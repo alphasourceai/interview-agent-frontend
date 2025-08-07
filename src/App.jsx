@@ -9,7 +9,8 @@ function App() {
     <Routes>
       <Route path="/interview-access/:role_token" element={<InterviewAccessPage />} />
       <Route path="/verify-otp" element={<VerifyOtp />} />
-      <Route path="/test-rls" element={<TestRLS />} />
+      <Route path="/rls-test" element={<TestRLS />} />
+      <Route path="*" element={<div style={{ padding: 50 }}>Fallback route hit</div>} />
     </Routes>
   );
 }
