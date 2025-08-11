@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export default function InterviewAccessForm({ roleToken }) {
-  const [formData, setFormData] = useState({
+const navigate = useNavigate();  
+const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     email: '',
@@ -37,8 +39,13 @@ export default function InterviewAccessForm({ roleToken }) {
     body.append('role_token', roleToken);
 
     try {
-      const res = await axios.post('http://localhost:3000/api/candidate/submit', body);
-      setMessage(res.data.message);
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/candidate/submit`, body);
+setMessage(res.data.message);
+// Redirect to OTP entry with the data we returned from the backend
+const { candidate_id, email, role_id } = res.data || {};
+if (candidate_id && email) {
+navigate(`/verify-otp?candidate_id=${encodeURIComponent(candidate_id)}&email=${encodeURIComponent(email)}&role_id=${encodeURIComponent(role_id || '')}`);
+}
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong.');
     } finally {
