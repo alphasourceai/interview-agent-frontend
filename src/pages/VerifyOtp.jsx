@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+// /src/pages/VerifyOtp.jsx
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 function VerifyOtp() {
@@ -12,14 +13,62 @@ function VerifyOtp() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [creating, setCreating] = useState(false);
   const otpInputRef = useRef(null);
 
+  const API_BASE = import.meta.env.VITE_BACKEND_URL;
+
   useEffect(() => {
-    // Autofocus the OTP field for a smoother UX
     otpInputRef.current?.focus();
   }, []);
 
-  const API_BASE = import.meta.env.VITE_BACKEND_URL;
+  const extractLink = (data) =>
+    data?.video_url ||
+    data?.redirect_url ||
+    data?.conversation_url ||
+    data?.url ||
+    data?.link ||
+    null;
+
+  const startInterview = useCallback(
+    async (candidate_id, role_id, verifiedEmail) => {
+      setCreating(true);
+      setError('');
+      try {
+        const resp = await fetch(`${API_BASE}/create-tavus-interview`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            candidate_id,
+            name: '', // optional
+            email: verifiedEmail,
+            role_id
+          })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          // Back end will send a helpful error message if Tavus times out
+          setMessage(data.message || 'Interview link not ready yet. Please try again.');
+          return;
+        }
+
+        const link = extractLink(data);
+        if (link) {
+          window.location.href = link;
+          return;
+        }
+
+        setMessage('Verified. Interview link not ready yet—please try again.');
+      } catch (e) {
+        console.error('create-tavus-interview failed:', e);
+        setMessage('Verified. Interview link not ready yet—please try again.');
+      } finally {
+        setCreating(false);
+      }
+    },
+    [API_BASE]
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +76,6 @@ function VerifyOtp() {
     setError('');
     setMessage('');
 
-    // quick client-side check
     if (!/^\d{6}$/.test(otp)) {
       setError('Please enter the 6-digit code.');
       setSubmitting(false);
@@ -35,26 +83,29 @@ function VerifyOtp() {
     }
 
     try {
+      // 1) Verify OTP (FAST) — no Tavus call here
       const response = await fetch(`${API_BASE}/api/candidate/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Backend verify route only requires email + code based on our current server
-        body: JSON.stringify({ email, code: otp /* role_id: roleIdFromQuery */ }),
+        body: JSON.stringify({ email, code: otp })
       });
 
       const result = await response.json();
 
       if (!response.ok) {
         setError(result.error || 'Verification failed.');
+        return;
+      }
+
+      setMessage(result.message || 'Verified.');
+      const candidate_id = result.candidate_id || candidateIdFromQuery || '';
+      const role_id = result.role_id || roleIdFromQuery || '';
+
+      // 2) Now create Tavus interview (separate call)
+      if (candidate_id && role_id && (result.email || email)) {
+        await startInterview(candidate_id, role_id, result.email || email);
       } else {
-        setMessage(result.message || 'Verified.');
-        if (result.redirect_url) {
-          // Kick candidate straight into Tavus
-          window.location.href = result.redirect_url;
-        } else {
-          // Fallback: verified but no link yet
-          setMessage('Verification complete. Your interview link will be ready shortly.');
-        }
+        setMessage('Verified. Missing candidate or role information.');
       }
     } catch (err) {
       console.error('Error verifying OTP:', err);
@@ -76,7 +127,6 @@ function VerifyOtp() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          // if email was passed from previous page, lock it to avoid mismatch
           readOnly={!!emailFromQuery}
         />
 
@@ -98,16 +148,32 @@ function VerifyOtp() {
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || creating}
           className="bg-[#00cfc8] text-white px-4 py-2 rounded hover:bg-[#00b8b1] w-full"
         >
-          {submitting ? 'Verifying...' : 'Submit OTP'}
+          {submitting ? 'Verifying...' : creating ? 'Starting interview…' : 'Submit OTP'}
         </button>
 
-        {/* Optional: helpful note while SMS is in sandbox */}
+        {/* If Tavus was slow/timeouts, allow retry without re-entering OTP */}
+        {message && !error && !submitting && !creating && (
+          <button
+            type="button"
+            onClick={() =>
+              startInterview(
+                candidateIdFromQuery,
+                roleIdFromQuery,
+                email
+              )
+            }
+            className="mt-3 w-full border px-4 py-2 rounded"
+          >
+            Try launching interview again
+          </button>
+        )}
+
         {import.meta.env.DEV && (
           <p className="text-xs text-gray-500 mt-3">
-            Tip: Copy the latest code from the <code>otp_tokens</code> table if SMS is disabled.
+            Tip: If SMS is disabled, copy the latest code from the <code>otp_tokens</code> table.
           </p>
         )}
       </form>
