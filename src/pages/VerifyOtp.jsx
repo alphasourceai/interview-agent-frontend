@@ -14,8 +14,14 @@ function VerifyOtp() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [creating, setCreating] = useState(false);
-  const otpInputRef = useRef(null);
 
+  const [roleId, setRoleId] = useState(roleIdFromQuery);
+  const [candidateId, setCandidateId] = useState(candidateIdFromQuery);
+  const [interviewId, setInterviewId] = useState(
+    () => sessionStorage.getItem('interviewId') || ''
+  );
+
+  const otpInputRef = useRef(null);
   const API_BASE = import.meta.env.VITE_BACKEND_URL;
 
   useEffect(() => {
@@ -34,23 +40,29 @@ function VerifyOtp() {
     async (candidate_id, role_id, verifiedEmail) => {
       setCreating(true);
       setError('');
+      setMessage('');
       try {
         const resp = await fetch(`${API_BASE}/create-tavus-interview`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             candidate_id,
-            name: '', // optional
-            email: verifiedEmail,
-            role_id
+            role_id,
+            email: verifiedEmail
           })
         });
 
         const data = await resp.json();
+
         if (!resp.ok) {
-          // Back end will send a helpful error message if Tavus times out
           setMessage(data.message || 'Interview link not ready yet. Please try again.');
           return;
+        }
+
+        // Persist interview id for resume/retry flows
+        if (data.interview_id) {
+          setInterviewId(data.interview_id);
+          sessionStorage.setItem('interviewId', data.interview_id);
         }
 
         const link = extractLink(data);
@@ -59,7 +71,7 @@ function VerifyOtp() {
           return;
         }
 
-        setMessage('Verified. Interview link not ready yet—please try again.');
+        setMessage('Verified. Interview room is initializing—try Resume if it doesn’t open shortly.');
       } catch (e) {
         console.error('create-tavus-interview failed:', e);
         setMessage('Verified. Interview link not ready yet—please try again.');
@@ -68,6 +80,39 @@ function VerifyOtp() {
       }
     },
     [API_BASE]
+  );
+
+  const resumeInterview = useCallback(
+    async () => {
+      if (!interviewId) {
+        setMessage('No interview to resume yet.');
+        return;
+      }
+      setCreating(true);
+      setError('');
+      try {
+        const resp = await fetch(`${API_BASE}/interviews/${interviewId}/retry-create`, {
+          method: 'POST'
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          setMessage(data.error || 'Still getting your room ready. Try again in a moment.');
+          return;
+        }
+        const link = extractLink(data);
+        if (link) {
+          window.location.href = link;
+          return;
+        }
+        setMessage(data.message || 'Room not ready yet—try again shortly.');
+      } catch (e) {
+        console.error('retry-create failed:', e);
+        setMessage('Could not resume yet. Please try again.');
+      } finally {
+        setCreating(false);
+      }
+    },
+    [API_BASE, interviewId]
   );
 
   const handleSubmit = async (e) => {
@@ -83,7 +128,7 @@ function VerifyOtp() {
     }
 
     try {
-      // 1) Verify OTP (FAST) — no Tavus call here
+      // 1) Verify OTP
       const response = await fetch(`${API_BASE}/api/candidate/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -91,19 +136,24 @@ function VerifyOtp() {
       });
 
       const result = await response.json();
-
       if (!response.ok) {
         setError(result.error || 'Verification failed.');
         return;
       }
 
       setMessage(result.message || 'Verified.');
-      const candidate_id = result.candidate_id || candidateIdFromQuery || '';
-      const role_id = result.role_id || roleIdFromQuery || '';
 
-      // 2) Now create Tavus interview (separate call)
-      if (candidate_id && role_id && (result.email || email)) {
-        await startInterview(candidate_id, role_id, result.email || email);
+      // Capture canonical IDs from server response or URL params
+      const nextCandidateId = result.candidate_id || candidateIdFromQuery || candidateId;
+      const nextRoleId = result.role_id || roleIdFromQuery || roleId;
+      const verifiedEmail = result.email || email;
+
+      setCandidateId(nextCandidateId);
+      setRoleId(nextRoleId);
+
+      // 2) Create/launch interview
+      if (nextCandidateId && nextRoleId && verifiedEmail) {
+        await startInterview(nextCandidateId, nextRoleId, verifiedEmail);
       } else {
         setMessage('Verified. Missing candidate or role information.');
       }
@@ -154,21 +204,27 @@ function VerifyOtp() {
           {submitting ? 'Verifying...' : creating ? 'Starting interview…' : 'Submit OTP'}
         </button>
 
-        {/* If Tavus was slow/timeouts, allow retry without re-entering OTP */}
-        {message && !error && !submitting && !creating && (
-          <button
-            type="button"
-            onClick={() =>
-              startInterview(
-                candidateIdFromQuery,
-                roleIdFromQuery,
-                email
-              )
-            }
-            className="mt-3 w-full border px-4 py-2 rounded"
-          >
-            Try launching interview again
-          </button>
+        {/* Quick relaunch if Tavus link wasn’t ready */}
+        {(!error && !submitting && !creating && (message || interviewId)) && (
+          <div className="mt-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => startInterview(candidateId, roleId, email)}
+              className="w-full border px-4 py-2 rounded"
+            >
+              Try launching interview again
+            </button>
+
+            {interviewId && (
+              <button
+                type="button"
+                onClick={resumeInterview}
+                className="w-full border px-4 py-2 rounded"
+              >
+                Resume interview
+              </button>
+            )}
+          </div>
         )}
 
         {import.meta.env.DEV && (
