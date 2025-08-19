@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiGet } from '../lib/api'
+import SignOutButton from '../components/SignOutButton.jsx'
 
 export default function ClientDashboard() {
   const [me, setMe] = useState(null)
+  const [clients, setClients] = useState([])       // { client_id, role, name }[]
   const [clientId, setClientId] = useState('')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -13,10 +15,14 @@ export default function ClientDashboard() {
     ;(async () => {
       try {
         setLoading(true)
-        const meResp = await apiGet('/auth/me')
+        const [meResp, myClients] = await Promise.all([
+          apiGet('/auth/me'),
+          apiGet('/clients/my')
+        ])
         if (!alive) return
         setMe(meResp)
-        const first = meResp.memberships?.[0]?.client_id || ''
+        setClients(myClients.items || [])
+        const first = (myClients.items?.[0]?.client_id) || (meResp.memberships?.[0]?.client_id) || ''
         setClientId(first)
       } catch (e) {
         setError(String(e))
@@ -33,7 +39,8 @@ export default function ClientDashboard() {
     ;(async () => {
       try {
         setLoading(true)
-        const { items } = await apiGet('/dashboard/interviews?client_id=' + encodeURIComponent(clientId))
+        const qs = `?client_id=${encodeURIComponent(clientId)}`
+        const { items } = await apiGet('/dashboard/interviews' + qs)
         if (!alive) return
         setItems(items || [])
       } catch (e) {
@@ -45,8 +52,12 @@ export default function ClientDashboard() {
     return () => { alive = false }
   }, [clientId])
 
-  const members = me?.memberships || []
-  const hasMembership = members.length > 0
+  const hasMembership = (me?.memberships || []).length > 0
+  const canInvite = hasMembership && (me?.memberships || []).some(m => ['owner','admin'].includes(m.role))
+  const nameById = Object.fromEntries(clients.map(c => [c.client_id, c.name]))
+  const roleById = Object.fromEntries(clients.map(c => [c.client_id, c.role]))
+  const currentName = nameById[clientId] || clientId
+  const currentRole = roleById[clientId] || (me?.memberships?.find(m => m.client_id === clientId)?.role) || 'member'
 
   const rows = useMemo(() => {
     return (items || []).map(r => ({
@@ -63,8 +74,20 @@ export default function ClientDashboard() {
   }, [items])
 
   return (
-    <div style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1000, margin: '0 auto' }}>
-      <h1 style={{ marginBottom: 16 }}>Dashboard</h1>
+    <div style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1100, margin: '0 auto' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>Dashboard</h1>
+        <div style={{ display:'flex', gap: 8 }}>
+          {canInvite && (
+            <a
+              href="/invite"
+              style={{ textDecoration:'none', border:'1px solid #e5e7eb', padding:'8px 12px', borderRadius:8, background:'#f9fafb' }}>
+              Invite teammate
+            </a>
+          )}
+          <SignOutButton />
+        </div>
+      </div>
 
       {error && <div style={{ color: 'crimson', marginBottom: 16 }}>{error}</div>}
 
@@ -75,21 +98,31 @@ export default function ClientDashboard() {
       )}
 
       {hasMembership && (
-        <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center', flexWrap:'wrap' }}>
           <label htmlFor="clientSel">Client</label>
-          <select id="clientSel" value={clientId} onChange={e => setClientId(e.target.value)} style={{ padding: 8 }}>
-            {members.map(m => (
-              <option key={m.client_id} value={m.client_id}>
-                {m.client_id} ({m.role})
+          <select
+            id="clientSel"
+            value={clientId}
+            onChange={e => setClientId(e.target.value)}
+            style={{ padding: 8 }}
+          >
+            {clients.map(c => (
+              <option key={c.client_id} value={c.client_id}>
+                {c.name} ({c.role})
               </option>
             ))}
           </select>
+          <div style={{ color:'#6b7280' }}>
+            Viewing: <strong>{currentName}</strong> &middot; Role: <strong>{currentRole}</strong>
+          </div>
         </div>
       )}
 
       {loading && <div>Loading…</div>}
 
-      {!loading && hasMembership && rows.length === 0 && <div>No interviews yet for this client.</div>}
+      {!loading && hasMembership && rows.length === 0 && (
+        <div>No interviews yet for this client.</div>
+      )}
 
       {!loading && rows.length > 0 && (
         <div style={{ overflowX: 'auto' }}>
