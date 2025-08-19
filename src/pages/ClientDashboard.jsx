@@ -1,83 +1,133 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { apiGet } from '../lib/api'
 
 export default function ClientDashboard() {
-  const [roles, setRoles] = useState([])
-  const [candidateCounts, setCandidateCounts] = useState({})
-
-  const clientId = '230f8351-f284-450e-b1d8-adeef448b70a' // 🔒 TEMP until auth
+  const [me, setMe] = useState(null)
+  const [clientId, setClientId] = useState('')
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const fetchRolesAndCounts = async () => {
-      // 1. Get roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('roles')
-        .select('*')
-        .eq('client_id', clientId)
-
-      if (rolesError) {
-        console.error('Error fetching roles:', rolesError)
-        return
+    let alive = true
+    ;(async () => {
+      try {
+        setLoading(true)
+        const meResp = await apiGet('/auth/me')
+        if (!alive) return
+        setMe(meResp)
+        const first = meResp.memberships?.[0]?.client_id || ''
+        setClientId(first)
+      } catch (e) {
+        setError(String(e))
+      } finally {
+        setLoading(false)
       }
-
-      setRoles(rolesData)
-
-      // 2. Get candidate counts grouped by role_id
-    const { data: candidatesData, error: candidatesError } = await supabase
-  .from('candidates')
-  .select('id, role_id')
-  .eq('client_id', clientId)
-
-if (candidatesError) {
-  console.error('Error fetching candidates:', candidatesError)
-  return
-}
-
-// Group by role_id manually
-const countsMap = {}
-candidatesData.forEach((candidate) => {
-  const roleId = candidate.role_id
-  countsMap[roleId] = (countsMap[roleId] || 0) + 1
-})
-
-setCandidateCounts(countsMap)
-
-    }
-
-    fetchRolesAndCounts()
+    })()
+    return () => { alive = false }
   }, [])
 
+  useEffect(() => {
+    if (!clientId) { setItems([]); return }
+    let alive = true
+    ;(async () => {
+      try {
+        setLoading(true)
+        const { items } = await apiGet('/dashboard/interviews?client_id=' + encodeURIComponent(clientId))
+        if (!alive) return
+        setItems(items || [])
+      } catch (e) {
+        setError(String(e))
+      } finally {
+        setLoading(false)
+      }
+    })()
+    return () => { alive = false }
+  }, [clientId])
+
+  const members = me?.memberships || []
+  const hasMembership = members.length > 0
+
+  const rows = useMemo(() => {
+    return (items || []).map(r => ({
+      id: r.id,
+      created_at: new Date(r.created_at).toLocaleString(),
+      role_title: r.role?.title || '—',
+      has_video: r.has_video ? '✓' : '—',
+      has_transcript: r.has_transcript ? '✓' : '—',
+      has_analysis: r.has_analysis ? '✓' : '—',
+      video_url: r.video_url || '',
+      transcript_url: r.transcript_url || '',
+      analysis_url: r.analysis_url || ''
+    }))
+  }, [items])
+
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Your Roles</h1>
-      <Link to="/create-role" className="text-blue-600 underline mb-2 block">
-        Create New Role
-      </Link>
-      <table className="w-full border">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-2 text-left">Title</th>
-            <th className="p-2 text-left">Interview Type</th>
-            <th className="p-2 text-left">Candidates Created</th>
-            <th className="p-2 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {roles.map((role) => (
-            <tr key={role.id} className="border-t">
-              <td className="p-2">{role.title}</td>
-              <td className="p-2">{role.interview_type}</td>
-              <td className="p-2">{candidateCounts[role.id] || 0}</td>
-              <td className="p-2">
-                <Link to={`/reports/${role.id}`} className="text-blue-600 underline">
-                  Reports & Candidates
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1000, margin: '0 auto' }}>
+      <h1 style={{ marginBottom: 16 }}>Dashboard</h1>
+
+      {error && <div style={{ color: 'crimson', marginBottom: 16 }}>{error}</div>}
+
+      {!hasMembership && (
+        <div style={{ background: '#fff3cd', border: '1px solid #ffeeba', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          You are signed in but not a member of any client yet. Ask an admin to invite you.
+        </div>
+      )}
+
+      {hasMembership && (
+        <div style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <label htmlFor="clientSel">Client</label>
+          <select id="clientSel" value={clientId} onChange={e => setClientId(e.target.value)} style={{ padding: 8 }}>
+            {members.map(m => (
+              <option key={m.client_id} value={m.client_id}>
+                {m.client_id} ({m.role})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {loading && <div>Loading…</div>}
+
+      {!loading && hasMembership && rows.length === 0 && <div>No interviews yet for this client.</div>}
+
+      {!loading && rows.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={th}>Created</th>
+                <th style={th}>Role</th>
+                <th style={th}>Video</th>
+                <th style={th}>Transcript</th>
+                <th style={th}>Analysis</th>
+                <th style={th}>Links</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.id}>
+                  <td style={td}>{r.created_at}</td>
+                  <td style={td}>{r.role_title}</td>
+                  <td style={td} title={r.video_url}>{r.has_video}</td>
+                  <td style={td} title={r.transcript_url}>{r.has_transcript}</td>
+                  <td style={td} title={r.analysis_url}>{r.has_analysis}</td>
+                  <td style={td}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {r.video_url && <a href={r.video_url} target="_blank" rel="noreferrer">Video</a>}
+                      {r.transcript_url && <a href={r.transcript_url} target="_blank" rel="noreferrer">Transcript</a>}
+                      {r.analysis_url && <a href={r.analysis_url} target="_blank" rel="noreferrer">Analysis</a>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
+
+const th = { textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '8px 6px' }
+const td = { borderBottom: '1px solid #f1f5f9', padding: '8px 6px', verticalAlign: 'top' }
