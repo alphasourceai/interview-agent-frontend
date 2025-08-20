@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { apiGet } from '../lib/api'
+import { apiGet, apiDownload } from '../lib/api'
 import SignOutButton from '../components/SignOutButton.jsx'
 
 export default function ClientDashboard() {
@@ -42,9 +42,11 @@ export default function ClientDashboard() {
     const key = `${interviewId}:pdf`
     try {
       setOpening(prev => ({ ...prev, [key]: true }))
-      const { url } = await apiGet(`/reports/${encodeURIComponent(interviewId)}/generate`)
-      if (!url) throw new Error('No report URL returned')
-      window.open(url, '_blank', 'noopener,noreferrer')
+       // Auto-download from backend (sends Authorization header via axios)
+await apiDownload(
+`/reports/${encodeURIComponent(interviewId)}/download`,
+`Candidate_Report_${interviewId}.pdf`
+)
     } catch (e) {
       setError(String(e?.message || e))
     } finally {
