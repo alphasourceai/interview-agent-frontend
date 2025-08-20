@@ -20,3 +20,7 @@ export async function apiPost(path, body) {
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
+export async function getSignedUrl(interviewId, kind) {
+  const res = await api.get('/files/signed-url', { params: { interview_id: interviewId, kind } });
+  return res.data.url;
+}
