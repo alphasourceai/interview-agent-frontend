@@ -9,6 +9,7 @@ export default function ClientDashboard() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [opening, setOpening] = useState({})       // { [interviewId+kind]: boolean } open-in-progress state
 
   useEffect(() => {
     let alive = true
@@ -72,6 +73,22 @@ export default function ClientDashboard() {
       analysis_url: r.analysis_url || ''
     }))
   }, [items])
+
+  // Helper: open a signed URL for transcript/analysis
+  async function openSigned(interviewId, kind) {
+    const key = `${interviewId}:${kind}`
+    try {
+      setOpening(prev => ({ ...prev, [key]: true }))
+      const qs = `?interview_id=${encodeURIComponent(interviewId)}&kind=${encodeURIComponent(kind)}`
+      const { url } = await apiGet('/files/signed-url' + qs)
+      if (!url) throw new Error('No signed URL returned')
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setOpening(prev => ({ ...prev, [key]: false }))
+    }
+  }
 
   return (
     <div style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1100, margin: '0 auto' }}>
@@ -138,22 +155,46 @@ export default function ClientDashboard() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
-                <tr key={r.id}>
-                  <td style={td}>{r.created_at}</td>
-                  <td style={td}>{r.role_title}</td>
-                  <td style={td} title={r.video_url}>{r.has_video}</td>
-                  <td style={td} title={r.transcript_url}>{r.has_transcript}</td>
-                  <td style={td} title={r.analysis_url}>{r.has_analysis}</td>
-                  <td style={td}>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {r.video_url && <a href={r.video_url} target="_blank" rel="noreferrer">Video</a>}
-                      {r.transcript_url && <a href={r.transcript_url} target="_blank" rel="noreferrer">Transcript</a>}
-                      {r.analysis_url && <a href={r.analysis_url} target="_blank" rel="noreferrer">Analysis</a>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {rows.map(r => {
+                const trKey = `${r.id}:transcript`
+                const anKey = `${r.id}:analysis`
+                return (
+                  <tr key={r.id}>
+                    <td style={td}>{r.created_at}</td>
+                    <td style={td}>{r.role_title}</td>
+                    <td style={td} title={r.video_url}>{r.has_video}</td>
+                    <td style={td} title={r.transcript_url}>{r.has_transcript}</td>
+                    <td style={td} title={r.analysis_url}>{r.has_analysis}</td>
+                    <td style={td}>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {r.video_url && (
+                          <a href={r.video_url} target="_blank" rel="noreferrer">Video</a>
+                        )}
+
+                        {r.transcript_url && (
+                          <button
+                            onClick={() => openSigned(r.id, 'transcript')}
+                            disabled={!!opening[trKey]}
+                            style={btn}
+                          >
+                            {opening[trKey] ? 'Opening…' : 'Transcript'}
+                          </button>
+                        )}
+
+                        {r.analysis_url && (
+                          <button
+                            onClick={() => openSigned(r.id, 'analysis')}
+                            disabled={!!opening[anKey]}
+                            style={btn}
+                          >
+                            {opening[anKey] ? 'Opening…' : 'Analysis'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -164,3 +205,10 @@ export default function ClientDashboard() {
 
 const th = { textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '8px 6px' }
 const td = { borderBottom: '1px solid #f1f5f9', padding: '8px 6px', verticalAlign: 'top' }
+const btn = {
+  border: '1px solid #e5e7eb',
+  padding: '6px 10px',
+  borderRadius: 6,
+  background: '#f9fafb',
+  cursor: 'pointer'
+}
