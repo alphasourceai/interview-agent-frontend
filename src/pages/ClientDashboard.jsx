@@ -13,6 +13,26 @@ export default function ClientDashboard() {
   const [expanded, setExpanded] = useState({})     // { [id]: boolean }
 
   // ---- helpers ----
+
+function getSupabaseAccessToken() {
+  try {
+    const key = Object.keys(localStorage).find(
+      (k) => k.startsWith('sb-') && k.endsWith('-auth-token')
+    );
+    if (!key) return null;
+    const raw = localStorage.getItem(key);
+    const obj = raw ? JSON.parse(raw) : null;
+    return (
+      obj?.access_token ||
+      obj?.currentSession?.access_token ||
+      obj?.accessToken ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
   const pctText = (v) =>
     (typeof v === 'number' && isFinite(v)) || v === 0 ? `${Math.max(0, Math.min(100, v))}%` : '—'
   const fmtDate = (iso) => {
@@ -39,20 +59,45 @@ export default function ClientDashboard() {
   }
 
   async function generatePdf(interviewId) {
-    const key = `${interviewId}:pdf`
-    try {
-      setOpening(prev => ({ ...prev, [key]: true }))
-       // Auto-download from backend (sends Authorization header via axios)
-await apiDownload(
-`/reports/${encodeURIComponent(interviewId)}/download`,
-`Candidate_Report_${interviewId}.pdf`
-)
-    } catch (e) {
-      setError(String(e?.message || e))
-    } finally {
-      setOpening(prev => ({ ...prev, [key]: false }))
-    }
+  const key = `${interviewId}:pdf`;
+  try {
+    setOpening((prev) => ({ ...prev, [key]: true }));
+
+    // Build the absolute URL to the backend download endpoint
+    const base =
+      (import.meta?.env?.VITE_BACKEND_URL || '').replace(/\/+$/, '') ||
+      window.location.origin;
+    const href = `${base}/reports/${encodeURIComponent(
+      interviewId
+    )}/download`;
+
+    // Get the Supabase access token from localStorage
+    const token = getSupabaseAccessToken();
+    if (!token) throw new Error('Not signed in');
+
+    // Authenticated fetch -> blob -> trigger download
+    const res = await fetch(href, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Download failed (${res.status})`);
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Candidate_Report_${interviewId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    setError(String(e?.message || e));
+  } finally {
+    setOpening((prev) => ({ ...prev, [key]: false }));
   }
+}
+
 
   // ---- load user + clients ----
   useEffect(() => {
