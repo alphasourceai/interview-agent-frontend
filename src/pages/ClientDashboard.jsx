@@ -4,12 +4,12 @@ import SignOutButton from '../components/SignOutButton.jsx'
 
 export default function ClientDashboard() {
   const [me, setMe] = useState(null)
-  const [clients, setClients] = useState([])       // { client_id, role, name }[]
+  const [clients, setClients] = useState([])
   const [clientId, setClientId] = useState('')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [opening, setOpening] = useState({})       // { [interviewId+kind]: boolean } open-in-progress state
+  const [opening, setOpening] = useState({})
 
   useEffect(() => {
     let alive = true
@@ -74,7 +74,6 @@ export default function ClientDashboard() {
     }))
   }, [items])
 
-  // Helper: open a signed URL for transcript/analysis
   async function openSigned(interviewId, kind) {
     const key = `${interviewId}:${kind}`
     try {
@@ -82,6 +81,20 @@ export default function ClientDashboard() {
       const qs = `?interview_id=${encodeURIComponent(interviewId)}&kind=${encodeURIComponent(kind)}`
       const { url } = await apiGet('/files/signed-url' + qs)
       if (!url) throw new Error('No signed URL returned')
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setOpening(prev => ({ ...prev, [key]: false }))
+    }
+  }
+
+  async function generatePdf(interviewId) {
+    const key = `${interviewId}:pdf`
+    try {
+      setOpening(prev => ({ ...prev, [key]: true }))
+      const { url } = await apiGet(`/reports/${encodeURIComponent(interviewId)}/generate`)
+      if (!url) throw new Error('No report URL returned')
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (e) {
       setError(String(e))
@@ -130,7 +143,7 @@ export default function ClientDashboard() {
             ))}
           </select>
           <div style={{ color:'#6b7280' }}>
-            Viewing: <strong>{currentName}</strong> &middot; Role: <strong>{currentRole}</strong>
+            Viewing: <strong>{currentName}</strong> · Role: <strong>{currentRole}</strong>
           </div>
         </div>
       )}
@@ -158,6 +171,7 @@ export default function ClientDashboard() {
               {rows.map(r => {
                 const trKey = `${r.id}:transcript`
                 const anKey = `${r.id}:analysis`
+                const pdfKey = `${r.id}:pdf`
                 return (
                   <tr key={r.id}>
                     <td style={td}>{r.created_at}</td>
@@ -170,7 +184,6 @@ export default function ClientDashboard() {
                         {r.video_url && (
                           <a href={r.video_url} target="_blank" rel="noreferrer">Video</a>
                         )}
-
                         {r.transcript_url && (
                           <button
                             onClick={() => openSigned(r.id, 'transcript')}
@@ -180,7 +193,6 @@ export default function ClientDashboard() {
                             {opening[trKey] ? 'Opening…' : 'Transcript'}
                           </button>
                         )}
-
                         {r.analysis_url && (
                           <button
                             onClick={() => openSigned(r.id, 'analysis')}
@@ -190,6 +202,13 @@ export default function ClientDashboard() {
                             {opening[anKey] ? 'Opening…' : 'Analysis'}
                           </button>
                         )}
+                        <button
+                          onClick={() => generatePdf(r.id)}
+                          disabled={!!opening[pdfKey]}
+                          style={btn}
+                        >
+                          {opening[pdfKey] ? 'Generating…' : 'Download PDF'}
+                        </button>
                       </div>
                     </td>
                   </tr>
