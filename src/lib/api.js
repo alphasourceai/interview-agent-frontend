@@ -1,3 +1,4 @@
+// chore: mvp-hardening-frontend-v3 (no-op)
 // src/lib/api.js
 import { supabase } from './supabaseClient'
 
