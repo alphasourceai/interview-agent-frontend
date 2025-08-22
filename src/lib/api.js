@@ -1,5 +1,9 @@
-// chore: mvp-hardening-frontend-v3 (no-op)
 // src/lib/api.js
+// Backward compatible API utilities:
+//  - Legacy: apiGet, apiPost, apiDownload
+//  - New:    api (grouped methods)
+// Works with Supabase auth; attaches Bearer token to backend requests.
+
 import { supabase } from './supabaseClient'
 
 const base = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '')
@@ -27,17 +31,24 @@ async function fetchJSON(path, { method = 'GET', body, headers = {} } = {}) {
     ...(await authHeader()),
     ...headers,
   }
-  const res = await fetch(url, { method, headers: h, body: body ? JSON.stringify(body) : undefined })
+  const res = await fetch(url, {
+    method,
+    headers: h,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`
-    try { const j = await res.json(); if (j?.error) msg = j.error } catch {}
+    try {
+      const j = await res.json()
+      if (j?.error) msg = j.error
+    } catch {}
     throw new Error(msg)
   }
   const ct = res.headers.get('content-type') || ''
   return ct.includes('application/json') ? res.json() : res.text()
 }
 
-/* -------- Legacy helpers exported for backward compatibility -------- */
+/* ---------------- Legacy helpers (keep old imports working) ---------------- */
 export async function apiGet(path) {
   return fetchJSON(path, { method: 'GET' })
 }
@@ -61,9 +72,9 @@ export async function apiDownload(path, filename) {
   URL.revokeObjectURL(a.href)
 }
 
-/* ---------------- New structured API (can be used gradually) ---------------- */
+/* ---------------- New structured API (use gradually) ---------------- */
 export const api = {
-  // Auth / clients
+  // Auth / Clients
   getMe: () => apiGet('/auth/me'),
   getMyClients: () => apiGet('/clients/my'),
 
@@ -73,19 +84,28 @@ export const api = {
 
   // Roles
   createRole: (payload) => apiPost('/roles', payload),
-  listRoles: (clientId) => apiGet(`/roles?client_id=${encodeURIComponent(clientId)}`),
+  listRoles: (clientId) =>
+    apiGet(`/roles?client_id=${encodeURIComponent(clientId)}`),
 
   // Files (signed URLs)
   getSignedUrl: (interviewId, kind) =>
-    apiGet(`/files/signed-url?interview_id=${encodeURIComponent(interviewId)}&kind=${encodeURIComponent(kind)}`),
+    apiGet(
+      `/files/signed-url?interview_id=${encodeURIComponent(interviewId)}&kind=${encodeURIComponent(kind)}`
+    ),
 
   // Reports
-  generateReport: (interviewId) => apiGet(`/reports/${encodeURIComponent(interviewId)}/generate`),
-  downloadReport: (interviewId) => apiDownload(`/reports/${encodeURIComponent(interviewId)}/download`),
+  generateReport: (interviewId) =>
+    apiGet(`/reports/${encodeURIComponent(interviewId)}/generate`),
+  downloadReport: (interviewId) =>
+    apiDownload(`/reports/${encodeURIComponent(interviewId)}/download`),
 
   // Invites + Members
   createInvite: (payload) => apiPost('/clients/invite', payload),
   acceptInvite: (payload) => apiPost('/clients/accept-invite', payload),
-  getMembers: (clientId) => apiGet(`/clients/members?client_id=${encodeURIComponent(clientId)}`),
+  getMembers: (clientId) =>
+    apiGet(`/clients/members?client_id=${encodeURIComponent(clientId)}`),
   revokeMember: (payload) => apiPost('/clients/members/revoke', payload),
 }
+
+// Optional default export for convenience
+export default api
