@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useClientContext } from "../lib/clientContext.jsx";
 import { apiGet, apiPost } from "../lib/api";
-import { supabase } from "../lib/supabaseClient";
 
 const label = { fontSize: 14, fontWeight: 600, marginRight: 8 };
 const select = { border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 10px" };
@@ -9,26 +8,15 @@ const btn = { border: "1px solid #ccc", borderRadius: 6, padding: "6px 10px", ba
 const input = { border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 10px" };
 const cell = { padding: "6px 8px", borderBottom: "1px solid #eee" };
 
-async function loadMembersAny(clientId) {
-  // Try /clients/members?client_id=...
+// Load members via backend only
+async function loadMembers(clientId) {
   try {
-    const r = await apiGet(`/clients/members?client_id=${clientId}`);
-    const items = r?.members || r?.items || r || [];
-    return Array.isArray(items) ? items : [];
-  } catch (e) {
-    // Try /clients/:id/members
-    try {
-      const r2 = await apiGet(`/clients/${clientId}/members`);
-      const items = r2?.members || r2?.items || r2 || [];
-      return Array.isArray(items) ? items : [];
-    } catch {
-      // Final fallback: read directly (if table is readable)
-      const { data } = await supabase
-        .from("client_members")
-        .select("user_id,name,email,role")
-        .eq("client_id", clientId);
-      return data || [];
-    }
+    const r = await apiGet(`/clients/members?client_id=${encodeURIComponent(clientId)}`);
+    return r?.members ?? [];
+  } catch {
+    // fallback to alternate path if your server exposes it
+    const r2 = await apiGet(`/clients/${encodeURIComponent(clientId)}/members`);
+    return r2?.members ?? [];
   }
 }
 
@@ -46,7 +34,7 @@ export default function Account() {
     setLoading(true);
     setError("");
     try {
-      const items = await loadMembersAny(currentClientId);
+      const items = await loadMembers(currentClientId);
       setMembers(items);
     } catch (e) {
       setError(e.message || "Failed to load members");
@@ -80,7 +68,8 @@ export default function Account() {
     if (!currentClientId || !user_id) return;
     setError("");
     try {
-      await apiPost("/clients/revoke", { client_id: currentClientId, user_id });
+      // FIX: correct revoke endpoint
+      await apiPost("/clients/members/revoke", { client_id: currentClientId, user_id });
       await refresh();
     } catch (e) {
       setError(e.message || "Revoke failed");
