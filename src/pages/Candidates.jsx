@@ -9,7 +9,6 @@ export default function Candidates() {
   const { clients, currentClientId, setCurrentClientId } = useClientContext();
 
   useEffect(() => {
-    // If we somehow have no current client but do have a list, pick the first.
     if (!currentClientId && clients.length) setCurrentClientId(clients[0].id);
   }, [clients, currentClientId, setCurrentClientId]);
 
@@ -30,7 +29,6 @@ export default function Candidates() {
         </select>
       </div>
 
-      {/* The legacy “Invite teammate” call-to-action is intentionally removed. */}
       <ClientDashboard />
     </div>
   );

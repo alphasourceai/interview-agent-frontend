@@ -12,14 +12,16 @@ async function authedFetch(url, opts = {}) {
 
 export function ClientProvider({ children }) {
   const [loading, setLoading] = useState(true);
-  const [clients, setClients] = useState([]);
+  const [clients, setClients] = useState([]); // [{id, name}]
   const [currentClientId, setCurrentClientId] = useState(null);
 
   useEffect(() => {
     let stop = false;
+
     async function load() {
       setLoading(true);
       try {
+        // 1) get memberships
         let list = [];
         let res = await authedFetch(`${import.meta.env.VITE_BACKEND_URL}/clients/my`);
         if (res.ok) {
@@ -30,33 +32,54 @@ export function ClientProvider({ children }) {
           else if (Array.isArray(json.memberships)) {
             list = json.memberships.map(m => ({
               id: m.client_id || m.id,
-              name: m.name || m.client_name || m.client_id || m.id,
+              name: m.name || m.client_name || null,
             }));
           }
         }
         if (!list.length) {
+          // fallback to /auth/me to at least get IDs
           res = await authedFetch(`${import.meta.env.VITE_BACKEND_URL}/auth/me`);
           if (res.ok) {
             const me = await res.json();
             const ids = Array.isArray(me?.clientIds) ? me.clientIds : [];
-            list = ids.map(id => ({ id, name: id }));
+            list = ids.map(id => ({ id, name: null }));
           }
         }
-        const normalized = list.map(x => ({
-          id: x.id || x.client_id,
-          name: x.name || x.title || (x.id || x.client_id),
-        })).filter(x => x.id);
+
+        // 2) normalize and enrich names from Supabase if missing
+        const norm = (list || [])
+          .map(x => ({ id: x.id || x.client_id, name: x.name || x.title || null }))
+          .filter(x => x.id);
+
+        const needLookup = norm.filter(x => !x.name).map(x => x.id);
+        if (needLookup.length) {
+          const { data: rows } = await supabase
+            .from("clients")
+            .select("id,name")
+            .in("id", needLookup);
+          const nameMap = Object.fromEntries((rows || []).map(r => [r.id, r.name]));
+          for (const c of norm) {
+            if (!c.name && nameMap[c.id]) c.name = nameMap[c.id];
+          }
+        }
+
         if (!stop) {
-          setClients(normalized);
+          setClients(norm);
           const saved = localStorage.getItem("currentClientId");
-          const first = normalized[0]?.id || null;
-          const chosen = saved && normalized.some(c => c.id === saved) ? saved : first;
+          const first = norm[0]?.id || null;
+          const chosen = saved && norm.some(c => c.id === saved) ? saved : first;
           setCurrentClientId(chosen);
         }
-      } catch {} finally {
+      } catch {
+        if (!stop) {
+          setClients([]);
+          setCurrentClientId(null);
+        }
+      } finally {
         if (!stop) setLoading(false);
       }
     }
+
     load();
     return () => { stop = true; };
   }, []);
