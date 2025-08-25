@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useClientContext } from "../lib/clientContext.jsx";
 import { apiGet, apiPost } from "../lib/api";
+import { supabase } from "../lib/supabaseClient";
 
 const label = { fontSize: 14, fontWeight: 600, marginRight: 8 };
 const select = { border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 10px" };
@@ -8,22 +9,45 @@ const btn = { border: "1px solid #ccc", borderRadius: 6, padding: "6px 10px", ba
 const input = { border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 10px" };
 const cell = { padding: "6px 8px", borderBottom: "1px solid #eee" };
 
+async function loadMembersAny(clientId) {
+  // Try /clients/members?client_id=...
+  try {
+    const r = await apiGet(`/clients/members?client_id=${clientId}`);
+    const items = r?.members || r?.items || r || [];
+    return Array.isArray(items) ? items : [];
+  } catch (e) {
+    // Try /clients/:id/members
+    try {
+      const r2 = await apiGet(`/clients/${clientId}/members`);
+      const items = r2?.members || r2?.items || r2 || [];
+      return Array.isArray(items) ? items : [];
+    } catch {
+      // Final fallback: read directly (if table is readable)
+      const { data } = await supabase
+        .from("client_members")
+        .select("user_id,name,email,role")
+        .eq("client_id", clientId);
+      return data || [];
+    }
+  }
+}
+
 export default function Account() {
   const { clients, currentClientId, setCurrentClientId } = useClientContext();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [error, setError] = useState("");
 
-  async function loadMembers(clientId) {
-    if (!clientId) return;
+  async function refresh() {
+    if (!currentClientId) return;
     setLoading(true);
     setError("");
     try {
-      const res = await apiGet(`/clients/members?client_id=${clientId}`);
-      const items = res?.members || res?.items || res || [];
-      setMembers(Array.isArray(items) ? items : []);
+      const items = await loadMembersAny(currentClientId);
+      setMembers(items);
     } catch (e) {
       setError(e.message || "Failed to load members");
       setMembers([]);
@@ -32,18 +56,20 @@ export default function Account() {
     }
   }
 
-  useEffect(() => {
-    if (currentClientId) loadMembers(currentClientId);
-  }, [currentClientId]);
+  useEffect(() => { refresh(); }, [currentClientId]);
 
   async function invite() {
     if (!currentClientId || !inviteEmail) return;
     setError("");
     try {
-      await apiPost("/clients/invite", { email: inviteEmail, client_id: currentClientId, role: inviteRole });
-      setInviteEmail("");
-      setInviteRole("member");
-      await loadMembers(currentClientId);
+      await apiPost("/clients/invite", {
+        client_id: currentClientId,
+        email: inviteEmail,
+        name: inviteName || null,
+        role: inviteRole,
+      });
+      setInviteName(""); setInviteEmail(""); setInviteRole("member");
+      await refresh();
       alert("Invitation sent.");
     } catch (e) {
       setError(e.message || "Invite failed");
@@ -55,7 +81,7 @@ export default function Account() {
     setError("");
     try {
       await apiPost("/clients/revoke", { client_id: currentClientId, user_id });
-      await loadMembers(currentClientId);
+      await refresh();
     } catch (e) {
       setError(e.message || "Revoke failed");
     }
@@ -88,6 +114,7 @@ export default function Account() {
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
           <thead>
             <tr>
+              <th style={{ ...cell, textAlign: "left" }}>Name</th>
               <th style={{ ...cell, textAlign: "left" }}>Email</th>
               <th style={{ ...cell, textAlign: "left" }}>Role</th>
               <th style={{ ...cell, textAlign: "left" }}>Actions</th>
@@ -95,11 +122,14 @@ export default function Account() {
           </thead>
           <tbody>
             {members.map(m => (
-              <tr key={m.user_id || m.id}>
-                <td style={cell}>{m.email || m.user_email || m.name || "—"}</td>
+              <tr key={m.user_id || m.id || (m.email || Math.random())}>
+                <td style={cell}>{m.name || "—"}</td>
+                <td style={cell}>{m.email || m.user_email || "—"}</td>
                 <td style={cell}>{m.role || "member"}</td>
                 <td style={cell}>
-                  <button style={btn} onClick={() => revoke(m.user_id || m.id)}>Revoke</button>
+                  {(m.user_id || m.id) ? (
+                    <button style={btn} onClick={() => revoke(m.user_id || m.id)}>Revoke</button>
+                  ) : "—"}
                 </td>
               </tr>
             ))}
@@ -108,7 +138,14 @@ export default function Account() {
       )}
 
       <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Invite a member</h3>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <input
+          type="text"
+          placeholder="Full name"
+          value={inviteName}
+          onChange={(e) => setInviteName(e.target.value)}
+          style={input}
+        />
         <input
           type="email"
           placeholder="email@example.com"
