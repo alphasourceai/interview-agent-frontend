@@ -8,16 +8,9 @@ const btn = { border: "1px solid #ccc", borderRadius: 6, padding: "6px 10px", ba
 const input = { border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 10px" };
 const cell = { padding: "6px 8px", borderBottom: "1px solid #eee" };
 
-// Load members via backend only
 async function loadMembers(clientId) {
-  try {
-    const r = await apiGet(`/clients/members?client_id=${encodeURIComponent(clientId)}`);
-    return r?.members ?? [];
-  } catch {
-    // fallback to alternate path if your server exposes it
-    const r2 = await apiGet(`/clients/${encodeURIComponent(clientId)}/members`);
-    return r2?.members ?? [];
-  }
+  const r = await apiGet(`/clients/members?client_id=${encodeURIComponent(clientId)}`);
+  return r?.members ?? [];
 }
 
 export default function Account() {
@@ -31,49 +24,29 @@ export default function Account() {
 
   async function refresh() {
     if (!currentClientId) return;
-    setLoading(true);
-    setError("");
-    try {
-      const items = await loadMembers(currentClientId);
-      setMembers(items);
-    } catch (e) {
-      setError(e.message || "Failed to load members");
-      setMembers([]);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true); setError("");
+    try { setMembers(await loadMembers(currentClientId)); }
+    catch (e) { setError(e.message || "Failed to load members"); setMembers([]); }
+    finally { setLoading(false); }
   }
-
   useEffect(() => { refresh(); }, [currentClientId]);
 
   async function invite() {
     if (!currentClientId || !inviteEmail) return;
     setError("");
     try {
-      await apiPost("/clients/invite", {
-        client_id: currentClientId,
-        email: inviteEmail,
-        name: inviteName || null,
-        role: inviteRole,
-      });
+      await apiPost("/clients/invite", { client_id: currentClientId, email: inviteEmail, name: inviteName || null, role: inviteRole });
       setInviteName(""); setInviteEmail(""); setInviteRole("member");
       await refresh();
       alert("Invitation sent.");
-    } catch (e) {
-      setError(e.message || "Invite failed");
-    }
+    } catch (e) { setError(e.message || "Invite failed"); }
   }
 
   async function revoke(user_id) {
     if (!currentClientId || !user_id) return;
     setError("");
-    try {
-      // FIX: correct revoke endpoint
-      await apiPost("/clients/members/revoke", { client_id: currentClientId, user_id });
-      await refresh();
-    } catch (e) {
-      setError(e.message || "Revoke failed");
-    }
+    try { await apiPost("/clients/members/revoke", { client_id: currentClientId, user_id }); await refresh(); }
+    catch (e) { setError(e.message || "Revoke failed"); }
   }
 
   return (
@@ -82,44 +55,25 @@ export default function Account() {
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
         <div style={label}>Client</div>
-        <select
-          style={select}
-          value={currentClientId || ""}
-          onChange={(e) => setCurrentClientId(e.target.value)}
-        >
-          {clients.map(c => (
-            <option key={c.id} value={c.id}>{c.name || c.id}</option>
-          ))}
+        <select style={select} value={currentClientId || ""} onChange={(e) => setCurrentClientId(e.target.value)}>
+          {clients.map(c => <option key={c.id} value={c.id}>{c.name || c.id}</option>)}
         </select>
       </div>
 
       <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Members</h2>
       {error && <div style={{ color: "#dc2626", marginBottom: 8 }}>{error}</div>}
-      {loading ? (
-        <div>Loading…</div>
-      ) : members.length === 0 ? (
-        <div>No members yet.</div>
-      ) : (
+      {loading ? <div>Loading…</div> : members.length === 0 ? <div>No members yet.</div> : (
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
           <thead>
-            <tr>
-              <th style={{ ...cell, textAlign: "left" }}>Name</th>
-              <th style={{ ...cell, textAlign: "left" }}>Email</th>
-              <th style={{ ...cell, textAlign: "left" }}>Role</th>
-              <th style={{ ...cell, textAlign: "left" }}>Actions</th>
-            </tr>
+            <tr><th style={{ ...cell, textAlign: "left" }}>Name</th><th style={{ ...cell, textAlign: "left" }}>Email</th><th style={{ ...cell, textAlign: "left" }}>Role</th><th style={{ ...cell, textAlign: "left" }}>Actions</th></tr>
           </thead>
           <tbody>
             {members.map(m => (
-              <tr key={m.user_id || m.id || (m.email || Math.random())}>
+              <tr key={m.user_id || m.id || m.email}>
                 <td style={cell}>{m.name || "—"}</td>
                 <td style={cell}>{m.email || m.user_email || "—"}</td>
                 <td style={cell}>{m.role || "member"}</td>
-                <td style={cell}>
-                  {(m.user_id || m.id) ? (
-                    <button style={btn} onClick={() => revoke(m.user_id || m.id)}>Revoke</button>
-                  ) : "—"}
-                </td>
+                <td style={cell}>{(m.user_id || m.id) ? <button style={btn} onClick={() => revoke(m.user_id || m.id)}>Revoke</button> : "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -128,24 +82,10 @@ export default function Account() {
 
       <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Invite a member</h3>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <input
-          type="text"
-          placeholder="Full name"
-          value={inviteName}
-          onChange={(e) => setInviteName(e.target.value)}
-          style={input}
-        />
-        <input
-          type="email"
-          placeholder="email@example.com"
-          value={inviteEmail}
-          onChange={(e) => setInviteEmail(e.target.value)}
-          style={input}
-        />
+        <input type="text" placeholder="Full name" value={inviteName} onChange={(e) => setInviteName(e.target.value)} style={input} />
+        <input type="email" placeholder="email@example.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} style={input} />
         <select style={select} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-          <option value="member">member</option>
-          <option value="owner">owner</option>
-          <option value="admin">admin</option>
+          <option value="member">member</option><option value="owner">owner</option><option value="admin">admin</option>
         </select>
         <button style={btn} onClick={invite}>Invite</button>
       </div>
