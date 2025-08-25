@@ -1,40 +1,35 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom'
-import Roles from './pages/Roles'
-import Candidates from './pages/Candidates'
-import Account from './pages/Account'
-// If you have a signin page etc., import them here.
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ClientProvider } from "./lib/clientContext";
+import NavBar from "./components/NavBar";
+import RequireAuth from "./components/RequireAuth";
+import SignIn from "./pages/SignIn";
+import AuthCallback from "./pages/AuthCallback";
+import Roles from "./pages/Roles";
+import RoleNew from "./pages/RoleNew";
+import Candidates from "./pages/Candidates";
+import Account from "./pages/Account";
+import ClientDashboard from "./pages/ClientDashboard.jsx";
 
-function Shell({ children }) {
-  return (
-    <div>
-      <nav className="border-b">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex gap-4">
-          <Link to="/roles" className="hover:underline">Roles</Link>
-          <Link to="/candidates" className="hover:underline">Candidates</Link>
-          <Link to="/account" className="hover:underline">Account</Link>
-        </div>
-      </nav>
-      <main>{children}</main>
-    </div>
-  )
-}
-
-// If you already have a ProtectedRoute component, you can wrap Routes with it.
-// For simplicity here we assume your auth gate happens higher up.
 export default function App() {
   return (
-    <BrowserRouter>
-      <Shell>
+    <ClientProvider>
+      <BrowserRouter>
+        <NavBar />
         <Routes>
-          <Route path="/" element={<Navigate to="/candidates" replace />} />
-          <Route path="/roles" element={<Roles />} />
-          <Route path="/candidates" element={<Candidates />} />
-          <Route path="/account" element={<Account />} />
-          {/* Add your existing auth routes here, e.g., /sign-in, /accept-invite */}
-          <Route path="*" element={<div className="p-6">Not found</div>} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route element={<RequireAuth />}>
+            <Route path="/" element={<Navigate to="/roles" replace />} />
+            <Route path="/roles" element={<Roles />} />
+            <Route path="/roles/new" element={<RoleNew />} />
+            <Route path="/candidates" element={<Candidates />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/dashboard" element={<Candidates />} />
+            <Route path="/client-dashboard" element={<ClientDashboard />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/roles" replace />} />
         </Routes>
-      </Shell>
-    </BrowserRouter>
-  )
+      </BrowserRouter>
+    </ClientProvider>
+  );
 }
