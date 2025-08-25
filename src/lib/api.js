@@ -1,111 +1,79 @@
-// src/lib/api.js
-// Backward compatible API utilities:
-//  - Legacy: apiGet, apiPost, apiDownload
-//  - New:    api (grouped methods)
-// Works with Supabase auth; attaches Bearer token to backend requests.
+import { supabase } from "./supabaseClient";
 
-import { supabase } from './supabaseClient'
-
-const base = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '')
-
-async function getToken() {
-  const { data } = await supabase.auth.getSession()
-  return data?.session?.access_token || null
+async function authedFetch(url, opts = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers = new Headers(opts.headers || {});
+  if (session?.access_token) headers.set("Authorization", `Bearer ${session.access_token}`);
+  return fetch(url, { ...opts, headers });
 }
 
-async function authHeader() {
-  const token = await getToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
-function fullUrl(path) {
-  if (!path) return base
-  if (/^https?:\/\//i.test(path)) return path
-  return `${base}${path.startsWith('/') ? path : `/${path}`}`
-}
-
-async function fetchJSON(path, { method = 'GET', body, headers = {} } = {}) {
-  const url = fullUrl(path)
-  const h = {
-    'Content-Type': 'application/json',
-    ...(await authHeader()),
-    ...headers,
-  }
-  const res = await fetch(url, {
-    method,
-    headers: h,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
-  if (!res.ok) {
-    let msg = `${res.status} ${res.statusText}`
-    try {
-      const j = await res.json()
-      if (j?.error) msg = j.error
-    } catch {}
-    throw new Error(msg)
-  }
-  const ct = res.headers.get('content-type') || ''
-  return ct.includes('application/json') ? res.json() : res.text()
-}
-
-/* ---------------- Legacy helpers (keep old imports working) ---------------- */
+// legacy helpers preserved
 export async function apiGet(path) {
-  return fetchJSON(path, { method: 'GET' })
+  const res = await authedFetch(`${import.meta.env.VITE_BACKEND_URL}${path}`);
+  if (!res.ok) throw new Error(`GET ${path} failed`);
+  return res.json();
 }
 
-export async function apiPost(path, body) {
-  return fetchJSON(path, { method: 'POST', body })
+export async function apiDownload(path) {
+  const res = await authedFetch(`${import.meta.env.VITE_BACKEND_URL}${path}`);
+  if (!res.ok) throw new Error(`DOWNLOAD ${path} failed`);
+  return res;
 }
 
-export async function apiDownload(path, filename) {
-  const url = fullUrl(path)
-  const headers = await authHeader()
-  const res = await fetch(url, { headers })
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-  const blob = await res.blob()
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = filename || (url.split('/').pop() || 'download')
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(a.href)
-}
-
-/* ---------------- New structured API (use gradually) ---------------- */
 export const api = {
-  // Auth / Clients
-  getMe: () => apiGet('/auth/me'),
-  getMyClients: () => apiGet('/clients/my'),
+  // ----- ROLES -----
+  roles: {
+    async list({ client_id }) {
+      const res = await authedFetch(`${import.meta.env.VITE_BACKEND_URL}/roles?client_id=${client_id}`);
+      if (!res.ok) return [];
+      const json = await res.json();
+      return json.roles || json || [];
+    },
+    async uploadJD({ client_id, file }) {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await authedFetch(
+        `${import.meta.env.VITE_BACKEND_URL}/roles/upload-jd?client_id=${client_id}`,
+        { method: "POST", body: form }
+      );
+      if (!res.ok) return null;
+      return res.json();
+    },
+    async create(body) {
+      const res = await authedFetch(`${import.meta.env.VITE_BACKEND_URL}/roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.role || json;
+    },
+  },
 
-  // Dashboard
-  getDashboardInterviews: (clientId) =>
-    apiGet(`/dashboard/interviews?client_id=${encodeURIComponent(clientId)}`),
+  // ----- CLIENTS (new) -----
+  clients: {
+    async my() {
+      const res = await authedFetch(`${import.meta.env.VITE_BACKEND_URL}/clients/my`);
+      if (!res.ok) return [];
+      const json = await res.json();
+      if (Array.isArray(json)) return json;
+      if (Array.isArray(json.clients)) return json.clients;
+      if (Array.isArray(json.items)) return json.items;
+      if (Array.isArray(json.memberships)) {
+        return json.memberships.map(m => ({
+          id: m.client_id || m.id,
+          name: m.name || m.client_name || m.client_id || m.id,
+        }));
+      }
+      return [];
+    },
+  },
 
-  // Roles
-  createRole: (payload) => apiPost('/roles', payload),
-  listRoles: (clientId) =>
-    apiGet(`/roles?client_id=${encodeURIComponent(clientId)}`),
-
-  // Files (signed URLs)
-  getSignedUrl: (interviewId, kind) =>
-    apiGet(
-      `/files/signed-url?interview_id=${encodeURIComponent(interviewId)}&kind=${encodeURIComponent(kind)}`
-    ),
-
-  // Reports
-  generateReport: (interviewId) =>
-    apiGet(`/reports/${encodeURIComponent(interviewId)}/generate`),
-  downloadReport: (interviewId) =>
-    apiDownload(`/reports/${encodeURIComponent(interviewId)}/download`),
-
-  // Invites + Members
-  createInvite: (payload) => apiPost('/clients/invite', payload),
-  acceptInvite: (payload) => apiPost('/clients/accept-invite', payload),
-  getMembers: (clientId) =>
-    apiGet(`/clients/members?client_id=${encodeURIComponent(clientId)}`),
-  revokeMember: (payload) => apiPost('/clients/members/revoke', payload),
-}
-
-// Optional default export for convenience
-export default api
+  // ----- LEGACY: api.getMyClients(getToken?) -----
+  // Some pages still call api.getMyClients(getToken). We ignore the arg and return a simple array.
+  async getMyClients() {
+    const list = await this.clients.my();
+    return list;
+  },
+};
