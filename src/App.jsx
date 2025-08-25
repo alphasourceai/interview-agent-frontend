@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ClientProvider } from "./lib/clientContext";
+import { ClientProvider } from "./lib/clientContext.jsx";
 import NavBar from "./components/NavBar";
 import RequireAuth from "./components/RequireAuth";
 import SignIn from "./pages/SignIn";
