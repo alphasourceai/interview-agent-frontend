@@ -25,7 +25,12 @@ export default function Roles() {
     <div className="mx-auto max-w-6xl p-4">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Roles</h1>
-        <button onClick={() => navigate("/roles/new")} className="rounded-md px-3 py-1.5 border">Add Role</button>
+        <button
+  onClick={() => navigate("/roles/new")}
+  style={{ border: "1px solid #ccc", borderRadius: 6, padding: "6px 10px", background: "#fff", marginBottom: 12 }}
+>
+  Add Role
+</button>
       </div>
       {loading ? (
         <div>Loading...</div>
