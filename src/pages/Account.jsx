@@ -1,102 +1,128 @@
-// src/pages/Account.jsx
-import { useEffect, useState } from 'react'
-import { api } from '../lib/api'
-import { supabase } from '../lib/supabaseClient'
+import { useEffect, useState } from "react";
+import { useClientContext } from "../lib/clientContext.jsx";
+import { apiGet, apiPost } from "../lib/api";
 
-async function getToken() {
-  const { data } = await supabase.auth.getSession()
-  return data.session?.access_token || null
-}
+const label = { fontSize: 14, fontWeight: 600, marginRight: 8 };
+const select = { border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 10px" };
+const btn = { border: "1px solid #ccc", borderRadius: 6, padding: "6px 10px", background: "#fff" };
+const input = { border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 10px" };
+const cell = { padding: "6px 8px", borderBottom: "1px solid #eee" };
 
 export default function Account() {
-  const [clients, setClients] = useState([])
-  const [clientId, setClientId] = useState('')
-  const [members, setMembers] = useState([])
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState('member')
-  const [msg, setMsg] = useState('')
+  const { clients, currentClientId, setCurrentClientId } = useClientContext();
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("member");
+  const [error, setError] = useState("");
 
-  async function load(cid) {
-    setMsg('')
-    const { clients } = await api.getMyClients(getToken)
-    setClients(clients || [])
-    const useId = cid || clients?.[0]?.client_id || ''
-    setClientId(useId)
-    if (useId) {
-      const { members } = await api.getMembers(useId, getToken)
-      setMembers(members || [])
+  async function loadMembers(clientId) {
+    if (!clientId) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await apiGet(`/clients/members?client_id=${clientId}`);
+      const items = res?.members || res?.items || res || [];
+      setMembers(Array.isArray(items) ? items : []);
+    } catch (e) {
+      setError(e.message || "Failed to load members");
+      setMembers([]);
+    } finally {
+      setLoading(false);
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    if (currentClientId) loadMembers(currentClientId);
+  }, [currentClientId]);
 
   async function invite() {
+    if (!currentClientId || !inviteEmail) return;
+    setError("");
     try {
-      await api.createInvite({ client_id: clientId, email: inviteEmail, role: inviteRole }, getToken)
-      setInviteEmail('')
-      setMsg('Invite sent.')
+      await apiPost("/clients/invite", { email: inviteEmail, client_id: currentClientId, role: inviteRole });
+      setInviteEmail("");
+      setInviteRole("member");
+      await loadMembers(currentClientId);
+      alert("Invitation sent.");
     } catch (e) {
-      setMsg(e.message)
+      setError(e.message || "Invite failed");
     }
   }
+
   async function revoke(user_id) {
-    if (!confirm('Remove this member?')) return
+    if (!currentClientId || !user_id) return;
+    setError("");
     try {
-      await api.revokeMember({ client_id: clientId, user_id }, getToken)
-      await load(clientId)
+      await apiPost("/clients/revoke", { client_id: currentClientId, user_id });
+      await loadMembers(currentClientId);
     } catch (e) {
-      setMsg(e.message)
+      setError(e.message || "Revoke failed");
     }
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-4">Account</h1>
+    <div>
+      <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Account</h1>
 
-      <div className="mb-4">
-        <label className="block text-sm mb-1">Client</label>
-        <select className="border rounded p-2" value={clientId} onChange={e=>load(e.target.value)}>
-          {clients.map(c => <option key={c.client_id} value={c.client_id}>{c.client_name || c.client_id}</option>)}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        <div style={label}>Client</div>
+        <select
+          style={select}
+          value={currentClientId || ""}
+          onChange={(e) => setCurrentClientId(e.target.value)}
+        >
+          {clients.map(c => (
+            <option key={c.id} value={c.id}>{c.name || c.id}</option>
+          ))}
         </select>
       </div>
 
-      <h2 className="text-xl font-semibold mb-2">Members</h2>
-      <div className="border rounded mb-4">
-        <table className="w-full text-sm">
+      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Members</h2>
+      {error && <div style={{ color: "#dc2626", marginBottom: 8 }}>{error}</div>}
+      {loading ? (
+        <div>Loading…</div>
+      ) : members.length === 0 ? (
+        <div>No members yet.</div>
+      ) : (
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
           <thead>
-            <tr className="bg-gray-50">
-              <th className="p-2 text-left">Email</th>
-              <th className="p-2 text-left">Role</th>
-              <th className="p-2 text-left">Actions</th>
+            <tr>
+              <th style={{ ...cell, textAlign: "left" }}>Email</th>
+              <th style={{ ...cell, textAlign: "left" }}>Role</th>
+              <th style={{ ...cell, textAlign: "left" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {members.map(m => (
-              <tr key={m.user_id} className="border-t">
-                <td className="p-2">{m.email || m.user_id}</td>
-                <td className="p-2">{m.role}</td>
-                <td className="p-2">
-                  <button className="border rounded px-2 py-1" onClick={() => revoke(m.user_id)}>Remove</button>
+              <tr key={m.user_id || m.id}>
+                <td style={cell}>{m.email || m.user_email || m.name || "—"}</td>
+                <td style={cell}>{m.role || "member"}</td>
+                <td style={cell}>
+                  <button style={btn} onClick={() => revoke(m.user_id || m.id)}>Revoke</button>
                 </td>
               </tr>
             ))}
-            {members.length === 0 && <tr><td className="p-2" colSpan={3}>No members yet.</td></tr>}
           </tbody>
         </table>
-      </div>
+      )}
 
-      <h3 className="text-lg font-semibold mb-2">Invite a member</h3>
-      <div className="flex gap-2 items-center">
-        <input className="border rounded p-2 flex-1" placeholder="email@example.com" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} />
-        <select className="border rounded p-2" value={inviteRole} onChange={e=>setInviteRole(e.target.value)}>
+      <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Invite a member</h3>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          type="email"
+          placeholder="email@example.com"
+          value={inviteEmail}
+          onChange={(e) => setInviteEmail(e.target.value)}
+          style={input}
+        />
+        <select style={select} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
           <option value="member">member</option>
-          <option value="admin">admin</option>
           <option value="owner">owner</option>
+          <option value="admin">admin</option>
         </select>
-        <button className="border rounded px-3 py-2" onClick={invite} disabled={!clientId || !inviteEmail}>Invite</button>
+        <button style={btn} onClick={invite}>Invite</button>
       </div>
-
-      {msg && <div className="mt-3 text-sm">{msg}</div>}
     </div>
-  )
+  );
 }

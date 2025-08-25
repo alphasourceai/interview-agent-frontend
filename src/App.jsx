@@ -15,6 +15,7 @@ import Roles from "./pages/Roles.jsx";
 import Candidates from "./pages/Candidates.jsx";
 import Account from "./pages/Account.jsx";
 import ClientDashboard from "./pages/ClientDashboard.jsx"; // legacy
+import RoleNew from "./pages/RoleNew.jsx";
 
 // auth helpers
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -92,6 +93,17 @@ export default function App() {
               </AppShell>
             }
           />
+<Route
+  path="/roles/new"
+  element={
+    <AppShell>
+      <ProtectedRoute>
+        <RoleNew />
+      </ProtectedRoute>
+    </AppShell>
+  }
+/>
+
           <Route
             path="/candidates"
             element={
