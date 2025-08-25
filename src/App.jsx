@@ -20,29 +20,43 @@ import ClientDashboard from "./pages/ClientDashboard.jsx"; // legacy
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import SignOutButton from "./components/SignOutButton.jsx";
 
-// ---- shells ----
+// ---- simple inline styles (no Tailwind) ----
+const navStyle = {
+  borderBottom: "1px solid #e5e7eb",
+  background: "#fff",
+};
+const navInnerStyle = {
+  maxWidth: 1100,
+  margin: "0 auto",
+  padding: "12px 16px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 16,
+};
+const navLinksStyle = { display: "flex", gap: 16, alignItems: "center" };
+const mainStyle = { maxWidth: 1100, margin: "0 auto", padding: "16px" };
+
 function AppShell({ children }) {
   return (
     <div>
-      <nav className="border-b">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex gap-4">
-            <Link to="/roles" className="hover:underline">Roles</Link>
-            <Link to="/candidates" className="hover:underline">Candidates</Link>
-            <Link to="/account" className="hover:underline">Account</Link>
+      <nav style={navStyle}>
+        <div style={navInnerStyle}>
+          <div style={navLinksStyle}>
+            <Link to="/roles">Roles</Link>
+            <Link to="/candidates">Candidates</Link>
+            <Link to="/account">Account</Link>
           </div>
           <SignOutButton />
         </div>
       </nav>
-      <main className="max-w-6xl mx-auto px-4 py-4">{children}</main>
+      <main style={mainStyle}>{children}</main>
     </div>
   );
 }
 
 function PublicShell({ children }) {
-  return (
-    <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
-  );
+  return <main style={mainStyle}>{children}</main>;
 }
 
 export default function App() {
