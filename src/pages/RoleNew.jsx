@@ -1,122 +1,109 @@
 // src/pages/RoleNew.jsx
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../lib/api';
-import { supabase } from '../lib/supabaseClient';
+import { Api } from '../lib/api';
 import { useClientContext } from '../lib/clientContext';
 
-async function getToken() {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token || null;
-}
-
 export default function RoleNew() {
-  const nav = useNavigate();
-  const { clients, selectedClientId, loadClients, setSelectedClientId } = useClientContext();
+  const { client } = useClientContext();
   const [title, setTitle] = useState('');
   const [interviewType, setInterviewType] = useState('basic');
-  const [jdFile, setJdFile] = useState(null);
-  const [manualQs, setManualQs] = useState('');
+  const [roleId, setRoleId] = useState(null);
+  const [file, setFile] = useState(null);
+  const [parsedPreview, setParsedPreview] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    loadClients?.();
-  }, [loadClients]);
+  useEffect(() => { setError(''); }, [title, interviewType, file]);
 
-  async function uploadJD(client_id) {
-    if (!jdFile) return null;
-    const token = await getToken();
-    const base = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '') || window.location.origin;
-    const fd = new FormData();
-    fd.append('file', jdFile);
-    fd.append('client_id', client_id);
-    const resp = await fetch(`${base}/roles/upload-jd?client_id=${encodeURIComponent(client_id)}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: fd,
-    });
-    if (!resp.ok) {
-      const t = await resp.text().catch(() => '');
-      throw new Error(`JD upload failed (${resp.status}) ${t || ''}`);
-    }
-    const j = await resp.json();
-    return j?.storage_path || null; // e.g. "kbs/<client>/<...>.pdf"
-  }
-
-  async function onSubmit(e) {
-    e.preventDefault();
-    if (!selectedClientId) return;
-    setSaving(true);
+  const onCreate = async () => {
     try {
-      const job_description_url = await uploadJD(selectedClientId);
-      const payload = {
-        client_id: selectedClientId,
-        title,
-        interview_type: interviewType,
-        job_description_url,                                // <— now stored
-        manual_questions: manualQs
-          ? manualQs.split('\n').map((s) => s.trim()).filter(Boolean)
-          : [],
-      };
-      await api.createRole(payload, getToken);
-      nav('/roles');
-    } catch (err) {
-      alert(err.message || 'Job description upload failed.');
+      setSaving(true);
+      const r = await Api.createRole(
+        { title, interview_type: interviewType },
+        client.id
+      );
+      setRoleId(r.id);
+    } catch (e) {
+      setError(e.message);
     } finally {
       setSaving(false);
     }
-  }
+  };
+
+  const onUploadJD = async () => {
+    if (!roleId || !file) return;
+    try {
+      setUploading(true);
+      const out = await Api.uploadRoleJD({ client_id: client.id, role_id: roleId, file });
+      setParsedPreview(out.parsed_text_preview || '');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6 max-w-3xl">
       <h1 className="text-2xl font-semibold mb-4">Add Role</h1>
 
-      <div className="mb-4">
-        <label className="block text-sm mb-1">Client</label>
-        <select
-          className="border rounded p-2"
-          value={selectedClientId || ''}
-          onChange={(e) => setSelectedClientId(e.target.value)}
+      <label className="block text-sm font-medium mb-1">Title</label>
+      <input
+        className="border rounded w-full p-2 mb-4"
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        placeholder="e.g., Senior Software Engineer"
+      />
+
+      <label className="block text-sm font-medium mb-1">Interview Type</label>
+      <select
+        className="border rounded w-full p-2 mb-4"
+        value={interviewType}
+        onChange={e => setInterviewType(e.target.value)}
+      >
+        <option value="basic">basic</option>
+        <option value="detailed">detailed</option>
+        <option value="technical">technical</option>
+      </select>
+
+      {!roleId ? (
+        <button
+          onClick={onCreate}
+          className="bg-black text-white rounded px-4 py-2"
+          disabled={saving || !title}
         >
-          {(clients || []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name || c.id}
-            </option>
-          ))}
-        </select>
-      </div>
+          {saving ? 'Creating…' : 'Create Role'}
+        </button>
+      ) : (
+        <>
+          <div className="mt-6 border-t pt-4">
+            <h2 className="text-lg font-semibold mb-2">Job Description (PDF or DOCX)</h2>
+            <input
+              type="file"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={e => setFile(e.target.files?.[0] || null)}
+            />
+            <button
+              onClick={onUploadJD}
+              className="ml-3 bg-black text-white rounded px-4 py-2 disabled:opacity-50"
+              disabled={!file || uploading}
+            >
+              {uploading ? 'Uploading…' : 'Upload & Parse'}
+            </button>
+            {!!parsedPreview && (
+              <div className="mt-4">
+                <div className="text-sm text-gray-600 mb-1">Parsed Preview (first ~1,200 chars)</div>
+                <pre className="whitespace-pre-wrap p-3 border rounded bg-gray-50 max-h-64 overflow-auto">
+                  {parsedPreview}
+                </pre>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
-      <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <label className="block text-sm mb-1">Role title</label>
-          <input className="border rounded p-2 w-full" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </div>
-
-        <div>
-          <label className="block text-sm mb-1">Interview type</label>
-          <select className="border rounded p-2" value={interviewType} onChange={(e) => setInterviewType(e.target.value)}>
-            <option value="basic">basic</option>
-            <option value="technical">technical</option>
-            <option value="detailed">detailed</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm mb-1">Job description (pdf/doc/docx)</label>
-          <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setJdFile(e.target.files?.[0] || null)} />
-          <div className="text-xs text-slate-500 mt-1">10–20MB max</div>
-        </div>
-
-        <div>
-          <label className="block text-sm mb-1">Manual questions (one per line)</label>
-          <textarea className="border rounded p-2 w-full min-h-[160px]" value={manualQs} onChange={(e) => setManualQs(e.target.value)} />
-        </div>
-
-        <div className="flex gap-2">
-          <button className="border px-4 py-1 rounded" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
-          <button type="button" className="border px-4 py-1 rounded" onClick={() => nav('/roles')}>Cancel</button>
-        </div>
-      </form>
+      {!!error && <div className="mt-4 text-red-600">{error}</div>}
     </div>
   );
 }
