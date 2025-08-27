@@ -1,7 +1,6 @@
 // src/lib/api.js
-// Unified API helpers that match existing call-sites across the app.
-// Exports: { api, apiGet, apiPost, apiDownload }.
-// Uses the shared Supabase client so we never create a second instance.
+// Unified API helpers used across the app.
+// Exports: { api, apiGet, apiPost, apiDownload }, plus default export = api.
 
 import { supabase } from "./supabaseClient";
 
@@ -18,12 +17,16 @@ async function getToken() {
 
 async function authedFetch(path, opts = {}, tokenOverride) {
   const token = tokenOverride || (await getToken());
+
   const headers = new Headers(opts.headers || {});
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  // Only set Content-Type for non-FormData bodies
-  if (!(opts.body instanceof FormData) && !headers.has("Content-Type") && opts.method && opts.method !== "GET") {
+
+  const hasBody = Object.prototype.hasOwnProperty.call(opts, "body");
+  const isForm = hasBody && opts.body instanceof FormData;
+  if (hasBody && !isForm && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
+
   const url = path.startsWith("http") ? path : `${BASE}${path}`;
   return fetch(url, { ...opts, headers, credentials: "include" });
 }
@@ -50,46 +53,41 @@ async function jsonOrThrow(res, msgPrefix = "Request failed") {
 /* Legacy convenience wrappers expected by multiple pages             */
 /* ------------------------------------------------------------------ */
 
-// GET that returns parsed JSON
 export async function apiGet(path) {
   const res = await authedFetch(path, { method: "GET" });
   return jsonOrThrow(res, `GET ${path} failed`);
 }
 
-// POST JSON (or FormData) that returns parsed JSON
 export async function apiPost(path, body) {
-  const opts = {
+  const res = await authedFetch(path, {
     method: "POST",
     body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
-  };
-  const res = await authedFetch(path, opts);
+  });
   return jsonOrThrow(res, `POST ${path} failed`);
 }
 
-// Start a browser download (redirects to signed URL). Returns void.
+// Browser-followed download/redirect (no JSON expected)
 export async function apiDownload(path) {
-  // Let the browser follow the 302 from the backend and download the file.
   if (typeof window !== "undefined") {
     window.location.href = path.startsWith("http") ? path : `${BASE}${path}`;
   }
 }
 
 /* ------------------------------------------------------------------ */
-/* Structured API object used in Roles, Candidates, RoleCreator, etc. */
+/* Structured API used in Roles, Candidates, RoleCreator, etc.        */
 /* ------------------------------------------------------------------ */
 
 export const api = {
-  // Generic verbs (return parsed JSON)
+  // Generic verbs that return parsed JSON
   async get(path) {
     const res = await authedFetch(path, { method: "GET" });
     return jsonOrThrow(res, `GET ${path} failed`);
   },
   async post(path, body) {
-    const opts = {
+    const res = await authedFetch(path, {
       method: "POST",
       body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
-    };
-    const res = await authedFetch(path, opts);
+    });
     return jsonOrThrow(res, `POST ${path} failed`);
   },
   async put(path, body) {
@@ -104,30 +102,31 @@ export const api = {
     return jsonOrThrow(res, `DELETE ${path} failed`);
   },
 
-  // RoleCreator.jsx expects these, optionally passing a token provider
+  // RoleCreator.jsx expects these shape-wise (optionally passing a token provider)
   async getMe(getTokenFn) {
-    const token = getTokenFn ? await getTokenFn() : null;
-    const res = await authedFetch("/auth/me", { method: "GET" }, token || undefined);
+    const token = getTokenFn ? await getTokenFn() : undefined;
+    const res = await authedFetch("/auth/me", { method: "GET" }, token);
     return jsonOrThrow(res, "GET /auth/me failed");
   },
 
   async getMyClients(getTokenFn) {
-    const token = getTokenFn ? await getTokenFn() : null;
-    const res = await authedFetch("/clients/my", { method: "GET" }, token || undefined);
+    const token = getTokenFn ? await getTokenFn() : undefined;
+    const res = await authedFetch("/clients/my", { method: "GET" }, token);
     return jsonOrThrow(res, "GET /clients/my failed");
   },
 
   async createRole(payload, getTokenFn) {
-    const token = getTokenFn ? await getTokenFn() : null;
-    const res = await authedFetch("/roles", {
-      method: "POST",
-      body: JSON.stringify(payload || {}),
-    }, token || undefined);
+    const token = getTokenFn ? await getTokenFn() : undefined;
+    const res = await authedFetch(
+      "/roles",
+      { method: "POST", body: JSON.stringify(payload || {}) },
+      token
+    );
     return jsonOrThrow(res, "POST /roles failed");
   },
 };
 
-// Optional aliases if other files import different names (harmless to keep)
+// Optional aliases; harmless if other files import different names
 export const Api = api;
 export default api;
 
