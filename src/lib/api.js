@@ -1,112 +1,63 @@
 // src/lib/api.js
-import { supabase } from "./supabaseClient";
+import { createClient } from '@supabase/supabase-js';
 
-const BASE = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/+$/, "");
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
-async function getToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || null;
-}
+const BASE = import.meta.env.VITE_BACKEND_URL;
 
 async function authedFetch(path, opts = {}) {
-  const token = await getToken();
+  const session = (await supabase.auth.getSession()).data.session;
+  const token = session?.access_token;
   const headers = new Headers(opts.headers || {});
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  const url = path.startsWith("http") ? path : `${BASE}${path}`;
-  return fetch(url, { ...opts, headers });
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (!headers.has('Content-Type') && !(opts.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+  const res = await fetch(`${BASE}${path}`, { ...opts, headers, credentials: 'include' });
+  if (!res.ok) {
+    let msg = 'Request failed';
+    try { const j = await res.json(); msg = j.error || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json().catch(() => ({}));
 }
 
-/* ---------- New structured API ---------- */
+export const Api = {
+  me: () => authedFetch('/auth/me'),
+  myClients: () => authedFetch('/clients/my'),
 
-export const api = {
-  async getRoles(clientId) {
-    if (!clientId) return [];
-    const res = await authedFetch(`/roles?client_id=${encodeURIComponent(clientId)}`);
+  roles: (client_id) => authedFetch(`/roles?client_id=${encodeURIComponent(client_id)}`),
+  createRole: (payload, client_id) =>
+    authedFetch(`/roles?client_id=${encodeURIComponent(client_id)}`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+
+  uploadRoleJD: async ({ client_id, role_id, file }) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const session = (await supabase.auth.getSession()).data.session;
+    const token = session?.access_token;
+    const res = await fetch(
+      `${BASE}/roles/upload-jd?client_id=${encodeURIComponent(client_id)}&role_id=${encodeURIComponent(role_id)}`,
+      { method: 'POST', body: fd, headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
     if (!res.ok) {
-      // 403 when RLS/client-scope denies; don't crash the page
-      if (res.status === 403) return [];
-      throw new Error(`Roles failed: ${res.status}`);
+      let msg = 'Upload failed';
+      try { const j = await res.json(); msg = j.error || msg; } catch {}
+      throw new Error(msg);
     }
-    const json = await res.json();
-    return Array.isArray(json) ? json : (json.items || []);
+    return res.json();
   },
 
-  async createRole({ clientId, title, interview_type, questions = [], jd_text, jd_file }) {
-    if (!clientId) throw new Error("Missing clientId");
+  candidates: (client_id) =>
+    authedFetch(`/dashboard/candidates?client_id=${encodeURIComponent(client_id)}`),
 
-    // (A) If a file was provided, try the upload endpoint first
-    if (jd_file) {
-      const form = new FormData();
-      form.append("client_id", clientId);
-      form.append("title", title || "");
-      form.append("interview_type", interview_type || "basic");
-      form.append("questions", JSON.stringify(questions || []));
-      form.append("jd_file", jd_file);
-
-      const res = await authedFetch(`/roles/upload-jd`, { method: "POST", body: form });
-      if (res.ok) return await res.json();
-
-      // If file upload fails (e.g. bucket perm), fall back to text-only create
-      console.warn("JD upload failed, falling back to text create.", res.status);
-    }
-
-    // (B) Text-based create
-    const res2 = await authedFetch(`/roles`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: clientId,
-        title,
-        interview_type,
-        questions,
-        jd_text: jd_text || null,
-      }),
-    });
-    if (!res2.ok) throw new Error(`Role create failed: ${res2.status}`);
-    return await res2.json();
-  },
-
-  async listCandidates(clientId) {
-    if (!clientId) return [];
-    // Supports both the newer /dashboard/candidates and the legacy /dashboard/interviews
-    let res = await authedFetch(`/dashboard/candidates?client_id=${encodeURIComponent(clientId)}`);
-    if (res.status === 404) {
-      res = await authedFetch(`/dashboard/interviews?client_id=${encodeURIComponent(clientId)}`);
-    }
-    if (!res.ok) throw new Error(`Candidates failed: ${res.status}`);
-    const json = await res.json();
-    return Array.isArray(json) ? json : (json.items || []);
-  },
-
-  async downloadReport(reportId) {
-    if (!reportId) throw new Error("Missing reportId");
-    const res = await authedFetch(`/reports/${encodeURIComponent(reportId)}/download`, {
-      method: "GET",
-    });
-    if (!res.ok) throw new Error(`Report download failed: ${res.status}`);
-    return await res.blob();
+  downloadReport: async (reportId) => {
+    // let the browser follow the redirect
+    window.location.href = `${BASE}/reports/${encodeURIComponent(reportId)}/download`;
   },
 };
-
-/* ---------- Legacy helpers kept for backward-compat ---------- */
-
-export async function apiGet(path) {
-  const res = await authedFetch(path);
-  if (!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
-  return res.json();
-}
-export async function apiPost(path, body) {
-  const res = await authedFetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body || {}),
-  });
-  if (!res.ok) throw new Error(`POST ${path} -> ${res.status}`);
-  return res.json();
-}
-/** Legacy "download" now returns a Blob (so callers can save it). */
-export async function apiDownload(path) {
-  const res = await authedFetch(path);
-  if (!res.ok) throw new Error(`DOWNLOAD ${path} -> ${res.status}`);
-  return res.blob();
-}
