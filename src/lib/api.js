@@ -1,10 +1,6 @@
 // src/lib/api.js
-import { createClient } from '@supabase/supabase-js';
-
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+// Single source of truth: reuse the existing Supabase client
+import { supabase } from './supabaseClient';
 
 const BASE = import.meta.env.VITE_BACKEND_URL;
 
@@ -26,7 +22,6 @@ async function authedFetch(path, opts = {}) {
     credentials: 'include',
   });
 
-  // Let callers handle non-JSON (e.g., redirects) if needed
   const contentType = res.headers.get('content-type') || '';
 
   if (!res.ok) {
@@ -43,15 +38,11 @@ async function authedFetch(path, opts = {}) {
     throw new Error(message);
   }
 
-  if (contentType.includes('application/json')) {
-    return res.json();
-  }
-  return res; // caller can handle blobs/redirects if needed
+  if (contentType.includes('application/json')) return res.json();
+  return res; // allow caller to handle non-JSON (redirects, blobs, etc.)
 }
 
-/* ------------------------------------------------------------------ */
-/* Convenience wrappers expected by legacy pages (e.g., AcceptInvite) */
-/* ------------------------------------------------------------------ */
+/* ---------------- Minimal helpers expected by legacy pages ---------------- */
 
 export function apiGet(path) {
   return authedFetch(path, { method: 'GET' });
@@ -64,7 +55,7 @@ export function apiPost(path, body) {
   });
 }
 
-/* -------------------------- High-level API ------------------------- */
+/* ---------------------- Higher-level convenience API ---------------------- */
 
 export const Api = {
   me: () => authedFetch('/auth/me'),
@@ -82,6 +73,8 @@ export const Api = {
   uploadRoleJD: async ({ client_id, role_id, file }) => {
     const fd = new FormData();
     fd.append('file', file);
+
+    // Use the same session token as authedFetch does
     const { data } = await supabase.auth.getSession();
     const token = data?.session?.access_token;
 
@@ -102,7 +95,7 @@ export const Api = {
       try {
         const j = await res.json();
         msg = j.error || j.message || msg;
-      } catch (_) {}
+      } catch {}
       throw new Error(msg);
     }
     return res.json();
@@ -113,7 +106,8 @@ export const Api = {
       `/dashboard/candidates?client_id=${encodeURIComponent(client_id)}`
     ),
 
-  downloadReport: async (reportId) => {
+  downloadReport: (reportId) => {
+    // Let the browser follow the 302 from the backend
     window.location.href = `${BASE}/reports/${encodeURIComponent(
       reportId
     )}/download`;
@@ -121,3 +115,6 @@ export const Api = {
 };
 
 export default Api;
+
+// Optional explicit export, useful for tests or advanced usage.
+export { authedFetch };
