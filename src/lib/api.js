@@ -1,122 +1,112 @@
+// src/lib/api.js
 import { supabase } from "./supabaseClient";
+
+const BASE = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/+$/, "");
 
 async function getToken() {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.access_token || null;
 }
 
-async function authedFetch(url, opts = {}) {
+async function authedFetch(path, opts = {}) {
   const token = await getToken();
   const headers = new Headers(opts.headers || {});
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  const url = path.startsWith("http") ? path : `${BASE}${path}`;
   return fetch(url, { ...opts, headers });
 }
 
-const BASE = import.meta.env.VITE_BACKEND_URL;
+/* ---------- New structured API ---------- */
 
-// ---------- Low-level helpers (named exports) ----------
+export const api = {
+  async getRoles(clientId) {
+    if (!clientId) return [];
+    const res = await authedFetch(`/roles?client_id=${encodeURIComponent(clientId)}`);
+    if (!res.ok) {
+      // 403 when RLS/client-scope denies; don't crash the page
+      if (res.status === 403) return [];
+      throw new Error(`Roles failed: ${res.status}`);
+    }
+    const json = await res.json();
+    return Array.isArray(json) ? json : (json.items || []);
+  },
+
+  async createRole({ clientId, title, interview_type, questions = [], jd_text, jd_file }) {
+    if (!clientId) throw new Error("Missing clientId");
+
+    // (A) If a file was provided, try the upload endpoint first
+    if (jd_file) {
+      const form = new FormData();
+      form.append("client_id", clientId);
+      form.append("title", title || "");
+      form.append("interview_type", interview_type || "basic");
+      form.append("questions", JSON.stringify(questions || []));
+      form.append("jd_file", jd_file);
+
+      const res = await authedFetch(`/roles/upload-jd`, { method: "POST", body: form });
+      if (res.ok) return await res.json();
+
+      // If file upload fails (e.g. bucket perm), fall back to text-only create
+      console.warn("JD upload failed, falling back to text create.", res.status);
+    }
+
+    // (B) Text-based create
+    const res2 = await authedFetch(`/roles`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: clientId,
+        title,
+        interview_type,
+        questions,
+        jd_text: jd_text || null,
+      }),
+    });
+    if (!res2.ok) throw new Error(`Role create failed: ${res2.status}`);
+    return await res2.json();
+  },
+
+  async listCandidates(clientId) {
+    if (!clientId) return [];
+    // Supports both the newer /dashboard/candidates and the legacy /dashboard/interviews
+    let res = await authedFetch(`/dashboard/candidates?client_id=${encodeURIComponent(clientId)}`);
+    if (res.status === 404) {
+      res = await authedFetch(`/dashboard/interviews?client_id=${encodeURIComponent(clientId)}`);
+    }
+    if (!res.ok) throw new Error(`Candidates failed: ${res.status}`);
+    const json = await res.json();
+    return Array.isArray(json) ? json : (json.items || []);
+  },
+
+  async downloadReport(reportId) {
+    if (!reportId) throw new Error("Missing reportId");
+    const res = await authedFetch(`/reports/${encodeURIComponent(reportId)}/download`, {
+      method: "GET",
+    });
+    if (!res.ok) throw new Error(`Report download failed: ${res.status}`);
+    return await res.blob();
+  },
+};
+
+/* ---------- Legacy helpers kept for backward-compat ---------- */
+
 export async function apiGet(path) {
-  const res = await authedFetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`GET ${path} failed (${res.status})`);
+  const res = await authedFetch(path);
+  if (!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
   return res.json();
 }
-
-export async function apiPost(path, body, asJson = true) {
-  let opts = { method: "POST" };
-  if (asJson) {
-    opts.headers = { "Content-Type": "application/json" };
-    opts.body = JSON.stringify(body || {});
-  } else {
-    opts.body = body; // e.g., FormData
-  }
-  const res = await authedFetch(`${BASE}${path}`, opts);
-  if (res.status === 204) return null;
-  const text = await res.text();
-  let parsed = null;
-  try { parsed = text ? JSON.parse(text) : null; } catch { parsed = text; }
-  if (!res.ok) {
-    const msg = parsed?.error || parsed?.message || `POST ${path} failed (${res.status})`;
-    throw new Error(msg);
-  }
-  return parsed;
-}
-
-export async function apiDownload(path) {
-  const res = await authedFetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`DOWNLOAD ${path} failed (${res.status})`);
-  return res;
-}
-
-// Optional: add PUT/DELETE if needed later
-export async function apiPut(path, body) {
-  const res = await authedFetch(`${BASE}${path}`, {
-    method: "PUT",
+export async function apiPost(path, body) {
+  const res = await authedFetch(path, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body || {}),
   });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error || `PUT ${path} failed (${res.status})`);
-  return json;
+  if (!res.ok) throw new Error(`POST ${path} -> ${res.status}`);
+  return res.json();
 }
-
-export async function apiDelete(path) {
-  const res = await authedFetch(`${BASE}${path}`, { method: "DELETE" });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error || `DELETE ${path} failed (${res.status})`);
-  return json;
+/** Legacy "download" now returns a Blob (so callers can save it). */
+export async function apiDownload(path) {
+  const res = await authedFetch(path);
+  if (!res.ok) throw new Error(`DOWNLOAD ${path} -> ${res.status}`);
+  return res.blob();
 }
-
-// ---------- High-level helpers used by pages ----------
-export const api = {
-  roles: {
-    async list({ client_id }) {
-      const res = await authedFetch(`${BASE}/roles?client_id=${client_id}`);
-      if (!res.ok) return [];
-      const json = await res.json();
-      return json.roles || json || [];
-    },
-    async uploadJD({ client_id, file }) {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await authedFetch(`${BASE}/roles/upload-jd?client_id=${client_id}`, {
-        method: "POST",
-        body: form,
-      });
-      if (!res.ok) return null;
-      return res.json();
-    },
-    async create(body) {
-      const res = await authedFetch(`${BASE}/roles`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) return null;
-      const json = await res.json();
-      return json.role || json;
-    },
-  },
-
-  clients: {
-    async my() {
-      const res = await authedFetch(`${BASE}/clients/my`);
-      if (!res.ok) return [];
-      const json = await res.json();
-      if (Array.isArray(json)) return json;
-      if (Array.isArray(json.clients)) return json.clients;
-      if (Array.isArray(json.items)) return json.items;
-      if (Array.isArray(json.memberships)) {
-        return json.memberships.map(m => ({
-          id: m.client_id || m.id,
-          name: m.name || m.client_name || m.client_id || m.id,
-        }));
-      }
-      return [];
-    },
-  },
-
-  async getMyClients() {
-    const list = await this.clients.my();
-    return list;
-  },
-};

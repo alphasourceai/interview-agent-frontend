@@ -1,201 +1,213 @@
 // src/pages/Candidates.jsx
-import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { useClientContext } from '../lib/clientContext';
+import { useEffect, useMemo, useState } from "react";
+import { api } from "../lib/api";
+import { useClientContext } from "../lib/clientContext";
 
-const th = { textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '8px 6px', whiteSpace: 'nowrap' };
-const td = { borderBottom: '1px solid #f1f5f9', padding: '8px 6px', verticalAlign: 'top' };
-const btn = { border: '1px solid #e5e7eb', padding: '6px 10px', borderRadius: 6, background: '#f9fafb', cursor: 'pointer' };
-const disabledBtn = { opacity: 0.6, cursor: 'not-allowed' };
-
-async function getToken() {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token || null;
+function parseSummary(any) {
+  if (!any) return null;
+  if (typeof any === "string") {
+    try { return JSON.parse(any); } catch { return null; }
+  }
+  return any;
+}
+function pct(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+function Bar({ value }) {
+  const v = pct(value);
+  return (
+    <div style={{ width: 180, height: 6, background: "#eee", borderRadius: 3 }}>
+      <div style={{ width: `${v ?? 0}%`, height: "100%", borderRadius: 3, background: "#888" }} />
+    </div>
+  );
+}
+function ScoreCell({ v }) {
+  const n = pct(v);
+  return <td style={{ textAlign: "center" }}>{n != null ? `${n}%` : "—"}</td>;
 }
 
 export default function Candidates() {
-  const { clients, selectedClientId, loadClients, setSelectedClientId } = useClientContext();
+  const { selectedClientId: clientId } = useClientContext();
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState({});
-  const [opening, setOpening] = useState({}); // map of "id:kind" -> boolean
+  const [openId, setOpenId] = useState(null);
+  const [downloading, setDownloading] = useState(null);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
-    loadClients?.();
-  }, [loadClients]);
-
-  useEffect(() => {
-    let abort = false;
-    (async () => {
-      setLoading(true);
+    let stop = false;
+    async function run() {
+      if (!clientId) { setRows([]); return; }
+      setErr("");
       try {
-        const token = await getToken();
-        const base = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '') || window.location.origin;
-        const url = `${base}/dashboard/interviews${selectedClientId ? `?client_id=${encodeURIComponent(selectedClientId)}` : ''}`;
-        const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        const j = await r.json().catch(() => (Array.isArray([]) ? [] : { items: [] }));
-        if (!abort) setRows(Array.isArray(j) ? j : (j.items || []));
-      } catch {
-        if (!abort) setRows([]);
-      } finally {
-        if (!abort) setLoading(false);
+        const data = await api.listCandidates(clientId);
+        if (!stop) setRows(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error(e);
+        if (!stop) setErr("Failed to load candidates.");
       }
-    })();
-    return () => { abort = true; };
-  }, [selectedClientId]);
-
-  const byId = useMemo(() => Object.fromEntries(rows.map((r) => [r.id, r])), [rows]);
-
-  async function openSigned(interviewId, kind) {
-    // kind: 'transcript' | 'analysis'
-    const key = `${interviewId}:${kind}`;
-    try {
-      setOpening((p) => ({ ...p, [key]: true }));
-      const token = await getToken();
-      const base = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '') || window.location.origin;
-      const url = `${base}/files/signed-url?interview_id=${encodeURIComponent(interviewId)}&kind=${encodeURIComponent(kind)}`;
-      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      const j = await r.json();
-      if (!j?.url) throw new Error(j?.error || 'No URL');
-      window.open(j.url, '_blank', 'noopener');
-    } catch (e) {
-      alert(e.message || 'Could not open file');
-    } finally {
-      setOpening((p) => ({ ...p, [key]: false }));
     }
-  }
+    run();
+    return () => { stop = true; };
+  }, [clientId]);
 
-  async function downloadPdf(interviewId) {
-    const key = `${interviewId}:pdf`;
+  const computed = useMemo(() => {
+    return rows.map((row) => {
+      const summary = parseSummary(row.analysis_summary);
+      const resumeScore =
+        summary?.resume_score ??
+        summary?.overall_resume_match_percent ??
+        null;
+      const interviewScore =
+        summary?.interview_score ??
+        summary?.overall_interview_match_percent ??
+        null;
+
+      // Prefer explicit overall; else average available pieces
+      let overall = summary?.overall_score ?? null;
+      if (overall == null) {
+        const parts = [resumeScore, interviewScore].filter((v) => v != null);
+        if (parts.length) overall = Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
+      }
+
+      return {
+        ...row,
+        _summary: summary,
+        _resumeScore: pct(resumeScore),
+        _interviewScore: pct(interviewScore),
+        _overall: pct(overall),
+      };
+    });
+  }, [rows]);
+
+  async function handleDownload(reportId) {
     try {
-      setOpening((p) => ({ ...p, [key]: true }));
-      const token = await getToken();
-      const base = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '') || window.location.origin;
-      const url = `${base}/reports/${encodeURIComponent(interviewId)}/download`;
-      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!r.ok) throw new Error('Failed to start download');
-      const blob = await r.blob();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `Interview_${interviewId}.pdf`;
+      setDownloading(reportId || true);
+      const blob = await api.downloadReport(reportId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Interview_Report_${reportId || "report"}.pdf`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(a.href);
+      URL.revokeObjectURL(url);
+      a.remove();
     } catch (e) {
-      alert(e.message || 'Could not download PDF');
+      console.error(e);
+      alert("Failed to start download.");
     } finally {
-      setOpening((p) => ({ ...p, [key]: false }));
+      setDownloading(null);
     }
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-4">Candidates</h1>
+    <div style={{ padding: 16 }}>
+      <h2>Candidates</h2>
+      {err && <div style={{ color: "crimson", marginBottom: 8 }}>{err}</div>}
 
-      <div className="mb-4">
-        <label className="block text-sm mb-1">Client</label>
-        <select
-          className="border rounded p-2"
-          value={selectedClientId || ''}
-          onChange={(e) => setSelectedClientId(e.target.value)}
-        >
-          {(clients || []).map((c) => (
-            <option key={c.id} value={c.id}>{c.name || c.id}</option>
-          ))}
-        </select>
+      <div style={{ marginBottom: 8 }}>
+        <label style={{ marginRight: 8 }}>Client</label>
+        {/* The dropdown lives in the navbar via ClientContext; shown here read-only */}
+        <span style={{ padding: "2px 6px", border: "1px solid #ddd", borderRadius: 4 }}>
+          {clientId ? "Selected" : "—"}
+        </span>
       </div>
 
-      {loading ? (
-        <div>Loading…</div>
-      ) : rows.length === 0 ? (
-        <div>No rows yet.</div>
-      ) : (
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              <th style={th} />
-              <th style={th}>Name</th>
-              <th style={th}>Email</th>
-              <th style={th}>Role</th>
-              <th style={th}>Resume</th>
-              <th style={th}>Interview</th>
-              <th style={th}>Overall</th>
-              <th style={th}>Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
+      <table cellPadding={6} style={{ width: "100%" }}>
+        <thead>
+          <tr>
+            <th />
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Resume</th>
+            <th>Interview</th>
+            <th>Overall</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {computed.map((c) => {
+            const id = c.id || c.uuid || c.interview_id || c.candidate_id;
+            const isOpen = openId === id;
+            const reportId = c.report_id || c.report_uuid || c.id; // be flexible
+            return (
               <FragmentRow
-                key={r.id}
-                row={r}
-                expanded={!!expanded[r.id]}
-                setExpanded={(on) => setExpanded((p) => ({ ...p, [r.id]: on }))}
-                openSigned={openSigned}
-                opening={opening}
-                downloadPdf={downloadPdf}
+                key={id}
+                row={c}
+                isOpen={isOpen}
+                onToggle={() => setOpenId(isOpen ? null : id)}
+                onDownload={() => handleDownload(reportId)}
+                downloading={downloading === reportId}
               />
-            ))}
-          </tbody>
-        </table>
-      )}
+            );
+          })}
+          {computed.length === 0 && (
+            <tr>
+              <td colSpan={8} style={{ color: "#666" }}>No rows yet.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function FragmentRow({ row, expanded, setExpanded, openSigned, opening, downloadPdf }) {
+function FragmentRow({ row, isOpen, onToggle, onDownload, downloading }) {
+  const created = row.created_at ? new Date(row.created_at).toLocaleString() : "—";
+  const name = row.name || [row.first_name, row.last_name].filter(Boolean).join(" ") || "—";
+  const roleName = row.role_title || row.role || "—";
+
   return (
     <>
-      <tr>
-        <td style={td}>
-          <button className="border rounded px-2 py-1" onClick={() => setExpanded(!expanded)}>
-            {expanded ? '▾' : '▸'}
-          </button>
+      <tr className="border-t">
+        <td>
+          <button onClick={onToggle} aria-label="expand">{isOpen ? "▾" : "▸"}</button>
         </td>
-        <td style={td}><strong>{row?.candidate?.name || '—'}</strong></td>
-        <td style={td}>{row?.candidate?.email || '—'}</td>
-        <td style={td}>{row?.role?.title || '—'}</td>
-        <td style={td}>{Number.isFinite(row?.resume_score) ? `${row.resume_score}%` : '—'}</td>
-        <td style={td}>{Number.isFinite(row?.interview_score) ? `${row.interview_score}%` : '—'}</td>
-        <td style={td}>{Number.isFinite(row?.overall_score) ? `${row.overall_score}%` : '—'}</td>
-        <td style={td}>{row?.created_at ? new Date(row.created_at).toLocaleString() : '—'}</td>
+        <td style={{ fontWeight: 600 }}>{name}</td>
+        <td>{row.email || "—"}</td>
+        <td>{roleName}</td>
+        <ScoreCell v={row._resumeScore} />
+        <ScoreCell v={row._interviewScore} />
+        <ScoreCell v={row._overall} />
+        <td>{created}</td>
       </tr>
-      {expanded && (
+      {isOpen && (
         <tr>
-          <td style={td}></td>
-          <td style={td} colSpan={7}>
-            <div className="flex items-center gap-2 mb-3">
-              <button
-                style={{ ...btn, ...(row?.has_video ? {} : disabledBtn) }}
-                disabled={!row?.has_video}
-                onClick={() => window.open(row.video_url, '_blank', 'noopener')}
-              >
-                Video
-              </button>
-              <button
-                style={{ ...btn, ...(row?.has_transcript ? {} : disabledBtn) }}
-                disabled={!row?.has_transcript || opening[`${row.id}:transcript`]}
-                onClick={() => openSigned(row.id, 'transcript')}
-              >
-                {opening[`${row.id}:transcript`] ? 'Opening…' : 'Transcript'}
-              </button>
-              <button
-                style={{ ...btn, ...(row?.has_analysis ? {} : disabledBtn) }}
-                disabled={!row?.has_analysis || opening[`${row.id}:analysis`]}
-                onClick={() => openSigned(row.id, 'analysis')}
-              >
-                {opening[`${row.id}:analysis`] ? 'Opening…' : 'Analysis JSON'}
-              </button>
-              <button
-                style={btn}
-                disabled={opening[`${row.id}:pdf`]}
-                onClick={() => downloadPdf(row.id)}
-              >
-                {opening[`${row.id}:pdf`] ? 'Preparing…' : 'Download PDF'}
+          <td />
+          <td colSpan={7}>
+            <div style={{ display: "flex", gap: 24, alignItems: "center", marginBottom: 10 }}>
+              {row.interview_video_url ? (
+                <a href={row.interview_video_url} target="_blank" rel="noreferrer">
+                  <button>Video</button>
+                </a>
+              ) : null}
+              {row.transcript_url ? (
+                <a href={row.transcript_url} target="_blank" rel="noreferrer">
+                  <button>Transcript</button>
+                </a>
+              ) : null}
+              <button onClick={onDownload} disabled={downloading}>
+                {downloading ? "Preparing..." : "Download PDF"}
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card title="Resume Analysis" items={row.resume_breakdown} />
-              <Card title="Interview Analysis" items={row.interview_breakdown} />
+            <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr" }}>
+              <section>
+                <h4 style={{ margin: 0 }}>Resume Analysis</h4>
+                <DetailRow label="Experience" value={row._summary?.experience_match_percent} />
+                <DetailRow label="Skills" value={row._summary?.skills_match_percent} />
+                <DetailRow label="Education" value={row._summary?.education_match_percent} />
+                {row._summary?.summary && (
+                  <p style={{ marginTop: 8, color: "#444" }}>{row._summary.summary}</p>
+                )}
+              </section>
+              <section>
+                <h4 style={{ margin: 0 }}>Interview Analysis</h4>
+                <DetailRow label="Clarity" value={row._summary?.interview_clarity_percent} />
+                <DetailRow label="Confidence" value={row._summary?.interview_confidence_percent} />
+                <DetailRow label="Body Language" value={row._summary?.interview_body_language_percent} />
+              </section>
             </div>
           </td>
         </tr>
@@ -204,23 +216,13 @@ function FragmentRow({ row, expanded, setExpanded, openSigned, opening, download
   );
 }
 
-function Card({ title, items }) {
-  const entries = Object.entries(items || {});
+function DetailRow({ label, value }) {
+  const v = pct(value);
   return (
-    <div className="border rounded p-3">
-      <div className="font-semibold mb-2">{title}</div>
-      {entries.length === 0 ? (
-        <div className="text-sm text-slate-500">No data</div>
-      ) : (
-        <ul className="text-sm space-y-1">
-          {entries.map(([k, v]) => (
-            <li key={k}>
-              <span className="inline-block w-28 text-slate-500">{k}</span>
-              <span className="font-medium">{String(v)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+      <div style={{ width: 120 }}>{label}</div>
+      <Bar value={v ?? 0} />
+      <div style={{ width: 40, textAlign: "right" }}>{v != null ? `${v}%` : "—"}</div>
     </div>
   );
 }
