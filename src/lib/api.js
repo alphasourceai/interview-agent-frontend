@@ -1,134 +1,186 @@
 // src/lib/api.js
-// Unified API helpers used across the app.
-// Exports: { api, apiGet, apiPost, apiDownload }, plus default export = api.
 
-import { supabase } from "./supabaseClient";
+// ---- Config ---------------------------------------------------------------
+const BASE_RAW =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BACKEND_URL) ||
+  (typeof window !== 'undefined' && window.__BACKEND_URL__) ||
+  '';
 
-const BASE = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/+$/, "");
-
-/* ------------------------------------------------------------------ */
-/* Token + fetch helpers                                              */
-/* ------------------------------------------------------------------ */
-
-async function getToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || null;
+function joinUrl(base, path) {
+  if (!base) return path;
+  if (base.endsWith('/') && path.startsWith('/')) return base.slice(1) + path;
+  if (!base.endsWith('/') && !path.startsWith('/')) return base + '/' + path;
+  return base + path;
 }
 
-async function authedFetch(path, opts = {}, tokenOverride) {
-  const token = tokenOverride || (await getToken());
+// ---- Core Request Helpers -------------------------------------------------
 
-  const headers = new Headers(opts.headers || {});
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+async function coreRequest(path, { method = 'GET', body, headers, signal, raw } = {}) {
+  const url = joinUrl(BASE_RAW, path);
 
-  const hasBody = Object.prototype.hasOwnProperty.call(opts, "body");
-  const isForm = hasBody && opts.body instanceof FormData;
-  if (hasBody && !isForm && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  const init = {
+    method,
+    credentials: 'include', // include cookies (Supabase auth, etc.)
+    headers: {
+      ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+      ...(headers || {}),
+    },
+    signal,
+  };
+
+  if (body !== undefined) {
+    init.body = body instanceof FormData ? body : JSON.stringify(body);
   }
 
-  const url = path.startsWith("http") ? path : `${BASE}${path}`;
-  return fetch(url, { ...opts, headers, credentials: "include" });
-}
+  const res = await fetch(url, init);
 
-async function jsonOrThrow(res, msgPrefix = "Request failed") {
-  const ct = res.headers.get("content-type") || "";
+  // Non-2xx -> throw with some detail
   if (!res.ok) {
-    let msg = `${msgPrefix} (${res.status})`;
+    // If caller wants the raw response, return it even if !ok
+    if (raw) return res;
+
+    let errText = '';
     try {
-      if (ct.includes("application/json")) {
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
         const j = await res.json();
-        msg = j.error || j.message || msg;
+        errText = j?.error || JSON.stringify(j);
       } else {
-        const t = await res.text();
-        if (t) msg = t;
+        errText = await res.text();
       }
-    } catch {}
-    throw new Error(msg);
+    } catch {
+      /* ignore */
+    }
+    const e = new Error(errText || `HTTP ${res.status}`);
+    e.status = res.status;
+    throw e;
   }
-  return ct.includes("application/json") ? res.json() : res;
+
+  if (raw) return res;
+
+  // Try to parse JSON when appropriate
+  const ct = res.headers.get('content-type') || '';
+  if (ct.includes('application/json')) return res.json();
+  return res.text();
 }
 
-/* ------------------------------------------------------------------ */
-/* Legacy convenience wrappers expected by multiple pages             */
-/* ------------------------------------------------------------------ */
-
-export async function apiGet(path) {
-  const res = await authedFetch(path, { method: "GET" });
-  return jsonOrThrow(res, `GET ${path} failed`);
+// Named HTTP helpers (some pages import these directly)
+export function apiGet(path, opts) {
+  return coreRequest(path, { method: 'GET', ...(opts || {}) });
+}
+export function apiPost(path, body, opts) {
+  return coreRequest(path, { method: 'POST', body, ...(opts || {}) });
+}
+export function apiPut(path, body, opts) {
+  return coreRequest(path, { method: 'PUT', body, ...(opts || {}) });
+}
+export function apiDel(path, opts) {
+  return coreRequest(path, { method: 'DELETE', ...(opts || {}) });
 }
 
-export async function apiPost(path, body) {
-  const res = await authedFetch(path, {
-    method: "POST",
-    body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
+// File download helper (saves Blob; caller decides how to handle it)
+export async function apiDownload(path, filename = 'download') {
+  const res = await coreRequest(path, { method: 'GET', raw: true });
+  const blob = await res.blob();
+  // Create a temporary link for download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Generic multipart upload (FormData)
+export function apiUpload(path, fields = {}, fileField = 'file') {
+  const fd = new FormData();
+  Object.entries(fields).forEach(([k, v]) => {
+    // allow File/Blob or primitive values
+    if (v !== undefined && v !== null) fd.append(k, v);
   });
-  return jsonOrThrow(res, `POST ${path} failed`);
+  return coreRequest(path, { method: 'POST', body: fd });
 }
 
-// Browser-followed download/redirect (no JSON expected)
-export async function apiDownload(path) {
-  if (typeof window !== "undefined") {
-    window.location.href = path.startsWith("http") ? path : `${BASE}${path}`;
-  }
+// ---- Domain Helpers used by pages -----------------------------------------
+
+// Clients
+export function getMyClient() {
+  return apiGet('/clients/my');
+}
+export function getClientMembers(clientId) {
+  const q = clientId ? `?client_id=${encodeURIComponent(clientId)}` : '';
+  return apiGet(`/clients/members${q}`);
 }
 
-/* ------------------------------------------------------------------ */
-/* Structured API used in Roles, Candidates, RoleCreator, etc.        */
-/* ------------------------------------------------------------------ */
+// Roles
+export function getRoles(clientId) {
+  const q = clientId ? `?client_id=${encodeURIComponent(clientId)}` : '';
+  return apiGet(`/roles${q}`);
+}
+export function createRole(payload) {
+  return apiPost('/roles', payload);
+}
+export function updateRole(roleId, payload) {
+  return apiPut(`/roles/${encodeURIComponent(roleId)}`, payload);
+}
+export function deleteRole(roleId) {
+  return apiDel(`/roles/${encodeURIComponent(roleId)}`);
+}
 
-export const api = {
-  // Generic verbs that return parsed JSON
-  async get(path) {
-    const res = await authedFetch(path, { method: "GET" });
-    return jsonOrThrow(res, `GET ${path} failed`);
-  },
-  async post(path, body) {
-    const res = await authedFetch(path, {
-      method: "POST",
-      body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
-    });
-    return jsonOrThrow(res, `POST ${path} failed`);
-  },
-  async put(path, body) {
-    const res = await authedFetch(path, {
-      method: "PUT",
-      body: JSON.stringify(body ?? {}),
-    });
-    return jsonOrThrow(res, `PUT ${path} failed`);
-  },
-  async delete(path) {
-    const res = await authedFetch(path, { method: "DELETE" });
-    return jsonOrThrow(res, `DELETE ${path} failed`);
-  },
+// Role JD upload (if your backend expects multipart to /roles-upload)
+export function uploadRoleJD({ roleId, file, filename }) {
+  const path = '/roles-upload';
+  const fd = new FormData();
+  if (roleId) fd.append('role_id', roleId);
+  if (filename) fd.append('filename', filename);
+  if (file) fd.append('file', file);
+  return coreRequest(path, { method: 'POST', body: fd });
+}
 
-  // RoleCreator.jsx expects these shape-wise (optionally passing a token provider)
-  async getMe(getTokenFn) {
-    const token = getTokenFn ? await getTokenFn() : undefined;
-    const res = await authedFetch("/auth/me", { method: "GET" }, token);
-    return jsonOrThrow(res, "GET /auth/me failed");
-  },
+// Candidates
+export function getCandidates(clientId) {
+  const q = clientId ? `?client_id=${encodeURIComponent(clientId)}` : '';
+  return apiGet(`/candidates${q}`);
+}
 
-  async getMyClients(getTokenFn) {
-    const token = getTokenFn ? await getTokenFn() : undefined;
-    const res = await authedFetch("/clients/my", { method: "GET" }, token);
-    return jsonOrThrow(res, "GET /clients/my failed");
-  },
+// Verify OTP (if used in your login flow)
+export function verifyOtp(payload) {
+  return apiPost('/verify-otp', payload);
+}
 
-  async createRole(payload, getTokenFn) {
-    const token = getTokenFn ? await getTokenFn() : undefined;
-    const res = await authedFetch(
-      "/roles",
-      { method: "POST", body: JSON.stringify(payload || {}) },
-      token
-    );
-    return jsonOrThrow(res, "POST /roles failed");
-  },
+// Interviews (Tavus)
+export function createInterview(payload) {
+  return apiPost('/interviews', payload);
+}
+export function retryInterview(payload) {
+  return apiPost('/interviews/retry', payload);
+}
+
+// ---- Default export (legacy object style) ---------------------------------
+
+const api = {
+  // low-level
+  get: apiGet,
+  post: apiPost,
+  put: apiPut,
+  del: apiDel,
+  download: apiDownload,
+  upload: apiUpload,
+
+  // domain
+  getMyClient,
+  getClientMembers,
+  getRoles,
+  createRole,
+  updateRole,
+  deleteRole,
+  uploadRoleJD,
+  getCandidates,
+  verifyOtp,
+  createInterview,
+  retryInterview,
 };
 
-// Optional aliases; harmless if other files import different names
-export const Api = api;
 export default api;
-
-// Also export internals for advanced callers/tests if needed
-export { authedFetch };
