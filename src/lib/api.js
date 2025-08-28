@@ -140,3 +140,4 @@ const api = {
 
 export { api };       // <-- add named export for compatibility
 export default api;   // <-- keep default export too
+export { api as Api };
