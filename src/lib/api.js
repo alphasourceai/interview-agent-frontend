@@ -1,4 +1,5 @@
 // src/lib/api.js
+// FE sync: minor comment to trigger clean commit & PR
 
 // ---- Config ---------------------------------------------------------------
 const BASE_RAW =
