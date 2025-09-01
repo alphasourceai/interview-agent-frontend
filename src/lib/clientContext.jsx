@@ -1,56 +1,56 @@
+// src/lib/clientContext.jsx
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import api from "../lib/api"; // default export; also works with { api }
 import { supabase } from "./supabaseClient";
 
 const Ctx = createContext(null);
-const API_BASE = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/+$/, "");
 
-async function authedFetch(path, opts = {}) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const headers = new Headers(opts.headers || {});
-  if (session?.access_token) headers.set("Authorization", `Bearer ${session.access_token}`);
-  const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
-  return fetch(url, { ...opts, headers });
+function normalizeClient(c) {
+  if (!c) return null;
+  return {
+    id: c.id ?? c.client_id ?? c.uuid ?? null,
+    name: c.name ?? c.client_name ?? c.title ?? "",
+    role: c.role ?? "member",
+  };
 }
 
 export function ClientProvider({ children }) {
   const [loading, setLoading] = useState(true);
-  const [clients, setClients] = useState([]);       // [{id, name, role?}]
+  const [clients, setClients] = useState([]);       // [{id, name, role}]
   const [currentClientId, setCurrentClientId] = useState(null);
 
   const refreshClients = useCallback(async () => {
     setLoading(true);
     try {
-      // 1) fetch memberships from backend (preferred)
+      // 1) preferred: backend summary
       let list = [];
-      let res = await authedFetch("/clients/my");
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json)) list = json;                    // rare
-        else if (Array.isArray(json.clients)) list = json.clients;
-        else if (Array.isArray(json.items)) list = json.items;   // alias
-        else if (Array.isArray(json.memberships)) {
-          list = json.memberships.map(m => ({
+      try {
+        const data = await api.getMyClient(); // GET /clients/my
+        if (Array.isArray(data?.clients)) list = data.clients;
+        else if (Array.isArray(data?.memberships)) {
+          list = data.memberships.map(m => ({
             id: m.client_id || m.id,
-            name: m.name || m.client_name || null,
+            name: m.name || m.client_name || "",
             role: m.role || "member",
           }));
+        } else if (Array.isArray(data)) {
+          list = data;
         }
+      } catch (_) {
+        // fall through to /auth/me
       }
 
-      // 2) fallback to /auth/me to at least get IDs
-      if (!list.length) {
-        res = await authedFetch("/auth/me");
-        if (res.ok) {
-          const me = await res.json();
-          const ids = Array.isArray(me?.clientIds) ? me.clientIds : [];
-          list = ids.map(id => ({ id, name: null }));
-        }
+      // 2) fallback: /auth/me clientIds → names via Supabase
+      if (!list?.length) {
+        const me = await api.get('/auth/me'); // still sends cookies
+        const ids = Array.isArray(me?.clientIds) ? me.clientIds : [];
+        list = ids.map(id => ({ id, name: "" }));
       }
 
-      // 3) normalize + enrich names from Supabase if missing
+      // 3) normalize + look up missing names from Supabase
       const norm = (list || [])
-        .map(x => ({ id: x.id || x.client_id, name: x.name || x.title || null, role: x.role || "member" }))
-        .filter(x => x.id);
+        .map(normalizeClient)
+        .filter(x => x && x.id);
 
       const needLookup = norm.filter(x => !x.name).map(x => x.id);
       if (needLookup.length) {
@@ -59,14 +59,12 @@ export function ClientProvider({ children }) {
           .select("id,name")
           .in("id", needLookup);
         const nameMap = Object.fromEntries((rows || []).map(r => [r.id, r.name]));
-        for (const c of norm) {
-          if (!c.name && nameMap[c.id]) c.name = nameMap[c.id];
-        }
+        for (const c of norm) if (!c.name && nameMap[c.id]) c.name = nameMap[c.id];
       }
 
       setClients(norm);
 
-      // choose a client (persist across reloads)
+      // choose a client and persist
       const saved = localStorage.getItem("currentClientId");
       const first = norm[0]?.id || null;
       const chosen = saved && norm.some(c => c.id === saved) ? saved : first;
@@ -79,14 +77,8 @@ export function ClientProvider({ children }) {
     }
   }, []);
 
-  // initial load
-  useEffect(() => {
-    let stop = false;
-    (async () => { if (!stop) await refreshClients(); })();
-    return () => { stop = true; };
-  }, [refreshClients]);
+  useEffect(() => { refreshClients(); }, [refreshClients]);
 
-  // persist selection
   useEffect(() => {
     if (currentClientId) localStorage.setItem("currentClientId", currentClientId);
   }, [currentClientId]);
@@ -97,7 +89,8 @@ export function ClientProvider({ children }) {
     currentClientId,
     setCurrentClientId,
     refreshClients,
-    // ---- Back-compat aliases (existing pages rely on these) ----
+
+    // Back-compat aliases (pages rely on these)
     selectedClientId: currentClientId,
     setSelectedClientId: setCurrentClientId,
     loadClients: refreshClients,
