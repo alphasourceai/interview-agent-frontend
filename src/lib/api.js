@@ -166,10 +166,13 @@ export function uploadRoleJD({ roleId, file, filename }) {
 }
 
 // Candidates
-export function getCandidates(clientId) {
+export async function getCandidates(clientId) {
   const q = clientId ? `?client_id=${encodeURIComponent(clientId)}` : '';
-  return apiGet(`/candidates${q}`);
+  // dashboard returns { items: [...] } — normalize to [] so pages can map safely
+  const res = await apiGet(`/dashboard/candidates${q}`);
+  return res?.items || [];
 }
+
 
 // OTP / Interviews
 export function verifyOtp(payload)       { return apiPost('/verify-otp', payload); }
@@ -194,3 +197,4 @@ const api = {
 export { api };        // named
 export default api;    // default
 export { api as Api }; // alias used by some pages
+// chore: trigger PR branch
