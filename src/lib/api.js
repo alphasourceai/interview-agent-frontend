@@ -1,5 +1,4 @@
 // src/lib/api.js
-// FE sync: minor comment to trigger clean commit & PR
 
 // ---- Config ---------------------------------------------------------------
 const BASE_RAW =
@@ -14,18 +13,66 @@ function joinUrl(base, path) {
   return base + path;
 }
 
+// ---- Auth helper (best-effort) --------------------------------------------
+
+async function getAccessToken() {
+  try {
+    // Preferred: window.supabase (if your app sets this)
+    const maybeSupabase = typeof window !== 'undefined' ? window.supabase : null;
+    if (maybeSupabase?.auth?.getSession) {
+      const { data } = await maybeSupabase.auth.getSession();
+      const tok = data?.session?.access_token || data?.session?.accessToken;
+      if (tok) return tok;
+    }
+
+    // Fallback: scan localStorage for the sb-*-auth-token key Supabase uses
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const key = Object.keys(localStorage).find(k => /sb-.*-auth-token$/.test(k));
+      if (key) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          // v2 format tends to have "currentSession"
+          const tok =
+            parsed?.currentSession?.access_token ||
+            parsed?.access_token ||
+            parsed?.session?.access_token;
+          if (tok) return tok;
+        }
+      }
+    }
+  } catch {
+    // ignore; we'll just send unauthenticated
+  }
+  return null;
+}
+
 // ---- Core Request Helpers -------------------------------------------------
 
 async function coreRequest(path, { method = 'GET', body, headers, signal, raw } = {}) {
   const url = joinUrl(BASE_RAW, path);
 
+  // Build headers; inject bearer token unless the caller already set one
+  const initHeaders = {
+    ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+    ...(headers || {}),
+  };
+
+  const hasAuthHeader =
+    initHeaders.authorization ||
+    initHeaders.Authorization ||
+    initHeaders['authorization'] ||
+    initHeaders['Authorization'];
+
+  if (!hasAuthHeader) {
+    const token = await getAccessToken();
+    if (token) initHeaders.Authorization = `Bearer ${token}`;
+  }
+
   const init = {
     method,
     credentials: 'include',
-    headers: {
-      ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
-      ...(headers || {}),
-    },
+    headers: initHeaders,
     signal,
   };
 
@@ -59,11 +106,13 @@ async function coreRequest(path, { method = 'GET', body, headers, signal, raw } 
   return res.text();
 }
 
-// Low-level helpers (named exports at definition — do not re-export again)
+// ---- Low-level helpers ----------------------------------------------------
+
 export function apiGet(path, opts)                { return coreRequest(path, { method: 'GET',    ...(opts || {}) }); }
 export function apiPost(path, body, opts)         { return coreRequest(path, { method: 'POST',   body, ...(opts || {}) }); }
 export function apiPut(path, body, opts)          { return coreRequest(path, { method: 'PUT',    body, ...(opts || {}) }); }
 export function apiDel(path, opts)                { return coreRequest(path, { method: 'DELETE', ...(opts || {}) }); }
+
 export async function apiDownload(path, filename = 'download') {
   const res = await coreRequest(path, { method: 'GET', raw: true });
   const blob = await res.blob();
@@ -73,6 +122,7 @@ export async function apiDownload(path, filename = 'download') {
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
+
 export function apiUpload(path, fields = {}) {
   const fd = new FormData();
   Object.entries(fields).forEach(([k, v]) => {
@@ -107,7 +157,7 @@ export function deleteRole(roleId) {
   return apiDel(`/roles/${encodeURIComponent(roleId)}`);
 }
 export function uploadRoleJD({ roleId, file, filename }) {
-  // Match backend route: /roles-upload/upload-jd
+  // Backend route: /roles-upload/upload-jd
   const fd = new FormData();
   if (roleId) fd.append('role_id', roleId);
   if (filename) fd.append('filename', filename);
@@ -122,13 +172,14 @@ export function getCandidates(clientId) {
 }
 
 // OTP / Interviews
-export function verifyOtp(payload)        { return apiPost('/verify-otp', payload); }
-export function createInterview(payload)  { return apiPost('/interviews', payload); }
-// If you need retry-by-id later, build the URL with the id (current BE expects /interviews/retry/:id/retry-create)
-// export function retryInterview(id)     { return apiPost(`/interviews/retry/${encodeURIComponent(id)}/retry-create`); }
-export function retryInterview(payload)   { return apiPost('/interviews/retry', payload); } // keeps prior FE shape if used
+export function verifyOtp(payload)       { return apiPost('/verify-otp', payload); }
+export function createInterview(payload) { return apiPost('/interviews', payload); }
 
-// ---- Default export + named 'api' (so pages can `import { api }`) ---------
+// If you adopt the new BE route that takes an :id:
+// export function retryInterview(id) { return apiPost(`/interviews/retry/${encodeURIComponent(id)}/retry-create`); }
+export function retryInterview(payload)  { return apiPost('/interviews/retry', payload); } // legacy FE shape
+
+// ---- Default export + named 'api' (compat) --------------------------------
 
 const api = {
   // low-level
@@ -140,6 +191,6 @@ const api = {
   verifyOtp, createInterview, retryInterview,
 };
 
-export { api };       // named export
-export default api;   // default export
-export { api as Api } // alias used by some pages
+export { api };        // named
+export default api;    // default
+export { api as Api }; // alias used by some pages
