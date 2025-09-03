@@ -1,1 +1,30 @@
-<paste the YAML above>
+services:
+  - type: web
+    name: ia-frontend-prod
+    runtime: static
+    branch: prod-single-dashboard
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        value: https://ia-backend-prod.onrender.com
+
+  - type: web
+    name: ia-frontend-qa
+    runtime: static
+    branch: qa-multipage
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        value: https://ia-backend-qa.onrender.com
+
+  - type: web
+    name: ia-frontend-staging
+    runtime: static
+    branch: staging-multipage
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        value: https://ia-backend-staging.onrender.com
