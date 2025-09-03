@@ -1,5 +1,5 @@
 services:
-  - type: static
+  - type: static_site
     name: ia-frontend-prod
     branch: prod-single-dashboard
     buildCommand: npm ci && npm run build
@@ -8,7 +8,7 @@ services:
       - key: VITE_BACKEND_URL
         value: https://ia-backend-prod.onrender.com
 
-  - type: static
+  - type: static_site
     name: ia-frontend-qa
     branch: qa-multipage
     buildCommand: npm ci && npm run build
@@ -17,7 +17,7 @@ services:
       - key: VITE_BACKEND_URL
         value: https://ia-backend-qa.onrender.com
 
-  - type: static
+  - type: static_site
     name: ia-frontend-staging
     branch: staging-multipage
     buildCommand: npm ci && npm run build
