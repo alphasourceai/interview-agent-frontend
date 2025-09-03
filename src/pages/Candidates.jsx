@@ -1,18 +1,18 @@
 // src/pages/Candidates.jsx
 import { useEffect, useState } from 'react';
-import { Api } from '../lib/api';
+import { Api } from '../lib/api';               // Api.getCandidates is available
 import { useClientContext } from '../lib/clientContext';
 
 function ScoreBar({ label, value }) {
-  const v = Math.max(0, Math.min(100, Number(value || 0)));
+  const n = Number(value);
+  const v = Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
   return (
-    <div className="mb-2">
-      <div className="flex justify-between text-sm">
-        <span>{label}</span><span>{v}%</span>
+    <div className="score-bar flex items-center gap-2">
+      <span className="text-sm text-gray-600">{label}</span>
+      <div className="h-2 flex-1 bg-gray-200 rounded">
+        <div className="h-2 rounded" style={{ width: `${v}%` }} />
       </div>
-      <div className="w-full h-2 bg-gray-200 rounded">
-        <div className="h-2 rounded" style={{ width: `${v}%`, backgroundColor: '#000' }} />
-      </div>
+      <span className="text-sm w-10 text-right">{v}%</span>
     </div>
   );
 }
@@ -22,86 +22,123 @@ export default function Candidates() {
   const [rows, setRows] = useState([]);
   const [openId, setOpenId] = useState(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    async function run() {
       try {
-        const list = await Api.candidates(client.id);
-        setRows(list || []);
+        setError('');
+        setLoading(true);
+
+        if (!client?.id) {
+          throw new Error('Client not selected.');
+        }
+
+        // Use standardized API shape. getCandidates returns an array.
+        const list = await Api.getCandidates(client.id);
+
+        if (!cancelled) {
+          // Defensive: ensure array of objects with id
+          const safe = Array.isArray(list)
+            ? list.filter(r => r && typeof r === 'object' && (r.id !== undefined && r.id !== null))
+            : [];
+          setRows(safe);
+        }
       } catch (e) {
-        setError(e.message);
+        if (!cancelled) setError(e?.message || 'Failed to load candidates');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    })();
-  }, [client.id]);
+    }
+
+    run();
+    return () => { cancelled = true; };
+  }, [client?.id]);
+
+  if (loading) return <div className="p-4">Loading candidates...</div>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Candidates</h1>
-      {!!error && <div className="text-red-600 mb-3">{error}</div>}
-      <div className="border rounded overflow-hidden">
-        <div className="grid grid-cols-6 text-sm font-medium bg-gray-50 px-3 py-2">
-          <div>Name</div>
-          <div>Email</div>
-          <div>Role</div>
-          <div>Resume</div>
-          <div>Interview</div>
-          <div>Overall</div>
-        </div>
-        {rows.map(r => {
-          const summary = r.analysis_summary || {};
-          return (
-            <div key={r.id} className="border-t">
-              <button
-                className="w-full grid grid-cols-6 px-3 py-2 text-left hover:bg-gray-50"
-                onClick={() => setOpenId(openId === r.id ? null : r.id)}
-              >
-                <div>{r.name || '—'}</div>
-                <div>{r.email || '—'}</div>
-                <div>{r.role_title || '—'}</div>
-                <div>{(r.resume_score ?? summary.resume_score ?? '—')}</div>
-                <div>{(r.interview_score ?? summary.interview_score ?? '—')}</div>
-                <div>{(r.overall_score ?? summary.overall_score ?? '—')}</div>
-              </button>
+    <div className="candidates-page p-4">
+      <h1 className="text-xl font-semibold mb-3">Candidates</h1>
 
-              {openId === r.id && (
-                <div className="bg-white px-4 py-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="font-semibold mb-2">Resume Analysis</h3>
-                      <ScoreBar label="Resume Score" value={summary.resume_score ?? r.resume_score} />
-                      <ScoreBar label="Skills Match" value={summary.skills_match_percent} />
-                      <ScoreBar label="Education Match" value={summary.education_match_percent} />
-                      <ScoreBar label="Experience Match" value={summary.experience_match_percent} />
-                      <ScoreBar label="Overall Resume Match" value={summary.overall_resume_match_percent} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Interview Analysis</h3>
-                      <ScoreBar label="Interview Score" value={summary.interview_score ?? r.interview_score} />
-                      <ScoreBar label="Clarity" value={summary.clarity_percent} />
-                      <ScoreBar label="Confidence" value={summary.confidence_percent} />
-                      <ScoreBar label="Body Language" value={summary.body_language_percent} />
+      {!!error && (
+        <div className="mb-3 rounded bg-red-50 text-red-700 px-3 py-2 text-sm">
+          {error}
+        </div>
+      )}
+
+      <table className="candidates-table w-full border rounded overflow-hidden">
+        <thead className="bg-gray-50 text-left">
+          <tr>
+            <th className="px-3 py-2">Name</th>
+            <th className="px-3 py-2">Email</th>
+            <th className="px-3 py-2">Role</th>
+            <th className="px-3 py-2">Resume</th>
+            <th className="px-3 py-2">Interview</th>
+            <th className="px-3 py-2">Overall</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => {
+            const summary = r?.analysis_summary || {};
+            const name = r?.name || [r?.first_name, r?.last_name].filter(Boolean).join(' ') || '—';
+            const roleTitle = r?.role || r?.role_title || '—';
+
+            return (
+              <tr key={r.id} className="border-t align-top">
+                <td className="px-3 py-2">{name}</td>
+                <td className="px-3 py-2">{r?.email || '—'}</td>
+                <td className="px-3 py-2">{roleTitle}</td>
+                <td className="px-3 py-2">
+                  <ScoreBar label="Resume" value={summary.resume_score ?? r?.resume_score} />
+                </td>
+                <td className="px-3 py-2">
+                  <button
+                    className="text-sm underline"
+                    onClick={() => setOpenId(openId === r.id ? null : r.id)}
+                  >
+                    {openId === r.id ? 'Hide' : 'Show'}
+                  </button>
+                </td>
+                <td className="px-3 py-2">
+                  <ScoreBar label="Overall" value={summary.overall_score ?? r?.overall_score} />
+                  {openId === r.id && (
+                    <div className="mt-3 p-3 bg-white border rounded">
+                      <h3 className="font-medium mb-2">Interview Analysis</h3>
+                      <ScoreBar label="Interview" value={summary.interview_score ?? r?.interview_score} />
                       <div className="mt-3 text-sm whitespace-pre-wrap">
                         {summary.summary || 'No summary available.'}
                       </div>
-                    </div>
-                  </div>
-
-                  {!!r.report_id && (
-                    <div className="mt-4">
-                      <button
-                        className="bg-black text-white rounded px-4 py-2"
-                        onClick={() => Api.downloadReport(r.report_id)}
-                      >
-                        Download PDF Report
-                      </button>
+                      {!!r?.report_id && (
+                        <div className="mt-3">
+                          <a
+                            href={`/reports/${r.report_id}/download`}
+                            className="text-sm underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Download PDF Report
+                          </a>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                </td>
+              </tr>
+            );
+          })}
+
+          {rows.length === 0 && !error && (
+            <tr>
+              <td colSpan={6} className="px-3 py-6 text-center text-sm text-gray-500">
+                No candidates yet.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
