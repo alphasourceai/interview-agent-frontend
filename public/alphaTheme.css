@@ -1,0 +1,36 @@
+/* public/alphaTheme.css */
+:root{
+  --alpha-bg:#061551; --alpha-text:#fff;
+  --alpha-accent:#ad8bf7; --alpha-accent-2:#854dff;
+  --alpha-body-dark:#2f2e2e; --alpha-surface:#ebfeff;
+  --alpha-radius:8px;
+}
+body.alpha-theme{
+  background:var(--alpha-bg); color:var(--alpha-text);
+  font-family:'Raleway',system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans',sans-serif;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+body.alpha-theme a{color:var(--alpha-accent);text-decoration:none}
+body.alpha-theme a:hover{text-decoration:underline}
+body.alpha-theme .btn, body.alpha-theme button.primary, body.alpha-theme [data-variant="primary"]{
+  background:var(--alpha-accent); color:#fff; border:0; border-radius:var(--alpha-radius);
+  padding:10px 16px; font-weight:700; cursor:pointer;
+}
+body.alpha-theme .btn:hover, body.alpha-theme button.primary:hover, body.alpha-theme [data-variant="primary"]:hover{
+  background:var(--alpha-accent-2);
+}
+body.alpha-theme table{width:100%;border-collapse:collapse}
+body.alpha-theme thead th{
+  text-align:left;font-weight:700;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.15)
+}
+body.alpha-theme tbody td{
+  padding:8px;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.92)
+}
+body.alpha-theme .card{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--alpha-radius);padding:16px;
+}
+body.alpha-theme input[type="text"], body.alpha-theme input[type="email"],
+body.alpha-theme input[type="file"], body.alpha-theme select{
+  background:var(--alpha-surface);color:#0f172a;border:1px solid #cbd5e1;border-radius:var(--alpha-radius);padding:8px 10px;
+}
