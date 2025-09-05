@@ -126,3 +126,71 @@
 .alpha-theme .auth-wrap h1,
 .alpha-theme .auth-wrap h2 { margin: 0 0 12px; }
 .alpha-theme .auth-wrap p { color: var(--alpha-muted); margin: 0 0 18px; }
+
+/* ====== alpha-theme overrides (append only) ================================= */
+
+/* 1) Inputs/selects: white text + caret (fix email field + dropdown text) */
+.alpha-theme input,
+.alpha-theme textarea,
+.alpha-theme select {
+  color: var(--alpha-text) !important;
+  caret-color: var(--alpha-text);
+  background-color: rgba(255,255,255,0.08);
+  border: 1px solid var(--alpha-border);
+}
+
+/* Options list uses system UI; make options dark so they’re readable there */
+.alpha-theme select option { color: #111; }
+
+/* 2) “Sign out” button look (lilac + white) */
+.alpha-theme a[href="/signout"],
+.alpha-theme button#signout,
+.alpha-theme button[data-role="signout"] {
+  background: var(--alpha-primary);
+  color: #fff !important;
+  border: 1px solid var(--alpha-primary);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.alpha-theme a[href="/signout"]:hover,
+.alpha-theme button#signout:hover,
+.alpha-theme button[data-role="signout"]:hover {
+  background: var(--alpha-primary-strong);
+  border-color: var(--alpha-primary-strong);
+}
+
+/* 3) Small action controls inside expanded panels that are <a> links
+      (Video / Transcript / Download PDF) */
+.alpha-theme .expanded a,
+.alpha-theme .panel a,
+.alpha-theme .report a {
+  display: inline-block;
+  background: var(--alpha-primary);
+  color: #fff !important;
+  border: 1px solid var(--alpha-primary);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.alpha-theme .expanded a:hover,
+.alpha-theme .panel a:hover,
+.alpha-theme .report a:hover {
+  background: var(--alpha-primary-strong);
+  border-color: var(--alpha-primary-strong);
+}
+
+/* 4) Belt-and-suspenders: force expanded/report surfaces to stay dark
+      if a library injects a white background */
+.alpha-theme .expanded,
+.alpha-theme .panel,
+.alpha-theme .report {
+  background: var(--alpha-surface) !important;
+  color: var(--alpha-text) !important;
+}
+
+/* 5) Subtle table row hover on dark */
+.alpha-theme table tr:hover {
+  background: rgba(255,255,255,0.06);
+}
+
