@@ -304,3 +304,72 @@
 .alpha-theme table tr th {
   border-color: var(--alpha-border) !important;
 }
+
+/* --- tweak pack: expanded row + buttons + report text ------------------- */
+
+/* 1) Make the “Video” button match the other lilac buttons inside expands */
+.alpha-theme .expanded button,
+.alpha-theme .row-details button,
+.alpha-theme .details-row button,
+.alpha-theme .report button {
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border: 1px solid var(--alpha-primary) !important;
+  border-radius: 20px !important;
+}
+.alpha-theme .expanded button:hover,
+.alpha-theme .row-details button:hover,
+.alpha-theme .details-row button:hover,
+.alpha-theme .report button:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+
+/* 2) Keep the top “name / email / …” bar dark when a row is expanded */
+.alpha-theme .expanded-row,
+.alpha-theme tr.expanded,
+.alpha-theme .row-details,
+.alpha-theme .details-row,
+.alpha-theme .expand,
+.alpha-theme .expanded {
+  background: var(--alpha-surface) !important;
+  color: var(--alpha-text) !important;
+  border-color: var(--alpha-border) !important;
+}
+
+/* Resist any white backgrounds a table might force */
+.alpha-theme table tr,
+.alpha-theme table td,
+.alpha-theme table th {
+  background-color: transparent !important;
+  color: var(--alpha-text);
+}
+
+/* 3) In the big “Resume Analysis / Interview Analysis” panels:
+      make labels + paragraph text white while headings stay dark */
+.alpha-theme .report,
+.alpha-theme .panel {
+  color: var(--alpha-text);
+}
+.alpha-theme .report p,
+.alpha-theme .panel p,
+.alpha-theme .report span,
+.alpha-theme .panel span,
+.alpha-theme .report small,
+.alpha-theme .panel small,
+.alpha-theme .report .label,
+.alpha-theme .panel .label {
+  color: var(--alpha-text) !important;
+}
+/* keep the section headings dark per spec */
+.alpha-theme .report h1,
+.alpha-theme .report h2,
+.alpha-theme .report h3,
+.alpha-theme .report h4,
+.alpha-theme .panel h1,
+.alpha-theme .panel h2,
+.alpha-theme .panel h3,
+.alpha-theme .panel h4 {
+  color: var(--alpha-darktext) !important;
+}
+
