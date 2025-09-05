@@ -431,3 +431,94 @@
   color: var(--alpha-darktext) !important;
 }
 
+/* ===== FINAL OVERRIDES FOR EXPANDED ROWS ===== */
+
+/* 1) Make **all** text inside expanded/analysis cards white (no gray),
+      regardless of nested classes from the table library */
+.alpha-theme .expanded,
+.alpha-theme .row-details,
+.alpha-theme .details-row,
+.alpha-theme .report {
+  color: var(--alpha-text) !important;
+}
+
+.alpha-theme .expanded *,
+.alpha-theme .row-details *,
+.alpha-theme .details-row *,
+.alpha-theme .report * {
+  color: var(--alpha-text) !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: var(--alpha-text) !important; /* wins vs. some webkits */
+  filter: none !important;
+}
+
+/* Keep the small section headings (“Resume Analysis”, “Interview Analysis”) dark per spec */
+.alpha-theme .report h1,
+.alpha-theme .report h2,
+.alpha-theme .report h3,
+.alpha-theme .report h4,
+.alpha-theme .expanded h1,
+.alpha-theme .expanded h2,
+.alpha-theme .expanded h3,
+.alpha-theme .expanded h4 {
+  color: var(--alpha-darktext) !important;
+}
+
+/* 2) Force the three action pills (“Video”, “Transcript”, “Download PDF”)
+      to lilac background with white text, regardless of element type */
+.alpha-theme .expanded a,
+.alpha-theme .expanded button,
+.alpha-theme .expanded .button,
+.alpha-theme .expanded .btn,
+.alpha-theme .expanded .badge,
+.alpha-theme .expanded .label,
+.alpha-theme .expanded .chip,
+.alpha-theme .expanded .tag,
+.alpha-theme .row-details a,
+.alpha-theme .row-details button,
+.alpha-theme .row-details .button,
+.alpha-theme .row-details .btn,
+.alpha-theme .row-details .badge,
+.alpha-theme .row-details .label,
+.alpha-theme .row-details .chip,
+.alpha-theme .row-details .tag {
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border: 1px solid var(--alpha-primary) !important;
+  border-radius: 20px !important;
+  text-decoration: none !important;
+  padding: 6px 10px !important;
+  display: inline-block !important;
+  line-height: 1.1 !important;
+  font-weight: 600 !important;
+}
+
+.alpha-theme .expanded a:hover,
+.alpha-theme .expanded button:hover,
+.alpha-theme .expanded .button:hover,
+.alpha-theme .expanded .btn:hover,
+.alpha-theme .expanded .badge:hover,
+.alpha-theme .expanded .label:hover,
+.alpha-theme .expanded .chip:hover,
+.alpha-theme .expanded .tag:hover,
+.alpha-theme .row-details a:hover,
+.alpha-theme .row-details button:hover,
+.alpha-theme .row-details .button:hover,
+.alpha-theme .row-details .btn:hover,
+.alpha-theme .row-details .badge:hover,
+.alpha-theme .row-details .label:hover,
+.alpha-theme .row-details .chip:hover,
+.alpha-theme .row-details .tag:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+
+/* 3) Ensure the expanded row’s header bar (name/email/… strip) stays dark */
+.alpha-theme .expanded .row,
+.alpha-theme .row-details .row,
+.alpha-theme .expanded .header,
+.alpha-theme .row-details .header {
+  background: var(--alpha-bg) !important;
+  color: var(--alpha-text) !important;
+  border-color: var(--alpha-border) !important;
+}
