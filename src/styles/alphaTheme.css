@@ -1,0 +1,128 @@
+/* --- AlphaSource theme (Wix-matched) ------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap');
+
+.alpha-theme {
+  --alpha-bg: #061551;          /* deep navy */
+  --alpha-surface: rgba(255,255,255,0.06);  /* cards/panels */
+  --alpha-border: rgba(255,255,255,0.14);
+  --alpha-text: #EBFEFF;         /* body text on dark */
+  --alpha-muted: rgba(235,254,255,0.75);
+  --alpha-primary: #AD8BF7;      /* lilac */
+  --alpha-primary-strong: #854DFF;
+  --alpha-darktext: #2F2E2E;     /* dark body text for light panels */
+  --alpha-radius: 12px;
+  --alpha-gap: 14px;
+}
+
+.alpha-theme, .alpha-theme body {
+  background: var(--alpha-bg);
+  color: var(--alpha-text);
+  font-family: 'Raleway', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  min-height: 100vh;
+}
+
+/* Links */
+.alpha-theme a { color: var(--alpha-primary); text-decoration: none; }
+.alpha-theme a:hover { text-decoration: underline; }
+
+/* Generic surfaces (hit most “expanded”/card-like containers) */
+.alpha-theme .card,
+.alpha-theme .panel,
+.alpha-theme .box,
+.alpha-theme .section,
+.alpha-theme .container,
+.alpha-theme .expanded,
+.alpha-theme .expand,
+.alpha-theme .expander-content,
+.alpha-theme .details,
+.alpha-theme .details-content,
+.alpha-theme .row-details,
+.alpha-theme details[open],
+.alpha-theme .report,
+.alpha-theme [class*="Card"],
+.alpha-theme [class*="Panel"] {
+  background: var(--alpha-surface) !important;
+  border: 1px solid var(--alpha-border) !important;
+  border-radius: var(--alpha-radius);
+  color: var(--alpha-text);
+}
+
+/* Headings inside expanded/report panels use darker text per spec */
+.alpha-theme .panel h1,
+.alpha-theme .panel h2,
+.alpha-theme .panel h3,
+.alpha-theme .panel h4,
+.alpha-theme .report h1,
+.alpha-theme .report h2,
+.alpha-theme .report h3,
+.alpha-theme .report h4,
+.alpha-theme .expanded h1,
+.alpha-theme .expanded h2,
+.alpha-theme .expanded h3,
+.alpha-theme .expanded h4 {
+  color: var(--alpha-darktext) !important;
+}
+
+/* Table text remains readable on dark */
+.alpha-theme table { color: var(--alpha-text); }
+
+/* Buttons (covers plain <button>, “Video/Transcript/Download PDF”, Sign out) */
+.alpha-theme button,
+.alpha-theme .btn,
+.alpha-theme input[type="button"],
+.alpha-theme input[type="submit"] {
+  appearance: none;
+  background: var(--alpha-primary);
+  color: #fff;
+  border: 1px solid var(--alpha-primary);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.alpha-theme button:hover,
+.alpha-theme .btn:hover,
+.alpha-theme input[type="button"]:hover,
+.alpha-theme input[type="submit"]:hover {
+  background: var(--alpha-primary-strong);
+  border-color: var(--alpha-primary-strong);
+}
+
+/* Ghost / link-like buttons (if any) */
+.alpha-theme .btn-ghost {
+  background: transparent;
+  color: var(--alpha-primary);
+  border-color: transparent;
+}
+.alpha-theme .btn-ghost:hover {
+  color: #fff;
+  background: var(--alpha-primary);
+}
+
+/* Inputs on dark background */
+.alpha-theme input,
+.alpha-theme select,
+.alpha-theme textarea {
+  background: rgba(255,255,255,0.08);
+  color: var(--alpha-text);
+  border: 1px solid var(--alpha-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.alpha-theme input::placeholder,
+.alpha-theme textarea::placeholder { color: var(--alpha-muted); }
+
+/* Sign-in screen container (keeps it on-brand) */
+.alpha-theme .auth-wrap {
+  max-width: 520px;
+  margin: 12vh auto 8vh;
+  padding: 24px;
+  background: var(--alpha-surface);
+  border: 1px solid var(--alpha-border);
+  border-radius: var(--alpha-radius);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+.alpha-theme .auth-wrap h1,
+.alpha-theme .auth-wrap h2 { margin: 0 0 12px; }
+.alpha-theme .auth-wrap p { color: var(--alpha-muted); margin: 0 0 18px; }

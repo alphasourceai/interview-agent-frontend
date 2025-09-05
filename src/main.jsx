@@ -6,6 +6,8 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 import ClientDashboard from './pages/ClientDashboard.jsx'
 import AcceptInvite from './pages/AcceptInvite.jsx'
 import Invite from './pages/Invite.jsx'
+import './styles/alphaTheme.css';
+
 
 const router = createBrowserRouter([
   { path: '/signin', element: <SignIn /> },
