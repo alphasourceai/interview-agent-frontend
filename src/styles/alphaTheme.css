@@ -373,3 +373,61 @@
   color: var(--alpha-darktext) !important;
 }
 
+/* --- final tweaks: make all three action pills lilac/white; force report text white --- */
+
+/* Catch buttons AND anchor-pills inside expanded rows/reports */
+.alpha-theme .expanded a,
+.alpha-theme .row-details a,
+.alpha-theme .details-row a,
+.alpha-theme .report a,
+.alpha-theme .expanded .btn,
+.alpha-theme .row-details .btn,
+.alpha-theme .details-row .btn,
+.alpha-theme .report .btn,
+.alpha-theme .expanded button,
+.alpha-theme .row-details button,
+.alpha-theme .details-row button,
+.alpha-theme .report button,
+.alpha-theme .expanded input[type="button"],
+.alpha-theme .expanded input[type="submit"] {
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border: 1px solid var(--alpha-primary) !important;
+  border-radius: 20px !important;
+  text-decoration: none !important;
+  padding: 6px 10px; /* keeps pills tidy if they were <a> */
+  display: inline-block; /* anchors look like pills */
+}
+.alpha-theme .expanded a:hover,
+.alpha-theme .row-details a:hover,
+.alpha-theme .details-row a:hover,
+.alpha-theme .report a:hover,
+.alpha-theme .expanded .btn:hover,
+.alpha-theme .row-details .btn:hover,
+.alpha-theme .details-row .btn:hover,
+.alpha-theme .report .btn:hover,
+.alpha-theme .expanded button:hover,
+.alpha-theme .row-details button:hover,
+.alpha-theme .details-row button:hover,
+.alpha-theme .report button:hover,
+.alpha-theme .expanded input[type="button"]:hover,
+.alpha-theme .expanded input[type="submit"]:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+
+/* Force ALL text inside the big analysis cards to white,
+   then re-apply dark color for the headings only */
+.alpha-theme .report,
+.alpha-theme .report * {
+  color: var(--alpha-text) !important;
+}
+
+/* Headings remain dark per your spec */
+.alpha-theme .report h1,
+.alpha-theme .report h2,
+.alpha-theme .report h3,
+.alpha-theme .report h4 {
+  color: var(--alpha-darktext) !important;
+}
+
