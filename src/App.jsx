@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import InterviewAccessPage from './pages/InterviewAccessPage';
 import VerifyOtp from './pages/VerifyOtp';
 import ClientDashboard from './pages/ClientDashboard';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 function NotFound() {
   return (
@@ -24,12 +25,19 @@ export default function App() {
         {/* Default → dashboard (single page) */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* Public routes used by your magic-link / access flows */}
+        {/* Public routes used by magic-link / access flows */}
         <Route path="/interview-access/:role_token" element={<InterviewAccessPage />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
 
-        {/* Single dashboard page */}
-        <Route path="/dashboard" element={<ClientDashboard />} />
+        {/* Single dashboard page (protected) */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <ClientDashboard />
+            </ProtectedRoute>
+          }
+        />
 
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
