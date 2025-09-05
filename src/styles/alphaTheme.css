@@ -522,3 +522,56 @@
   color: var(--alpha-text) !important;
   border-color: var(--alpha-border) !important;
 }
+
+/* ===== Inline-style killers (expanded rows) ===== */
+
+/* Make the lilac pill style win over inline styles (e.g., the “Video” <a>) */
+.alpha-theme .expanded a[style*="background: rgb(249, 250, 251)"],
+.alpha-theme .expanded a[style*="border: 1px solid rgb(229, 231, 235)"] {
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border-color: var(--alpha-primary) !important;
+  border-radius: 20px !important;
+  text-decoration: none !important;
+  padding: 6px 10px !important;
+  display: inline-block !important;
+  font-weight: 600 !important;
+}
+.alpha-theme .expanded a[style*="background: rgb(249, 250, 251)"]:hover,
+.alpha-theme .expanded a[style*="border: 1px solid rgb(229, 231, 235)"]:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+
+/* Force the big analysis cards (which are emitted with inline white bg) to use our dark surface */
+.alpha-theme .expanded div[style*="border-radius"][style*="background: rgb(255, 255, 255)"] {
+  background: var(--alpha-surface) !important;
+  border-color: var(--alpha-border) !important;
+  color: var(--alpha-text) !important;
+}
+
+/* Make ALL text inside those analysis cards white (headings, labels, paragraphs) */
+.alpha-theme .expanded div[style*="border-radius"][style*="background: rgb(255, 255, 255)"] * {
+  color: var(--alpha-text) !important;
+  -webkit-text-fill-color: var(--alpha-text) !important;
+  opacity: 1 !important;
+}
+
+/* Progress track (was light gray) -> subtle translucent light */
+.alpha-theme .expanded div[style*="height: 8px"][style*="background: rgb(229, 231, 235)"] {
+  background: rgba(255,255,255,0.15) !important;
+}
+
+/* Progress fill -> use brand lilac */
+.alpha-theme .expanded div[style*="height: 100%"][style*="width:"][style*="background: rgb(96, 165, 250)"] {
+  background: var(--alpha-primary) !important;
+}
+
+/* Keep the expanded-row header strip dark (name/email bar) */
+.alpha-theme .expanded .row,
+.alpha-theme .expanded .header {
+  background: var(--alpha-bg) !important;
+  color: var(--alpha-text) !important;
+  border-color: var(--alpha-border) !important;
+}
+
