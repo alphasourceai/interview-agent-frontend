@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
@@ -17,8 +18,8 @@ function NotFound() {
 
 export default function App() {
   return (
-    {/* Theme wrapper applies the Wix-matched colors/fonts */}
     <div className="alpha-theme min-h-screen">
+      {/* Theme wrapper applies the Wix-matched colors/fonts */}
       <Routes>
         {/* Default → dashboard (single page) */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
