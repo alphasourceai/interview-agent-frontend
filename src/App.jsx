@@ -1,11 +1,13 @@
-// src/App.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-import InterviewAccessPage from './pages/InterviewAccessPage';
-import VerifyOtp from './pages/VerifyOtp';
-import ClientDashboard from './pages/ClientDashboard';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+
+import ClientDashboard from './pages/ClientDashboard.jsx';
+import InterviewAccessPage from './pages/InterviewAccessPage.jsx';
+import VerifyOtp from './pages/VerifyOtp.jsx';
+import SignIn from './pages/SignIn.jsx';          // magic link entry
+import AcceptInvite from './pages/AcceptInvite.jsx'; // optional, if you use invites
 
 function NotFound() {
   return (
@@ -22,14 +24,16 @@ export default function App() {
     <div className="alpha-theme min-h-screen">
       {/* Theme wrapper applies the Wix-matched colors/fonts */}
       <Routes>
-        {/* Default → dashboard (single page) */}
+        {/* default → dashboard */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* Public routes used by magic-link / access flows */}
+        {/* public auth & access */}
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route path="/interview-access/:role_token" element={<InterviewAccessPage />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
 
-        {/* Single dashboard page (protected) */}
+        {/* single-page dashboard (protected) */}
         <Route
           path="/dashboard"
           element={
