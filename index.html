@@ -2,8 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Interview Agent</title>
+
+    <!-- Brand color for mobile address bar -->
+    <meta name="theme-color" content="#061551" />
+
+    <!-- Raleway (matches Wix) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Minimal paint styles to avoid flash before React mounts -->
+    <style>
+      html, body, #root { height: 100%; }
+      body {
+        margin: 0;
+        background: #061551;           /* brand navy */
+        color: #ffffff;                 /* brand white */
+        font-family: 'Raleway', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
