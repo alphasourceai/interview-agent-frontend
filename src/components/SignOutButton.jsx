@@ -1,15 +1,19 @@
-import { supabase } from '../lib/supabaseClient'
+import { supabase } from '../lib/supabaseClient';
 
 export default function SignOutButton() {
   async function onClick(e) {
-    e.preventDefault()
-    await supabase.auth.signOut()
-    window.location.href = '/signin'
+    e.preventDefault();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      // Always land users on signin
+      window.location.assign('/signin');
+    }
   }
+
   return (
-    <a href="/signin" onClick={onClick}
-       style={{ textDecoration:'none', border:'1px solid #e5e7eb', padding:'8px 12px', borderRadius:8, background:'#fff' }}>
+    <button className="btn" onClick={onClick}>
       Sign out
-    </a>
-  )
+    </button>
+  );
 }

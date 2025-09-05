@@ -194,3 +194,113 @@
   background: rgba(255,255,255,0.06);
 }
 
+/* === Fixes for legacy dashboard === */
+
+/* 2.1 Expanded rows/cards: keep dark background */
+.alpha-theme .expanded,
+.alpha-theme .expand,
+.alpha-theme .expander-content,
+.alpha-theme .row-details,
+.alpha-theme details[open],
+.alpha-theme .report,
+.alpha-theme .panel,
+.alpha-theme .box,
+.alpha-theme .card {
+  background: var(--alpha-surface) !important;
+  border: 1px solid var(--alpha-border) !important;
+  color: var(--alpha-text) !important;
+  border-radius: var(--alpha-radius);
+}
+
+/* Catch inline white backgrounds used by old components */
+.alpha-theme [style*="background:#fff"],
+.alpha-theme [style*="background: #fff"],
+.alpha-theme [style*="background:white"],
+.alpha-theme [style*="background: white"],
+.alpha-theme [style*="background-color:#fff"],
+.alpha-theme [style*="background-color: #fff"],
+.alpha-theme [style*="background-color:white"],
+.alpha-theme [style*="background-color: white"],
+.alpha-theme [style*="background: rgb(255, 255, 255)"],
+.alpha-theme [style*="background-color: rgb(255, 255, 255)"] {
+  background: var(--alpha-surface) !important;
+  color: var(--alpha-text) !important;
+}
+
+/* 2.2 Headings inside expanded/report panels should be dark (not white) */
+.alpha-theme .expanded h1,
+.alpha-theme .expanded h2,
+.alpha-theme .expanded h3,
+.alpha-theme .report h1,
+.alpha-theme .report h2,
+.alpha-theme .report h3,
+.alpha-theme .panel h1,
+.alpha-theme .panel h2,
+.alpha-theme .panel h3 {
+  color: var(--alpha-darktext) !important; /* e.g., "Resume Analysis", "Interview Analysis" */
+}
+
+/* 2.3 The three little action buttons (Video / Transcript / Download PDF) to lilac */
+.alpha-theme button,
+.alpha-theme .btn,
+.alpha-theme a.button,
+.alpha-theme a[role="button"],
+.alpha-theme input[type="button"],
+.alpha-theme input[type="submit"] {
+  appearance: none;
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border: 1px solid var(--alpha-primary) !important;
+  border-radius: 18px !important;
+  padding: 6px 10px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+}
+.alpha-theme button:hover,
+.alpha-theme .btn:hover,
+.alpha-theme a.button:hover,
+.alpha-theme a[role="button"]:hover,
+.alpha-theme input[type="button"]:hover,
+.alpha-theme input[type="submit"]:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+
+/* 2.4 Sign out link should look like our lilac button even if inline styles exist */
+.alpha-theme a[href$="/signin"],
+.alpha-theme a:has(> *:contains("Sign out")), /* best-effort */
+.alpha-theme .signout-btn {
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border: 1px solid var(--alpha-primary) !important;
+  border-radius: 18px !important;
+  padding: 6px 12px !important;
+  text-decoration: none !important;
+}
+.alpha-theme a[href$="/signin"]:hover,
+.alpha-theme .signout-btn:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+
+/* 2.5 Inputs on dark: white text (signin and filters) */
+.alpha-theme input,
+.alpha-theme select,
+.alpha-theme textarea {
+  background: rgba(255,255,255,0.08) !important;
+  color: var(--alpha-text) !important;
+  border: 1px solid var(--alpha-border) !important;
+}
+.alpha-theme input::placeholder,
+.alpha-theme textarea::placeholder {
+  color: var(--alpha-muted) !important;
+}
+
+/* 2.6 Table rows stay readable */
+.alpha-theme table {
+  color: var(--alpha-text) !important;
+}
+.alpha-theme table tr td,
+.alpha-theme table tr th {
+  border-color: var(--alpha-border) !important;
+}
