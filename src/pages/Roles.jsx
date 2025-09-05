@@ -1,58 +1,49 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { api } from "../lib/api";
-import { useClientContext } from "../lib/clientContext.jsx";
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { api } from '../lib/api';
+import { useClientContext } from '../lib/clientContext';
 
 export default function Roles() {
-  const [roles, setRoles] = useState([]);
+  const { clientId } = useClientContext();
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const { currentClientId } = useClientContext();
 
   useEffect(() => {
-    let ignore = false;
-    async function load() {
-      setLoading(true);
-      const res = await api.roles.list({ client_id: currentClientId });
-      if (!ignore) setRoles(res || []);
-      setLoading(false);
-    }
-    if (currentClientId) load();
-    return () => { ignore = true; };
-  }, [currentClientId]);
+    if (!clientId) return;
+    setLoading(true);
+    api.get(`/roles?client_id=${encodeURIComponent(clientId)}`)
+      .then(r => setRows(Array.isArray(r) ? r : []))
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false));
+  }, [clientId]);
 
   return (
-    <div className="mx-auto max-w-6xl p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold">Roles</h1>
-        <button
-  onClick={() => navigate("/roles/new")}
-  style={{ border: "1px solid #ccc", borderRadius: 6, padding: "6px 10px", background: "#fff", marginBottom: 12 }}
->
-  Add Role
-</button>
+    <div>
+      <h2>Roles</h2>
+      <div style={{ marginBottom: 8 }}>
+        <Link to="/roles/new"><button>Add Role</button></Link>
       </div>
-      {loading ? (
-        <div>Loading...</div>
-      ) : roles.length === 0 ? (
-        <div className="text-gray-600">No roles yet.</div>
-      ) : (
-        <table className="w-full border text-sm">
+
+      {loading ? <div>Loading…</div> : (
+        <table className="table">
           <thead>
-            <tr className="bg-gray-50">
-              <th className="p-2 text-left">Title</th>
-              <th className="p-2 text-left">Interview Type</th>
-              <th className="p-2 text-left">Created</th>
+            <tr>
+              <th>Title</th>
+              <th>Interview Type</th>
+              <th>Created</th>
             </tr>
           </thead>
           <tbody>
-            {roles.map(r => (
-              <tr key={r.id} className="border-t">
-                <td className="p-2">{r.title}</td>
-                <td className="p-2 capitalize">{r.interview_type}</td>
-                <td className="p-2">{r.created_at ? new Date(r.created_at).toLocaleString() : ""}</td>
+            {(rows || []).map(r => (
+              <tr key={r.id}>
+                <td>{r.title}</td>
+                <td>{r.interview_type || '—'}</td>
+                <td>{r.created_at ? new Date(r.created_at).toLocaleString() : '—'}</td>
               </tr>
             ))}
+            {(!rows || rows.length === 0) && (
+              <tr><td colSpan={3} style={{ color: '#777' }}>No roles yet.</td></tr>
+            )}
           </tbody>
         </table>
       )}

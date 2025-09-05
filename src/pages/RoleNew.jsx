@@ -1,89 +1,109 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { api } from "../lib/api";
-import { useClientContext } from "../lib/clientContext.jsx";
-
-const field = { display: "grid", gap: 6, marginBottom: 12 };
-const label = { fontSize: 14 };
-const input = { border: "1px solid #d1d5db", borderRadius: 6, padding: 10, width: "100%" };
-const btn = { border: "1px solid #ccc", borderRadius: 6, padding: "8px 12px", background: "#fff" };
+// src/pages/RoleNew.jsx
+import { useEffect, useState } from 'react';
+import { Api } from '../lib/api';
+import { useClientContext } from '../lib/clientContext';
 
 export default function RoleNew() {
-  const { currentClientId } = useClientContext();
-  const [title, setTitle] = useState("");
-  const [interviewType, setInterviewType] = useState("basic");
-  const [manualQuestions, setManualQuestions] = useState("");
+  const { client } = useClientContext();
+  const [title, setTitle] = useState('');
+  const [interviewType, setInterviewType] = useState('basic');
+  const [roleId, setRoleId] = useState(null);
   const [file, setFile] = useState(null);
+  const [parsedPreview, setParsedPreview] = useState('');
   const [saving, setSaving] = useState(false);
-  const navigate = useNavigate();
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
 
-  async function onSubmit(e) {
-    e.preventDefault();
-    if (!currentClientId || saving) return;
-    setSaving(true);
+  useEffect(() => { setError(''); }, [title, interviewType, file]);
 
-    let jd_file = null;
-    if (file) {
-      jd_file = await api.roles.uploadJD({ client_id: currentClientId, file });
-      if (!jd_file) {
-        alert("Job description upload failed.");
-        setSaving(false);
-        return;
-      }
+  const onCreate = async () => {
+    try {
+      setSaving(true);
+      const r = await Api.createRole(
+        { title, interview_type: interviewType },
+        client.id
+      );
+      setRoleId(r.id);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
     }
+  };
 
-    const role = await api.roles.create({
-      client_id: currentClientId,
-      title,
-      interview_type: interviewType,
-      manual_questions: manualQuestions.split("\n").map(s => s.trim()).filter(Boolean),
-      jd_file
-    });
-
-    setSaving(false);
-    if (role?.id) navigate("/roles");
-  }
+  const onUploadJD = async () => {
+    if (!roleId || !file) return;
+    try {
+      setUploading(true);
+      const out = await Api.uploadRoleJD({ client_id: client.id, role_id: roleId, file });
+      setParsedPreview(out.parsed_text_preview || '');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
-    <div style={{ maxWidth: 720 }}>
-      <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Add Role</h1>
-      <form onSubmit={onSubmit}>
-        <div style={field}>
-          <label style={label}>Role title</label>
-          <input style={input} value={title} onChange={e => setTitle(e.target.value)} required />
-        </div>
+    <div className="p-6 max-w-3xl">
+      <h1 className="text-2xl font-semibold mb-4">Add Role</h1>
 
-        <div style={field}>
-          <label style={label}>Interview type</label>
-          <select style={input} value={interviewType} onChange={e => setInterviewType(e.target.value)}>
-            <option value="basic">basic</option>
-            <option value="detailed">detailed</option>
-            <option value="technical">technical</option>
-          </select>
-        </div>
+      <label className="block text-sm font-medium mb-1">Title</label>
+      <input
+        className="border rounded w-full p-2 mb-4"
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        placeholder="e.g., Senior Software Engineer"
+      />
 
-        <div style={field}>
-          <label style={label}>Job description (pdf/doc/docx)</label>
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={e => setFile(e.target.files?.[0] || null)}
-          />
-        </div>
+      <label className="block text-sm font-medium mb-1">Interview Type</label>
+      <select
+        className="border rounded w-full p-2 mb-4"
+        value={interviewType}
+        onChange={e => setInterviewType(e.target.value)}
+      >
+        <option value="basic">basic</option>
+        <option value="detailed">detailed</option>
+        <option value="technical">technical</option>
+      </select>
 
-        <div style={field}>
-          <label style={label}>Manual questions (one per line)</label>
-          <textarea style={{ ...input, minHeight: 120 }}
-            value={manualQuestions}
-            onChange={e => setManualQuestions(e.target.value)}
-          />
-        </div>
+      {!roleId ? (
+        <button
+          onClick={onCreate}
+          className="bg-black text-white rounded px-4 py-2"
+          disabled={saving || !title}
+        >
+          {saving ? 'Creating…' : 'Create Role'}
+        </button>
+      ) : (
+        <>
+          <div className="mt-6 border-t pt-4">
+            <h2 className="text-lg font-semibold mb-2">Job Description (PDF or DOCX)</h2>
+            <input
+              type="file"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={e => setFile(e.target.files?.[0] || null)}
+            />
+            <button
+              onClick={onUploadJD}
+              className="ml-3 bg-black text-white rounded px-4 py-2 disabled:opacity-50"
+              disabled={!file || uploading}
+            >
+              {uploading ? 'Uploading…' : 'Upload & Parse'}
+            </button>
+            {!!parsedPreview && (
+              <div className="mt-4">
+                <div className="text-sm text-gray-600 mb-1">Parsed Preview (first ~1,200 chars)</div>
+                <pre className="whitespace-pre-wrap p-3 border rounded bg-gray-50 max-h-64 overflow-auto">
+                  {parsedPreview}
+                </pre>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="submit" style={btn} disabled={saving}>{saving ? "Saving..." : "Save Role"}</button>
-          <button type="button" style={btn} onClick={() => navigate("/roles")}>Cancel</button>
-        </div>
-      </form>
+      {!!error && <div className="mt-4 text-red-600">{error}</div>}
     </div>
   );
 }
