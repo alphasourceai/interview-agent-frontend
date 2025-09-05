@@ -575,3 +575,63 @@
   border-color: var(--alpha-border) !important;
 }
 
+/* === Final, blunt overrides for inline-styled expanded rows === */
+
+/* 1) Make the “Video” <a> look like the lilac pill (override light inline bg/border) */
+.alpha-theme a[style*="background: rgb(249, 250, 251)"],
+.alpha-theme a[style*="border: 1px solid rgb(229, 231, 235)"] {
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border-color: var(--alpha-primary) !important;
+  border-radius: 20px !important;
+  text-decoration: none !important;
+  padding: 6px 10px !important;
+  display: inline-block !important;
+  font-weight: 600 !important;
+}
+.alpha-theme a[style*="background: rgb(249, 250, 251)"]:hover,
+.alpha-theme a[style*="border: 1px solid rgb(229, 231, 235)"]:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+
+/* 2) The big analysis blocks: force dark surface + white text
+      (they come in with inline white background & gray text) */
+.alpha-theme div[style*="grid-column-start: span 6"][style*="border-radius: 12px"],
+.alpha-theme div[style*="border-radius: 12px"][style*="background: rgb(255, 255, 255)"] {
+  background: var(--alpha-surface) !important;
+  border-color: var(--alpha-border) !important;
+  color: var(--alpha-text) !important;
+}
+
+/* …and every descendant inside those blocks becomes white text */
+.alpha-theme div[style*="grid-column-start: span 6"][style*="border-radius: 12px"] *,
+.alpha-theme div[style*="border-radius: 12px"][style*="background: rgb(255, 255, 255)"] * {
+  color: var(--alpha-text) !important;
+  -webkit-text-fill-color: var(--alpha-text) !important;
+  opacity: 1 !important;
+}
+
+/* Labels (Experience/Skills/Education) and their % numbers often have inline gray/black */
+.alpha-theme div[style*="font-size: 12px"][style*="color: rgb(55, 65, 81)"],
+.alpha-theme span[style*="font-weight: 600"][style*="color: rgb(17, 24, 39)"] {
+  color: var(--alpha-text) !important;
+}
+
+/* Progress track (was light gray) -> subtle translucent light */
+.alpha-theme div[style*="height: 8px"][style*="overflow: hidden"][style*="border-radius: 8px"][style*="background: rgb(229, 231, 235)"] {
+  background: rgba(255,255,255,0.15) !important;
+}
+
+/* Progress fill (was blue) -> brand lilac */
+.alpha-theme div[style*="height: 100%"][style*="background: rgb(96, 165, 250)"] {
+  background: var(--alpha-primary) !important;
+}
+
+/* (Already fixed earlier) the expanded header strip stays dark */
+.alpha-theme .row,
+.alpha-theme .header {
+  background: var(--alpha-bg) !important;
+  color: var(--alpha-text) !important;
+  border-color: var(--alpha-border) !important;
+}
