@@ -1,51 +1,29 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 
-import ProtectedRoute from './components/ProtectedRoute.jsx';
+import SignIn from './pages/SignIn';                  // ⬅ add
+import InterviewAccessPage from './pages/InterviewAccessPage';
+import VerifyOtp from './pages/VerifyOtp';
+import ClientDashboard from './pages/ClientDashboard';
+import RoleCreator from './pages/RoleCreator';
+import RoleReports from './pages/RoleReports';
+import RoleCandidates from './pages/RoleCandidates';
 
-import ClientDashboard from './pages/ClientDashboard.jsx';
-import InterviewAccessPage from './pages/InterviewAccessPage.jsx';
-import VerifyOtp from './pages/VerifyOtp.jsx';
-import SignIn from './pages/SignIn.jsx';          // magic link entry
-import AcceptInvite from './pages/AcceptInvite.jsx'; // optional, if you use invites
-
-function NotFound() {
+function App() {
   return (
-    <div style={{ padding: 32 }}>
-      <h2>Page not found</h2>
-      <p>We couldn’t find that page.</p>
-      <a className="btn" href="/dashboard">Go to dashboard</a>
-    </div>
+    <Routes>
+      {/* Public */}
+      <Route path="/signin" element={<SignIn />} />    {/* ⬅ add */}
+      <Route path="/interview-access/:role_token" element={<InterviewAccessPage />} />
+      <Route path="/verify-otp" element={<VerifyOtp />} />
+
+      {/* Legacy single-page dashboard & role views */}
+      <Route path="/dashboard" element={<ClientDashboard />} />
+      <Route path="/create-role" element={<RoleCreator />} />
+      <Route path="/reports/:roleId" element={<RoleReports />} />
+      <Route path="/candidates/:roleId" element={<RoleCandidates />} />
+    </Routes>
   );
 }
 
-export default function App() {
-  return (
-    <div className="alpha-theme min-h-screen">
-      {/* Theme wrapper applies the Wix-matched colors/fonts */}
-      <Routes>
-        {/* default → dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-        {/* public auth & access */}
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/accept-invite" element={<AcceptInvite />} />
-        <Route path="/interview-access/:role_token" element={<InterviewAccessPage />} />
-        <Route path="/verify-otp" element={<VerifyOtp />} />
-
-        {/* single-page dashboard (protected) */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <ClientDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* 404 */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </div>
-  );
-}
+export default App;
