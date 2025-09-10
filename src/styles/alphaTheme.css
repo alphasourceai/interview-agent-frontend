@@ -635,3 +635,52 @@
   color: var(--alpha-text) !important;
   border-color: var(--alpha-border) !important;
 }
+
+/* Candidate submit & interview launch — force dark panels + white text */
+.alpha-theme div[style*="background: rgb(255, 255, 255)"][style*="padding: 12px"],
+.alpha-theme div[style*="background: rgb(255, 255, 255)"][style*="padding: 16px"],
+.alpha-theme div[style*="border: 1px solid rgb(229, 231, 235)"][style*="border-radius: 12px"] {
+  background: var(--alpha-surface) !important;
+  border-color: var(--alpha-border) !important;
+  color: var(--alpha-text) !important;
+}
+.alpha-theme div[style*="background: rgb(255, 255, 255)"][style*="padding: 12px"] *,
+.alpha-theme div[style*="background: rgb(255, 255, 255)"][style*="padding: 16px"] *,
+.alpha-theme div[style*="border: 1px solid rgb(229, 231, 235)"][style*="border-radius: 12px"] * {
+  color: var(--alpha-text) !important;
+  -webkit-text-fill-color: var(--alpha-text) !important;
+}
+
+/* File input / dropzones */
+.alpha-theme input[type="file"] {
+  background: rgba(255,255,255,0.08) !important;
+  color: var(--alpha-text) !important;
+  border: 1px solid var(--alpha-border) !important;
+  border-radius: 10px !important;
+  padding: 10px !important;
+}
+.alpha-theme label[for*="file"],
+.alpha-theme .dropzone,
+.alpha-theme [class*="dropzone"] {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px dashed var(--alpha-border) !important;
+  color: var(--alpha-text) !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+}
+
+/* Primary CTA buttons on those pages */
+.alpha-theme button,
+.alpha-theme .btn,
+.alpha-theme input[type="submit"] {
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border-color: var(--alpha-primary) !important;
+}
+.alpha-theme button:hover,
+.alpha-theme .btn:hover,
+.alpha-theme input[type="submit"]:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+
