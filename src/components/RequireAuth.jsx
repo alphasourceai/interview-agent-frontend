@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 
-export default function ProtectedRoute({ children }) {
+export default function RequireAuth() {
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const loc = useLocation();
@@ -29,5 +29,5 @@ export default function ProtectedRoute({ children }) {
     const next = encodeURIComponent(loc.pathname + loc.search);
     return <Navigate to={`/signin?next=${next}`} replace />;
   }
-  return children;
+  return <Outlet />;
 }
