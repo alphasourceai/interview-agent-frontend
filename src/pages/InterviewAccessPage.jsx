@@ -1,5 +1,5 @@
 // src/pages/InterviewAccessPage.jsx
-// One-page intake → OTP → Start Interview (embedded)
+// One-page intake → OTP → Start Interview (embedded tall)
 // Uses VITE_BACKEND_URL for API calls
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -166,8 +166,11 @@ export default function InterviewAccessPage() {
     <div className="p-4 max-w-6xl mx-auto space-y-6">
       {header}
 
-      {/* Top media/room area */}
-      <div className="w-full aspect-video bg-black/30 rounded-2xl border border-white/10 overflow-hidden flex items-center justify-center">
+      {/* Top media/room area — tall so Tavus UI isn’t cropped */}
+      <div
+        className="w-full rounded-2xl border border-white/10 overflow-hidden"
+        style={{ height: '70vh', background: 'rgba(0,0,0,0.3)' }}
+      >
         {roomUrl ? (
           <iframe
             title="Interview"
@@ -176,8 +179,8 @@ export default function InterviewAccessPage() {
             allow="camera; microphone; autoplay; fullscreen"
           />
         ) : (
-          <div className="text-center p-6 opacity-80">
-            <div className="text-sm">Your interview room will appear here after verification.</div>
+          <div className="w-full h-full flex items-center justify-center opacity-80">
+            <div className="text-center p-6">Your interview room will appear here after verification.</div>
           </div>
         )}
       </div>
@@ -190,7 +193,7 @@ export default function InterviewAccessPage() {
             roleToken={role_token}
             onSubmitted={(payload) => {
               setSubmitted(payload);
-              setVerified(false); // reset if user re-submits with a different email
+              setVerified(false); // reset if user re-submits
               setRoomUrl('');
             }}
           />
@@ -212,11 +215,9 @@ export default function InterviewAccessPage() {
                   roleId={submitted.role_id}
                   onVerified={(info) => {
                     setVerified(true);
-                    // keep latest ids in case BE returned different values
-                    setSubmitted((s) => ({ ...(s || {}), ...info }));
+                    setSubmitted((s) => ({ ...(s || {}), ...info })); // keep latest ids
                   }}
                 />
-
                 <div className="mt-4">
                   <button
                     type="button"
