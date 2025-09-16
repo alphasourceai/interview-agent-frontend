@@ -14,7 +14,9 @@ export default function ClientDashboard() {
   const [expanded, setExpanded] = useState({})
 
   const hasMembership = (me?.memberships || []).length > 0
-  const canInvite = hasMembership && (me?.memberships || []).some(m => ['owner', 'admin'].includes(m.role))
+  const canInvite =
+    hasMembership &&
+    (me?.memberships || []).some(m => ['owner', 'admin'].includes(m.role))
 
   const nameById = useMemo(
     () => Object.fromEntries(clients.map(c => [c.client_id, c.name])),
@@ -31,9 +33,15 @@ export default function ClientDashboard() {
     'member'
 
   const pctText = (v) =>
-    (typeof v === 'number' && isFinite(v)) || v === 0 ? `${Math.max(0, Math.min(100, v))}%` : '—'
+    (typeof v === 'number' && isFinite(v)) || v === 0
+      ? `${Math.max(0, Math.min(100, v))}%`
+      : '—'
   const fmtDate = (iso) => {
-    try { return new Date(iso).toLocaleString() } catch { return iso || '—' }
+    try {
+      return new Date(iso).toLocaleString()
+    } catch {
+      return iso || '—'
+    }
   }
 
   function toggleRow(id) {
@@ -41,10 +49,12 @@ export default function ClientDashboard() {
   }
 
   async function openSigned(interviewId, kind) {
+    if (!interviewId) return
     const key = `${interviewId}:${kind}`
     try {
       setOpening(p => ({ ...p, [key]: true }))
-      const qs = `?interview_id=${encodeURIComponent(interviewId)}&kind=${encodeURIComponent(kind)}`
+      const qs =
+        `?interview_id=${encodeURIComponent(interviewId)}&kind=${encodeURIComponent(kind)}`
       const { url } = await apiGet('/files/signed-url' + qs)
       if (!url) throw new Error('No signed URL returned')
       window.open(url, '_blank', 'noopener,noreferrer')
@@ -56,10 +66,14 @@ export default function ClientDashboard() {
   }
 
   async function generatePdf(interviewId) {
+    if (!interviewId) return
     const key = `${interviewId}:pdf`
     try {
       setOpening(p => ({ ...p, [key]: true }))
-      await apiDownload(`/reports/${encodeURIComponent(interviewId)}/download`, `Candidate_Report_${interviewId}.pdf`)
+      await apiDownload(
+        `/reports/${encodeURIComponent(interviewId)}/download`,
+        `Candidate_Report_${interviewId}.pdf`
+      )
     } catch (e) {
       setError(String(e?.message || e))
     } finally {
@@ -75,13 +89,16 @@ export default function ClientDashboard() {
         setLoading(true)
         const [meResp, myClients] = await Promise.all([
           apiGet('/auth/me'),
-          apiGet('/clients/my')
+          apiGet('/clients/my'),
         ])
         if (!alive) return
         setMe(meResp)
         const list = myClients?.items || []
         setClients(list)
-        const first = (list[0]?.client_id) || (meResp.memberships?.[0]?.client_id) || ''
+        const first =
+          list[0]?.client_id ||
+          meResp.memberships?.[0]?.client_id ||
+          ''
         setClientId(first)
       } catch (e) {
         setError(String(e?.message || e))
@@ -89,72 +106,85 @@ export default function ClientDashboard() {
         setLoading(false)
       }
     })()
-    return () => { alive = false }
+    return () => {
+      alive = false
+    }
   }, [])
 
-  // Load interviews for selected client
+  // Load candidate-centric rows for selected client
   useEffect(() => {
-    if (!clientId) { setItems([]); return }
+    if (!clientId) {
+      setItems([])
+      return
+    }
     let alive = true
     ;(async () => {
       try {
         setLoading(true)
         const qs = `?client_id=${encodeURIComponent(clientId)}`
-        const resp = await apiGet('/dashboard/interviews' + qs)
+        const resp = await apiGet('/dashboard/rows' + qs)
         const raw = resp?.items || []
-        // Defensive: filter out anything without a stable id, and enforce client match if present
-        const clean = raw
-          .filter(r => r && r.id)
-          .filter(r => !r.client_id || r.client_id === clientId)
 
-        console.debug('[dashboard] fetched interviews:', {
+        const scrubbed = (raw || []).filter(r => r && r.id) // basic sanity
+
+        console.debug('[dashboard] fetched rows:', {
           requestedClientId: clientId,
           rawCount: raw.length,
-          cleanCount: clean.length,
-          sample: clean.slice(0, 3)
+          scrubbedCount: scrubbed.length,
+          sample: scrubbed.slice(0, 3),
         })
 
         if (!alive) return
-        setItems(clean)
+        setItems(scrubbed)
       } catch (e) {
         setError(String(e?.message || e))
       } finally {
         setLoading(false)
       }
     })()
-    return () => { alive = false }
+    return () => {
+      alive = false
+    }
   }, [clientId])
 
+  // Normalize for table
   const rows = useMemo(() => {
     return (items || []).map(r => ({
-      id: r.id,
+      id: r.id, // candidate id
       created_at: r.created_at,
+      latest_interview_id: r.latest_interview_id || null,
+      latest_report_url: r.latest_report_url || null,
+
       candidate: {
         id: r.candidate?.id || null,
         name: r.candidate?.name || '',
-        email: r.candidate?.email || ''
+        email: r.candidate?.email || '',
       },
       role: r.role || null,
+
       video_url: r.video_url || null,
       transcript_url: r.transcript_url || null,
       analysis_url: r.analysis_url || null,
+
       has_video: !!r.video_url,
       has_transcript: !!r.transcript_url,
       has_analysis: !!r.analysis_url,
+
       resume_score: r.resume_score ?? null,
       interview_score: r.interview_score ?? null,
       overall_score: r.overall_score ?? null,
+
       resume_analysis: {
         experience: r.resume_analysis?.experience ?? null,
         skills: r.resume_analysis?.skills ?? null,
         education: r.resume_analysis?.education ?? null,
-        summary: r.resume_analysis?.summary || ''
+        summary: r.resume_analysis?.summary || '',
       },
       interview_analysis: {
         clarity: r.interview_analysis?.clarity ?? null,
         confidence: r.interview_analysis?.confidence ?? null,
-        body_language: r.interview_analysis?.body_language ?? null
-      }
+        body_language: r.interview_analysis?.body_language ?? null,
+      },
     }))
   }, [items])
 
@@ -164,7 +194,16 @@ export default function ClientDashboard() {
         <h1 style={{ margin: 0 }}>Dashboard</h1>
         <div style={{ display:'flex', gap: 8 }}>
           {canInvite && (
-            <a href="/invite" style={{ textDecoration:'none', border:'1px solid #e5e7eb', padding:'8px 12px', borderRadius:8, background:'#f9fafb' }}>
+            <a
+              href="/invite"
+              style={{
+                textDecoration:'none',
+                border:'1px solid #e5e7eb',
+                padding:'8px 12px',
+                borderRadius:8,
+                background:'#f9fafb'
+              }}
+            >
               Invite teammate
             </a>
           )}
@@ -196,16 +235,22 @@ export default function ClientDashboard() {
       )}
 
       {!hasMembership && !loading && (
-        <div style={{ background: '#fff3cd', border: '1px solid #ffeeba', padding: 12, borderRadius: 8, marginTop: 8 }}>
+        <div
+          style={{
+            background: '#fff3cd',
+            border: '1px solid #ffeeba',
+            padding: 12,
+            borderRadius: 8,
+            marginTop: 8
+          }}
+        >
           You are signed in but not a member of any client yet.
         </div>
       )}
 
       {loading && <div>Loading…</div>}
 
-      {!loading && rows.length === 0 && (
-        <div>No rows yet.</div>
-      )}
+      {!loading && rows.length === 0 && <div>No rows yet.</div>}
 
       {!loading && rows.length > 0 && (
         <div style={{ overflowX: 'auto' }}>
@@ -224,8 +269,8 @@ export default function ClientDashboard() {
             </thead>
             <tbody>
               {rows.map(r => {
-                const trKey = `${r.id}:transcript`
-                const pdfKey = `${r.id}:pdf`
+                const trKey = `${r.latest_interview_id || r.id}:transcript`
+                const pdfKey = `${r.latest_interview_id || r.id}:pdf`
                 const opened = !!expanded[r.id]
                 return (
                   <FragmentRow
@@ -262,9 +307,25 @@ function FragmentRow({
             onClick={() => toggleRow(r.id)}
             title={opened ? 'Collapse' : 'Expand'}
             aria-label={opened ? 'Collapse' : 'Expand'}
-            style={{ ...btn, width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+            style={{
+              ...btn,
+              width: 28,
+              height: 28,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0
+            }}
           >
-            <span style={{ display:'inline-block', transform: opened ? 'rotate(90deg)' : 'none', transition:'transform 120ms ease' }}>▶</span>
+            <span
+              style={{
+                display:'inline-block',
+                transform: opened ? 'rotate(90deg)' : 'none',
+                transition:'transform 120ms ease'
+              }}
+            >
+              ▶
+            </span>
           </button>
         </td>
         <td style={td}><div style={{ fontWeight: 600 }}>{r.candidate.name || '—'}</div></td>
@@ -285,16 +346,28 @@ function FragmentRow({
                 {r.video_url && (
                   <a href={r.video_url} target="_blank" rel="noreferrer" style={btn}>Video</a>
                 )}
+
                 <button
-                  onClick={() => openSigned(r.id, 'transcript')}
-                  disabled={!r.has_transcript || !!opening[trKey]}
-                  style={{ ...btn, ...(r.has_transcript ? {} : disabledBtn), ...(opening[trKey] ? disabledBtn : {}) }}
+                  onClick={() => openSigned(r.latest_interview_id, 'transcript')}
+                  disabled={!r.latest_interview_id || !r.has_transcript || !!opening[trKey]}
+                  style={{
+                    ...btn,
+                    ...(r.latest_interview_id && r.has_transcript ? {} : disabledBtn),
+                    ...(opening[trKey] ? disabledBtn : {})
+                  }}
                 >
                   {opening[trKey] ? 'Opening…' : 'Transcript'}
                 </button>
+
                 <button
-                  onClick={() => generatePdf(r.id)}
-                  disabled={!!opening[pdfKey]}
+                  onClick={() => {
+                    if (r.latest_report_url) {
+                      window.open(r.latest_report_url, '_blank', 'noopener,noreferrer')
+                    } else if (r.latest_interview_id) {
+                      generatePdf(r.latest_interview_id)
+                    }
+                  }}
+                  disabled={!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id)}
                   style={{ ...btn, ...(opening[pdfKey] ? disabledBtn : {}) }}
                 >
                   {opening[pdfKey] ? 'Generating…' : 'Download PDF'}
@@ -334,9 +407,10 @@ function FragmentRow({
 }
 
 function Meter({ label, value }) {
-  const pct = (typeof value === 'number' && isFinite(value)) || value === 0
-    ? Math.max(0, Math.min(100, value))
-    : null
+  const pct =
+    (typeof value === 'number' && isFinite(value)) || value === 0
+      ? Math.max(0, Math.min(100, value))
+      : null
   return (
     <div style={{ display:'grid', gap: 4 }}>
       <div style={{ display:'flex', justifyContent:'space-between', fontSize: 12, color:'#374151' }}>
@@ -350,7 +424,12 @@ function Meter({ label, value }) {
   )
 }
 
-const th = { textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '8px 6px', whiteSpace:'nowrap' }
+const th = {
+  textAlign: 'left',
+  borderBottom: '1px solid #e5e7eb',
+  padding: '8px 6px',
+  whiteSpace: 'nowrap',
+}
 const td = { borderBottom: '1px solid #f1f5f9', padding: '8px 6px', verticalAlign: 'top' }
 const btn = {
   border: '1px solid #e5e7eb',
@@ -359,6 +438,6 @@ const btn = {
   background: '#f9fafb',
   cursor: 'pointer',
   textDecoration: 'none',
-  display: 'inline-block'
+  display: 'inline-block',
 }
 const disabledBtn = { opacity: 0.6, cursor: 'not-allowed' }
