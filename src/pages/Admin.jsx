@@ -13,6 +13,11 @@ export default function Admin() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
+  // forgot/reset password
+  const [showReset, setShowReset] = useState(false)
+  const [newPass1, setNewPass1] = useState('')
+  const [newPass2, setNewPass2] = useState('')
+
   // clients
   const [clients, setClients] = useState([])
   const [selectedClientId, setSelectedClientId] = useState('')
@@ -33,6 +38,14 @@ export default function Admin() {
   const [memberRole, setMemberRole] = useState('member') // member | manager | admin
 
   const shareBase = 'https://www.alphasourceai.com/interview-agent'
+
+  // Detect Supabase recovery redirect (?pwreset=1 or hash type=recovery)
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('pwreset') === '1' || window.location.hash.includes('type=recovery')) {
+      setShowReset(true)
+    }
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -76,9 +89,32 @@ export default function Admin() {
   const handleSignIn = async (e) => {
     e.preventDefault()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return alert('Sign in failed')
+    if (error) return alert('Sign in failed: ' + error.message)
     setSession(data?.session || null)
     window.location.reload()
+  }
+
+  const startReset = async () => {
+    if (!email) return alert('Enter your email above first.')
+    const origin = window.location.origin
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/admin?pwreset=1`
+    })
+    if (error) return alert('Could not start reset: ' + error.message)
+    alert('Check your email for a password reset link.')
+  }
+
+  const submitReset = async (e) => {
+    e.preventDefault()
+    if (!newPass1 || newPass1 !== newPass2) return alert('Passwords do not match.')
+    const { error } = await supabase.auth.updateUser({ password: newPass1 })
+    if (error) return alert('Could not update password: ' + error.message)
+    alert('Password updated. You can sign in now.')
+    setShowReset(false)
+    setNewPass1(''); setNewPass2('')
+    const url = new URL(window.location.href)
+    url.searchParams.delete('pwreset')
+    window.history.replaceState({}, '', url.toString())
   }
 
   const handleSignOut = async () => {
@@ -184,18 +220,38 @@ export default function Admin() {
     return <div className="alpha-container"><div className="alpha-card"><h2>Loading…</h2></div></div>
   }
 
+  // ---------- Auth screens ----------
   if (!session) {
     return (
       <div className="alpha-container">
         <div className="alpha-card alpha-form">
-          <h2>Admin Sign In</h2>
-          <form onSubmit={handleSignIn}>
-            <label>Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-            <label>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-            <button type="submit">Sign In</button>
-          </form>
+          <h2>{showReset ? 'Reset Password' : 'Admin Sign In'}</h2>
+
+          {!showReset ? (
+            <form onSubmit={handleSignIn}>
+              <label>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+
+              <label>Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+
+              <button type="submit">Sign In</button>
+              <div style={{ marginTop: 8 }}>
+                <button type="button" onClick={startReset}>Forgot password?</button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={submitReset}>
+              <label>New password</label>
+              <input type="password" value={newPass1} onChange={e => setNewPass1(e.target.value)} required />
+              <label>Confirm new password</label>
+              <input type="password" value={newPass2} onChange={e => setNewPass2(e.target.value)} required />
+              <button type="submit">Update Password</button>
+              <div style={{ marginTop: 8 }}>
+                <button type="button" onClick={() => setShowReset(false)}>Back to sign in</button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     )
@@ -213,6 +269,7 @@ export default function Admin() {
     )
   }
 
+  // ---------- Admin app ----------
   return (
     <div className="alpha-container">
       <div className="alpha-header">
