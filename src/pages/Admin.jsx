@@ -1,3 +1,5 @@
+//src/pages/admin.jsx
+
 import React, { useEffect, useState } from 'react'
 import { apiGet, apiPost, apiDelete } from '../lib/api'
 import { supabase } from '../lib/supabaseClient'
