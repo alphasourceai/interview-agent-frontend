@@ -1,114 +1,135 @@
-// /src/pages/RoleCreator.jsx
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+// src/pages/RoleCreator.jsx
+import { useEffect, useState } from 'react'
+import { api } from '../lib/api'
+import { supabase } from '../lib/supabaseClient'
+
+async function getToken() {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token || null
+}
 
 export default function RoleCreator() {
+  const [clients, setClients] = useState([])
+  const [clientId, setClientId] = useState('')
   const [title, setTitle] = useState('')
   const [interviewType, setInterviewType] = useState('basic')
-  const [manualQuestions, setManualQuestions] = useState('')
-  const [jobFile, setJobFile] = useState(null)
+  const [jobText, setJobText] = useState('')
+  const [manualQs, setManualQs] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [message, setMessage] = useState('')
 
-  const navigate = useNavigate()
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await api.getMe(getToken)
+        if (!me?.memberships?.length) return
+        const { clients } = await api.getMyClients(getToken)
+        setClients(clients || [])
+        if (clients?.[0]?.client_id) setClientId(clients[0].client_id)
+      } catch (e) {
+        setMessage(`Error loading clients: ${e.message}`)
+      }
+    })()
+  }, [])
 
-  const handleSubmit = async (e) => {
+  async function onSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
-
-    const formData = new FormData()
-    formData.append('title', title)
-    formData.append('interview_type', interviewType)
-    formData.append('client_id', '230f8351-f284-450e-b1d8-adeef448b70a') // 🔒 TEMP until login
-    formData.append('job_description_file', jobFile)
-
-    // Parse manual questions into array
-    const questionsArray = manualQuestions
-      .split('\n')
-      .map(q => q.trim())
-      .filter(Boolean)
-
-    formData.append('manual_questions', JSON.stringify(questionsArray))
-
+    setMessage('')
     try {
-      const response = await fetch('https://interview-agent-backend-z6un.onrender.com/create-role', {
-  method: 'POST',
-  body: formData
-})
-
-      const result = await response.json()
-      if (response.ok) {
-        alert('Role created!')
-        navigate('/dashboard')
-      } else {
-        alert(result.error || 'Something went wrong.')
+      const payload = {
+        client_id: clientId,
+        title,
+        interview_type: interviewType, // basic | detailed | technical
+        job_description_text: jobText || undefined,
+        manual_questions: manualQs
+          ? manualQs.split('\n').map(s => s.trim()).filter(Boolean)
+          : [],
       }
-    } catch (err) {
-      console.error(err)
-      alert('Failed to submit form.')
+      const res = await api.createRole(payload, getToken)
+      setMessage(`Role created: ${res?.role?.id || 'ok'}`)
+      setTitle('')
+      setJobText('')
+      setManualQs('')
+    } catch (e) {
+      setMessage(`Create failed: ${e.message}`)
+    } finally {
+      setSubmitting(false)
     }
-
-    setSubmitting(false)
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Create a Role</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-
+    <div className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-semibold mb-4">Create a Role</h1>
+      <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block font-semibold">Job Title</label>
-          <input
-            type="text"
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-
-        <div>
-          <label className="block font-semibold">Interview Type</label>
+          <label className="block text-sm mb-1">Client</label>
           <select
-            value={interviewType}
-            onChange={(e) => setInterviewType(e.target.value)}
-            className="w-full p-2 border rounded"
+            className="border rounded p-2 w-full"
+            value={clientId}
+            onChange={e => setClientId(e.target.value)}
           >
-            <option value="basic">Basic (screening, ~10 min)</option>
-            <option value="detailed">Detailed (leadership, ~20 min)</option>
-            <option value="technical">Technical (skills-focused, ~20 min)</option>
+            {clients.map(c => (
+              <option key={c.client_id} value={c.client_id}>
+                {c.client_name || c.client_id}
+              </option>
+            ))}
           </select>
         </div>
 
         <div>
-          <label className="block font-semibold">Upload Job Description (PDF or DOCX)</label>
+          <label className="block text-sm mb-1">Role Title</label>
           <input
-            type="file"
-            accept=".pdf,.docx"
-            onChange={(e) => setJobFile(e.target.files[0])}
-            className="w-full"
+            className="border rounded p-2 w-full"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="e.g., Senior Customer Success Manager"
             required
           />
         </div>
 
         <div>
-          <label className="block font-semibold">Optional Manual Questions</label>
+          <label className="block text-sm mb-1">Interview Type</label>
+          <select
+            className="border rounded p-2 w-full"
+            value={interviewType}
+            onChange={e => setInterviewType(e.target.value)}
+          >
+            <option value="basic">basic (screening)</option>
+            <option value="detailed">detailed (leadership)</option>
+            <option value="technical">technical</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm mb-1">Job Description (text)</label>
           <textarea
-            rows="4"
-            value={manualQuestions}
-            onChange={(e) => setManualQuestions(e.target.value)}
-            className="w-full p-2 border rounded"
-            placeholder="One question per line"
+            className="border rounded p-2 w-full h-32"
+            value={jobText}
+            onChange={e => setJobText(e.target.value)}
+            placeholder="Paste the JD text (PDF parsing can come later)"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm mb-1">Manual Questions (one per line)</label>
+          <textarea
+            className="border rounded p-2 w-full h-32"
+            value={manualQs}
+            onChange={e => setManualQs(e.target.value)}
+            placeholder="Optional. One question per line."
           />
         </div>
 
         <button
-          type="submit"
-          disabled={submitting}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="rounded px-4 py-2 border disabled:opacity-50"
+          disabled={submitting || !clientId || !title}
         >
-          {submitting ? 'Submitting...' : 'Create Role'}
+          {submitting ? 'Creating…' : 'Create Role'}
         </button>
       </form>
+
+      {message && <div className="mt-4 text-sm">{message}</div>}
     </div>
   )
 }
