@@ -9,6 +9,8 @@ import './styles/alphaTheme.css'
 import SignIn from './pages/SignIn.jsx'
 import VerifyOtp from './pages/VerifyOtp.jsx'
 import InterviewAccessPage from './pages/InterviewAccessPage.jsx'
+import Admin from './pages/Admin.jsx'
+
 
 // Legacy single-page dashboard + role views
 import ClientDashboard from './pages/ClientDashboard.jsx'
@@ -27,6 +29,7 @@ const router = createBrowserRouter([
   { path: '/signin', element: <SignIn /> },
   { path: '/verify-otp', element: <VerifyOtp /> },
   { path: '/interview-access/:role_token', element: <InterviewAccessPage /> },
+{ path: '/admin', element: <Admin /> },
 
   // legacy single-page + role views
   { path: '/dashboard', element: <ProtectedRoute><ClientDashboard /></ProtectedRoute> },
