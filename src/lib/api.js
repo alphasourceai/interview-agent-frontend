@@ -21,7 +21,10 @@ async function handleJson(res) {
 }
 
 export async function apiGet(path) {
-  const res = await fetch(`${base}${path}`, { headers: await authHeaders(), credentials: 'include' });
+  const res = await fetch(`${base}${path}`, {
+    headers: await authHeaders(),
+    credentials: 'include'
+  });
   return handleJson(res);
 }
 
@@ -30,6 +33,15 @@ export async function apiPost(path, body) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(body || {}),
+    credentials: 'include'
+  });
+  return handleJson(res);
+}
+
+export async function apiDelete(path) {
+  const res = await fetch(`${base}${path}`, {
+    method: 'DELETE',
+    headers: await authHeaders(),
     credentials: 'include'
   });
   return handleJson(res);
