@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { apiGet, apiPost, apiDelete } from '../lib/api'
 import { supabase } from '../lib/supabaseClient'
 import '../styles/alphaTheme.css'
@@ -9,19 +9,28 @@ export default function Admin() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  // auth form
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
+  // clients
   const [clients, setClients] = useState([])
   const [selectedClientId, setSelectedClientId] = useState('')
   const [newClientName, setNewClientName] = useState('')
+  const [newClientAdminName, setNewClientAdminName] = useState('')
+  const [newClientAdminEmail, setNewClientAdminEmail] = useState('')
 
+  // roles
   const [roles, setRoles] = useState([])
   const [newRoleTitle, setNewRoleTitle] = useState('')
+  const [interviewType, setInterviewType] = useState('BASIC') // BASIC | DETAILED | TECHNICAL
+  const [jobFile, setJobFile] = useState(null)
 
+  // members
   const [members, setMembers] = useState([])
   const [memberEmail, setMemberEmail] = useState('')
   const [memberName, setMemberName] = useState('')
+  const [memberRole, setMemberRole] = useState('member') // member | manager | admin
 
   const shareBase = 'https://www.alphasourceai.com/interview-agent'
 
@@ -34,13 +43,11 @@ export default function Admin() {
         try {
           const u = await apiGet('/auth/me')
           setMe(u || null)
-          // Probe admin by hitting list clients
           const probe = await apiGet('/admin/clients')
           setIsAdmin(true)
-          setClients(probe?.items || [])
-          if ((probe?.items || []).length && !selectedClientId) {
-            setSelectedClientId(probe.items[0].id)
-          }
+          const list = probe?.items || []
+          setClients(list)
+          if (list.length && !selectedClientId) setSelectedClientId(list[0].id)
         } catch {
           setIsAdmin(false)
         }
@@ -76,19 +83,25 @@ export default function Admin() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    window.location.href = 'https://www.alphasourceai.com/account?logged_out=1'
+    window.location.href = '/admin' // return to admin login
   }
 
+  // ---------- Clients ----------
   const createClient = async () => {
     const name = newClientName.trim()
+    const admin_name = newClientAdminName.trim()
+    const admin_email = newClientAdminEmail.trim()
     if (!name) return
-    const resp = await apiPost('/admin/clients', { name })
+    const resp = await apiPost('/admin/clients', { name, admin_name, admin_email })
     const item = resp?.item
     if (item) {
       const next = [item, ...clients].sort((a, b) => a.name.localeCompare(b.name))
       setClients(next)
       setNewClientName('')
+      setNewClientAdminName('')
+      setNewClientAdminEmail('')
       setSelectedClientId(item.id)
+      if (resp?.seeded_member) setMembers([resp.seeded_member, ...members])
     }
   }
 
@@ -102,14 +115,35 @@ export default function Admin() {
     setMembers([])
   }
 
+  // ---------- Roles ----------
+  async function uploadJobDescription(file) {
+    if (!file) return null
+    const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
+    const key = `job-descriptions/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const { error } = await supabase.storage.from('job-descriptions').upload(key, file, {
+      upsert: true, contentType: file.type || 'application/octet-stream'
+    })
+    if (error) { alert('Job description upload failed'); return null }
+    return key // store path; backend will consume this
+  }
+
   const createRole = async () => {
     if (!selectedClientId) return
     const title = newRoleTitle.trim()
     if (!title) return
-    const resp = await apiPost('/admin/roles', { client_id: selectedClientId, title })
+    let jdPath = null
+    if (jobFile) jdPath = await uploadJobDescription(jobFile)
+    const payload = {
+      client_id: selectedClientId,
+      title,
+      interview_type: interviewType,            // BASIC | DETAILED | TECHNICAL
+      job_description_url: jdPath || null
+    }
+    const resp = await apiPost('/admin/roles', payload)
     if (resp?.item) {
       setRoles([resp.item, ...roles])
       setNewRoleTitle('')
+      setJobFile(null)
     }
   }
 
@@ -119,16 +153,23 @@ export default function Admin() {
     setRoles(roles.filter(r => r.id !== id))
   }
 
+  // ---------- Members ----------
   const addMember = async () => {
     if (!selectedClientId) return
     const e = memberEmail.trim()
     const n = memberName.trim()
     if (!e || !n) return
-    const resp = await apiPost('/admin/client-members', { client_id: selectedClientId, email: e, name: n })
+    const resp = await apiPost('/admin/client-members', {
+      client_id: selectedClientId,
+      email: e,
+      name: n,
+      role: memberRole
+    })
     if (resp?.item) {
       setMembers([resp.item, ...members])
       setMemberEmail('')
       setMemberName('')
+      setMemberRole('member')
       alert('Invite sent and member added')
     }
   }
@@ -163,7 +204,11 @@ export default function Admin() {
   if (!isAdmin) {
     return (
       <div className="alpha-container">
-        <div className="alpha-card"><h2>Access denied</h2><p>Your account is not an admin.</p><button onClick={handleSignOut}>Sign Out</button></div>
+        <div className="alpha-card">
+          <h2>Access denied</h2>
+          <p>Your account is not an admin.</p>
+          <button onClick={handleSignOut}>Sign Out</button>
+        </div>
       </div>
     )
   }
@@ -173,16 +218,19 @@ export default function Admin() {
       <div className="alpha-header">
         <h1>Admin</h1>
         <div className="alpha-actions">
-          <span>{me?.email}</span>
+          <span>{me?.user?.email || me?.email}</span>
           <button onClick={handleSignOut}>Sign Out</button>
         </div>
       </div>
 
       <div className="alpha-grid">
+        {/* Clients */}
         <div className="alpha-card">
           <h3>Clients</h3>
           <div className="row">
-            <input placeholder="New client name" value={newClientName} onChange={e => setNewClientName(e.target.value)} />
+            <input placeholder="Client name" value={newClientName} onChange={e => setNewClientName(e.target.value)} />
+            <input placeholder="Client admin name" value={newClientAdminName} onChange={e => setNewClientAdminName(e.target.value)} />
+            <input placeholder="Admin email" value={newClientAdminEmail} onChange={e => setNewClientAdminEmail(e.target.value)} />
             <button onClick={createClient}>Create</button>
           </div>
           <div className="row">
@@ -194,12 +242,20 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* Roles */}
         <div className="alpha-card">
           <h3>Roles</h3>
           <div className="row">
             <input placeholder="Role title" value={newRoleTitle} onChange={e => setNewRoleTitle(e.target.value)} />
+            <select value={interviewType} onChange={e => setInterviewType(e.target.value)}>
+              <option value="BASIC">BASIC</option>
+              <option value="DETAILED">DETAILED</option>
+              <option value="TECHNICAL">TECHNICAL</option>
+            </select>
+            <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => setJobFile(e.target.files?.[0] || null)} />
             <button disabled={!selectedClientId} onClick={createRole}>Create</button>
           </div>
+
           <div className="list">
             {roles.map(r => (
               <div key={r.id} className="list-row">
@@ -215,11 +271,17 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* Members */}
         <div className="alpha-card">
           <h3>Client Members</h3>
           <div className="row">
             <input placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
             <input placeholder="Member email" value={memberEmail} onChange={e => setMemberEmail(e.target.value)} />
+            <select value={memberRole} onChange={e => setMemberRole(e.target.value)}>
+              <option value="member">Member</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
+            </select>
             <button disabled={!selectedClientId} onClick={addMember}>Add</button>
           </div>
           <div className="list">
@@ -227,7 +289,7 @@ export default function Admin() {
               <div key={m.id} className="list-row">
                 <div className="grow">
                   <div className="title">{m.name}</div>
-                  <div className="sub">{m.email}</div>
+                  <div className="sub">{m.email} • {m.role || 'member'}</div>
                 </div>
                 <button onClick={() => removeMember(m.id)}>Remove</button>
               </div>
