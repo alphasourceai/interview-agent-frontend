@@ -1,3 +1,4 @@
+// src/lib/api.js
 import { supabase } from './supabaseClient';
 
 const base = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, '') || '';
@@ -21,7 +22,10 @@ async function handleJson(res) {
 }
 
 export async function apiGet(path) {
-  const res = await fetch(`${base}${path}`, { headers: await authHeaders(), credentials: 'include' });
+  const res = await fetch(`${base}${path}`, {
+    headers: await authHeaders(),
+    credentials: 'include'
+  });
   return handleJson(res);
 }
 
@@ -30,6 +34,15 @@ export async function apiPost(path, body) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(body || {}),
+    credentials: 'include'
+  });
+  return handleJson(res);
+}
+
+export async function apiDelete(path) {
+  const res = await fetch(`${base}${path}`, {
+    method: 'DELETE',
+    headers: await authHeaders(),
     credentials: 'include'
   });
   return handleJson(res);
@@ -62,3 +75,12 @@ export async function apiDownload(path, filename = 'report.pdf') {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+/* 🤝 Named 'api' object for modules that import { api } */
+export const api = {
+  get: apiGet,
+  post: apiPost,
+  delete: apiDelete,
+  download: apiDownload,
+  getSignedUrl,
+};
