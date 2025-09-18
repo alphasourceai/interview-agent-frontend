@@ -1,5 +1,3 @@
-//src/pages/admin.jsx
-
 import React, { useEffect, useState } from 'react'
 import { apiGet, apiPost, apiDelete } from '../lib/api'
 import { supabase } from '../lib/supabaseClient'
@@ -121,7 +119,7 @@ export default function Admin() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    window.location.href = '/admin' // return to admin login
+    window.location.href = '/admin'
   }
 
   // ---------- Clients ----------
@@ -162,7 +160,7 @@ export default function Admin() {
       upsert: true, contentType: file.type || 'application/octet-stream'
     })
     if (error) { alert('Job description upload failed'); return null }
-    return key // store path; backend will consume this
+    return key
   }
 
   const createRole = async () => {
@@ -174,7 +172,7 @@ export default function Admin() {
     const payload = {
       client_id: selectedClientId,
       title,
-      interview_type: interviewType,            // BASIC | DETAILED | TECHNICAL
+      interview_type: interviewType,
       job_description_url: jdPath || null
     }
     const resp = await apiPost('/admin/roles', payload)
@@ -238,8 +236,23 @@ export default function Admin() {
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
 
               <button type="submit">Sign In</button>
-              <div style={{ marginTop: 8 }}>
-                <button type="button" onClick={startReset}>Forgot password?</button>
+
+              {/* Make the link visually obvious and not theme-dependent */}
+              <div style={{ marginTop: 10 }}>
+                <button
+                  type="button"
+                  onClick={startReset}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    font: 'inherit'
+                  }}
+                >
+                  Forgot password?
+                </button>
               </div>
             </form>
           ) : (
