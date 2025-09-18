@@ -42,26 +42,32 @@ export default function Admin() {
   // Detect Supabase recovery redirect (?pwreset=1 or hash type=recovery)
   useEffect(() => {
     const url = new URL(window.location.href)
-    if (url.searchParams.get('pwreset') === '1' || window.location.hash.includes('type=recovery')) {
-      setShowReset(true)
-    }
+    const needsReset =
+      url.searchParams.get('pwreset') === '1' ||
+      window.location.hash.includes('type=recovery') ||
+      window.location.hash.includes('recovery')
+    if (needsReset) setShowReset(true)
   }, [])
 
   useEffect(() => {
     let alive = true
     ;(async () => {
       const { data } = await supabase.auth.getSession()
+      if (!alive) return
       setSession(data?.session || null)
       if (data?.session) {
         try {
           const u = await apiGet('/auth/me')
+          if (!alive) return
           setMe(u || null)
           const probe = await apiGet('/admin/clients')
-          setIsAdmin(true)
           const list = probe?.items || []
+          if (!alive) return
+          setIsAdmin(true)
           setClients(list)
           if (list.length && !selectedClientId) setSelectedClientId(list[0].id)
         } catch {
+          if (!alive) return
           setIsAdmin(false)
         }
       }
@@ -115,6 +121,9 @@ export default function Admin() {
     const url = new URL(window.location.href)
     url.searchParams.delete('pwreset')
     window.history.replaceState({}, '', url.toString())
+    // optional: sign out to force a clean login
+    await supabase.auth.signOut()
+    window.location.href = '/admin'
   }
 
   const handleSignOut = async () => {
@@ -220,53 +229,63 @@ export default function Admin() {
     return <div className="alpha-container"><div className="alpha-card"><h2>Loading…</h2></div></div>
   }
 
+  /* ---------- Force the RESET UI whenever showReset is true ----------
+     Supabase recovery links create a temporary session.
+     We still want to render the password reset form, not the dashboard. */
+  if (showReset) {
+    return (
+      <div className="alpha-container">
+        <div className="alpha-card alpha-form">
+          <h2>Reset Password</h2>
+          <form onSubmit={submitReset}>
+            <label>New password</label>
+            <input type="password" value={newPass1} onChange={e => setNewPass1(e.target.value)} required />
+            <label>Confirm new password</label>
+            <input type="password" value={newPass2} onChange={e => setNewPass2(e.target.value)} required />
+            <button type="submit">Update Password</button>
+            <div style={{ marginTop: 8 }}>
+              <button type="button" onClick={() => { setShowReset(false); window.location.href = '/admin' }}>
+                Back to sign in
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
   // ---------- Auth screens ----------
   if (!session) {
     return (
       <div className="alpha-container">
         <div className="alpha-card alpha-form">
-          <h2>{showReset ? 'Reset Password' : 'Admin Sign In'}</h2>
+          <h2>Admin Sign In</h2>
+          <form onSubmit={handleSignIn}>
+            <label>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
 
-          {!showReset ? (
-            <form onSubmit={handleSignIn}>
-              <label>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <label>Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
 
-              <label>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            <button type="submit">Sign In</button>
 
-              <button type="submit">Sign In</button>
-
-              {/* Make the link visually obvious and not theme-dependent */}
-              <div style={{ marginTop: 10 }}>
-                <button
-                  type="button"
-                  onClick={startReset}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                    font: 'inherit'
-                  }}
-                >
-                  Forgot password?
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={submitReset}>
-              <label>New password</label>
-              <input type="password" value={newPass1} onChange={e => setNewPass1(e.target.value)} required />
-              <label>Confirm new password</label>
-              <input type="password" value={newPass2} onChange={e => setNewPass2(e.target.value)} required />
-              <button type="submit">Update Password</button>
-              <div style={{ marginTop: 8 }}>
-                <button type="button" onClick={() => setShowReset(false)}>Back to sign in</button>
-              </div>
-            </form>
-          )}
+            <div style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={startReset}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  font: 'inherit'
+                }}
+              >
+                Forgot password?
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     )
