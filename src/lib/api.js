@@ -1,3 +1,4 @@
+// src/lib/api.js
 import { supabase } from './supabaseClient';
 
 const base = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, '') || '';
@@ -74,3 +75,12 @@ export async function apiDownload(path, filename = 'report.pdf') {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+/* 🤝 Named 'api' object for modules that import { api } */
+export const api = {
+  get: apiGet,
+  post: apiPost,
+  delete: apiDelete,
+  download: apiDownload,
+  getSignedUrl,
+};
