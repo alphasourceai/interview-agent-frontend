@@ -162,16 +162,24 @@ export default function Admin() {
 
   // ---------- Roles ----------
   async function uploadJobDescription(file) {
-    if (!file) return null
-    const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
-    const key = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-const { error } = await supabase.storage.from('job-descriptions').upload(key, file, {
+  if (!file) return null
+  const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
+  // Path **inside** the bucket (no bucket prefix here)
+  const objectPath = `${Date.now()}-${(crypto?.randomUUID?.() || Math.random().toString(36)).slice(0,8)}.${ext}`
 
-      upsert: true, contentType: file.type || 'application/octet-stream'
+  const { error } = await supabase.storage
+    .from('job-descriptions')
+    .upload(objectPath, file, {
+      upsert: true,
+      contentType: file.type || 'application/octet-stream'
     })
-    if (error) { alert('Job description upload failed'); return null }
-    return `job-descriptions/${key}`
-  }
+
+  if (error) { alert('Job description upload failed'); return null }
+
+  // Store with bucket prefix in DB to match your existing rows
+  return `job-descriptions/${objectPath}`
+}
+
 
   const createRole = async () => {
     if (!selectedClientId) return
