@@ -164,12 +164,13 @@ export default function Admin() {
   async function uploadJobDescription(file) {
     if (!file) return null
     const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
-    const key = `job-descriptions/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('job-descriptions').upload(key, file, {
+    const key = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+const { error } = await supabase.storage.from('job-descriptions').upload(key, file, {
+
       upsert: true, contentType: file.type || 'application/octet-stream'
     })
     if (error) { alert('Job description upload failed'); return null }
-    return key
+    return `job-descriptions/${key}`
   }
 
   const createRole = async () => {
