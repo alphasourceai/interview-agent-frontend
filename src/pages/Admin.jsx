@@ -13,6 +13,11 @@ export default function Admin() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
+  // forgot/reset password
+  const [showReset, setShowReset] = useState(false)
+  const [newPass1, setNewPass1] = useState('')
+  const [newPass2, setNewPass2] = useState('')
+
   // clients
   const [clients, setClients] = useState([])
   const [selectedClientId, setSelectedClientId] = useState('')
@@ -34,21 +39,35 @@ export default function Admin() {
 
   const shareBase = 'https://www.alphasourceai.com/interview-agent'
 
+  // Detect Supabase recovery redirect (?pwreset=1 or hash type=recovery)
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const needsReset =
+      url.searchParams.get('pwreset') === '1' ||
+      window.location.hash.includes('type=recovery') ||
+      window.location.hash.includes('recovery')
+    if (needsReset) setShowReset(true)
+  }, [])
+
   useEffect(() => {
     let alive = true
     ;(async () => {
       const { data } = await supabase.auth.getSession()
+      if (!alive) return
       setSession(data?.session || null)
       if (data?.session) {
         try {
           const u = await apiGet('/auth/me')
+          if (!alive) return
           setMe(u || null)
           const probe = await apiGet('/admin/clients')
-          setIsAdmin(true)
           const list = probe?.items || []
+          if (!alive) return
+          setIsAdmin(true)
           setClients(list)
           if (list.length && !selectedClientId) setSelectedClientId(list[0].id)
         } catch {
+          if (!alive) return
           setIsAdmin(false)
         }
       }
@@ -76,14 +95,40 @@ export default function Admin() {
   const handleSignIn = async (e) => {
     e.preventDefault()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return alert('Sign in failed')
+    if (error) return alert('Sign in failed: ' + error.message)
     setSession(data?.session || null)
     window.location.reload()
   }
 
+  const startReset = async () => {
+    if (!email) return alert('Enter your email above first.')
+    const origin = window.location.origin
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/admin?pwreset=1`
+    })
+    if (error) return alert('Could not start reset: ' + error.message)
+    alert('Check your email for a password reset link.')
+  }
+
+  const submitReset = async (e) => {
+    e.preventDefault()
+    if (!newPass1 || newPass1 !== newPass2) return alert('Passwords do not match.')
+    const { error } = await supabase.auth.updateUser({ password: newPass1 })
+    if (error) return alert('Could not update password: ' + error.message)
+    alert('Password updated. You can sign in now.')
+    setShowReset(false)
+    setNewPass1(''); setNewPass2('')
+    const url = new URL(window.location.href)
+    url.searchParams.delete('pwreset')
+    window.history.replaceState({}, '', url.toString())
+    // optional: sign out to force a clean login
+    await supabase.auth.signOut()
+    window.location.href = '/admin'
+  }
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    window.location.href = '/admin' // return to admin login
+    window.location.href = '/admin'
   }
 
   // ---------- Clients ----------
@@ -119,12 +164,13 @@ export default function Admin() {
   async function uploadJobDescription(file) {
     if (!file) return null
     const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
-    const key = `job-descriptions/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('job-descriptions').upload(key, file, {
+    const key = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+const { error } = await supabase.storage.from('job-descriptions').upload(key, file, {
+
       upsert: true, contentType: file.type || 'application/octet-stream'
     })
     if (error) { alert('Job description upload failed'); return null }
-    return key // store path; backend will consume this
+    return `job-descriptions/${key}`
   }
 
   const createRole = async () => {
@@ -136,7 +182,7 @@ export default function Admin() {
     const payload = {
       client_id: selectedClientId,
       title,
-      interview_type: interviewType,            // BASIC | DETAILED | TECHNICAL
+      interview_type: interviewType,
       job_description_url: jdPath || null
     }
     const resp = await apiPost('/admin/roles', payload)
@@ -184,6 +230,32 @@ export default function Admin() {
     return <div className="alpha-container"><div className="alpha-card"><h2>Loading…</h2></div></div>
   }
 
+  /* ---------- Force the RESET UI whenever showReset is true ----------
+     Supabase recovery links create a temporary session.
+     We still want to render the password reset form, not the dashboard. */
+  if (showReset) {
+    return (
+      <div className="alpha-container">
+        <div className="alpha-card alpha-form">
+          <h2>Reset Password</h2>
+          <form onSubmit={submitReset}>
+            <label>New password</label>
+            <input type="password" value={newPass1} onChange={e => setNewPass1(e.target.value)} required />
+            <label>Confirm new password</label>
+            <input type="password" value={newPass2} onChange={e => setNewPass2(e.target.value)} required />
+            <button type="submit">Update Password</button>
+            <div style={{ marginTop: 8 }}>
+              <button type="button" onClick={() => { setShowReset(false); window.location.href = '/admin' }}>
+                Back to sign in
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  // ---------- Auth screens ----------
   if (!session) {
     return (
       <div className="alpha-container">
@@ -192,9 +264,28 @@ export default function Admin() {
           <form onSubmit={handleSignIn}>
             <label>Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+
             <label>Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+
             <button type="submit">Sign In</button>
+
+            <div style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={startReset}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  font: 'inherit'
+                }}
+              >
+                Forgot password?
+              </button>
+            </div>
           </form>
         </div>
       </div>
@@ -213,6 +304,7 @@ export default function Admin() {
     )
   }
 
+  // ---------- Admin app ----------
   return (
     <div className="alpha-container">
       <div className="alpha-header">
