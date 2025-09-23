@@ -30,7 +30,6 @@ export default function Admin() {
   const [newRoleTitle, setNewRoleTitle] = useState('')
   const [interviewType, setInterviewType] = useState('BASIC') // BASIC | DETAILED | TECHNICAL
   const [jobFile, setJobFile] = useState(null)
-  const [roleBusy, setRoleBusy] = useState(false)
 
   // members
   const [members, setMembers] = useState([])
@@ -77,25 +76,18 @@ export default function Admin() {
     return () => { alive = false }
   }, [])
 
-  async function refreshRoles(clientId = selectedClientId) {
-    const r = await apiGet('/admin/roles' + (clientId ? ('?client_id=' + encodeURIComponent(clientId)) : ''))
-    setRoles(r?.items || [])
-  }
-
-  async function refreshMembers(clientId = selectedClientId) {
-    if (!clientId) { setMembers([]); return }
-    const m = await apiGet('/admin/client-members?client_id=' + encodeURIComponent(clientId))
-    setMembers(m?.items || [])
-  }
-
   useEffect(() => {
     let alive = true
     ;(async () => {
       if (!isAdmin) return
-      if (!alive) return
-      await refreshRoles(selectedClientId)
-      if (!alive) return
-      await refreshMembers(selectedClientId)
+      const r = await apiGet('/admin/roles' + (selectedClientId ? ('?client_id=' + encodeURIComponent(selectedClientId)) : ''))
+      if (alive) setRoles(r?.items || [])
+      if (selectedClientId) {
+        const m = await apiGet('/admin/client-members?client_id=' + encodeURIComponent(selectedClientId))
+        if (alive) setMembers(m?.items || [])
+      } else {
+        if (alive) setMembers([])
+      }
     })()
     return () => { alive = false }
   }, [isAdmin, selectedClientId])
@@ -168,67 +160,51 @@ export default function Admin() {
   }
 
   // ---------- Roles ----------
-  // Call backend to upload & process JD (parse + rubric + KB)
-  const uploadJDToBackend = async (roleId, file) => {
-    const form = new FormData()
-    form.append('file', file)
-    const { data } = await supabase.auth.getSession()
-    const token = data?.session?.access_token
-    const qs = new URLSearchParams({
-      client_id: selectedClientId,
-      role_id: roleId
-    }).toString()
-    const res = await fetch(`/roles-upload/upload-jd?${qs}`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: form,
-      credentials: 'include'
-    })
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      throw new Error(json?.error || 'JD upload failed')
-    }
-    return json
+  async function uploadJobDescription(file) {
+    if (!file) return null
+    const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
+    const rnd = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2)
+    // Put under a "jd/" prefix inside the bucket for tidiness
+    const objectPath = `jd/${Date.now()}-${rnd}.${ext}`
+
+    const { error } = await supabase.storage
+      .from('job-descriptions')
+      .upload(objectPath, file, {
+        upsert: true,
+        contentType: file.type || 'application/octet-stream'
+      })
+
+    if (error) { alert('Job description upload failed'); return null }
+
+    // Store with bucket prefix in DB to match existing rows and server normalizer
+    return `job-descriptions/${objectPath}`
   }
 
   const createRole = async () => {
     if (!selectedClientId) return
     const title = newRoleTitle.trim()
     if (!title) return
-
-    setRoleBusy(true)
-    try {
-      // 1) Create role (no JD here)
-      const payload = {
-        client_id: selectedClientId,
-        title,
-        interview_type: interviewType
-      }
-      const resp = await apiPost('/admin/roles', payload)
-      const role = resp?.item
-      if (!role) {
-        alert('Role create failed')
-        return
-      }
-
-      // 2) If a JD file is selected, send it to backend pipeline
-      if (jobFile) {
-        try {
-          await uploadJDToBackend(role.id, jobFile)
-        } catch (e) {
-          console.error('uploadJDToBackend error', e)
-          alert('Role created, but JD processing failed: ' + e.message)
-        }
-      }
-
-      // 3) Refresh roles to fetch description/rubric/kb
-      await refreshRoles(selectedClientId)
-
-      // 4) Reset inputs
+    let jdPath = null
+    if (jobFile) jdPath = await uploadJobDescription(jobFile)
+    const payload = {
+      client_id: selectedClientId,
+      title,
+      interview_type: interviewType,
+      job_description_url: jdPath || null
+    }
+    const resp = await apiPost('/admin/roles', payload)
+    if (resp?.item) {
+      // optimistic add
+      setRoles([resp.item, ...roles])
       setNewRoleTitle('')
       setJobFile(null)
-    } finally {
-      setRoleBusy(false)
+      // brief refresh so description/kb show if enrichment finished
+      setTimeout(async () => {
+        const r = await apiGet('/admin/roles' + (selectedClientId ? ('?client_id=' + encodeURIComponent(selectedClientId)) : ''))
+        if (r?.items) setRoles(r.items)
+      }, 600)
     }
   }
 
@@ -269,7 +245,7 @@ export default function Admin() {
     return <div className="alpha-container"><div className="alpha-card"><h2>Loading…</h2></div></div>
   }
 
-  // ---------- Reset UI ----------
+  // ---------- Password reset view ----------
   if (showReset) {
     return (
       <div className="alpha-container">
@@ -301,12 +277,9 @@ export default function Admin() {
           <form onSubmit={handleSignIn}>
             <label>Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-
             <label>Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-
             <button type="submit">Sign In</button>
-
             <div style={{ marginTop: 10 }}>
               <button
                 type="button"
@@ -381,11 +354,8 @@ export default function Admin() {
               <option value="DETAILED">DETAILED</option>
               <option value="TECHNICAL">TECHNICAL</option>
             </select>
-            {/* Only allow PDF/DOCX since backend parser supports those */}
-            <input type="file" accept=".pdf,.docx" onChange={e => setJobFile(e.target.files?.[0] || null)} />
-            <button disabled={!selectedClientId || roleBusy} onClick={createRole}>
-              {roleBusy ? 'Creating…' : 'Create'}
-            </button>
+            <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => setJobFile(e.target.files?.[0] || null)} />
+            <button disabled={!selectedClientId} onClick={createRole}>Create</button>
           </div>
 
           <div className="list">
@@ -394,7 +364,6 @@ export default function Admin() {
                 <div className="grow">
                   <div className="title">{r.title}</div>
                   <div className="sub">{`${shareBase}?role=${r.slug_or_token}`}</div>
-                  {r.kb_document_id && <div className="sub">KB: {r.kb_document_id}</div>}
                 </div>
                 <button onClick={() => navigator.clipboard.writeText(`${shareBase}?role=${r.slug_or_token}`)}>Copy link</button>
                 <button onClick={() => deleteRole(r.id)}>Delete</button>
