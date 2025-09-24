@@ -844,19 +844,3 @@ button.danger:hover {
   justify-content: center;
 }
 .btn-icon.lilac:hover { filter: brightness(1.05); }
-
-/* make section titles pop a bit more */
-.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.section-title { font-size: 18px; font-weight: 700; }
-
-/* header with logo + title */
-.alpha-header--dash { display: flex; align-items: center; justify-content: space-between; }
-.alpha-header-left { display: flex; align-items: center; gap: 10px; }
-/* ~35% bigger than previous 28px */
-.alpha-logo { width: 38px; height: 38px; object-fit: contain; }
-
-/* small center helper in table cells */
-.center { text-align: center; }
-
-/* thin top bar card under header */
-.alpha-card--bar { padding: 10px 14px; margin-bottom: 12px; }

@@ -1,10 +1,9 @@
-// src/pages/Admin.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { apiGet, apiPost, apiDelete, api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
 import '../styles/alphaTheme.css';
 
-/* Bright-white trash icon (default size +25%) */
+/* inline trash icon (bright white via strokes) */
 const IconTrash = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path d="M3 6h18" stroke="white" strokeWidth="2" strokeLinecap="round"/>
@@ -41,6 +40,7 @@ export default function Admin() {
   const [newRoleTitle, setNewRoleTitle] = useState('');
   const [interviewType, setInterviewType] = useState('BASIC'); // BASIC | DETAILED | TECHNICAL
   const [jobFile, setJobFile] = useState(null);
+  const fileRef = useRef(null);
   const [roleBusy, setRoleBusy] = useState(false);
 
   // members
@@ -60,7 +60,7 @@ export default function Admin() {
 
   const shareBase = 'https://www.alphasourceai.com/interview-agent';
 
-  // Detect Supabase recovery redirect (?pwreset=1 or hash type=recovery)
+  // Detect Supabase recovery redirect
   useEffect(() => {
     const url = new URL(window.location.href);
     const needsReset =
@@ -106,7 +106,7 @@ export default function Admin() {
   async function refreshRoles(clientId = selectedClientId) {
     const r = await apiGet('/admin/roles' + (clientId ? ('?client_id=' + encodeURIComponent(clientId)) : ''));
     const items = r?.items || [];
-    items.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)); // newest first
+    items.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     setRoles(items);
   }
 
@@ -228,6 +228,7 @@ export default function Admin() {
       await refreshRoles(selectedClientId);
       setNewRoleTitle('');
       setJobFile(null);
+      if (fileRef.current) fileRef.current.value = '';
     } finally {
       setRoleBusy(false);
     }
@@ -299,12 +300,9 @@ export default function Admin() {
           <form onSubmit={handleSignIn}>
             <label>Email</label>
             <input className="alpha-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-
             <label>Password</label>
             <input className="alpha-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-
             <button type="submit">Sign In</button>
-
             <div style={{ marginTop: 10 }}>
               <button
                 type="button"
@@ -338,7 +336,7 @@ export default function Admin() {
       {/* Header with logo (top-left), title, and account (top-right) */}
       <div className="alpha-header alpha-header--dash">
         <div className="alpha-header-left">
-          {/* Put symbol into /public as /alpha-symbol.png */}
+          {/* put the logo at /public/alpha-symbol.png */}
           <img src="/alpha-symbol.png" alt="AlphaSourceAI" className="alpha-logo" />
           <h1>Admin Dashboard</h1>
         </div>
@@ -408,6 +406,7 @@ export default function Admin() {
             {/* file picker + clear */}
             <div className="file-stack">
               <input
+                ref={fileRef}
                 className="alpha-input file"
                 type="file"
                 accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -415,7 +414,11 @@ export default function Admin() {
                 aria-label="Job Description file (PDF or DOCX)"
               />
               {jobFile && (
-                <button className="btn-icon lilac file-clear" onClick={() => setJobFile(null)} title="Remove file">
+                <button
+                  className="btn-icon lilac file-clear"
+                  onClick={() => { setJobFile(null); if (fileRef.current) fileRef.current.value = ''; }}
+                  title="Remove file"
+                >
                   <IconTrash />
                 </button>
               )}
