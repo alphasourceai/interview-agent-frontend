@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { apiGet, apiPost, apiDelete } from '../lib/api'
+import { apiGet, apiPost, apiDelete, api, } from '../lib/api'
 import { supabase } from '../lib/supabaseClient'
 import '../styles/alphaTheme.css'
 
@@ -168,27 +168,14 @@ export default function Admin() {
   }
 
   // ---------- Roles ----------
-  // Call backend to upload & process JD (parse + rubric + KB)
   const uploadJDToBackend = async (roleId, file) => {
     const form = new FormData()
     form.append('file', file)
-    const { data } = await supabase.auth.getSession()
-    const token = data?.session?.access_token
     const qs = new URLSearchParams({
       client_id: selectedClientId,
       role_id: roleId
     }).toString()
-    const res = await fetch(`/roles-upload/upload-jd?${qs}`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: form,
-      credentials: 'include'
-    })
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      throw new Error(json?.error || 'JD upload failed')
-    }
-    return json
+    return api.upload(`/roles-upload/upload-jd?${qs}`, form)
   }
 
   const createRole = async () => {
@@ -196,9 +183,15 @@ export default function Admin() {
     const title = newRoleTitle.trim()
     if (!title) return
 
+    // REQUIRE a JD file for role creation
+    if (!jobFile) {
+      alert('Please choose a Job Description file (PDF or DOCX) before creating the role.')
+      return
+    }
+
     setRoleBusy(true)
     try {
-      // 1) Create role (no JD here)
+      // 1) Create role
       const payload = {
         client_id: selectedClientId,
         title,
@@ -211,20 +204,19 @@ export default function Admin() {
         return
       }
 
-      // 2) If a JD file is selected, send it to backend pipeline
-      if (jobFile) {
-        try {
-          await uploadJDToBackend(role.id, jobFile)
-        } catch (e) {
-          console.error('uploadJDToBackend error', e)
-          alert('Role created, but JD processing failed: ' + e.message)
+      // 2) Upload JD (required)
+      try {
+        const out = await uploadJDToBackend(role.id, jobFile)
+        if (out?.parsed_text_preview) {
+          console.log('[JD preview]', out.parsed_text_preview)
         }
+      } catch (e) {
+        console.error('uploadJDToBackend error', e)
+        alert('Role created, but JD processing failed: ' + e.message)
       }
 
-      // 3) Refresh roles to fetch description/rubric/kb
+      // 3) Refresh roles and reset inputs
       await refreshRoles(selectedClientId)
-
-      // 4) Reset inputs
       setNewRoleTitle('')
       setJobFile(null)
     } finally {
@@ -382,8 +374,17 @@ export default function Admin() {
               <option value="TECHNICAL">TECHNICAL</option>
             </select>
             {/* Only allow PDF/DOCX since backend parser supports those */}
-            <input type="file" accept=".pdf,.docx" onChange={e => setJobFile(e.target.files?.[0] || null)} />
-            <button disabled={!selectedClientId || roleBusy} onClick={createRole}>
+            <input
+              type="file"
+              accept=".pdf,.docx"
+              onChange={e => setJobFile(e.target.files?.[0] || null)}
+              aria-label="Job Description file (PDF or DOCX)"
+            />
+            <button
+              disabled={!selectedClientId || roleBusy || !newRoleTitle.trim() || !jobFile}
+              onClick={createRole}
+              title={!jobFile ? 'Choose a PDF or DOCX to enable Create' : 'Create role'}
+            >
               {roleBusy ? 'Creating…' : 'Create'}
             </button>
           </div>
