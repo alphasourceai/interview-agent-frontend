@@ -695,4 +695,128 @@
   font-weight: 600 !important;
 }
 
+/* ===== Admin polish additions ===== */
 
+.alpha-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.alpha-actions {
+  display: inline-flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.section {
+  margin-top: 12px;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.toggle:hover { border-color: rgba(255,255,255,0.3); }
+
+.icon {
+  display: block;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  width: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: transparent;
+  cursor: pointer;
+}
+.icon-btn:hover { border-color: rgba(255,255,255,0.3); }
+
+.ml-2 { margin-left: 8px; }
+.mr-8 { margin-right: 16px; }
+
+.select-lg {
+  height: 44px;              /* ~25% taller than typical input */
+  padding: 0 10px;
+  font-size: 1.05rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  color: inherit;
+}
+
+.file-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.list {
+  margin-top: 10px;
+}
+.list.compact .list-row { padding-top: 8px; padding-bottom: 8px; }
+.list-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.list-row.header {
+  font-weight: 600;
+  opacity: 0.8;
+}
+.list-row .grow {
+  min-width: 220px;
+}
+.list-row .col {
+  min-width: 90px;
+}
+.list-row .col.center {
+  display: flex;
+  justify-content: center;
+}
+
+.title { font-weight: 600; }
+.sub { font-size: 12px; opacity: 0.8; }
+
+.linklike {
+  background: none !important;
+  border: none !important;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+  color: inherit;
+}
+
+button.danger {
+  background: transparent;
+  border: 1px solid rgba(255, 50, 50, 0.5);
+}
+button.danger:hover {
+  border-color: rgba(255, 80, 80, 0.9);
+}
