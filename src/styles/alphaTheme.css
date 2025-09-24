@@ -844,3 +844,37 @@ button.danger:hover {
   justify-content: center;
 }
 .btn-icon.lilac:hover { filter: brightness(1.05); }
+
+/* Header with logo + title (compact) */
+.alpha-header--dash { display:flex; align-items:center; justify-content:space-between; }
+.alpha-header-left { display:flex; align-items:center; gap:10px; }
+.alpha-logo { width:44px; height:44px; object-fit:contain; }  /* smaller logo */
+
+/* Section titles */
+.section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.section-title { font-size:18px; font-weight:700; }
+
+/* Thin top bar card */
+.alpha-card--bar { padding:10px 14px; margin-bottom:12px; }
+
+/* Center helper */
+.center { text-align:center; }
+
+/* Roles “table-like” layout */
+.table.like .t-head,
+.table.like .t-row {
+  display:grid;
+  grid-template-columns: 1fr 220px 60px 60px 120px 80px; /* Role | Created | KB | JD | Link | Delete */
+  gap: 12px;
+  align-items:center;
+}
+.table.like .t-head { font-weight:700; opacity:0.9; padding:10px 12px; }
+.table.like .t-row { padding:12px; border-top:1px solid rgba(255,255,255,0.06); }
+.table.like .t-empty { padding:14px; }
+
+/* File input + clear icon stacked */
+.file-stack { position:relative; display:flex; align-items:center; }
+.file-stack .file-clear { position:absolute; right:-46px; }
+
+/* Icon buttons stay lilac but icon is bright white */
+.btn-icon.lilac { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:999px; }
