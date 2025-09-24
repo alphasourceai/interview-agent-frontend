@@ -1,3 +1,4 @@
+// src/lib/api.js
 import { supabase } from './supabaseClient';
 
 const base = import.meta.env.VITE_BACKEND_URL?.replace(/\/+$/, '') || '';
@@ -12,7 +13,7 @@ async function authHeaders() {
 async function handleJson(res) {
   const text = await res.text();
   let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch {}
+  try { data = text ? JSON.parse(text) : null; } catch { /* keep raw text */ }
   if (!res.ok) {
     const msg = (data && (data.error || data.message)) || text || `HTTP ${res.status}`;
     throw new Error(msg);
@@ -75,21 +76,30 @@ export async function apiDownload(path, filename = 'report.pdf') {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Upload FormData (e.g., JD PDF/DOCX) to the backend.
+ * - `path` must start with '/', e.g. `/roles-upload/upload-jd?...`
+ * - `formData` should be a FormData including the `file` field
+ * We deliberately DO NOT set Content-Type (browser sets multipart boundary).
+ */
 export async function apiUpload(path, formData) {
+  if (!(formData instanceof FormData)) throw new Error('apiUpload expects a FormData body');
+  const headers = await authHeaders(); // Authorization only; no Content-Type for FormData
   const res = await fetch(`${base}${path}`, {
     method: 'POST',
-    headers: await authHeaders(),
+    headers,
     body: formData,
     credentials: 'include'
   });
   return handleJson(res);
 }
 
+/* 🤝 Named 'api' object for modules that import { api } */
 export const api = {
   get: apiGet,
   post: apiPost,
   delete: apiDelete,
   download: apiDownload,
   getSignedUrl,
-  upload: apiUpload,
+  upload: apiUpload,   // ← NEW
 };
