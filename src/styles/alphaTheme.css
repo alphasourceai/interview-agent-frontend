@@ -820,3 +820,44 @@ button.danger {
 button.danger:hover {
   border-color: rgba(255, 80, 80, 0.9);
 }
+
+/* --- sizing: inputs & selects match height --- */
+.alpha-input {
+  height: 40px;             /* matches text inputs */
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.alpha-select { height: 40px; }
+
+/* file input wrapper so clear icon can sit beside it */
+.file-stack { position: relative; display: flex; align-items: center; gap: 8px; }
+.file-stack .file { width: 220px; }
+
+.btn-icon.lilac {
+  background: #9d83f3;      /* your lilac */
+  border: none;
+  border-radius: 9999px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-icon.lilac:hover { filter: brightness(1.05); }
+
+/* make section titles pop a bit more */
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.section-title { font-size: 18px; font-weight: 700; }
+
+/* header with logo + title */
+.alpha-header--dash {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.alpha-header-left { display: flex; align-items: center; gap: 10px; }
+.alpha-logo { width: 28px; height: 28px; object-fit: contain; }
+
+/* small center helper in table cells */
+.center { text-align: center; }
+
+/* thin top bar card under header */
+.alpha-card--bar { padding: 10px 14px; margin-bottom: 12px; }
