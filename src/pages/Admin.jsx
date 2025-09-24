@@ -1,8 +1,48 @@
-// src/pages/Admin.jsx
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { apiGet, apiPost, apiDelete, api } from '../lib/api'
 import { supabase } from '../lib/supabaseClient'
 import '../styles/alphaTheme.css'
+
+/* ---------- small UI helpers ---------- */
+
+function useStickyToggle(key, defaultOn = false) {
+  const [open, setOpen] = useState(() => {
+    try {
+      const raw = localStorage.getItem(key)
+      return raw === null ? defaultOn : raw === '1'
+    } catch { return defaultOn }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(key, open ? '1' : '0') } catch {}
+  }, [key, open])
+  return [open, setOpen]
+}
+
+const IconTrash = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="white" aria-hidden="true">
+    <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm1 5h2v10h-2V8zm4 0h2v10h-2V8zM7 8h2v10H7V8z"/>
+  </svg>
+)
+
+const IconCheck = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M20.285 6.708l-11.01 11.01-5.657-5.657 1.414-1.415 4.243 4.243 9.596-9.596z"/>
+  </svg>
+)
+
+const Chip = ({ children, onClick, title, danger }) => (
+  <button
+    type="button"
+    className="alpha-chip"
+    onClick={onClick}
+    title={title}
+    style={danger ? { background: '#a45ad9' } : undefined}
+  >
+    {children}
+  </button>
+)
+
+/* ===================================================================== */
 
 export default function Admin() {
   const [session, setSession] = useState(null)
@@ -10,11 +50,11 @@ export default function Admin() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // auth form
+  // login
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  // forgot/reset password
+  // reset password
   const [showReset, setShowReset] = useState(false)
   const [newPass1, setNewPass1] = useState('')
   const [newPass2, setNewPass2] = useState('')
@@ -32,18 +72,25 @@ export default function Admin() {
   const [interviewType, setInterviewType] = useState('BASIC') // BASIC | DETAILED | TECHNICAL
   const [jobFile, setJobFile] = useState(null)
   const [roleBusy, setRoleBusy] = useState(false)
-  const fileInputRef = useRef(null)
-  const [fileKey, setFileKey] = useState(0) // force remount to clear filename in all browsers
 
   // members
   const [members, setMembers] = useState([])
   const [memberEmail, setMemberEmail] = useState('')
   const [memberName, setMemberName] = useState('')
-  const [memberRole, setMemberRole] = useState('member') // member | manager | admin
+  const [memberRole, setMemberRole] = useState('member')
+
+  // collapsibles (persisted)
+  const [showClients, setShowClients] = useStickyToggle('adm_clients_open', false)
+  const [showRoles, setShowRoles] = useStickyToggle('adm_roles_open', false)
+  const [showMembers, setShowMembers] = useStickyToggle('adm_members_open', false)
+
+  // “clear file” UI (to fully reset <input type=file>)
+  const fileInputRef = useRef(null)
+  const [fileClearedToken, setFileClearedToken] = useState(0)
 
   const shareBase = 'https://www.alphasourceai.com/interview-agent'
 
-  // Detect Supabase recovery redirect (?pwreset=1 or hash type=recovery)
+  /* ---------- detect Supabase recovery redirect ---------- */
   useEffect(() => {
     const url = new URL(window.location.href)
     const needsReset =
@@ -53,6 +100,7 @@ export default function Admin() {
     if (needsReset) setShowReset(true)
   }, [])
 
+  /* ---------- boot/auth/load lists ---------- */
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -64,6 +112,7 @@ export default function Admin() {
           const u = await apiGet('/auth/me')
           if (!alive) return
           setMe(u || null)
+
           const probe = await apiGet('/admin/clients')
           const list = probe?.items || []
           if (!alive) return
@@ -103,6 +152,7 @@ export default function Admin() {
     return () => { alive = false }
   }, [isAdmin, selectedClientId])
 
+  /* ---------- auth handlers ---------- */
   const handleSignIn = async (e) => {
     e.preventDefault()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -137,11 +187,12 @@ export default function Admin() {
   }
 
   const handleSignOut = async () => {
+    try { localStorage.removeItem('adm_clients_open'); localStorage.removeItem('adm_roles_open'); localStorage.removeItem('adm_members_open'); } catch {}
     await supabase.auth.signOut()
     window.location.href = '/admin'
   }
 
-  // ---------- Clients ----------
+  /* ---------- Clients ---------- */
   const createClient = async () => {
     const name = newClientName.trim()
     const admin_name = newClientAdminName.trim()
@@ -170,7 +221,7 @@ export default function Admin() {
     setMembers([])
   }
 
-  // ---------- Roles ----------
+  /* ---------- Roles ---------- */
   const uploadJDToBackend = async (roleId, file) => {
     const form = new FormData()
     form.append('file', file)
@@ -181,18 +232,11 @@ export default function Admin() {
     return api.upload(`/roles-upload/upload-jd?${qs}`, form)
   }
 
-  const clearJD = () => {
-    setJobFile(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-    setFileKey(k => k + 1) // ensures filename clears in all browsers
-  }
-
   const createRole = async () => {
     if (!selectedClientId) return
     const title = newRoleTitle.trim()
     if (!title) return
 
-    // REQUIRE a JD file for role creation
     if (!jobFile) {
       alert('Please choose a Job Description file (PDF or DOCX) before creating the role.')
       return
@@ -200,34 +244,25 @@ export default function Admin() {
 
     setRoleBusy(true)
     try {
-      // 1) Create role
-      const payload = {
-        client_id: selectedClientId,
-        title,
-        interview_type: interviewType
-      }
+      const payload = { client_id: selectedClientId, title, interview_type: interviewType }
       const resp = await apiPost('/admin/roles', payload)
       const role = resp?.item
-      if (!role) {
-        alert('Role create failed')
-        return
-      }
+      if (!role) { alert('Role create failed'); return }
 
-      // 2) Upload JD (required)
       try {
         const out = await uploadJDToBackend(role.id, jobFile)
-        if (out?.parsed_text_preview) {
-          console.log('[JD preview]', out.parsed_text_preview)
-        }
+        if (out?.parsed_text_preview) console.log('[JD preview]', out.parsed_text_preview)
       } catch (e) {
         console.error('uploadJDToBackend error', e)
         alert('Role created, but JD processing failed: ' + e.message)
       }
 
-      // 3) Refresh roles and reset inputs
       await refreshRoles(selectedClientId)
       setNewRoleTitle('')
-      clearJD()
+      setJobFile(null)
+      // fully clear the file input
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setFileClearedToken(x => x + 1)
     } finally {
       setRoleBusy(false)
     }
@@ -239,23 +274,18 @@ export default function Admin() {
     setRoles(roles.filter(r => r.id !== id))
   }
 
-  // ---------- Members ----------
+  /* ---------- Members ---------- */
   const addMember = async () => {
     if (!selectedClientId) return
     const e = memberEmail.trim()
     const n = memberName.trim()
     if (!e || !n) return
     const resp = await apiPost('/admin/client-members', {
-      client_id: selectedClientId,
-      email: e,
-      name: n,
-      role: memberRole
+      client_id: selectedClientId, email: e, name: n, role: memberRole
     })
     if (resp?.item) {
       setMembers([resp.item, ...members])
-      setMemberEmail('')
-      setMemberName('')
-      setMemberRole('member')
+      setMemberEmail(''); setMemberName(''); setMemberRole('member')
       alert('Invite sent and member added')
     }
   }
@@ -266,11 +296,12 @@ export default function Admin() {
     setMembers(members.filter(m => m.id !== id))
   }
 
+  /* ---------- Render screens ---------- */
+
   if (loading) {
     return <div className="alpha-container"><div className="alpha-card"><h2>Loading…</h2></div></div>
   }
 
-  // ---------- Reset UI ----------
   if (showReset) {
     return (
       <div className="alpha-container">
@@ -293,6 +324,32 @@ export default function Admin() {
     )
   }
 
+  if (!session) {
+    return (
+      <div className="alpha-container">
+        <div className="alpha-card alpha-form">
+          <h2>Admin Sign In</h2>
+          <form onSubmit={handleSignIn}>
+            <label>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <label>Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            <button type="submit">Sign In</button>
+            <div style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={startReset}
+                style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
+              >
+                Forgot password?
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
   if (!isAdmin) {
     return (
       <div className="alpha-container">
@@ -305,23 +362,36 @@ export default function Admin() {
     )
   }
 
-  // ---------- Admin app ----------
+  const selectedClient = useMemo(
+    () => clients.find(c => c.id === selectedClientId) || null,
+    [clients, selectedClientId]
+  )
+
   return (
     <div className="alpha-container">
-      {/* Header (only change we’re keeping) */}
-      <div className="alpha-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Header with logo (enlarged + aligned) */}
+      <div className="alpha-header" style={{ alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* place the logo file at public/alpha-symbol.png */}
-          <img
-            src="/alpha-symbol.png"
-            alt="AlphaSourceAI"
-            style={{ height: 27, width: 'auto' /* ~35% larger than the small mark */ }}
-          />
+          <img src="/symbol.png" width="28" height="28" alt="AlphaSourceAI" style={{ display: 'block' }} />
           <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
         </div>
         <div className="alpha-actions">
           <span>{me?.user?.email || me?.email}</span>
           <button onClick={handleSignOut}>Sign Out</button>
+        </div>
+      </div>
+
+      {/* Current client selector (top, larger control) */}
+      <div className="alpha-card" style={{ marginTop: 12, paddingTop: 12 }}>
+        <div className="row" style={{ alignItems: 'center' }}>
+          <div style={{ fontSize: 12, opacity: 0.85, marginRight: 8 }}>Current client</div>
+          <select
+            value={selectedClientId}
+            onChange={e => setSelectedClientId(e.target.value)}
+            style={{ height: 34, fontSize: 14, padding: '6px 8px', minWidth: 220 }}
+          >
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
         </div>
       </div>
 
@@ -335,56 +405,69 @@ export default function Admin() {
             <input placeholder="Admin email" value={newClientAdminEmail} onChange={e => setNewClientAdminEmail(e.target.value)} />
             <button onClick={createClient}>Create</button>
           </div>
-          <div className="row">
-            <select value={selectedClientId} onChange={e => setSelectedClientId(e.target.value)}>
-              <option value="">Select a client</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            {selectedClientId && <button onClick={() => deleteClient(selectedClientId)}>Delete</button>}
+
+          <div className="row" style={{ marginTop: 8 }}>
+            <Chip onClick={() => setShowClients(v => !v)} title={showClients ? 'Hide clients' : 'Show clients'}>
+              {showClients ? 'Hide clients' : 'Show all clients'}
+            </Chip>
           </div>
 
-          <div className="list">
-            {clients.map(c => (
-              <div key={c.id} className="list-row">
-                <div className="grow">
-                  <div className="title">{c.name}</div>
+          {showClients && (
+            <div className="list" style={{ marginTop: 8 }}>
+              {clients.map(c => (
+                <div key={c.id} className="list-row">
+                  <div className="grow">
+                    <div className="title">{c.name}</div>
+                    <div className="sub">Created {new Date(c.created_at).toLocaleString()}</div>
+                  </div>
+                  <button className="alpha-chip" title="Delete client" onClick={() => deleteClient(c.id)}>
+                    <IconTrash />
+                  </button>
                 </div>
-                {/* keep lilac button; add visible trash emoji */}
-                <button onClick={() => deleteClient(c.id)} title="Delete client">🗑️</button>
-              </div>
-            ))}
-            {clients.length === 0 && <div className="muted">No clients yet</div>}
-          </div>
+              ))}
+              {clients.length === 0 && <div className="muted">No clients yet</div>}
+            </div>
+          )}
         </div>
 
         {/* Roles */}
         <div className="alpha-card">
           <h3>Roles</h3>
           <div className="row">
-            <input placeholder="Role title" value={newRoleTitle} onChange={e => setNewRoleTitle(e.target.value)} />
-            <select value={interviewType} onChange={e => setInterviewType(e.target.value)}>
+            <input
+              placeholder="Role title"
+              value={newRoleTitle}
+              onChange={e => setNewRoleTitle(e.target.value)}
+            />
+            <select value={interviewType} onChange={e => setInterviewType(e.target.value)} style={{ height: 34 }}>
               <option value="BASIC">BASIC</option>
               <option value="DETAILED">DETAILED</option>
               <option value="TECHNICAL">TECHNICAL</option>
             </select>
 
-            {/* file input with reliable clear */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="file"
-                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                onChange={e => setJobFile(e.target.files?.[0] || null)}
-                aria-label="Job Description file (PDF or DOCX)"
-                ref={fileInputRef}
-                key={fileKey}
-              />
-              {jobFile && (
-                <button type="button" onClick={clearJD} title="Remove chosen file">
-                  🗑️
-                </button>
-              )}
-              <span className="muted">*.pdf or *.docx</span>
-            </div>
+            <input
+              key={fileClearedToken} // forces DOM refresh after clear
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx"
+              onChange={e => setJobFile(e.target.files?.[0] || null)}
+              aria-label="Job Description file (PDF or DOCX)"
+            />
+
+            {/* white trash in lilac button to clear selected file */}
+            <button
+              type="button"
+              className="alpha-chip"
+              title="Clear selected file"
+              onClick={() => {
+                setJobFile(null)
+                if (fileInputRef.current) fileInputRef.current.value = ''
+                setFileClearedToken(x => x + 1)
+              }}
+              aria-label="Clear selected JD file"
+            >
+              <IconTrash />
+            </button>
 
             <button
               disabled={!selectedClientId || roleBusy || !newRoleTitle.trim() || !jobFile}
@@ -395,21 +478,52 @@ export default function Admin() {
             </button>
           </div>
 
-          <div className="list">
-            {roles.map(r => (
-              <div key={r.id} className="list-row">
-                <div className="grow">
-                  <div className="title">{r.title}</div>
-                  <div className="sub">{`${shareBase}?role=${r.slug_or_token}`}</div>
-                  {r.kb_document_id && <div className="sub">KB: {r.kb_document_id}</div>}
-                </div>
-                <button onClick={() => navigator.clipboard.writeText(`${shareBase}?role=${r.slug_or_token}`)}>Copy link</button>
-                {/* keep lilac Delete; visible trash emoji to satisfy “icon” ask without CSS changes */}
-                <button onClick={() => deleteRole(r.id)} title="Delete role">🗑️</button>
-              </div>
-            ))}
-            {roles.length === 0 && <div className="muted">No roles yet</div>}
+          <div className="row" style={{ marginTop: 8 }}>
+            <Chip onClick={() => setShowRoles(v => !v)} title={showRoles ? 'Hide roles' : 'Show roles'}>
+              {showRoles ? 'Hide roles' : 'Show roles'}
+            </Chip>
           </div>
+
+          {showRoles && (
+            <>
+              <div className="tableHeader" style={{ display: 'grid', gridTemplateColumns: '1fr 180px 60px 60px 90px 64px', gap: 8, padding: '10px 8px', opacity: 0.8 }}>
+                <div>Role</div>
+                <div>Created</div>
+                <div>KB</div>
+                <div>JD</div>
+                <div>Link</div>
+                <div>Delete</div>
+              </div>
+              <div className="list">
+                {roles.map(r => (
+                  <div key={r.id} className="list-row" style={{ display: 'grid', gridTemplateColumns: '1fr 180px 60px 60px 90px 64px', gap: 8 }}>
+                    <div className="grow" style={{ minWidth: 0 }}>
+                      <div className="title">{r.title}</div>
+                      <div className="sub">Type: {r.interview_type || '—'} • Token: {r.slug_or_token}</div>
+                    </div>
+                    <div className="sub" style={{ alignSelf: 'center' }}>
+                      {r.created_at ? new Date(r.created_at).toLocaleString() : '—'}
+                    </div>
+                    <div style={{ alignSelf: 'center', color: '#a0ffb3' }}>
+                      {r.kb_document_id ? <IconCheck /> : '—'}
+                    </div>
+                    <div style={{ alignSelf: 'center', color: '#a0ffb3' }}>
+                      {r.job_description_url ? <IconCheck /> : '—'}
+                    </div>
+                    <div style={{ alignSelf: 'center' }}>
+                      <Chip onClick={() => navigator.clipboard.writeText(`${shareBase}?role=${r.slug_or_token}`)}>Copy link</Chip>
+                    </div>
+                    <div style={{ alignSelf: 'center' }}>
+                      <button className="alpha-chip" title="Delete role" onClick={() => deleteRole(r.id)}>
+                        <IconTrash />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {roles.length === 0 && <div className="muted">No roles yet</div>}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Members */}
@@ -418,25 +532,34 @@ export default function Admin() {
           <div className="row">
             <input placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
             <input placeholder="Member email" value={memberEmail} onChange={e => setMemberEmail(e.target.value)} />
-            <select value={memberRole} onChange={e => setMemberRole(e.target.value)}>
+            <select value={memberRole} onChange={e => setMemberRole(e.target.value)} style={{ height: 34 }}>
               <option value="member">Member</option>
               <option value="manager">Manager</option>
               <option value="admin">Admin</option>
             </select>
             <button disabled={!selectedClientId} onClick={addMember}>Add</button>
           </div>
-          <div className="list">
-            {members.map(m => (
-              <div key={m.id} className="list-row">
-                <div className="grow">
-                  <div className="title">{m.name}</div>
-                  <div className="sub">{m.email} • {m.role || 'member'}</div>
-                </div>
-                <button onClick={() => removeMember(m.id)}>Remove</button>
-              </div>
-            ))}
-            {members.length === 0 && <div className="muted">No members for this client</div>}
+
+          <div className="row" style={{ marginTop: 8 }}>
+            <Chip onClick={() => setShowMembers(v => !v)} title={showMembers ? 'Hide members' : 'Show members'}>
+              {showMembers ? 'Hide members' : 'Show members'}
+            </Chip>
           </div>
+
+          {showMembers && (
+            <div className="list" style={{ marginTop: 8 }}>
+              {members.map(m => (
+                <div key={m.id} className="list-row">
+                  <div className="grow">
+                    <div className="title">{m.name}</div>
+                    <div className="sub">{m.email} • {m.role || 'member'}</div>
+                  </div>
+                  <Chip onClick={() => removeMember(m.id)}>Remove</Chip>
+                </div>
+              ))}
+              {members.length === 0 && <div className="muted">No members for this client</div>}
+            </div>
+          )}
         </div>
       </div>
     </div>
