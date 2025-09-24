@@ -850,11 +850,10 @@ button.danger:hover {
 .section-title { font-size: 18px; font-weight: 700; }
 
 /* header with logo + title */
-.alpha-header--dash {
-  display: flex; align-items: center; justify-content: space-between;
-}
+.alpha-header--dash { display: flex; align-items: center; justify-content: space-between; }
 .alpha-header-left { display: flex; align-items: center; gap: 10px; }
-.alpha-logo { width: 28px; height: 28px; object-fit: contain; }
+/* ~35% bigger than previous 28px */
+.alpha-logo { width: 38px; height: 38px; object-fit: contain; }
 
 /* small center helper in table cells */
 .center { text-align: center; }
