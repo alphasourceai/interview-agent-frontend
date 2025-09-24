@@ -1,15 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+// src/pages/Admin.jsx
+import React, { useEffect, useMemo, useState } from 'react';
 import { apiGet, apiPost, apiDelete, api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
 import '../styles/alphaTheme.css';
 
-/* inline trash icon (bright white via strokes) */
+/* bright white trash icon, +25% size */
 const IconTrash = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M3 6h18" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="white" strokeWidth="2"/>
-    <path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
-    <path d="M10 11v6M14 11v6" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M3 6h18" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#FFFFFF" strokeWidth="2"/>
+    <path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" stroke="#FFFFFF" strokeWidth="2" strokeLinejoin="round"/>
+    <path d="M10 11v6M14 11v6" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
   </svg>
 );
 
@@ -40,7 +41,6 @@ export default function Admin() {
   const [newRoleTitle, setNewRoleTitle] = useState('');
   const [interviewType, setInterviewType] = useState('BASIC'); // BASIC | DETAILED | TECHNICAL
   const [jobFile, setJobFile] = useState(null);
-  const fileRef = useRef(null);
   const [roleBusy, setRoleBusy] = useState(false);
 
   // members
@@ -49,10 +49,11 @@ export default function Admin() {
   const [memberName, setMemberName] = useState('');
   const [memberRole, setMemberRole] = useState('member'); // member | manager | admin
 
-  // collapsibles (persist across refresh; reset on new login)
-  const [showClients, setShowClients] = useState(() => localStorage.getItem('adm_show_clients') === '1');
-  const [showRoles, setShowRoles] = useState(() => localStorage.getItem('adm_show_roles') === '1');
-  const [showMembers, setShowMembers] = useState(() => localStorage.getItem('adm_show_members') === '1');
+  // collapsibles — default collapsed unless user has toggled them on before
+  const readToggle = (key) => (localStorage.getItem(key) === '1' ? true : false);
+  const [showClients, setShowClients] = useState(readToggle('adm_show_clients'));
+  const [showRoles, setShowRoles] = useState(readToggle('adm_show_roles'));
+  const [showMembers, setShowMembers] = useState(readToggle('adm_show_members'));
 
   useEffect(() => localStorage.setItem('adm_show_clients', showClients ? '1' : '0'), [showClients]);
   useEffect(() => localStorage.setItem('adm_show_roles', showRoles ? '1' : '0'), [showRoles]);
@@ -158,6 +159,10 @@ export default function Admin() {
     url.searchParams.delete('pwreset');
     window.history.replaceState({}, '', url.toString());
     await supabase.auth.signOut();
+    // collapse sections for next login
+    localStorage.removeItem('adm_show_clients');
+    localStorage.removeItem('adm_show_roles');
+    localStorage.removeItem('adm_show_members');
     window.location.href = '/admin';
   };
 
@@ -228,7 +233,6 @@ export default function Admin() {
       await refreshRoles(selectedClientId);
       setNewRoleTitle('');
       setJobFile(null);
-      if (fileRef.current) fileRef.current.value = '';
     } finally {
       setRoleBusy(false);
     }
@@ -333,10 +337,10 @@ export default function Admin() {
   // ---------- Admin app ----------
   return (
     <div className="alpha-container">
-      {/* Header with logo (top-left), title, and account (top-right) */}
+      {/* Header with logo (left), title, and account (right) */}
       <div className="alpha-header alpha-header--dash">
         <div className="alpha-header-left">
-          {/* put the logo at /public/alpha-symbol.png */}
+          {/* place the file at /public/alpha-symbol.png */}
           <img src="/alpha-symbol.png" alt="AlphaSourceAI" className="alpha-logo" />
           <h1>Admin Dashboard</h1>
         </div>
@@ -406,7 +410,6 @@ export default function Admin() {
             {/* file picker + clear */}
             <div className="file-stack">
               <input
-                ref={fileRef}
                 className="alpha-input file"
                 type="file"
                 accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -414,11 +417,7 @@ export default function Admin() {
                 aria-label="Job Description file (PDF or DOCX)"
               />
               {jobFile && (
-                <button
-                  className="btn-icon lilac file-clear"
-                  onClick={() => { setJobFile(null); if (fileRef.current) fileRef.current.value = ''; }}
-                  title="Remove file"
-                >
+                <button className="btn-icon lilac file-clear" onClick={() => setJobFile(null)} title="Remove file">
                   <IconTrash />
                 </button>
               )}
@@ -452,9 +451,7 @@ export default function Admin() {
                       <div className="center">{hasKB ? '✓' : '—'}</div>
                       <div className="center">{hasJD ? '✓' : '—'}</div>
                       <div>
-                        <button onClick={() => navigator.clipboard.writeText(`${shareBase}?role=${r.slug_or_token}`)}>
-                          Copy link
-                        </button>
+                        <button onClick={() => navigator.clipboard.writeText(`${shareBase}?role=${r.slug_or_token}`)}>Copy link</button>
                       </div>
                       <div className="center">
                         <button className="btn-icon lilac" onClick={() => deleteRole(r.id)} title="Delete role">
