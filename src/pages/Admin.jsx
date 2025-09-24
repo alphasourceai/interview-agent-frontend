@@ -1,91 +1,110 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { api, apiGet, apiPost, apiDelete } from '../lib/api' // keep legacy helpers + new api.upload
+// src/pages/Admin.jsx
+import React, { useEffect, useRef, useState } from 'react'
+import { apiGet, apiPost, apiDelete, api } from '../lib/api'
 import { supabase } from '../lib/supabaseClient'
 import '../styles/alphaTheme.css'
 
-/* ---------- tiny SVG icons (inline, theme-friendly) ---------- */
-const Chevron = ({ open }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" className="icon">
-    <path d={open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} fill="none" stroke="currentColor" strokeWidth="2" />
-  </svg>
-)
-const Trash = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" className="icon">
-    <path d="M3 6h18M8 6V4h8v2m-1 0v14H8V6h8z" fill="none" stroke="currentColor" strokeWidth="2" />
-  </svg>
-)
-const Check = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" className="icon">
-    <path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2" />
-  </svg>
-)
-
-/* ---------- localStorage helpers (persist per-user) ---------- */
-function lsKey(userEmail, key) {
-  return `admin_ui:${userEmail || 'anon'}:${key}`
+// ---- tiny icons (inline SVG so no extra deps) ----
+function IconChevron({ open }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d={open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }
-function readBool(userEmail, key, fallback = false) {
-  try {
-    const v = localStorage.getItem(lsKey(userEmail, key))
-    if (v === 'true') return true
-    if (v === 'false') return false
-    return fallback
-  } catch { return fallback }
+function IconTrash() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M3 6h18M9 6v12m6-12v12M8 6l1-2h6l1 2M6 6l1 14h10l1-14"
+        fill="none"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }
-function writeBool(userEmail, key, val) {
-  try { localStorage.setItem(lsKey(userEmail, key), String(!!val)) } catch {}
+function IconCheck() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M20 6L9 17l-5-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }
 
 export default function Admin() {
-  /* ---------- auth / session ---------- */
   const [session, setSession] = useState(null)
   const [me, setMe] = useState(null)
-  const userEmail = me?.user?.email || me?.email || ''
-
-  /* ---------- page state ---------- */
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // sign-in form
+  // auth form
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  // reset flow
+  // forgot/reset password
   const [showReset, setShowReset] = useState(false)
   const [newPass1, setNewPass1] = useState('')
   const [newPass2, setNewPass2] = useState('')
 
-  // data: clients / roles / members
+  // clients
   const [clients, setClients] = useState([])
   const [selectedClientId, setSelectedClientId] = useState('')
-  const [roles, setRoles] = useState([])
-  const [members, setMembers] = useState([])
-
-  // create client
   const [newClientName, setNewClientName] = useState('')
   const [newClientAdminName, setNewClientAdminName] = useState('')
   const [newClientAdminEmail, setNewClientAdminEmail] = useState('')
 
-  // create role
+  // roles
+  const [roles, setRoles] = useState([])
   const [newRoleTitle, setNewRoleTitle] = useState('')
-  const [interviewType, setInterviewType] = useState('BASIC')
-  const [jobFile, setJobFile] = useState(null)
+  const [interviewType, setInterviewType] = useState('BASIC') // BASIC | DETAILED | TECHNICAL
   const [roleBusy, setRoleBusy] = useState(false)
 
-  // add member
+  // JD file input (with bullet-proof clear)
+  const [jobFile, setJobFile] = useState(null)
+  const fileInputRef = useRef(null)
+  const [fileKey, setFileKey] = useState(0)
+
+  // members
+  const [members, setMembers] = useState([])
   const [memberEmail, setMemberEmail] = useState('')
   const [memberName, setMemberName] = useState('')
-  const [memberRole, setMemberRole] = useState('member')
+  const [memberRole, setMemberRole] = useState('member') // member | manager | admin
 
-  // expand/collapse (persisted per-user)
-  const [openClients, setOpenClients] = useState(false)
-  const [openRoles, setOpenRoles] = useState(false)
-  const [openMembers, setOpenMembers] = useState(false)
+  // collapsible sections (persist across refresh; default collapsed on new auth)
+  const [showClients, setShowClients] = useState(
+    localStorage.getItem('adm_show_clients') === '1'
+  )
+  const [showRoles, setShowRoles] = useState(
+    localStorage.getItem('adm_show_roles') === '1'
+  )
+  const [showMembers, setShowMembers] = useState(
+    localStorage.getItem('adm_show_members') === '1'
+  )
 
-  // share link base
+  useEffect(() => { localStorage.setItem('adm_show_clients', showClients ? '1' : '0') }, [showClients])
+  useEffect(() => { localStorage.setItem('adm_show_roles', showRoles ? '1' : '0') }, [showRoles])
+  useEffect(() => { localStorage.setItem('adm_show_members', showMembers ? '1' : '0') }, [showMembers])
+
   const shareBase = 'https://www.alphasourceai.com/interview-agent'
 
-  /* ---------- init reset detection ---------- */
+  // Detect Supabase recovery redirect (?pwreset=1 or hash type=recovery)
   useEffect(() => {
     const url = new URL(window.location.href)
     const needsReset =
@@ -95,23 +114,23 @@ export default function Admin() {
     if (needsReset) setShowReset(true)
   }, [])
 
-  /* ---------- load session & bootstrap ---------- */
   useEffect(() => {
     let alive = true
     ;(async () => {
       const { data } = await supabase.auth.getSession()
       if (!alive) return
       setSession(data?.session || null)
-
       if (data?.session) {
         try {
           const u = await apiGet('/auth/me')
           if (!alive) return
           setMe(u || null)
-          // admin probe
-          await apiGet('/admin/clients')
+          const probe = await apiGet('/admin/clients')
+          const list = probe?.items || []
           if (!alive) return
           setIsAdmin(true)
+          setClients(list)
+          if (list.length && !selectedClientId) setSelectedClientId(list[0].id)
         } catch {
           if (!alive) return
           setIsAdmin(false)
@@ -122,55 +141,29 @@ export default function Admin() {
     return () => { alive = false }
   }, [])
 
-  /* ---------- after we know user email: restore expand states ---------- */
-  useEffect(() => {
-    if (!userEmail) return
-    setOpenClients(readBool(userEmail, 'openClients', false))
-    setOpenRoles(readBool(userEmail, 'openRoles', false))
-    setOpenMembers(readBool(userEmail, 'openMembers', false))
-  }, [userEmail])
+  async function refreshRoles(clientId = selectedClientId) {
+    const r = await apiGet('/admin/roles' + (clientId ? ('?client_id=' + encodeURIComponent(clientId)) : ''))
+    setRoles(r?.items || [])
+  }
 
-  /* ---------- load initial data once admin ---------- */
-  async function refreshClients() {
-    const r = await apiGet('/admin/clients')
-    const list = r?.items || []
-    // newest first
-    list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    setClients(list)
-    if (!selectedClientId && list[0]?.id) setSelectedClientId(list[0].id)
-  }
-  async function refreshRoles(clientId) {
-    if (!clientId) { setRoles([]); return }
-    const r = await apiGet('/admin/roles?client_id=' + encodeURIComponent(clientId))
-    const list = r?.items || []
-    list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    setRoles(list)
-  }
-  async function refreshMembers(clientId) {
+  async function refreshMembers(clientId = selectedClientId) {
     if (!clientId) { setMembers([]); return }
-    const r = await apiGet('/admin/client-members?client_id=' + encodeURIComponent(clientId))
-    setMembers(r?.items || [])
+    const m = await apiGet('/admin/client-members?client_id=' + encodeURIComponent(clientId))
+    setMembers(m?.items || [])
   }
-  useEffect(() => {
-    let alive = true
-    ;(async () => {
-      if (!isAdmin) return
-      await refreshClients()
-    })()
-    return () => { alive = false }
-  }, [isAdmin])
 
   useEffect(() => {
     let alive = true
     ;(async () => {
       if (!isAdmin) return
+      if (!alive) return
       await refreshRoles(selectedClientId)
+      if (!alive) return
       await refreshMembers(selectedClientId)
     })()
     return () => { alive = false }
   }, [isAdmin, selectedClientId])
 
-  /* ---------- handlers ---------- */
   const handleSignIn = async (e) => {
     e.preventDefault()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -201,18 +194,22 @@ export default function Admin() {
     url.searchParams.delete('pwreset')
     window.history.replaceState({}, '', url.toString())
     await supabase.auth.signOut()
+    // Collapse sections on fresh auth next time
+    localStorage.setItem('adm_show_clients', '0')
+    localStorage.setItem('adm_show_roles', '0')
+    localStorage.setItem('adm_show_members', '0')
     window.location.href = '/admin'
   }
 
   const handleSignOut = async () => {
-    // clear persisted expand state on logout
-    writeBool(userEmail, 'openClients', false)
-    writeBool(userEmail, 'openRoles', false)
-    writeBool(userEmail, 'openMembers', false)
     await supabase.auth.signOut()
+    localStorage.setItem('adm_show_clients', '0')
+    localStorage.setItem('adm_show_roles', '0')
+    localStorage.setItem('adm_show_members', '0')
     window.location.href = '/admin'
   }
 
+  // ---------- Clients ----------
   const createClient = async () => {
     const name = newClientName.trim()
     const admin_name = newClientAdminName.trim()
@@ -221,54 +218,84 @@ export default function Admin() {
     const resp = await apiPost('/admin/clients', { name, admin_name, admin_email })
     const item = resp?.item
     if (item) {
-      await refreshClients()
-      setNewClientName(''); setNewClientAdminName(''); setNewClientAdminEmail('')
+      const next = [item, ...clients].sort((a, b) => a.name.localeCompare(b.name))
+      setClients(next)
+      setNewClientName('')
+      setNewClientAdminName('')
+      setNewClientAdminEmail('')
       setSelectedClientId(item.id)
-      if (resp?.seeded_member) setMembers(m => [resp.seeded_member, ...m])
+      if (resp?.seeded_member) setMembers([resp.seeded_member, ...members])
     }
   }
 
   const deleteClient = async (id) => {
     if (!confirm('Delete this client?')) return
     await apiDelete('/admin/clients/' + id)
-    await refreshClients()
-    if (selectedClientId === id) {
-      setSelectedClientId(clients[0]?.id || '')
-      await refreshRoles(clients[0]?.id || '')
-      await refreshMembers(clients[0]?.id || '')
-    }
+    const next = clients.filter(c => c.id !== id)
+    setClients(next)
+    if (selectedClientId === id) setSelectedClientId(next[0]?.id || '')
+    setRoles([])
+    setMembers([])
   }
 
-  const clearFile = () => setJobFile(null)
-
-  const jdUploadToBackend = async (roleId, file) => {
+  // ---------- Roles ----------
+  const uploadJDToBackend = async (roleId, file) => {
     const form = new FormData()
     form.append('file', file)
-    const qs = new URLSearchParams({ client_id: selectedClientId, role_id: roleId }).toString()
+    const qs = new URLSearchParams({
+      client_id: selectedClientId,
+      role_id: roleId
+    }).toString()
     return api.upload(`/roles-upload/upload-jd?${qs}`, form)
+  }
+
+  const clearJD = () => {
+    setJobFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    setFileKey(k => k + 1) // remount ensures filename clears in all browsers
   }
 
   const createRole = async () => {
     if (!selectedClientId) return
     const title = newRoleTitle.trim()
     if (!title) return
-    if (!jobFile) return alert('Please choose a PDF/DOCX first.')
+
+    // REQUIRE a JD file for role creation
+    if (!jobFile) {
+      alert('Please choose a Job Description file (PDF or DOCX) before creating the role.')
+      return
+    }
 
     setRoleBusy(true)
     try {
-      const payload = { client_id: selectedClientId, title, interview_type: interviewType }
+      // 1) Create role
+      const payload = {
+        client_id: selectedClientId,
+        title,
+        interview_type: interviewType
+      }
       const resp = await apiPost('/admin/roles', payload)
       const role = resp?.item
-      if (!role) throw new Error('Role create failed')
+      if (!role) {
+        alert('Role create failed')
+        return
+      }
 
-      // Upload JD right after create
-      await jdUploadToBackend(role.id, jobFile)
+      // 2) Upload JD (required)
+      try {
+        const out = await uploadJDToBackend(role.id, jobFile)
+        if (out?.parsed_text_preview) {
+          console.log('[JD preview]', out.parsed_text_preview)
+        }
+      } catch (e) {
+        console.error('uploadJDToBackend error', e)
+        alert('Role created, but JD processing failed: ' + e.message)
+      }
 
+      // 3) Refresh roles and reset inputs/File
       await refreshRoles(selectedClientId)
-      setNewRoleTitle(''); setJobFile(null)
-    } catch (e) {
-      console.error(e)
-      alert(e.message || 'Failed to create role')
+      setNewRoleTitle('')
+      clearJD()
     } finally {
       setRoleBusy(false)
     }
@@ -277,20 +304,26 @@ export default function Admin() {
   const deleteRole = async (id) => {
     if (!confirm('Delete this role?')) return
     await apiDelete('/admin/roles/' + id)
-    await refreshRoles(selectedClientId)
+    setRoles(roles.filter(r => r.id !== id))
   }
 
+  // ---------- Members ----------
   const addMember = async () => {
     if (!selectedClientId) return
     const e = memberEmail.trim()
     const n = memberName.trim()
     if (!e || !n) return
     const resp = await apiPost('/admin/client-members', {
-      client_id: selectedClientId, email: e, name: n, role: memberRole
+      client_id: selectedClientId,
+      email: e,
+      name: n,
+      role: memberRole
     })
     if (resp?.item) {
       setMembers([resp.item, ...members])
-      setMemberEmail(''); setMemberName(''); setMemberRole('member')
+      setMemberEmail('')
+      setMemberName('')
+      setMemberRole('member')
       alert('Invite sent and member added')
     }
   }
@@ -301,38 +334,14 @@ export default function Admin() {
     setMembers(members.filter(m => m.id !== id))
   }
 
-  /* ---------- helpers ---------- */
-  const fmtDate = (s) => {
-    if (!s) return ''
-    const d = new Date(s)
-    return d.toLocaleString([], { month: 'short', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' })
-  }
-  const copyLink = async (slug) => {
-    const url = `${shareBase}?role=${slug}`
-    try {
-      await navigator.clipboard.writeText(url)
-      alert('Copied!')
-    } catch {
-      prompt('Copy link:', url)
-    }
-  }
-
-  const clientOptions = useMemo(() =>
-    clients.map(c => ({ id: c.id, name: c.name })), [clients])
-
-  /* ---------- UI ---------- */
-
   if (loading) {
     return <div className="alpha-container"><div className="alpha-card"><h2>Loading…</h2></div></div>
   }
 
+  // ---------- Reset UI ----------
   if (showReset) {
     return (
       <div className="alpha-container">
-        <div className="alpha-header">
-          <h1>Admin</h1>
-          <div />
-        </div>
         <div className="alpha-card alpha-form">
           <h2>Reset Password</h2>
           <form onSubmit={submitReset}>
@@ -352,208 +361,177 @@ export default function Admin() {
     )
   }
 
-  if (!session) {
-    return (
-      <div className="alpha-container">
-        <div className="alpha-header">
-          <h1>Admin</h1>
-          <div />
-        </div>
-        <div className="alpha-card alpha-form">
-          <h2>Admin Sign In</h2>
-          <form onSubmit={handleSignIn}>
-            <label>Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-            <label>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-            <div className="row">
-              <button type="submit">Sign In</button>
-              <button type="button" className="linklike" onClick={startReset}>Forgot password?</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )
-  }
-
   if (!isAdmin) {
     return (
       <div className="alpha-container">
-        <div className="alpha-header">
-          <h1>Admin</h1>
-          <div className="alpha-actions">
-            <button onClick={handleSignOut}>Sign Out</button>
-          </div>
-        </div>
         <div className="alpha-card">
           <h2>Access denied</h2>
           <p>Your account is not an admin.</p>
+          <button onClick={handleSignOut}>Sign Out</button>
         </div>
       </div>
     )
   }
 
+  // ---------- Admin app ----------
   return (
     <div className="alpha-container">
-      {/* Header with email + sign out on the right */}
+      {/* Header */}
       <div className="alpha-header">
-        <h1>Admin</h1>
+        <div className="left">
+          <img src="/alpha-symbol.png" alt="AlphaSourceAI" className="alpha-logo" />
+          <h1>Admin Dashboard</h1>
+        </div>
         <div className="alpha-actions">
-          <span className="muted">{userEmail}</span>
+          <span>{me?.user?.email || me?.email}</span>
           <button onClick={handleSignOut}>Sign Out</button>
         </div>
       </div>
 
-      {/* Current client selector (bigger) */}
+      {/* Current client selector */}
       <div className="alpha-card">
-        <div className="row">
-          <label className="mr-8">Current client</label>
-          <select
-            className="select-lg"
-            value={selectedClientId}
-            onChange={e => setSelectedClientId(e.target.value)}
-          >
-            {clientOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
+        <label className="block text-sm mb-1">Current client</label>
+        <select
+          className="alpha-input tall"
+          value={selectedClientId}
+          onChange={e => setSelectedClientId(e.target.value)}
+        >
+          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
       </div>
 
       <div className="alpha-grid">
-        {/* Clients Section */}
+        {/* Clients */}
         <div className="alpha-card">
-          <div className="section-header">
-            <h3>Clients</h3>
-          </div>
-
+          <h3 className="alpha-section-title">Clients</h3>
           <div className="row">
-            <input placeholder="Client name" value={newClientName} onChange={e => setNewClientName(e.target.value)} />
-            <input placeholder="Client admin name" value={newClientAdminName} onChange={e => setNewClientAdminName(e.target.value)} />
-            <input placeholder="Admin email" value={newClientAdminEmail} onChange={e => setNewClientAdminEmail(e.target.value)} />
+            <input className="alpha-input" placeholder="Client name" value={newClientName} onChange={e => setNewClientName(e.target.value)} />
+            <input className="alpha-input" placeholder="Client admin name" value={newClientAdminName} onChange={e => setNewClientAdminName(e.target.value)} />
+            <input className="alpha-input" placeholder="Admin email" value={newClientAdminEmail} onChange={e => setNewClientAdminEmail(e.target.value)} />
             <button onClick={createClient}>Create</button>
           </div>
 
-          <div className="section">
-            <button
-              className="toggle"
-              onClick={() => { const v = !openClients; setOpenClients(v); writeBool(userEmail, 'openClients', v) }}
-              aria-expanded={openClients}
-            >
-              <Chevron open={openClients} /> <span className="ml-2">Show all clients</span>
-            </button>
+          <button className="alpha-disclosure" onClick={() => setShowClients(v => !v)}>
+            <IconChevron open={showClients} /> <span>{showClients ? 'Hide' : 'Show'} all clients</span>
+          </button>
 
-            {openClients && (
-              <div className="list compact">
-                {clients.map(c => (
-                  <div key={c.id} className="list-row">
-                    <div className="grow">
-                      <div className="title">{c.name}</div>
-                      <div className="sub">Created: {fmtDate(c.created_at)}</div>
-                    </div>
-                    <button
-                      title="Delete client"
-                      className="icon-btn"
-                      onClick={() => deleteClient(c.id)}
-                    >
-                      <Trash />
-                    </button>
+          {showClients && (
+            <div className="alpha-table">
+              {clients.map(c => (
+                <div key={c.id} className="alpha-row">
+                  <div className="grow">
+                    <div className="title">{c.name}</div>
                   </div>
-                ))}
-                {clients.length === 0 && <div className="muted">No clients yet</div>}
-              </div>
-            )}
-          </div>
+                  <button
+                    className="btn-icon lilac"
+                    title="Delete client"
+                    onClick={() => deleteClient(c.id)}
+                  >
+                    <IconTrash />
+                  </button>
+                </div>
+              ))}
+              {clients.length === 0 && <div className="muted">No clients yet</div>}
+            </div>
+          )}
         </div>
 
-        {/* Roles Section */}
+        {/* Roles */}
         <div className="alpha-card">
-          <div className="section-header">
-            <h3>Roles</h3>
-          </div>
+          <h3 className="alpha-section-title">Roles</h3>
 
           <div className="row">
-            <input placeholder="Role title" value={newRoleTitle} onChange={e => setNewRoleTitle(e.target.value)} />
-            <select className="select-lg" value={interviewType} onChange={e => setInterviewType(e.target.value)}>
+            <input className="alpha-input" placeholder="Role title" value={newRoleTitle} onChange={e => setNewRoleTitle(e.target.value)} />
+            <select className="alpha-input tall" value={interviewType} onChange={e => setInterviewType(e.target.value)}>
               <option value="BASIC">BASIC</option>
               <option value="DETAILED">DETAILED</option>
               <option value="TECHNICAL">TECHNICAL</option>
             </select>
 
-            <div className="file-wrap">
+            <div className="file-stack">
               <input
+                className="alpha-input file"
                 type="file"
                 accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={e => setJobFile(e.target.files?.[0] || null)}
+                aria-label="Job Description file (PDF or DOCX)"
+                ref={fileInputRef}
+                key={fileKey}
               />
               {jobFile && (
-                <button type="button" className="icon-btn ml-2" title="Clear file" onClick={clearFile}>
-                  <Trash />
+                <button
+                  type="button"
+                  className="btn-icon lilac file-clear"
+                  title="Remove file"
+                  onClick={clearJD}
+                >
+                  <IconTrash />
                 </button>
               )}
+              <span className="muted note">*.pdf or *.docx</span>
             </div>
 
-            <button disabled={!selectedClientId || roleBusy || !jobFile || !newRoleTitle.trim()} onClick={createRole}>
+            <button
+              disabled={!selectedClientId || roleBusy || !newRoleTitle.trim() || !jobFile}
+              onClick={createRole}
+              title={!jobFile ? 'Choose a PDF or DOCX to enable Create' : 'Create role'}
+            >
               {roleBusy ? 'Creating…' : 'Create'}
             </button>
           </div>
 
-          <div className="section">
-            <button
-              className="toggle"
-              onClick={() => { const v = !openRoles; setOpenRoles(v); writeBool(userEmail, 'openRoles', v) }}
-              aria-expanded={openRoles}
-            >
-              <Chevron open={openRoles} /> <span className="ml-2">Show roles</span>
-            </button>
+          <button className="alpha-disclosure" onClick={() => setShowRoles(v => !v)}>
+            <IconChevron open={showRoles} /> <span>{showRoles ? 'Hide' : 'Show'} roles</span>
+          </button>
 
-            {openRoles && (
-              <div className="list">
-                {/* header row */}
-                <div className="list-row header">
-                  <div className="grow">Role</div>
-                  <div className="col">Created</div>
-                  <div className="col center">KB</div>
-                  <div className="col center">JD</div>
-                  <div className="col">Link</div>
-                  <div className="col">Delete</div>
-                </div>
-
-                {roles.map(r => {
-                  const hasKB = !!r.kb_document_id
-                  const hasJD = !!(r.job_description_url && r.description)
-                  return (
-                    <div key={r.id} className="list-row">
-                      <div className="grow">
-                        <div className="title">{r.title}</div>
-                        <div className="sub">Type: {r.interview_type || '—'} • Token: {r.slug_or_token}</div>
-                      </div>
-                      <div className="col">{fmtDate(r.created_at)}</div>
-                      <div className="col center">{hasKB ? <Check /> : '—'}</div>
-                      <div className="col center">{hasJD ? <Check /> : '—'}</div>
-                      <div className="col">
-                        <button onClick={() => copyLink(r.slug_or_token)}>Copy link</button>
-                      </div>
-                      <div className="col">
-                        <button className="danger" onClick={() => deleteRole(r.id)}>Delete</button>
-                      </div>
-                    </div>
-                  )
-                })}
-                {roles.length === 0 && <div className="muted">No roles yet</div>}
+          {showRoles && (
+            <div className="alpha-table header-cols">
+              <div className="alpha-row header">
+                <div className="grow">Role</div>
+                <div className="col small">Created</div>
+                <div className="col tiny center">KB</div>
+                <div className="col tiny center">JD</div>
+                <div className="col small center">Link</div>
+                <div className="col tiny center">Delete</div>
               </div>
-            )}
-          </div>
+
+              {roles.map(r => {
+                const created = r.created_at ? new Date(r.created_at).toLocaleString() : '—'
+                const hasKB = !!r.kb_document_id
+                const hasJD = !!(r.job_description_url && r.description)
+                const link = `${shareBase}?role=${r.slug_or_token}`
+                return (
+                  <div key={r.id} className="alpha-row">
+                    <div className="grow">
+                      <div className="title">{r.title}</div>
+                      <div className="sub">Type: {r.interview_type || '—'} • Token: {r.slug_or_token}</div>
+                    </div>
+                    <div className="col small">{created}</div>
+                    <div className="col tiny center">{hasKB ? <IconCheck /> : '—'}</div>
+                    <div className="col tiny center">{hasJD ? <IconCheck /> : '—'}</div>
+                    <div className="col small center">
+                      <button onClick={() => navigator.clipboard.writeText(link)}>Copy link</button>
+                    </div>
+                    <div className="col tiny center">
+                      <button className="btn-icon lilac" onClick={() => deleteRole(r.id)} title="Delete role">
+                        <IconTrash />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+              {roles.length === 0 && <div className="muted">No roles yet</div>}
+            </div>
+          )}
         </div>
 
-        {/* Members Section */}
+        {/* Members */}
         <div className="alpha-card">
-          <div className="section-header">
-            <h3>Client Members</h3>
-          </div>
-
+          <h3 className="alpha-section-title">Client Members</h3>
           <div className="row">
-            <input placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
-            <input placeholder="Member email" value={memberEmail} onChange={e => setMemberEmail(e.target.value)} />
-            <select className="select-lg" value={memberRole} onChange={e => setMemberRole(e.target.value)}>
+            <input className="alpha-input" placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
+            <input className="alpha-input" placeholder="Member email" value={memberEmail} onChange={e => setMemberEmail(e.target.value)} />
+            <select className="alpha-input tall" value={memberRole} onChange={e => setMemberRole(e.target.value)}>
               <option value="member">Member</option>
               <option value="manager">Manager</option>
               <option value="admin">Admin</option>
@@ -561,30 +539,24 @@ export default function Admin() {
             <button disabled={!selectedClientId} onClick={addMember}>Add</button>
           </div>
 
-          <div className="section">
-            <button
-              className="toggle"
-              onClick={() => { const v = !openMembers; setOpenMembers(v); writeBool(userEmail, 'openMembers', v) }}
-              aria-expanded={openMembers}
-            >
-              <Chevron open={openMembers} /> <span className="ml-2">Show members</span>
-            </button>
+          <button className="alpha-disclosure" onClick={() => setShowMembers(v => !v)}>
+            <IconChevron open={showMembers} /> <span>{showMembers ? 'Hide' : 'Show'} members</span>
+          </button>
 
-            {openMembers && (
-              <div className="list">
-                {members.map(m => (
-                  <div key={m.id} className="list-row">
-                    <div className="grow">
-                      <div className="title">{m.name}</div>
-                      <div className="sub">{m.email} • {m.role || 'member'}</div>
-                    </div>
-                    <button className="danger" onClick={() => removeMember(m.id)}>Remove</button>
+          {showMembers && (
+            <div className="alpha-table">
+              {members.map(m => (
+                <div key={m.id} className="alpha-row">
+                  <div className="grow">
+                    <div className="title">{m.name}</div>
+                    <div className="sub">{m.email} • {m.role || 'member'}</div>
                   </div>
-                ))}
-                {members.length === 0 && <div className="muted">No members for this client</div>}
-              </div>
-            )}
-          </div>
+                  <button onClick={() => removeMember(m.id)}>Remove</button>
+                </div>
+              ))}
+              {members.length === 0 && <div className="muted">No members for this client</div>}
+            </div>
+          )}
         </div>
       </div>
     </div>
