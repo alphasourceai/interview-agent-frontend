@@ -237,7 +237,7 @@ button.danger {
 button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 
 /* sizing: inputs & selects match height */
-.alpha-input { height: 40px; padding: 8px 10px; font-size: 14px; }
+input.alpha-input { height: 40px; padding: 8px 10px; font-size: 14px; }
 .alpha-select { height: 40px; }
 
 /* file input wrapper so clear icon can sit beside it */
