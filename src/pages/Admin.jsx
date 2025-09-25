@@ -367,7 +367,7 @@ export default function Admin() {
             <button className="toggle" onClick={() => setShowClients(v => !v)}>
               {showClients ? 'Hide clients' : 'Show clients'}
             </button>
-            <h3 className="section-title">Clients</h3>
+            <h2 className="section-title">Clients</h2>
           </div>
 
           <div className="row">
@@ -400,7 +400,7 @@ export default function Admin() {
             <button className="toggle" onClick={() => setShowRoles(v => !v)}>
               {showRoles ? 'Hide roles' : 'Show roles'}
             </button>
-            <h3 className="section-title">Roles</h3>
+            <h2 className="section-title">Roles</h2>
           </div>
 
           <div className="row">
@@ -477,7 +477,7 @@ export default function Admin() {
             <button className="toggle" onClick={() => setShowMembers(v => !v)}>
               {showMembers ? 'Hide members' : 'Show members'}
             </button>
-            <h3 className="section-title">Client Members</h3>
+            <h2 className="section-title">Client Members</h2>
           </div>
 
           <div className="row">
