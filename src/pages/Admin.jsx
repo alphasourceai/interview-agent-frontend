@@ -285,25 +285,34 @@ export default function Admin() {
   const deleteRole = async (id) => {
     if (!confirm('Delete this role?')) return;
 
-    // Primary endpoint includes client_id (most backends require it)
-    const primaryUrl = `/admin/roles/${encodeURIComponent(id)}?client_id=${encodeURIComponent(selectedClientId)}`;
+    const attempts = [
+      // Common REST patterns
+      { method: 'DELETE', url: `/admin/roles/${encodeURIComponent(id)}` },
+      { method: 'DELETE', url: `/admin/roles/${encodeURIComponent(id)}?client_id=${encodeURIComponent(selectedClientId)}` },
+      { method: 'DELETE', url: `/admin/roles?id=${encodeURIComponent(id)}&client_id=${encodeURIComponent(selectedClientId)}` },
 
-    try {
-      await apiDelete(primaryUrl);
-      setRoles(prev => prev.filter(r => r.id !== id));
-      return;
-    } catch (err) {
-      // Fallback to query-style route for older deployments
+      // Legacy / RPC-style pattern some deployments use
+      { method: 'POST',  url: `/admin/roles/delete`, body: { id, client_id: selectedClientId } },
+    ];
+
+    for (const step of attempts) {
       try {
-        const fallbackUrl = `/admin/roles?id=${encodeURIComponent(id)}&client_id=${encodeURIComponent(selectedClientId)}`;
-        await apiDelete(fallbackUrl);
+        if (step.method === 'DELETE') {
+          await apiDelete(step.url);
+        } else {
+          await apiPost(step.url, step.body);
+        }
+        // If we got here, the call succeeded — update UI and stop
         setRoles(prev => prev.filter(r => r.id !== id));
         return;
-      } catch (err2) {
-        console.error('Delete role failed', err2 || err);
-        alert('Could not delete role. Please refresh and try again.');
+      } catch (err) {
+        // 404 or method-not-allowed? try next pattern
+        console.warn('Role delete attempt failed:', step.method, step.url, err?.status || err?.message);
+        continue;
       }
     }
+
+    alert('Could not delete role. Please refresh and try again.');
   };
 
   // ---------- Members ----------
