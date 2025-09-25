@@ -1,11 +1,11 @@
 // src/pages/Admin.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { apiGet, apiPost, apiDelete, api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
 import '../styles/alphaTheme.css';
 
-/* bright white trash icon, +~30% size */
-const IconTrash = ({ size = 36 }) => (
+/* bright white trash icon */
+const IconTrash = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path d="M3 6h18" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
     <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#FFFFFF" strokeWidth="2"/>
@@ -42,6 +42,8 @@ export default function Admin() {
   const [interviewType, setInterviewType] = useState('BASIC'); // BASIC | DETAILED | TECHNICAL
   const [jobFile, setJobFile] = useState(null);
   const [roleBusy, setRoleBusy] = useState(false);
+  const fileInputRef = useRef(null);
+  const [fileKey, setFileKey] = useState(0); // ensure full reset of file input
 
   // members
   const [members, setMembers] = useState([]);
@@ -58,6 +60,48 @@ export default function Admin() {
   useEffect(() => localStorage.setItem('adm_show_clients', showClients ? '1' : '0'), [showClients]);
   useEffect(() => localStorage.setItem('adm_show_roles', showRoles ? '1' : '0'), [showRoles]);
   useEffect(() => localStorage.setItem('adm_show_members', showMembers ? '1' : '0'), [showMembers]);
+
+  // --- 60-minute inactivity auto-logout ---
+  useEffect(() => {
+    const IDLE_LIMIT_MS = 60 * 60 * 1000; // 60 minutes
+    let timer;
+
+    const triggerLogout = async () => {
+      try {
+        await supabase.auth.signOut();
+      } finally {
+        // also clear section-state so a fresh login starts collapsed
+        localStorage.removeItem('adm_show_clients');
+        localStorage.removeItem('adm_show_roles');
+        localStorage.removeItem('adm_show_members');
+        window.location.href = '/admin';
+      }
+    };
+
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(triggerLogout, IDLE_LIMIT_MS);
+    };
+
+    // Reset on any user activity
+    const activityEvents = [
+      'mousemove',
+      'mousedown',
+      'keydown',
+      'scroll',
+      'touchstart',
+      'visibilitychange',
+      'click'
+    ];
+
+    activityEvents.forEach((ev) => window.addEventListener(ev, resetTimer));
+    resetTimer(); // start on mount
+
+    return () => {
+      clearTimeout(timer);
+      activityEvents.forEach((ev) => window.removeEventListener(ev, resetTimer));
+    };
+  }, []);
 
   const shareBase = 'https://www.alphasourceai.com/interview-agent';
 
@@ -363,6 +407,7 @@ export default function Admin() {
       <div className="alpha-grid">
         {/* Clients */}
         <div className="alpha-card">
+          <div style={{ height: 12 }} />
           <div className="section-head">
             <h2 className="section-title">Clients</h2>
           </div>
@@ -391,7 +436,7 @@ export default function Admin() {
                     <div className="sub">Created {new Date(c.created_at).toLocaleString()}</div>
                   </div>
                   <button className="btn-icon" onClick={() => deleteClient(c.id)} title="Delete client">
-                    <IconTrash size={36} />
+                    <IconTrash size={24} />
                   </button>
                 </div>
               ))}
@@ -401,6 +446,7 @@ export default function Admin() {
 
         {/* Roles */}
         <div className="alpha-card">
+          <div style={{ height: 12 }} />
           <div className="section-head">
             <h2 className="section-title">Roles</h2>
           </div>
@@ -416,15 +462,25 @@ export default function Admin() {
             {/* file picker + clear */}
             <div className="file-stack">
               <input
+                key={fileKey}
                 className="alpha-input file"
                 type="file"
                 accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={e => setJobFile(e.target.files?.[0] || null)}
                 aria-label="Job Description file (PDF or DOCX)"
+                ref={fileInputRef}
               />
               {jobFile && (
-                <button className="btn-icon file-clear" onClick={() => setJobFile(null)} title="Remove file">
-                  <IconTrash size={36} />
+                <button
+                  className="btn-icon file-clear"
+                  onClick={() => {
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    setJobFile(null);
+                    setFileKey(k => k + 1); // fully reset the input element
+                  }}
+                  title="Remove file"
+                >
+                  <IconTrash size={24} />
                 </button>
               )}
             </div>
@@ -468,7 +524,7 @@ export default function Admin() {
                       </div>
                       <div className="center">
                         <button className="btn-icon" onClick={() => deleteRole(r.id)} title="Delete role">
-                          <IconTrash size={36} />
+                          <IconTrash size={24} />
                         </button>
                       </div>
                     </div>
@@ -482,6 +538,7 @@ export default function Admin() {
 
         {/* Members */}
         <div className="alpha-card">
+          <div style={{ height: 12 }} />
           <div className="section-head">
             <h2 className="section-title">Client Members</h2>
           </div>
