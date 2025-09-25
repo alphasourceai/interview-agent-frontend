@@ -4,8 +4,8 @@ import { apiGet, apiPost, apiDelete, api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
 import '../styles/alphaTheme.css';
 
-/* bright white trash icon, +25% size */
-const IconTrash = ({ size = 18 }) => (
+/* bright white trash icon, +~30% size */
+const IconTrash = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path d="M3 6h18" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
     <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#FFFFFF" strokeWidth="2"/>
