@@ -284,35 +284,17 @@ export default function Admin() {
 
   const deleteRole = async (id) => {
     if (!confirm('Delete this role?')) return;
-
-    const attempts = [
-      // Common REST patterns
-      { method: 'DELETE', url: `/admin/roles/${encodeURIComponent(id)}` },
-      { method: 'DELETE', url: `/admin/roles/${encodeURIComponent(id)}?client_id=${encodeURIComponent(selectedClientId)}` },
-      { method: 'DELETE', url: `/admin/roles?id=${encodeURIComponent(id)}&client_id=${encodeURIComponent(selectedClientId)}` },
-
-      // Legacy / RPC-style pattern some deployments use
-      { method: 'POST',  url: `/admin/roles/delete`, body: { id, client_id: selectedClientId } },
-    ];
-
-    for (const step of attempts) {
-      try {
-        if (step.method === 'DELETE') {
-          await apiDelete(step.url);
-        } else {
-          await apiPost(step.url, step.body);
-        }
-        // If we got here, the call succeeded — update UI and stop
-        setRoles(prev => prev.filter(r => r.id !== id));
-        return;
-      } catch (err) {
-        // 404 or method-not-allowed? try next pattern
-        console.warn('Role delete attempt failed:', step.method, step.url, err?.status || err?.message);
-        continue;
-      }
+    try {
+      const qs = new URLSearchParams({
+        id,
+        client_id: selectedClientId || '',
+      }).toString();
+      await apiDelete('/admin/roles?' + qs);
+      setRoles(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      console.error('Role delete failed:', err);
+      alert('Could not delete role. Please refresh and try again.');
     }
-
-    alert('Could not delete role. Please refresh and try again.');
   };
 
   // ---------- Members ----------
