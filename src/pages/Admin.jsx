@@ -390,8 +390,8 @@ export default function Admin() {
                     <div className="title">{c.name}</div>
                     <div className="sub">Created {new Date(c.created_at).toLocaleString()}</div>
                   </div>
-                  <button className="btn-icon lilac" onClick={() => deleteClient(c.id)} title="Delete client">
-                    <IconTrash size={32} />
+                  <button className="btn-icon" onClick={() => deleteClient(c.id)} title="Delete client">
+                    <IconTrash size={36} />
                   </button>
                 </div>
               ))}
@@ -423,8 +423,8 @@ export default function Admin() {
                 aria-label="Job Description file (PDF or DOCX)"
               />
               {jobFile && (
-                <button className="btn-icon lilac file-clear" onClick={() => setJobFile(null)} title="Remove file">
-                  <IconTrash size={28} />
+                <button className="btn-icon file-clear" onClick={() => setJobFile(null)} title="Remove file">
+                  <IconTrash size={36} />
                 </button>
               )}
             </div>
@@ -467,8 +467,8 @@ export default function Admin() {
                         <button onClick={() => navigator.clipboard.writeText(`${shareBase}?role=${r.slug_or_token}`)}>Copy link</button>
                       </div>
                       <div className="center">
-                        <button className="btn-icon lilac" onClick={() => deleteRole(r.id)} title="Delete role">
-                          <IconTrash size={32} />
+                        <button className="btn-icon" onClick={() => deleteRole(r.id)} title="Delete role">
+                          <IconTrash size={36} />
                         </button>
                       </div>
                     </div>
