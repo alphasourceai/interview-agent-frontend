@@ -364,12 +364,10 @@ export default function Admin() {
         {/* Clients */}
         <div className="alpha-card">
           <div className="section-head">
-            <button className="toggle" onClick={() => setShowClients(v => !v)}>
-              {showClients ? 'Hide clients' : 'Show clients'}
-            </button>
             <h2 className="section-title">Clients</h2>
           </div>
 
+          {/* create row */}
           <div className="row">
             <input className="alpha-input" placeholder="Client name" value={newClientName} onChange={e => setNewClientName(e.target.value)} />
             <input className="alpha-input" placeholder="Client admin name" value={newClientAdminName} onChange={e => setNewClientAdminName(e.target.value)} />
@@ -377,8 +375,15 @@ export default function Admin() {
             <button onClick={createClient}>Create</button>
           </div>
 
+          {/* toggle UNDER inputs */}
+          <div className="toggle-row">
+            <button type="button" className="toggle" aria-pressed={showClients} onClick={() => setShowClients(v => !v)}>
+              {showClients ? 'Hide clients' : 'Show clients'}
+            </button>
+          </div>
+
           {showClients && (
-            <div className="list list--rows">
+            <div className="list list--rows" id="clients-list">
               {clients.map(c => (
                 <div key={c.id} className="list-row">
                   <div className="grow">
@@ -397,9 +402,6 @@ export default function Admin() {
         {/* Roles */}
         <div className="alpha-card">
           <div className="section-head">
-            <button className="toggle" onClick={() => setShowRoles(v => !v)}>
-              {showRoles ? 'Hide roles' : 'Show roles'}
-            </button>
             <h2 className="section-title">Roles</h2>
           </div>
 
@@ -436,8 +438,15 @@ export default function Admin() {
             </button>
           </div>
 
+          {/* toggle UNDER inputs */}
+          <div className="toggle-row">
+            <button type="button" className="toggle" aria-pressed={showRoles} onClick={() => setShowRoles(v => !v)}>
+              {showRoles ? 'Hide roles' : 'Show roles'}
+            </button>
+          </div>
+
           {showRoles && (
-            <div className="table like">
+            <div className="table like" id="roles-table">
               <div className="t-head">
                 <div>Role</div><div>Created</div><div>KB</div><div>JD</div><div>Link</div><div>Delete</div>
               </div>
@@ -474,9 +483,6 @@ export default function Admin() {
         {/* Members */}
         <div className="alpha-card">
           <div className="section-head">
-            <button className="toggle" onClick={() => setShowMembers(v => !v)}>
-              {showMembers ? 'Hide members' : 'Show members'}
-            </button>
             <h2 className="section-title">Client Members</h2>
           </div>
 
@@ -491,8 +497,15 @@ export default function Admin() {
             <button disabled={!selectedClientId} onClick={addMember}>Add</button>
           </div>
 
+          {/* toggle UNDER inputs */}
+          <div className="toggle-row">
+            <button type="button" className="toggle" aria-pressed={showMembers} onClick={() => setShowMembers(v => !v)}>
+              {showMembers ? 'Hide members' : 'Show members'}
+            </button>
+          </div>
+
           {showMembers && (
-            <div className="list list--rows">
+            <div className="list list--rows" id="members-list">
               {members.map(m => (
                 <div key={m.id} className="list-row">
                   <div className="grow">
