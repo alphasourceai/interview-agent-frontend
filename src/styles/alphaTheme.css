@@ -283,3 +283,17 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 /* File input + clear icon stacked */
 .file-stack { position:relative; display:flex; align-items:center; }
 .file-stack .file-clear { position:absolute; right:-46px; }
+
+.signout-btn {
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border: 1px solid var(--alpha-primary) !important;
+  border-radius: 18px !important;
+  padding: 6px 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+}
+.signout-btn:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}

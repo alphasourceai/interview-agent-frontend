@@ -31,7 +31,6 @@ export default function Admin() {
 
   // clients
   const [clients, setClients] = useState([]);
-  the
   const [selectedClientId, setSelectedClientId] = useState('');
   const [newClientName, setNewClientName] = useState('');
   const [newClientAdminName, setNewClientAdminName] = useState('');
@@ -329,7 +328,7 @@ export default function Admin() {
         <div className="alpha-card">
           <h2>Access denied</h2>
           <p>Your account is not an admin.</p>
-          <button onClick={handleSignOut}>Sign Out</button>
+          <button className="signout-btn" onClick={handleSignOut}>Sign Out</button>
         </div>
       </div>
     );
