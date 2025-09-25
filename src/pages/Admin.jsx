@@ -391,7 +391,7 @@ export default function Admin() {
                     <div className="sub">Created {new Date(c.created_at).toLocaleString()}</div>
                   </div>
                   <button className="btn-icon lilac" onClick={() => deleteClient(c.id)} title="Delete client">
-                    <IconTrash />
+                    <IconTrash size={32} />
                   </button>
                 </div>
               ))}
@@ -424,7 +424,7 @@ export default function Admin() {
               />
               {jobFile && (
                 <button className="btn-icon lilac file-clear" onClick={() => setJobFile(null)} title="Remove file">
-                  <IconTrash />
+                  <IconTrash size={28} />
                 </button>
               )}
             </div>
@@ -468,7 +468,7 @@ export default function Admin() {
                       </div>
                       <div className="center">
                         <button className="btn-icon lilac" onClick={() => deleteRole(r.id)} title="Delete role">
-                          <IconTrash />
+                          <IconTrash size={32} />
                         </button>
                       </div>
                     </div>
