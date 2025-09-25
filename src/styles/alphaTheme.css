@@ -263,7 +263,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 }
 
 /* file input wrapper so clear icon can sit beside it */
-.file-stack { position: relative; display: flex; align-items: center; gap: 8px; }
+.file-stack { position: relative; display: flex; align-items: center; gap: 8px; margin-right: 36px; }
 .file-stack .file { width: 220px; }
 
 /* lilac circular icon buttons; icon itself is white via SVG fill/stroke */
@@ -286,7 +286,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 /* Header with logo + title (compact) */
 .alpha-header--dash { display:flex; align-items:center; justify-content:space-between; }
 .alpha-header-left { display:flex; align-items:center; gap:10px; }
-.alpha-logo { width:44px; height:44px; object-fit:contain; }  /* compact logo */
+.alpha-logo { width:55px; height:55px; object-fit:contain; }  /* compact logo */
 
 /* Thin top bar card */
 .alpha-card--bar { padding:10px 14px; margin-bottom:12px; }
@@ -308,7 +308,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 
 /* File input + clear icon stacked */
 .file-stack { position:relative; display:flex; align-items:center; }
-.file-stack .file-clear { position:absolute; right:-46px; }
+.file-stack .file-clear { position: absolute; right: -36px; }
 
 .signout-btn {
   background: var(--alpha-primary) !important;
