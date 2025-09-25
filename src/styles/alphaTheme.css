@@ -237,8 +237,26 @@ button.danger {
 button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 
 /* sizing: inputs & selects match height */
-input.alpha-input { height: 40px; padding: 8px 10px; font-size: 14px; }
-.alpha-select { height: 40px; }
+/* sizing: inputs & selects match EXACT 40px including padding + border */
+.alpha-theme input.alpha-input,
+.alpha-theme .alpha-input[type="text"],
+.alpha-theme .alpha-input[type="email"],
+.alpha-theme .alpha-input[type="password"],
+.alpha-theme .alpha-input[type="search"],
+.alpha-theme select.alpha-select,
+.alpha-theme .alpha-select {
+  height: 40px !important;        /* total box height */
+  box-sizing: border-box !important;
+  padding: 8px 10px !important;    /* included in the 40px now */
+  line-height: 24px;               /* keeps text vertically comfy */
+}
+
+/* optional: file input tries to match as well */
+.alpha-theme input[type="file"].alpha-input {
+  height: 40px !important;
+  box-sizing: border-box !important;
+  padding: 6px 10px !important;
+}
 
 /* file input wrapper so clear icon can sit beside it */
 .file-stack { position: relative; display: flex; align-items: center; gap: 8px; }
