@@ -282,18 +282,34 @@ export default function Admin() {
     }
   };
 
-  // Planned canonical delete route; BE work pending
+  // Delete role: try canonical DELETE with query params, then fall back to POST if not available
   const deleteRole = async (id) => {
     if (!confirm('Delete this role?')) return;
     try {
-      // canonical: DELETE /admin/roles/:id
-      await apiDelete(`/admin/roles/${id}`);
-      setRoles(prev => prev.filter(r => r.id !== id));
+      // Preferred: DELETE /admin/roles?id=...&client_id=...
+      const url = `/admin/roles?id=${encodeURIComponent(id)}&client_id=${encodeURIComponent(selectedClientId)}`;
+      let ok = false;
+      try {
+        await apiDelete(url);
+        ok = true;
+      } catch (e) {
+        // If server doesn't support that yet, try POST /admin/roles/delete
+        if (e?.response?.status === 404) {
+          await apiPost('/admin/roles/delete', { id, client_id: selectedClientId });
+          ok = true;
+        } else {
+          throw e;
+        }
+      }
+  
+      if (ok) {
+        setRoles(prev => prev.filter(r => r.id !== id));
+      }
     } catch (err) {
-      // Graceful message while BE endpoint is not yet implemented
-      const msg = (err && (err.status === 404 || err?.response?.status === 404 || /not\s*found/i.test(String(err))))
-        ? 'Delete isn\'t available yet on the server (404). We\'ll enable this as soon as the backend route exists.'
-        : 'Could not delete role. Please refresh and try again.';
+      const msg =
+        (err?.response?.data?.error) ||
+        (err?.message) ||
+        'Could not delete role. Please refresh and try again.';
       console.error('Role delete failed:', err);
       alert(msg);
     }
