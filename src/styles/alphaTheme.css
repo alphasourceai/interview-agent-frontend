@@ -3,14 +3,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap');
 
 .alpha-theme {
-  --alpha-bg: #061551;          /* deep navy */
-  --alpha-surface: rgba(255,255,255,0.06);  /* cards/panels */
+  --alpha-bg: #061551;
+  --alpha-surface: rgba(255,255,255,0.06);
   --alpha-border: rgba(255,255,255,0.14);
-  --alpha-text: #EBFEFF;         /* body text on dark */
+  --alpha-text: #EBFEFF;
   --alpha-muted: rgba(235,254,255,0.75);
-  --alpha-primary: #AD8BF7;      /* lilac */
+  --alpha-primary: #AD8BF7;
   --alpha-primary-strong: #854DFF;
-  --alpha-darktext: #2F2E2E;     /* dark body text for light panels */
+  --alpha-darktext: #2F2E2E;
   --alpha-radius: 12px;
   --alpha-gap: 14px;
 }
@@ -26,7 +26,7 @@
 .alpha-theme a { color: var(--alpha-primary); text-decoration: none; }
 .alpha-theme a:hover { text-decoration: underline; }
 
-/* Generic surfaces (hit most “expanded”/card-like containers) */
+/* Generic surfaces */
 .alpha-theme .card,
 .alpha-theme .panel,
 .alpha-theme .box,
@@ -48,7 +48,7 @@
   color: var(--alpha-text);
 }
 
-/* Headings inside expanded/report panels use darker text per spec */
+/* Headings inside panels use darker text */
 .alpha-theme .panel h1,
 .alpha-theme .panel h2,
 .alpha-theme .panel h3,
@@ -64,10 +64,10 @@
   color: var(--alpha-darktext) !important;
 }
 
-/* Table text remains readable on dark */
+/* Table text */
 .alpha-theme table { color: var(--alpha-text); }
 
-/* Buttons (covers plain <button>, “Video/Transcript/Download PDF”, Sign out) */
+/* Buttons */
 .alpha-theme button,
 .alpha-theme .btn,
 .alpha-theme input[type="button"],
@@ -89,7 +89,7 @@
   border-color: var(--alpha-primary-strong);
 }
 
-/* Ghost / link-like buttons (if any) */
+/* Ghost / link-like buttons */
 .alpha-theme .btn-ghost {
   background: transparent;
   color: var(--alpha-primary);
@@ -100,7 +100,7 @@
   background: var(--alpha-primary);
 }
 
-/* Inputs on dark background */
+/* Inputs on dark */
 .alpha-theme input,
 .alpha-theme select,
 .alpha-theme textarea {
@@ -113,7 +113,7 @@
 .alpha-theme input::placeholder,
 .alpha-theme textarea::placeholder { color: var(--alpha-muted); }
 
-/* Sign-in screen container (keeps it on-brand) */
+/* Auth card */
 .alpha-theme .auth-wrap {
   max-width: 520px;
   margin: 12vh auto 8vh;
@@ -123,579 +123,12 @@
   border-radius: var(--alpha-radius);
   box-shadow: 0 10px 30px rgba(0,0,0,0.25);
 }
-.alpha-theme .auth-wrap h1,
-.alpha-theme .auth-wrap h2 { margin: 0 0 12px; }
-.alpha-theme .auth-wrap p { color: var(--alpha-muted); margin: 0 0 18px; }
 
 /* ====== alpha-theme overrides (append only) ================================= */
 
-/* 1) Inputs/selects: white text + caret (fix email field + dropdown text) */
-.alpha-theme input,
-.alpha-theme textarea,
-.alpha-theme select {
-  color: var(--alpha-text) !important;
-  caret-color: var(--alpha-text);
-  background-color: rgba(255,255,255,0.08);
-  border: 1px solid var(--alpha-border);
-}
-
-/* Options list uses system UI; make options dark so they’re readable there */
 .alpha-theme select option { color: #111; }
 
-/* 2) “Sign out” button look (lilac + white) */
-.alpha-theme a[href="/signout"],
-.alpha-theme button#signout,
-.alpha-theme button[data-role="signout"] {
-  background: var(--alpha-primary);
-  color: #fff !important;
-  border: 1px solid var(--alpha-primary);
-  border-radius: 20px;
-  padding: 8px 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.alpha-theme a[href="/signout"]:hover,
-.alpha-theme button#signout:hover,
-.alpha-theme button[data-role="signout"]:hover {
-  background: var(--alpha-primary-strong);
-  border-color: var(--alpha-primary-strong);
-}
-
-/* 3) Small action controls inside expanded panels that are <a> links
-      (Video / Transcript / Download PDF) */
-.alpha-theme .expanded a,
-.alpha-theme .panel a,
-.alpha-theme .report a {
-  display: inline-block;
-  background: var(--alpha-primary);
-  color: #fff !important;
-  border: 1px solid var(--alpha-primary);
-  border-radius: 8px;
-  padding: 6px 10px;
-}
-.alpha-theme .expanded a:hover,
-.alpha-theme .panel a:hover,
-.alpha-theme .report a:hover {
-  background: var(--alpha-primary-strong);
-  border-color: var(--alpha-primary-strong);
-}
-
-/* 4) Belt-and-suspenders: force expanded/report surfaces to stay dark
-      if a library injects a white background */
-.alpha-theme .expanded,
-.alpha-theme .panel,
-.alpha-theme .report {
-  background: var(--alpha-surface) !important;
-  color: var(--alpha-text) !important;
-}
-
-/* 5) Subtle table row hover on dark */
-.alpha-theme table tr:hover {
-  background: rgba(255,255,255,0.06);
-}
-
-/* === Fixes for legacy dashboard === */
-
-/* 2.1 Expanded rows/cards: keep dark background */
-.alpha-theme .expanded,
-.alpha-theme .expand,
-.alpha-theme .expander-content,
-.alpha-theme .row-details,
-.alpha-theme details[open],
-.alpha-theme .report,
-.alpha-theme .panel,
-.alpha-theme .box,
-.alpha-theme .card {
-  background: var(--alpha-surface) !important;
-  border: 1px solid var(--alpha-border) !important;
-  color: var(--alpha-text) !important;
-  border-radius: var(--alpha-radius);
-}
-
-/* Catch inline white backgrounds used by old components */
-.alpha-theme [style*="background:#fff"],
-.alpha-theme [style*="background: #fff"],
-.alpha-theme [style*="background:white"],
-.alpha-theme [style*="background: white"],
-.alpha-theme [style*="background-color:#fff"],
-.alpha-theme [style*="background-color: #fff"],
-.alpha-theme [style*="background-color:white"],
-.alpha-theme [style*="background-color: white"],
-.alpha-theme [style*="background: rgb(255, 255, 255)"],
-.alpha-theme [style*="background-color: rgb(255, 255, 255)"] {
-  background: var(--alpha-surface) !important;
-  color: var(--alpha-text) !important;
-}
-
-/* 2.2 Headings inside expanded/report panels should be dark (not white) */
-.alpha-theme .expanded h1,
-.alpha-theme .expanded h2,
-.alpha-theme .expanded h3,
-.alpha-theme .report h1,
-.alpha-theme .report h2,
-.alpha-theme .report h3,
-.alpha-theme .panel h1,
-.alpha-theme .panel h2,
-.alpha-theme .panel h3 {
-  color: var(--alpha-darktext) !important; /* e.g., "Resume Analysis", "Interview Analysis" */
-}
-
-/* 2.3 The three little action buttons (Video / Transcript / Download PDF) to lilac */
-.alpha-theme button,
-.alpha-theme .btn,
-.alpha-theme a.button,
-.alpha-theme a[role="button"],
-.alpha-theme input[type="button"],
-.alpha-theme input[type="submit"] {
-  appearance: none;
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border: 1px solid var(--alpha-primary) !important;
-  border-radius: 18px !important;
-  padding: 6px 10px !important;
-  font-weight: 600 !important;
-  cursor: pointer;
-}
-.alpha-theme button:hover,
-.alpha-theme .btn:hover,
-.alpha-theme a.button:hover,
-.alpha-theme a[role="button"]:hover,
-.alpha-theme input[type="button"]:hover,
-.alpha-theme input[type="submit"]:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-
-/* 2.4 Sign out link should look like our lilac button even if inline styles exist */
-.alpha-theme a[href$="/signin"],
-.alpha-theme a:has(> *:contains("Sign out")), /* best-effort */
-.alpha-theme .signout-btn {
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border: 1px solid var(--alpha-primary) !important;
-  border-radius: 18px !important;
-  padding: 6px 12px !important;
-  text-decoration: none !important;
-}
-.alpha-theme a[href$="/signin"]:hover,
-.alpha-theme .signout-btn:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-
-/* 2.5 Inputs on dark: white text (signin and filters) */
-.alpha-theme input,
-.alpha-theme select,
-.alpha-theme textarea {
-  background: rgba(255,255,255,0.08) !important;
-  color: var(--alpha-text) !important;
-  border: 1px solid var(--alpha-border) !important;
-}
-.alpha-theme input::placeholder,
-.alpha-theme textarea::placeholder {
-  color: var(--alpha-muted) !important;
-}
-
-/* 2.6 Table rows stay readable */
-.alpha-theme table {
-  color: var(--alpha-text) !important;
-}
-.alpha-theme table tr td,
-.alpha-theme table tr th {
-  border-color: var(--alpha-border) !important;
-}
-
-/* --- tweak pack: expanded row + buttons + report text ------------------- */
-
-/* 1) Make the “Video” button match the other lilac buttons inside expands */
-.alpha-theme .expanded button,
-.alpha-theme .row-details button,
-.alpha-theme .details-row button,
-.alpha-theme .report button {
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border: 1px solid var(--alpha-primary) !important;
-  border-radius: 20px !important;
-}
-.alpha-theme .expanded button:hover,
-.alpha-theme .row-details button:hover,
-.alpha-theme .details-row button:hover,
-.alpha-theme .report button:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-
-/* 2) Keep the top “name / email / …” bar dark when a row is expanded */
-.alpha-theme .expanded-row,
-.alpha-theme tr.expanded,
-.alpha-theme .row-details,
-.alpha-theme .details-row,
-.alpha-theme .expand,
-.alpha-theme .expanded {
-  background: var(--alpha-surface) !important;
-  color: var(--alpha-text) !important;
-  border-color: var(--alpha-border) !important;
-}
-
-/* Resist any white backgrounds a table might force */
-.alpha-theme table tr,
-.alpha-theme table td,
-.alpha-theme table th {
-  background-color: transparent !important;
-  color: var(--alpha-text);
-}
-
-/* 3) In the big “Resume Analysis / Interview Analysis” panels:
-      make labels + paragraph text white while headings stay dark */
-.alpha-theme .report,
-.alpha-theme .panel {
-  color: var(--alpha-text);
-}
-.alpha-theme .report p,
-.alpha-theme .panel p,
-.alpha-theme .report span,
-.alpha-theme .panel span,
-.alpha-theme .report small,
-.alpha-theme .panel small,
-.alpha-theme .report .label,
-.alpha-theme .panel .label {
-  color: var(--alpha-text) !important;
-}
-/* keep the section headings dark per spec */
-.alpha-theme .report h1,
-.alpha-theme .report h2,
-.alpha-theme .report h3,
-.alpha-theme .report h4,
-.alpha-theme .panel h1,
-.alpha-theme .panel h2,
-.alpha-theme .panel h3,
-.alpha-theme .panel h4 {
-  color: var(--alpha-darktext) !important;
-}
-
-/* --- final tweaks: make all three action pills lilac/white; force report text white --- */
-
-/* Catch buttons AND anchor-pills inside expanded rows/reports */
-.alpha-theme .expanded a,
-.alpha-theme .row-details a,
-.alpha-theme .details-row a,
-.alpha-theme .report a,
-.alpha-theme .expanded .btn,
-.alpha-theme .row-details .btn,
-.alpha-theme .details-row .btn,
-.alpha-theme .report .btn,
-.alpha-theme .expanded button,
-.alpha-theme .row-details button,
-.alpha-theme .details-row button,
-.alpha-theme .report button,
-.alpha-theme .expanded input[type="button"],
-.alpha-theme .expanded input[type="submit"] {
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border: 1px solid var(--alpha-primary) !important;
-  border-radius: 20px !important;
-  text-decoration: none !important;
-  padding: 6px 10px; /* keeps pills tidy if they were <a> */
-  display: inline-block; /* anchors look like pills */
-}
-.alpha-theme .expanded a:hover,
-.alpha-theme .row-details a:hover,
-.alpha-theme .details-row a:hover,
-.alpha-theme .report a:hover,
-.alpha-theme .expanded .btn:hover,
-.alpha-theme .row-details .btn:hover,
-.alpha-theme .details-row .btn:hover,
-.alpha-theme .report .btn:hover,
-.alpha-theme .expanded button:hover,
-.alpha-theme .row-details button:hover,
-.alpha-theme .details-row button:hover,
-.alpha-theme .report button:hover,
-.alpha-theme .expanded input[type="button"]:hover,
-.alpha-theme .expanded input[type="submit"]:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-
-/* Force ALL text inside the big analysis cards to white,
-   then re-apply dark color for the headings only */
-.alpha-theme .report,
-.alpha-theme .report * {
-  color: var(--alpha-text) !important;
-}
-
-/* Headings remain dark per your spec */
-.alpha-theme .report h1,
-.alpha-theme .report h2,
-.alpha-theme .report h3,
-.alpha-theme .report h4 {
-  color: var(--alpha-darktext) !important;
-}
-
-/* ===== FINAL OVERRIDES FOR EXPANDED ROWS ===== */
-
-/* 1) Make **all** text inside expanded/analysis cards white (no gray),
-      regardless of nested classes from the table library */
-.alpha-theme .expanded,
-.alpha-theme .row-details,
-.alpha-theme .details-row,
-.alpha-theme .report {
-  color: var(--alpha-text) !important;
-}
-
-.alpha-theme .expanded *,
-.alpha-theme .row-details *,
-.alpha-theme .details-row *,
-.alpha-theme .report * {
-  color: var(--alpha-text) !important;
-  opacity: 1 !important;
-  -webkit-text-fill-color: var(--alpha-text) !important; /* wins vs. some webkits */
-  filter: none !important;
-}
-
-/* Keep the small section headings (“Resume Analysis”, “Interview Analysis”) dark per spec */
-.alpha-theme .report h1,
-.alpha-theme .report h2,
-.alpha-theme .report h3,
-.alpha-theme .report h4,
-.alpha-theme .expanded h1,
-.alpha-theme .expanded h2,
-.alpha-theme .expanded h3,
-.alpha-theme .expanded h4 {
-  color: var(--alpha-darktext) !important;
-}
-
-/* 2) Force the three action pills (“Video”, “Transcript”, “Download PDF”)
-      to lilac background with white text, regardless of element type */
-.alpha-theme .expanded a,
-.alpha-theme .expanded button,
-.alpha-theme .expanded .button,
-.alpha-theme .expanded .btn,
-.alpha-theme .expanded .badge,
-.alpha-theme .expanded .label,
-.alpha-theme .expanded .chip,
-.alpha-theme .expanded .tag,
-.alpha-theme .row-details a,
-.alpha-theme .row-details button,
-.alpha-theme .row-details .button,
-.alpha-theme .row-details .btn,
-.alpha-theme .row-details .badge,
-.alpha-theme .row-details .label,
-.alpha-theme .row-details .chip,
-.alpha-theme .row-details .tag {
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border: 1px solid var(--alpha-primary) !important;
-  border-radius: 20px !important;
-  text-decoration: none !important;
-  padding: 6px 10px !important;
-  display: inline-block !important;
-  line-height: 1.1 !important;
-  font-weight: 600 !important;
-}
-
-.alpha-theme .expanded a:hover,
-.alpha-theme .expanded button:hover,
-.alpha-theme .expanded .button:hover,
-.alpha-theme .expanded .btn:hover,
-.alpha-theme .expanded .badge:hover,
-.alpha-theme .expanded .label:hover,
-.alpha-theme .expanded .chip:hover,
-.alpha-theme .expanded .tag:hover,
-.alpha-theme .row-details a:hover,
-.alpha-theme .row-details button:hover,
-.alpha-theme .row-details .button:hover,
-.alpha-theme .row-details .btn:hover,
-.alpha-theme .row-details .badge:hover,
-.alpha-theme .row-details .label:hover,
-.alpha-theme .row-details .chip:hover,
-.alpha-theme .row-details .tag:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-
-/* 3) Ensure the expanded row’s header bar (name/email/… strip) stays dark */
-.alpha-theme .expanded .row,
-.alpha-theme .row-details .row,
-.alpha-theme .expanded .header,
-.alpha-theme .row-details .header {
-  background: var(--alpha-bg) !important;
-  color: var(--alpha-text) !important;
-  border-color: var(--alpha-border) !important;
-}
-
-/* ===== Inline-style killers (expanded rows) ===== */
-
-/* Make the lilac pill style win over inline styles (e.g., the “Video” <a>) */
-.alpha-theme .expanded a[style*="background: rgb(249, 250, 251)"],
-.alpha-theme .expanded a[style*="border: 1px solid rgb(229, 231, 235)"] {
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border-color: var(--alpha-primary) !important;
-  border-radius: 20px !important;
-  text-decoration: none !important;
-  padding: 6px 10px !important;
-  display: inline-block !important;
-  font-weight: 600 !important;
-}
-.alpha-theme .expanded a[style*="background: rgb(249, 250, 251)"]:hover,
-.alpha-theme .expanded a[style*="border: 1px solid rgb(229, 231, 235)"]:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-
-/* Force the big analysis cards (which are emitted with inline white bg) to use our dark surface */
-.alpha-theme .expanded div[style*="border-radius"][style*="background: rgb(255, 255, 255)"] {
-  background: var(--alpha-surface) !important;
-  border-color: var(--alpha-border) !important;
-  color: var(--alpha-text) !important;
-}
-
-/* Make ALL text inside those analysis cards white (headings, labels, paragraphs) */
-.alpha-theme .expanded div[style*="border-radius"][style*="background: rgb(255, 255, 255)"] * {
-  color: var(--alpha-text) !important;
-  -webkit-text-fill-color: var(--alpha-text) !important;
-  opacity: 1 !important;
-}
-
-/* Progress track (was light gray) -> subtle translucent light */
-.alpha-theme .expanded div[style*="height: 8px"][style*="background: rgb(229, 231, 235)"] {
-  background: rgba(255,255,255,0.15) !important;
-}
-
-/* Progress fill -> use brand lilac */
-.alpha-theme .expanded div[style*="height: 100%"][style*="width:"][style*="background: rgb(96, 165, 250)"] {
-  background: var(--alpha-primary) !important;
-}
-
-/* Keep the expanded-row header strip dark (name/email bar) */
-.alpha-theme .expanded .row,
-.alpha-theme .expanded .header {
-  background: var(--alpha-bg) !important;
-  color: var(--alpha-text) !important;
-  border-color: var(--alpha-border) !important;
-}
-
-/* === Final, blunt overrides for inline-styled expanded rows === */
-
-/* 1) Make the “Video” <a> look like the lilac pill (override light inline bg/border) */
-.alpha-theme a[style*="background: rgb(249, 250, 251)"],
-.alpha-theme a[style*="border: 1px solid rgb(229, 231, 235)"] {
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border-color: var(--alpha-primary) !important;
-  border-radius: 20px !important;
-  text-decoration: none !important;
-  padding: 6px 10px !important;
-  display: inline-block !important;
-  font-weight: 600 !important;
-}
-.alpha-theme a[style*="background: rgb(249, 250, 251)"]:hover,
-.alpha-theme a[style*="border: 1px solid rgb(229, 231, 235)"]:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-
-/* 2) The big analysis blocks: force dark surface + white text
-      (they come in with inline white background & gray text) */
-.alpha-theme div[style*="grid-column-start: span 6"][style*="border-radius: 12px"],
-.alpha-theme div[style*="border-radius: 12px"][style*="background: rgb(255, 255, 255)"] {
-  background: var(--alpha-surface) !important;
-  border-color: var(--alpha-border) !important;
-  color: var(--alpha-text) !important;
-}
-
-/* …and every descendant inside those blocks becomes white text */
-.alpha-theme div[style*="grid-column-start: span 6"][style*="border-radius: 12px"] *,
-.alpha-theme div[style*="border-radius: 12px"][style*="background: rgb(255, 255, 255)"] * {
-  color: var(--alpha-text) !important;
-  -webkit-text-fill-color: var(--alpha-text) !important;
-  opacity: 1 !important;
-}
-
-/* Labels (Experience/Skills/Education) and their % numbers often have inline gray/black */
-.alpha-theme div[style*="font-size: 12px"][style*="color: rgb(55, 65, 81)"],
-.alpha-theme span[style*="font-weight: 600"][style*="color: rgb(17, 24, 39)"] {
-  color: var(--alpha-text) !important;
-}
-
-/* Progress track (was light gray) -> subtle translucent light */
-.alpha-theme div[style*="height: 8px"][style*="overflow: hidden"][style*="border-radius: 8px"][style*="background: rgb(229, 231, 235)"] {
-  background: rgba(255,255,255,0.15) !important;
-}
-
-/* Progress fill (was blue) -> brand lilac */
-.alpha-theme div[style*="height: 100%"][style*="background: rgb(96, 165, 250)"] {
-  background: var(--alpha-primary) !important;
-}
-
-/* (Already fixed earlier) the expanded header strip stays dark */
-.alpha-theme .row,
-.alpha-theme .header {
-  background: var(--alpha-bg) !important;
-  color: var(--alpha-text) !important;
-  border-color: var(--alpha-border) !important;
-}
-
-/* Candidate submit & interview launch — force dark panels + white text */
-.alpha-theme div[style*="background: rgb(255, 255, 255)"][style*="padding: 12px"],
-.alpha-theme div[style*="background: rgb(255, 255, 255)"][style*="padding: 16px"],
-.alpha-theme div[style*="border: 1px solid rgb(229, 231, 235)"][style*="border-radius: 12px"] {
-  background: var(--alpha-surface) !important;
-  border-color: var(--alpha-border) !important;
-  color: var(--alpha-text) !important;
-}
-.alpha-theme div[style*="background: rgb(255, 255, 255)"][style*="padding: 12px"] *,
-.alpha-theme div[style*="background: rgb(255, 255, 255)"][style*="padding: 16px"] *,
-.alpha-theme div[style*="border: 1px solid rgb(229, 231, 235)"][style*="border-radius: 12px"] * {
-  color: var(--alpha-text) !important;
-  -webkit-text-fill-color: var(--alpha-text) !important;
-}
-
-/* File input / dropzones */
-.alpha-theme input[type="file"] {
-  background: rgba(255,255,255,0.08) !important;
-  color: var(--alpha-text) !important;
-  border: 1px solid var(--alpha-border) !important;
-  border-radius: 10px !important;
-  padding: 10px !important;
-}
-.alpha-theme label[for*="file"],
-.alpha-theme .dropzone,
-.alpha-theme [class*="dropzone"] {
-  background: rgba(255,255,255,0.08) !important;
-  border: 1px dashed var(--alpha-border) !important;
-  color: var(--alpha-text) !important;
-  border-radius: 12px !important;
-  padding: 12px !important;
-}
-
-/* Primary CTA buttons on those pages */
-.alpha-theme button,
-.alpha-theme .btn,
-.alpha-theme input[type="submit"] {
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border-color: var(--alpha-primary) !important;
-}
-.alpha-theme button:hover,
-.alpha-theme .btn:hover,
-.alpha-theme input[type="submit"]:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-
-/* Sign-in button legibility */
-.alpha-theme .btn,
-.alpha-theme button {
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border: 1px solid var(--alpha-primary) !important;
-  border-radius: 20px !important;
-  padding: 10px 14px !important;
-  font-weight: 600 !important;
-}
-
-/* ===== Admin polish additions ===== */
+/* === Admin polish additions === */
 
 .alpha-header {
   display: flex;
@@ -716,16 +149,17 @@
   align-items: center;
 }
 
-.section-header {
+/* SECTION HEADER: toggle + title grouped on the LEFT */
+.section-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 10px;                 /* space between pill and title */
+  justify-content: flex-start;
+  margin-bottom: 10px;
 }
+.section-title { font-size: 18px; font-weight: 700; }
 
-.section {
-  margin-top: 12px;
-}
+.section { margin-top: 12px; }
 
 .toggle {
   display: inline-flex;
@@ -739,9 +173,7 @@
 }
 .toggle:hover { border-color: rgba(255,255,255,0.3); }
 
-.icon {
-  display: block;
-}
+.icon { display: block; }
 
 .icon-btn {
   display: inline-flex;
@@ -760,7 +192,7 @@
 .mr-8 { margin-right: 16px; }
 
 .select-lg {
-  height: 44px;              /* ~25% taller than typical input */
+  height: 44px;
   padding: 0 10px;
   font-size: 1.05rem;
   border-radius: 8px;
@@ -769,14 +201,9 @@
   color: inherit;
 }
 
-.file-wrap {
-  display: inline-flex;
-  align-items: center;
-}
+.file-wrap { display: inline-flex; align-items: center; }
 
-.list {
-  margin-top: 10px;
-}
+.list { margin-top: 10px; }
 .list.compact .list-row { padding-top: 8px; padding-bottom: 8px; }
 .list-row {
   display: grid;
@@ -786,20 +213,10 @@
   padding: 10px 8px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-.list-row.header {
-  font-weight: 600;
-  opacity: 0.8;
-}
-.list-row .grow {
-  min-width: 220px;
-}
-.list-row .col {
-  min-width: 90px;
-}
-.list-row .col.center {
-  display: flex;
-  justify-content: center;
-}
+.list-row.header { font-weight: 600; opacity: 0.8; }
+.list-row .grow { min-width: 220px; }
+.list-row .col { min-width: 90px; }
+.list-row .col.center { display: flex; justify-content: center; }
 
 .title { font-weight: 600; }
 .sub { font-size: 12px; opacity: 0.8; }
@@ -817,24 +234,19 @@ button.danger {
   background: transparent;
   border: 1px solid rgba(255, 50, 50, 0.5);
 }
-button.danger:hover {
-  border-color: rgba(255, 80, 80, 0.9);
-}
+button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 
-/* --- sizing: inputs & selects match height --- */
-.alpha-input {
-  height: 40px;             /* matches text inputs */
-  padding: 8px 10px;
-  font-size: 14px;
-}
+/* sizing: inputs & selects match height */
+.alpha-input { height: 40px; padding: 8px 10px; font-size: 14px; }
 .alpha-select { height: 40px; }
 
 /* file input wrapper so clear icon can sit beside it */
 .file-stack { position: relative; display: flex; align-items: center; gap: 8px; }
 .file-stack .file { width: 220px; }
 
+/* lilac circular icon buttons; icon itself is white via SVG fill/stroke */
 .btn-icon.lilac {
-  background: #9d83f3;      /* your lilac */
+  background: #9d83f3;
   border: none;
   border-radius: 9999px;
   width: 34px;
@@ -845,19 +257,29 @@ button.danger:hover {
 }
 .btn-icon.lilac:hover { filter: brightness(1.05); }
 
-/* make section titles pop a bit more */
-.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.section-title { font-size: 18px; font-weight: 700; }
+/* Header with logo + title (compact) */
+.alpha-header--dash { display:flex; align-items:center; justify-content:space-between; }
+.alpha-header-left { display:flex; align-items:center; gap:10px; }
+.alpha-logo { width:44px; height:44px; object-fit:contain; }  /* compact logo */
 
-/* header with logo + title */
-.alpha-header--dash {
-  display: flex; align-items: center; justify-content: space-between;
+/* Thin top bar card */
+.alpha-card--bar { padding:10px 14px; margin-bottom:12px; }
+
+/* Center helper */
+.center { text-align:center; }
+
+/* Roles “table-like” layout */
+.table.like .t-head,
+.table.like .t-row {
+  display:grid;
+  grid-template-columns: 1fr 220px 60px 60px 120px 80px; /* Role | Created | KB | JD | Link | Delete */
+  gap: 12px;
+  align-items:center;
 }
-.alpha-header-left { display: flex; align-items: center; gap: 10px; }
-.alpha-logo { width: 28px; height: 28px; object-fit: contain; }
+.table.like .t-head { font-weight:700; opacity:0.9; padding:10px 12px; }
+.table.like .t-row { padding:12px; border-top:1px solid rgba(255,255,255,0.06); }
+.table.like .t-empty { padding:14px; }
 
-/* small center helper in table cells */
-.center { text-align: center; }
-
-/* thin top bar card under header */
-.alpha-card--bar { padding: 10px 14px; margin-bottom: 12px; }
+/* File input + clear icon stacked */
+.file-stack { position:relative; display:flex; align-items:center; }
+.file-stack .file-clear { position:absolute; right:-46px; }
