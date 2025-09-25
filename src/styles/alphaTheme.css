@@ -278,8 +278,8 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   justify-content: center;
 }
 .btn-icon.lilac svg {
-  width: 36px;
-  height: 36px;
+  width: 24px;
+  height: 24px;
   stroke: #fff;
 }
 
@@ -322,4 +322,36 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .signout-btn:hover {
   background: var(--alpha-primary-strong) !important;
   border-color: var(--alpha-primary-strong) !important;
+}
+
+/* === Icon-only buttons override (trash, etc.) ============================ */
+.alpha-theme button.btn-icon,
+.alpha-theme button.btn-icon.lilac {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+}
+
+.alpha-theme button.btn-icon:hover,
+.alpha-theme button.btn-icon.lilac:hover {
+  background: transparent !important;
+  filter: none !important;
+}
+
+.alpha-theme button.btn-icon > svg {
+  width: 24px !important;
+  height: 24px !important;
+  display: block;
+}
+
+/* Neutralize any remaining lilac styles on old class name */
+.btn-icon.lilac {
+  background: transparent !important;
+  border: none !important;
 }
