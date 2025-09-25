@@ -282,14 +282,42 @@ export default function Admin() {
     }
   };
 
-  const deleteRole = async (id) => {
+  // Tries several backend variants so FE works across BE versions
+  async function attemptDeleteRoleEndpoints({ id, token }) {
+    const qsIdClient = new URLSearchParams({ id, client_id: selectedClientId || '' }).toString();
+    const qsTokenClient = token ? new URLSearchParams({ token, client_id: selectedClientId || '' }).toString() : null;
+
+    const tries = [
+      // DELETE /admin/roles/:id?client_id=...
+      () => apiDelete('/admin/roles/' + id + (selectedClientId ? ('?client_id=' + encodeURIComponent(selectedClientId)) : '')),
+      // DELETE /admin/roles?id=...&client_id=...
+      () => apiDelete('/admin/roles?' + qsIdClient),
+      // DELETE /admin/roles?token=...&client_id=...   (some BE versions key by token)
+      () => (qsTokenClient ? apiDelete('/admin/roles?' + qsTokenClient) : Promise.reject('skip')),
+      // POST /admin/roles/delete with body { id, client_id }
+      () => apiPost('/admin/roles/delete', { id, client_id: selectedClientId || '' }),
+      // POST /admin/roles/delete with body { token, client_id }
+      () => (token ? apiPost('/admin/roles/delete', { token, client_id: selectedClientId || '' }) : Promise.reject('skip')),
+      // DELETE /admin/roles/:token (fallback)
+      () => apiDelete('/admin/roles/' + (token || id)),
+    ];
+
+    let lastErr;
+    for (const t of tries) {
+      try {
+        const res = await t();
+        if (res !== undefined) return res;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('Delete failed across endpoints');
+  }
+
+  const deleteRole = async (id, token) => {
     if (!confirm('Delete this role?')) return;
     try {
-      const qs = new URLSearchParams({
-        id,
-        client_id: selectedClientId || '',
-      }).toString();
-      await apiDelete('/admin/roles?' + qs);
+      await attemptDeleteRoleEndpoints({ id, token });
       setRoles(prev => prev.filter(r => r.id !== id));
     } catch (err) {
       console.error('Role delete failed:', err);
@@ -532,7 +560,7 @@ export default function Admin() {
                         <button onClick={() => navigator.clipboard.writeText(`${shareBase}?role=${r.slug_or_token}`)}>Copy link</button>
                       </div>
                       <div className="center">
-                        <button className="btn-icon" onClick={() => deleteRole(r.id)} title="Delete role">
+                        <button className="btn-icon" onClick={() => deleteRole(r.id, r.slug_or_token)} title="Delete role">
                           <IconTrash size={24} />
                         </button>
                       </div>
