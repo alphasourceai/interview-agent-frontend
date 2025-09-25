@@ -284,8 +284,26 @@ export default function Admin() {
 
   const deleteRole = async (id) => {
     if (!confirm('Delete this role?')) return;
-    await apiDelete('/admin/roles/' + id);
-    setRoles(roles.filter(r => r.id !== id));
+
+    // Primary endpoint includes client_id (most backends require it)
+    const primaryUrl = `/admin/roles/${encodeURIComponent(id)}?client_id=${encodeURIComponent(selectedClientId)}`;
+
+    try {
+      await apiDelete(primaryUrl);
+      setRoles(prev => prev.filter(r => r.id !== id));
+      return;
+    } catch (err) {
+      // Fallback to query-style route for older deployments
+      try {
+        const fallbackUrl = `/admin/roles?id=${encodeURIComponent(id)}&client_id=${encodeURIComponent(selectedClientId)}`;
+        await apiDelete(fallbackUrl);
+        setRoles(prev => prev.filter(r => r.id !== id));
+        return;
+      } catch (err2) {
+        console.error('Delete role failed', err2 || err);
+        alert('Could not delete role. Please refresh and try again.');
+      }
+    }
   };
 
   // ---------- Members ----------
