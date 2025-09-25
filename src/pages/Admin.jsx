@@ -31,6 +31,7 @@ export default function Admin() {
 
   // clients
   const [clients, setClients] = useState([]);
+  the
   const [selectedClientId, setSelectedClientId] = useState('');
   const [newClientName, setNewClientName] = useState('');
   const [newClientAdminName, setNewClientAdminName] = useState('');
@@ -364,8 +365,10 @@ export default function Admin() {
         {/* Clients */}
         <div className="alpha-card">
           <div className="section-head">
+            <button className="toggle" onClick={() => setShowClients(v => !v)}>
+              {showClients ? 'Hide clients' : 'Show clients'}
+            </button>
             <h3 className="section-title">Clients</h3>
-            <button className="toggle" onClick={() => setShowClients(v => !v)}>{showClients ? 'Hide clients' : 'Show clients'}</button>
           </div>
 
           <div className="row">
@@ -395,8 +398,10 @@ export default function Admin() {
         {/* Roles */}
         <div className="alpha-card">
           <div className="section-head">
+            <button className="toggle" onClick={() => setShowRoles(v => !v)}>
+              {showRoles ? 'Hide roles' : 'Show roles'}
+            </button>
             <h3 className="section-title">Roles</h3>
-            <button className="toggle" onClick={() => setShowRoles(v => !v)}>{showRoles ? 'Hide roles' : 'Show roles'}</button>
           </div>
 
           <div className="row">
@@ -470,8 +475,10 @@ export default function Admin() {
         {/* Members */}
         <div className="alpha-card">
           <div className="section-head">
+            <button className="toggle" onClick={() => setShowMembers(v => !v)}>
+              {showMembers ? 'Hide members' : 'Show members'}
+            </button>
             <h3 className="section-title">Client Members</h3>
-            <button className="toggle" onClick={() => setShowMembers(v => !v)}>{showMembers ? 'Hide members' : 'Show members'}</button>
           </div>
 
           <div className="row">
