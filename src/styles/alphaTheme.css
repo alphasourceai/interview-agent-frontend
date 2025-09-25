@@ -157,7 +157,7 @@
   justify-content: flex-start;
   margin-bottom: 10px;
 }
-.section-title { font-size: 18px; font-weight: 700; }
+.section-title { font-size: 18px; font-weight: 700; margin-top: 12px; }
 
 
 .section { margin-top: 12px; }
