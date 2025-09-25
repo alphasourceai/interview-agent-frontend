@@ -159,7 +159,11 @@
 }
 .section-title { font-size: 18px; font-weight: 700; }
 
+
 .section { margin-top: 12px; }
+
+/* helper: spacing for the Show/Hide toggle row beneath input rows */
+.toggle-row { margin-top: 8px; }
 
 .toggle {
   display: inline-flex;
@@ -264,16 +268,20 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 
 /* lilac circular icon buttons; icon itself is white via SVG fill/stroke */
 .btn-icon.lilac {
-  background: #9d83f3;
+  background: transparent;
   border: none;
-  border-radius: 9999px;
-  width: 34px;
-  height: 34px;
+  border-radius: 0;
+  width: auto;
+  height: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.btn-icon.lilac:hover { filter: brightness(1.05); }
+.btn-icon.lilac svg {
+  width: 36px;
+  height: 36px;
+  stroke: #fff;
+}
 
 /* Header with logo + title (compact) */
 .alpha-header--dash { display:flex; align-items:center; justify-content:space-between; }
