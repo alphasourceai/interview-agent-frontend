@@ -157,9 +157,13 @@
   justify-content: flex-start;
   margin-bottom: 10px;
 }
-.section-title { font-size: 18px; font-weight: 700; }
+.section-title { font-size: 18px; font-weight: 700; margin-top: 12px; }
+
 
 .section { margin-top: 12px; }
+
+/* helper: spacing for the Show/Hide toggle row beneath input rows */
+.toggle-row { margin-top: 8px; }
 
 .toggle {
   display: inline-flex;
@@ -237,30 +241,52 @@ button.danger {
 button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 
 /* sizing: inputs & selects match height */
-.alpha-input { height: 40px; padding: 8px 10px; font-size: 14px; }
-.alpha-select { height: 40px; }
+/* sizing: inputs & selects match EXACT 40px including padding + border */
+.alpha-theme input.alpha-input,
+.alpha-theme .alpha-input[type="text"],
+.alpha-theme .alpha-input[type="email"],
+.alpha-theme .alpha-input[type="password"],
+.alpha-theme .alpha-input[type="search"],
+.alpha-theme select.alpha-select,
+.alpha-theme .alpha-select {
+  height: 40px !important;        /* total box height */
+  box-sizing: border-box !important;
+  padding: 8px 10px !important;    /* included in the 40px now */
+  line-height: 24px;               /* keeps text vertically comfy */
+}
+
+/* optional: file input tries to match as well */
+.alpha-theme input[type="file"].alpha-input {
+  height: 40px !important;
+  box-sizing: border-box !important;
+  padding: 6px 10px !important;
+}
 
 /* file input wrapper so clear icon can sit beside it */
-.file-stack { position: relative; display: flex; align-items: center; gap: 8px; }
+.file-stack { position: relative; display: flex; align-items: center; gap: 8px; margin-right: 36px; }
 .file-stack .file { width: 220px; }
 
 /* lilac circular icon buttons; icon itself is white via SVG fill/stroke */
 .btn-icon.lilac {
-  background: #9d83f3;
+  background: transparent;
   border: none;
-  border-radius: 9999px;
-  width: 34px;
-  height: 34px;
+  border-radius: 0;
+  width: auto;
+  height: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.btn-icon.lilac:hover { filter: brightness(1.05); }
+.btn-icon.lilac svg {
+  width: 24px;
+  height: 24px;
+  stroke: #fff;
+}
 
 /* Header with logo + title (compact) */
 .alpha-header--dash { display:flex; align-items:center; justify-content:space-between; }
 .alpha-header-left { display:flex; align-items:center; gap:10px; }
-.alpha-logo { width:44px; height:44px; object-fit:contain; }  /* compact logo */
+.alpha-logo { width:55px; height:55px; object-fit:contain; }  /* compact logo */
 
 /* Thin top bar card */
 .alpha-card--bar { padding:10px 14px; margin-bottom:12px; }
@@ -281,5 +307,86 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .table.like .t-empty { padding:14px; }
 
 /* File input + clear icon stacked */
-.file-stack { position:relative; display:flex; align-items:center; }
-.file-stack .file-clear { position:absolute; right:-46px; }
+.file-stack .file-clear { position: absolute; right: -36px; }
+
+.signout-btn {
+  background: var(--alpha-primary) !important;
+  color: #fff !important;
+  border: 1px solid var(--alpha-primary) !important;
+  border-radius: 18px !important;
+  padding: 6px 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+}
+.signout-btn:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+
+/* === Icon-only buttons override (trash, etc.) ============================ */
+.alpha-theme button.btn-icon,
+.alpha-theme button.btn-icon.lilac {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+}
+
+.alpha-theme button.btn-icon:hover,
+.alpha-theme button.btn-icon.lilac:hover {
+  background: transparent !important;
+  filter: none !important;
+}
+
+.alpha-theme button.btn-icon > svg {
+  width: 24px !important;
+  height: 24px !important;
+  display: block;
+}
+
+/* Neutralize any remaining lilac styles on old class name */
+.btn-icon.lilac {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* ---- Force expanded table rows to stay dark even if the row adds inline white/gray bg ---- */
+.alpha-theme tr[style*="background: rgb(249, 250, 251)"],
+.alpha-theme tr[style*="background:#fff"],
+.alpha-theme tr[style*="background: #fff"],
+.alpha-theme tr[style*="background: white"],
+.alpha-theme tr[style*="background-color: rgb(249, 250, 251)"],
+.alpha-theme tr[style*="background-color:#fff"],
+.alpha-theme tr[style*="background-color: #fff"],
+.alpha-theme tr[style*="background-color: white"] {
+  background: var(--alpha-surface) !important;
+  color: var(--alpha-text) !important;
+}
+
+/* Ensure all text inside stays readable */
+.alpha-theme tr[style*="background: rgb(249, 250, 251)"] *,
+.alpha-theme tr[style*="background:#fff"] *,
+.alpha-theme tr[style*="background: #fff"] *,
+.alpha-theme tr[style*="background: white"] *,
+.alpha-theme tr[style*="background-color: rgb(249, 250, 251)"] *,
+.alpha-theme tr[style*="background-color:#fff"] *,
+.alpha-theme tr[style*="background-color: #fff"] *,
+.alpha-theme tr[style*="background-color: white"] * {
+  color: var(--alpha-text) !important;
+  -webkit-text-fill-color: var(--alpha-text) !important;
+  opacity: 1 !important;
+}
+
+/* Keep borders and hover consistent on dark */
+.alpha-theme table tr td,
+.alpha-theme table tr th {
+  border-color: var(--alpha-border) !important;
+}
+.alpha-theme table tr:hover {
+  background: rgba(255,255,255,0.06) !important;
+}

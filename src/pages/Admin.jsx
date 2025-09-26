@@ -1,11 +1,11 @@
 // src/pages/Admin.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { apiGet, apiPost, apiDelete, api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
 import '../styles/alphaTheme.css';
 
-/* bright white trash icon, +25% size */
-const IconTrash = ({ size = 18 }) => (
+/* bright white trash icon */
+const IconTrash = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path d="M3 6h18" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
     <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#FFFFFF" strokeWidth="2"/>
@@ -31,7 +31,6 @@ export default function Admin() {
 
   // clients
   const [clients, setClients] = useState([]);
-  the
   const [selectedClientId, setSelectedClientId] = useState('');
   const [newClientName, setNewClientName] = useState('');
   const [newClientAdminName, setNewClientAdminName] = useState('');
@@ -43,6 +42,8 @@ export default function Admin() {
   const [interviewType, setInterviewType] = useState('BASIC'); // BASIC | DETAILED | TECHNICAL
   const [jobFile, setJobFile] = useState(null);
   const [roleBusy, setRoleBusy] = useState(false);
+  const fileInputRef = useRef(null);
+  const [fileKey, setFileKey] = useState(0); // ensure full reset of file input
 
   // members
   const [members, setMembers] = useState([]);
@@ -59,6 +60,48 @@ export default function Admin() {
   useEffect(() => localStorage.setItem('adm_show_clients', showClients ? '1' : '0'), [showClients]);
   useEffect(() => localStorage.setItem('adm_show_roles', showRoles ? '1' : '0'), [showRoles]);
   useEffect(() => localStorage.setItem('adm_show_members', showMembers ? '1' : '0'), [showMembers]);
+
+  // --- 60-minute inactivity auto-logout ---
+  useEffect(() => {
+    const IDLE_LIMIT_MS = 60 * 60 * 1000; // 60 minutes
+    let timer;
+
+    const triggerLogout = async () => {
+      try {
+        await supabase.auth.signOut();
+      } finally {
+        // also clear section-state so a fresh login starts collapsed
+        localStorage.removeItem('adm_show_clients');
+        localStorage.removeItem('adm_show_roles');
+        localStorage.removeItem('adm_show_members');
+        window.location.href = '/admin';
+      }
+    };
+
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(triggerLogout, IDLE_LIMIT_MS);
+    };
+
+    // Reset on any user activity
+    const activityEvents = [
+      'mousemove',
+      'mousedown',
+      'keydown',
+      'scroll',
+      'touchstart',
+      'visibilitychange',
+      'click'
+    ];
+
+    activityEvents.forEach((ev) => window.addEventListener(ev, resetTimer));
+    resetTimer(); // start on mount
+
+    return () => {
+      clearTimeout(timer);
+      activityEvents.forEach((ev) => window.removeEventListener(ev, resetTimer));
+    };
+  }, []);
 
   const shareBase = 'https://www.alphasourceai.com/interview-agent';
 
@@ -239,10 +282,37 @@ export default function Admin() {
     }
   };
 
+  // Delete role: try canonical DELETE with query params, then fall back to POST if not available
   const deleteRole = async (id) => {
     if (!confirm('Delete this role?')) return;
-    await apiDelete('/admin/roles/' + id);
-    setRoles(roles.filter(r => r.id !== id));
+    try {
+      // Preferred: DELETE /admin/roles?id=...&client_id=...
+      const url = `/admin/roles?id=${encodeURIComponent(id)}&client_id=${encodeURIComponent(selectedClientId)}`;
+      let ok = false;
+      try {
+        await apiDelete(url);
+        ok = true;
+      } catch (e) {
+        // If server doesn't support that yet, try POST /admin/roles/delete
+        if (e?.response?.status === 404) {
+          await apiPost('/admin/roles/delete', { id, client_id: selectedClientId });
+          ok = true;
+        } else {
+          throw e;
+        }
+      }
+  
+      if (ok) {
+        setRoles(prev => prev.filter(r => r.id !== id));
+      }
+    } catch (err) {
+      const msg =
+        (err?.response?.data?.error) ||
+        (err?.message) ||
+        'Could not delete role. Please refresh and try again.';
+      console.error('Role delete failed:', err);
+      alert(msg);
+    }
   };
 
   // ---------- Members ----------
@@ -329,7 +399,7 @@ export default function Admin() {
         <div className="alpha-card">
           <h2>Access denied</h2>
           <p>Your account is not an admin.</p>
-          <button onClick={handleSignOut}>Sign Out</button>
+          <button className="signout-btn" onClick={handleSignOut}>Sign Out</button>
         </div>
       </div>
     );
@@ -364,13 +434,12 @@ export default function Admin() {
       <div className="alpha-grid">
         {/* Clients */}
         <div className="alpha-card">
+          <div style={{ height: 12 }} />
           <div className="section-head">
-            <button className="toggle" onClick={() => setShowClients(v => !v)}>
-              {showClients ? 'Hide clients' : 'Show clients'}
-            </button>
-            <h3 className="section-title">Clients</h3>
+            <h2 className="section-title">Clients</h2>
           </div>
 
+          {/* create row */}
           <div className="row">
             <input className="alpha-input" placeholder="Client name" value={newClientName} onChange={e => setNewClientName(e.target.value)} />
             <input className="alpha-input" placeholder="Client admin name" value={newClientAdminName} onChange={e => setNewClientAdminName(e.target.value)} />
@@ -378,16 +447,23 @@ export default function Admin() {
             <button onClick={createClient}>Create</button>
           </div>
 
+          {/* toggle UNDER inputs */}
+          <div className="toggle-row">
+            <button type="button" className="toggle" aria-pressed={showClients} onClick={() => setShowClients(v => !v)}>
+              {showClients ? 'Hide clients' : 'Show clients'}
+            </button>
+          </div>
+
           {showClients && (
-            <div className="list list--rows">
+            <div className="list list--rows" id="clients-list">
               {clients.map(c => (
                 <div key={c.id} className="list-row">
                   <div className="grow">
                     <div className="title">{c.name}</div>
                     <div className="sub">Created {new Date(c.created_at).toLocaleString()}</div>
                   </div>
-                  <button className="btn-icon lilac" onClick={() => deleteClient(c.id)} title="Delete client">
-                    <IconTrash />
+                  <button className="btn-icon" onClick={() => deleteClient(c.id)} title="Delete client">
+                    <IconTrash size={24} />
                   </button>
                 </div>
               ))}
@@ -397,11 +473,9 @@ export default function Admin() {
 
         {/* Roles */}
         <div className="alpha-card">
+          <div style={{ height: 12 }} />
           <div className="section-head">
-            <button className="toggle" onClick={() => setShowRoles(v => !v)}>
-              {showRoles ? 'Hide roles' : 'Show roles'}
-            </button>
-            <h3 className="section-title">Roles</h3>
+            <h2 className="section-title">Roles</h2>
           </div>
 
           <div className="row">
@@ -415,15 +489,25 @@ export default function Admin() {
             {/* file picker + clear */}
             <div className="file-stack">
               <input
+                key={fileKey}
                 className="alpha-input file"
                 type="file"
                 accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={e => setJobFile(e.target.files?.[0] || null)}
                 aria-label="Job Description file (PDF or DOCX)"
+                ref={fileInputRef}
               />
               {jobFile && (
-                <button className="btn-icon lilac file-clear" onClick={() => setJobFile(null)} title="Remove file">
-                  <IconTrash />
+                <button
+                  className="btn-icon file-clear"
+                  onClick={() => {
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    setJobFile(null);
+                    setFileKey(k => k + 1); // fully reset the input element
+                  }}
+                  title="Remove file"
+                >
+                  <IconTrash size={24} />
                 </button>
               )}
             </div>
@@ -437,8 +521,15 @@ export default function Admin() {
             </button>
           </div>
 
+          {/* toggle UNDER inputs */}
+          <div className="toggle-row">
+            <button type="button" className="toggle" aria-pressed={showRoles} onClick={() => setShowRoles(v => !v)}>
+              {showRoles ? 'Hide roles' : 'Show roles'}
+            </button>
+          </div>
+
           {showRoles && (
-            <div className="table like">
+            <div className="table like" id="roles-table">
               <div className="t-head">
                 <div>Role</div><div>Created</div><div>KB</div><div>JD</div><div>Link</div><div>Delete</div>
               </div>
@@ -459,8 +550,8 @@ export default function Admin() {
                         <button onClick={() => navigator.clipboard.writeText(`${shareBase}?role=${r.slug_or_token}`)}>Copy link</button>
                       </div>
                       <div className="center">
-                        <button className="btn-icon lilac" onClick={() => deleteRole(r.id)} title="Delete role">
-                          <IconTrash />
+                        <button className="btn-icon" onClick={() => deleteRole(r.id)} title="Delete role">
+                          <IconTrash size={24} />
                         </button>
                       </div>
                     </div>
@@ -474,11 +565,9 @@ export default function Admin() {
 
         {/* Members */}
         <div className="alpha-card">
+          <div style={{ height: 12 }} />
           <div className="section-head">
-            <button className="toggle" onClick={() => setShowMembers(v => !v)}>
-              {showMembers ? 'Hide members' : 'Show members'}
-            </button>
-            <h3 className="section-title">Client Members</h3>
+            <h2 className="section-title">Client Members</h2>
           </div>
 
           <div className="row">
@@ -492,8 +581,15 @@ export default function Admin() {
             <button disabled={!selectedClientId} onClick={addMember}>Add</button>
           </div>
 
+          {/* toggle UNDER inputs */}
+          <div className="toggle-row">
+            <button type="button" className="toggle" aria-pressed={showMembers} onClick={() => setShowMembers(v => !v)}>
+              {showMembers ? 'Hide members' : 'Show members'}
+            </button>
+          </div>
+
           {showMembers && (
-            <div className="list list--rows">
+            <div className="list list--rows" id="members-list">
               {members.map(m => (
                 <div key={m.id} className="list-row">
                   <div className="grow">
