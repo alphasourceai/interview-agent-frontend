@@ -390,3 +390,185 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .alpha-theme table tr:hover {
   background: rgba(255,255,255,0.06) !important;
 }
+
+/* Pill titles inside the expanded cards (Resume Analysis / Interview Analysis)
+   use a light gray chip background. Force their text to black for readability,
+   without needing JSX changes. */
+.alpha-theme [style*="background: rgb(229, 231, 235)"],
+.alpha-theme [style*="background-color: rgb(229, 231, 235)"],
+.alpha-theme [style*="background: #e5e7eb"],
+.alpha-theme [style*="background-color: #e5e7eb"],
+.alpha-theme [style*="background: rgb(209, 213, 219)"],
+.alpha-theme [style*="background-color: rgb(209, 213, 219)"],
+.alpha-theme [style*="background: #d1d5db"],
+.alpha-theme [style*="background-color: #d1d5db"] {
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
+}
+
+/* --- Expand/Collapse buttons: lilac background + white caret/text -------- */
+.alpha-theme button[style*="background: rgb(229, 231, 235)"],
+.alpha-theme button[style*="background-color: rgb(229, 231, 235)"],
+.alpha-theme button[style*="background: #e5e7eb"],
+.alpha-theme button[style*="background-color: #e5e7eb"],
+.alpha-theme button[style*="background: rgb(209, 213, 219)"],
+.alpha-theme button[style*="background-color: rgb(209, 213, 219)"],
+.alpha-theme button[style*="background: #d1d5db"],
+.alpha-theme button[style*="background-color: #d1d5db"] {
+  background: var(--alpha-primary) !important;
+  border-color: var(--alpha-primary) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+.alpha-theme button[style*="background: rgb(229, 231, 235)"]:hover,
+.alpha-theme button[style*="background-color: rgb(229, 231, 235)"]:hover,
+.alpha-theme button[style*="background: #e5e7eb"]:hover,
+.alpha-theme button[style*="background-color: #e5e7eb"]:hover,
+.alpha-theme button[style*="background: rgb(209, 213, 219)"]:hover,
+.alpha-theme button[style*="background-color: rgb(209, 213, 219)"]:hover,
+.alpha-theme button[style*="background: #d1d5db"]:hover,
+.alpha-theme button[style*="background-color: #d1d5db"]:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+/* Ensure any caret icon inside becomes white as well (text or svg) */
+.alpha-theme button[style*="background: rgb(229, 231, 235)"] *,
+.alpha-theme button[style*="background-color: rgb(229, 231, 235)"] *,
+.alpha-theme button[style*="background: #e5e7eb"] *,
+.alpha-theme button[style*="background-color: #e5e7eb"] *,
+.alpha-theme button[style*="background: rgb(209, 213, 219)"] *,
+.alpha-theme button[style*="background-color: rgb(209, 213, 219)"] *,
+.alpha-theme button[style*="background: #d1d5db"] *,
+.alpha-theme button[style*="background-color: #d1d5db"] * {
+  color: #fff !important;
+  fill: #fff !important;
+  stroke: #fff !important;
+}
+
+/* --- Expanded row action buttons (Video / Transcript / Best Report) -------
+   These are rendered as <a role="button"> or <button> with a light gray
+   inline background. Force them to our lilac with white text. */
+.alpha-theme a[role="button"][style*="background: rgb(249, 250, 251)"],
+.alpha-theme a[role="button"][style*="background-color: rgb(249, 250, 251)"],
+.alpha-theme a[role="button"][style*="background: #f9fafb"],
+.alpha-theme a[role="button"][style*="background-color: #f9fafb"],
+.alpha-theme button[style*="background: rgb(249, 250, 251)"],
+.alpha-theme button[style*="background-color: rgb(249, 250, 251)"],
+.alpha-theme a[role="button"][style*="background: rgb(229, 231, 235)"],
+.alpha-theme a[role="button"][style*="background-color: rgb(229, 231, 235)"],
+.alpha-theme a[role="button"][style*="background: #e5e7eb"],
+.alpha-theme a[role="button"][style*="background-color: #e5e7eb"],
+.alpha-theme button[style*="background: rgb(229, 231, 235)"],
+.alpha-theme button[style*="background-color: rgb(229, 231, 235)"] {
+  background: var(--alpha-primary) !important;
+  border-color: var(--alpha-primary) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+.alpha-theme a[role="button"][style*="background: rgb(249, 250, 251)"]:hover,
+.alpha-theme a[role="button"][style*="background-color: rgb(249, 250, 251)"]:hover,
+.alpha-theme a[role="button"][style*="background: #f9fafb"]:hover,
+.alpha-theme a[role="button"][style*="background-color: #f9fafb"]:hover,
+.alpha-theme button[style*="background: rgb(249, 250, 251)"]:hover,
+.alpha-theme button[style*="background-color: rgb(249, 250, 251)"]:hover,
+.alpha-theme a[role="button"][style*="background: rgb(229, 231, 235)"]:hover,
+.alpha-theme a[role="button"][style*="background-color: rgb(229, 231, 235)"]:hover,
+.alpha-theme a[role="button"][style*="background: #e5e7eb"]:hover,
+.alpha-theme a[role="button"][style*="background-color: #e5e7eb"]:hover,
+.alpha-theme button[style*="background: rgb(229, 231, 235)"]:hover,
+.alpha-theme button[style*="background-color: rgb(229, 231, 235)"]:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+/* Ensure any icon/caret inside turns white too */
+.alpha-theme a[role="button"][style*="background" ] *,
+.alpha-theme button[style*="background" ] * {
+  color: #fff !important;
+  fill: #fff !important;
+  stroke: #fff !important;
+}
+
+/* Disabled / unavailable buttons → grey text on lilac pill. We try common
+   states used by the generated markup. */
+.alpha-theme a[role="button"][aria-disabled="true"],
+.alpha-theme a[role="button"].disabled,
+.alpha-theme a[role="button"][style*="opacity: 0.5"],
+.alpha-theme a[role="button"][style*="opacity:.5"],
+.alpha-theme button:disabled {
+  color: #BFC7D6 !important;              /* soft grey text */
+  -webkit-text-fill-color: #BFC7D6 !important;
+  cursor: not-allowed !important;
+}
+
+/* === Client Dashboard (scoped) hardening ===================================
+   These class-based rules back up the inline-style overrides above and ensure
+   the dashboard never flips to white when rows expand. They only apply when
+   the page root has `.alpha-theme` and the dashboard container uses
+   `.client-dash` (present on the dashboard markup).
+*/
+
+/* Keep expanded rows dark */
+.alpha-theme .client-dash .cd-row.opened,
+.alpha-theme .client-dash tr.cd-row.opened {
+  background: var(--alpha-surface) !important;
+  color: var(--alpha-text) !important;
+}
+.alpha-theme .client-dash .cd-row.opened *,
+.alpha-theme .client-dash tr.cd-row.opened * {
+  color: var(--alpha-text) !important;
+  -webkit-text-fill-color: var(--alpha-text) !important;
+}
+
+/* Toggle caret pill: lilac bg with white icon/text */
+.alpha-theme .client-dash .expand-toggle.btn.lilac,
+.alpha-theme .client-dash .expand-toggle[role="button"],
+.alpha-theme .client-dash button.expand-toggle {
+  background: var(--alpha-primary) !important;
+  border-color: var(--alpha-primary) !important;
+  color: #fff !important;
+}
+.alpha-theme .client-dash .expand-toggle.btn.lilac:hover,
+.alpha-theme .client-dash .expand-toggle[role="button"]:hover,
+.alpha-theme .client-dash button.expand-toggle:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+.alpha-theme .client-dash .expand-toggle *,
+.alpha-theme .client-dash button.expand-toggle * {
+  color: #fff !important;
+  fill: #fff !important;
+  stroke: #fff !important;
+}
+
+/* Row action buttons (Video / Transcript / Best Report) */
+.alpha-theme .client-dash .row-actions .btn.lilac,
+.alpha-theme .client-dash .row-actions a[role="button"],
+.alpha-theme .client-dash .row-actions button {
+  background: var(--alpha-primary) !important;
+  border-color: var(--alpha-primary) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+.alpha-theme .client-dash .row-actions .btn.lilac:hover,
+.alpha-theme .client-dash .row-actions a[role="button"]:hover,
+.alpha-theme .client-dash .row-actions button:hover {
+  background: var(--alpha-primary-strong) !important;
+  border-color: var(--alpha-primary-strong) !important;
+}
+.alpha-theme .client-dash .row-actions .btn.lilac.is-disabled,
+.alpha-theme .client-dash .row-actions a[role="button"][aria-disabled="true"],
+.alpha-theme .client-dash .row-actions button:disabled {
+  color: #BFC7D6 !important; /* soft grey text for unavailable */
+  -webkit-text-fill-color: #BFC7D6 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important; /* avoid Tailwind dimming stacking */
+}
+
+/* Pill headers inside cards ("Resume Analysis" / "Interview Analysis")
+   are rendered as light grey chips — force black text for readability. */
+.alpha-theme .client-dash .analysis-chip,
+.alpha-theme .client-dash [data-chip="title"],
+.alpha-theme .client-dash .chip-title {
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
+}
