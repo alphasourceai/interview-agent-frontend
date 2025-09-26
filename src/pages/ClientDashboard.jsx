@@ -40,12 +40,40 @@ function HeaderButton({ label, active, dir, onClick }) {
 
 function InfoTip({ text }) {
   const [open, setOpen] = useState(false);
+  const [flip, setFlip] = useState(false);
+  const wrapRef = useState(null)[0] || (typeof document !== 'undefined' ? { current: null } : null);
+  const ref = wrapRef || { current: null };
+
+  // ensure we have a stable ref object
+  if (!wrapRef || !wrapRef.current) {
+    // noop; TextEdit context may not allow creating refs outside render, so we'll use a lazy init below
+  }
+
+  const setWrapRef = (el) => {
+    // store element so we can measure on hover
+    if (ref) ref.current = el;
+  };
+
+  const onEnter = () => {
+    setOpen(true);
+    // next frame: measure and flip if overflowing to the right
+    requestAnimationFrame(() => {
+      const el = ref?.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const TOOLTIP_W = 260; // keep in sync with style maxWidth
+      const overflowRight = rect.right + TOOLTIP_W + 16 > window.innerWidth; // + some padding
+      setFlip(overflowRight);
+    });
+  };
+
   return (
     <span
+      ref={setWrapRef}
       style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
-      onMouseEnter={() => setOpen(true)}
+      onMouseEnter={onEnter}
       onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
+      onFocus={onEnter}
       onBlur={() => setOpen(false)}
     >
       <span
@@ -63,7 +91,6 @@ function InfoTip({ text }) {
           marginLeft: 6,
           cursor: 'help'
         }}
-        title={text}
       >
         i
       </span>
@@ -72,17 +99,19 @@ function InfoTip({ text }) {
           role="tooltip"
           style={{
             position: 'absolute',
-            bottom: '140%',
-            left: '100%',
-            transform: 'translate(8px, 0)',
+            top: -8,
+            left: flip ? 'auto' : 12,
+            right: flip ? 12 : 'auto',
+            transform: 'translateY(-100%)',
             background: '#111827',
             color: '#EBFEFF',
             border: '1px solid rgba(255,255,255,0.14)',
             borderRadius: 8,
             padding: '8px 10px',
-            whiteSpace: 'nowrap',
+            whiteSpace: 'normal',
             fontSize: 12,
-            zIndex: 10,
+            zIndex: 50,
+            maxWidth: 260,
             boxShadow: '0 6px 18px rgba(0,0,0,0.3)'
           }}
         >
