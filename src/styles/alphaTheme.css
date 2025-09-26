@@ -354,3 +354,39 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   background: transparent !important;
   border: none !important;
 }
+
+/* ---- Force expanded table rows to stay dark even if the row adds inline white/gray bg ---- */
+.alpha-theme tr[style*="background: rgb(249, 250, 251)"],
+.alpha-theme tr[style*="background:#fff"],
+.alpha-theme tr[style*="background: #fff"],
+.alpha-theme tr[style*="background: white"],
+.alpha-theme tr[style*="background-color: rgb(249, 250, 251)"],
+.alpha-theme tr[style*="background-color:#fff"],
+.alpha-theme tr[style*="background-color: #fff"],
+.alpha-theme tr[style*="background-color: white"] {
+  background: var(--alpha-surface) !important;
+  color: var(--alpha-text) !important;
+}
+
+/* Ensure all text inside stays readable */
+.alpha-theme tr[style*="background: rgb(249, 250, 251)"] *,
+.alpha-theme tr[style*="background:#fff"] *,
+.alpha-theme tr[style*="background: #fff"] *,
+.alpha-theme tr[style*="background: white"] *,
+.alpha-theme tr[style*="background-color: rgb(249, 250, 251)"] *,
+.alpha-theme tr[style*="background-color:#fff"] *,
+.alpha-theme tr[style*="background-color: #fff"] *,
+.alpha-theme tr[style*="background-color: white"] * {
+  color: var(--alpha-text) !important;
+  -webkit-text-fill-color: var(--alpha-text) !important;
+  opacity: 1 !important;
+}
+
+/* Keep borders and hover consistent on dark */
+.alpha-theme table tr td,
+.alpha-theme table tr th {
+  border-color: var(--alpha-border) !important;
+}
+.alpha-theme table tr:hover {
+  background: rgba(255,255,255,0.06) !important;
+}
