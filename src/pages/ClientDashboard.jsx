@@ -72,9 +72,9 @@ function InfoTip({ text }) {
           role="tooltip"
           style={{
             position: 'absolute',
-            top: '140%',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            bottom: '140%',
+            left: '100%',
+            transform: 'translate(8px, 0)',
             background: '#111827',
             color: '#EBFEFF',
             border: '1px solid rgba(255,255,255,0.14)',
@@ -381,6 +381,7 @@ export default function ClientDashboard() {
 
       {/* Filters: Role + Min Overall */}
       <div style={{ margin: '8px 0 16px', display:'flex', gap: 12, alignItems:'center', flexWrap:'wrap' }}>
+        <div style={{ fontWeight: 600, opacity: 0.9, marginRight: 4 }}>Filters:</div>
         <div style={{ display:'flex', alignItems:'center', gap: 6 }}>
           <label htmlFor="roleFilter">Role</label>
           <select
