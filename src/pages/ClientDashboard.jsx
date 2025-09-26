@@ -189,7 +189,7 @@ export default function ClientDashboard() {
   }, [items])
 
   return (
-    <div style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="client-dash" style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16 }}>
         <h1 style={{ margin: 0 }}>Dashboard</h1>
         <div style={{ display:'flex', gap: 8 }}>
@@ -301,14 +301,14 @@ function FragmentRow({
 }) {
   return (
     <>
-      <tr style={{ background: opened ? '#f9fafb' : 'transparent' }}>
+      <tr className={opened ? 'cd-row opened' : 'cd-row'}>
         <td style={{ ...td, verticalAlign: 'top' }}>
           <button
             onClick={() => toggleRow(r.id)}
             title={opened ? 'Collapse' : 'Expand'}
             aria-label={opened ? 'Collapse' : 'Expand'}
+            className="btn lilac expand-toggle"
             style={{
-              ...btn,
               width: 28,
               height: 28,
               display: 'inline-flex',
@@ -342,19 +342,15 @@ function FragmentRow({
           <td style={td}></td>
           <td style={{...td, paddingTop: 0}} colSpan={7}>
             <div style={{ display:'grid', gap: 12 }}>
-              <div style={{ display:'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+              <div className="row-actions" style={{ display:'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
                 {r.video_url && (
-                  <a href={r.video_url} target="_blank" rel="noreferrer" style={btn}>Video</a>
+                  <a href={r.video_url} target="_blank" rel="noreferrer" className="btn lilac">Video</a>
                 )}
 
                 <button
                   onClick={() => openSigned(r.latest_interview_id, 'transcript')}
                   disabled={!r.latest_interview_id || !r.has_transcript || !!opening[trKey]}
-                  style={{
-                    ...btn,
-                    ...(r.latest_interview_id && r.has_transcript ? {} : disabledBtn),
-                    ...(opening[trKey] ? disabledBtn : {})
-                  }}
+                  className={`btn lilac${(!r.latest_interview_id || !r.has_transcript || !!opening[trKey]) ? ' is-disabled' : ''}`}
                 >
                   {opening[trKey] ? 'Opening…' : 'Transcript'}
                 </button>
@@ -368,7 +364,7 @@ function FragmentRow({
                     }
                   }}
                   disabled={!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id)}
-                  style={{ ...btn, ...(opening[pdfKey] ? disabledBtn : {}) }}
+                  className={`btn lilac${(!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id)) ? ' is-disabled' : ''}`}
                 >
                   {opening[pdfKey] ? 'Generating…' : 'Download PDF'}
                 </button>
@@ -376,7 +372,7 @@ function FragmentRow({
 
               <div style={{ display:'grid', gridTemplateColumns:'repeat(12,1fr)', gap: 12, marginTop: 8 }}>
                 <div style={{ gridColumn: 'span 6', border:'1px solid #e5e7eb', borderRadius: 12, padding: 12, background:'#fff' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Resume Analysis</div>
+                  <div style={{ fontWeight: 600, marginBottom: 8, color: '#111' }}>Resume Analysis</div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap: 8 }}>
                     <Meter label="Experience" value={r.resume_analysis.experience} />
                     <Meter label="Skills" value={r.resume_analysis.skills} />
@@ -390,7 +386,7 @@ function FragmentRow({
                 </div>
 
                 <div style={{ gridColumn: 'span 6', border:'1px solid #e5e7eb', borderRadius: 12, padding: 12, background:'#fff' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Interview Analysis</div>
+                  <div style={{ fontWeight: 600, marginBottom: 8, color: '#111' }}>Interview Analysis</div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap: 8 }}>
                     <Meter label="Clarity" value={r.interview_analysis.clarity} />
                     <Meter label="Confidence" value={r.interview_analysis.confidence} />
