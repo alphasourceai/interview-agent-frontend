@@ -46,12 +46,22 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
     }
 
     setSubmitting(true);
+    // normalize inputs
+    const first = (form.first_name || '').trim();
+    const last = (form.last_name || '').trim();
+    const email = (form.email || '').trim();
+    const phoneDigits = String(form.phone || '').replace(/\D/g, '');
+    if (!phoneDigits || phoneDigits.length < 7 || phoneDigits.length > 15) {
+      setSubmitting(false);
+      setError('Please enter a valid phone number (7–15 digits).');
+      return;
+    }
     try {
       const body = new FormData();
-      body.append('first_name', form.first_name);
-      body.append('last_name', form.last_name);
-      body.append('email', form.email);
-      body.append('phone', form.phone);
+      body.append('first_name', first);
+      body.append('last_name', last);
+      body.append('email', email);
+      body.append('phone', phoneDigits);
       body.append('resume', form.resume);
       body.append('role_token', roleToken);
 
@@ -134,6 +144,10 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
           onChange={onChange}
           placeholder="Digits only"
           required
+          inputMode="numeric"
+          pattern="[0-9]{7,15}"
+          title="Enter 7–15 digits"
+          autoComplete="tel"
           className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2"
         />
       </div>
