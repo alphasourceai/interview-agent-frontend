@@ -104,6 +104,7 @@ function OtpInline({ email, candidateId, roleId, onVerified }) {
 
 export default function InterviewAccessPage() {
   const { role_token } = useParams();
+  const roomRef = useRef(null);
 
   // intake result
   const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
@@ -141,8 +142,17 @@ export default function InterviewAccessPage() {
         data?.redirect_url ||
         data?.url ||
         '';
-      if (url) setRoomUrl(url);
-      else setError('Interview room is initializing—try again in a moment.');
+      if (url) {
+        setRoomUrl(url);
+        // bring the room into view once it renders
+        setTimeout(() => {
+          try {
+            roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch {}
+        }, 50);
+      } else {
+        setError('Interview room is initializing—try again in a moment.');
+      }
     } catch {
       setError('Network error starting interview.');
     } finally {
@@ -168,15 +178,18 @@ export default function InterviewAccessPage() {
 
       {/* Top media/room area — tall so Tavus UI isn’t cropped */}
       <div
-        className="w-full rounded-2xl border border-white/10 overflow-hidden"
-        style={{ height: '70vh', background: 'rgba(0,0,0,0.3)' }}
+        id="roomHost"
+        ref={roomRef}
+        className="room-host w-full rounded-2xl border border-white/10 overflow-hidden"
+        style={{ height: '72vh', background: 'rgba(0,0,0,0.3)' }}
       >
         {roomUrl ? (
           <iframe
             title="Interview"
             src={roomUrl}
-            className="w-full h-full"
-            allow="camera; microphone; autoplay; fullscreen"
+            className="room-frame w-full h-full"
+            loading="lazy"
+            allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center opacity-80">
@@ -234,6 +247,34 @@ export default function InterviewAccessPage() {
           </div>
         </div>
       </div>
+      <style>{`
+        /* Ensure any embed fills the host container */
+        .room-host { position: relative; }
+        .room-host > iframe,
+        .room-host > div,
+        .room-host > section { width: 100% !important; height: 100% !important; display: block !important; }
+
+        /* Common class patterns sometimes used by pre-interview widgets; stretch them too */
+        .room-host [class*="haircheck"],
+        .room-host [class*="wrapper"],
+        .room-host [class*="container"],
+        .room-host [data-component],
+        .room-host [data-widget] {
+          width: 100% !important;
+          height: 100% !important;
+          max-height: 100% !important;
+        }
+
+        /* In case an inner wrapper uses inline auto heights */
+        .room-host *[style*="height: auto"] { height: 100% !important; }
+        .room-host *[style*="min-height"] { min-height: 100% !important; }
+        .room-host *[style*="max-height"] { max-height: 100% !important; }
+
+        /* Mobile: ensure the host is tall enough even with viewport UI chrome */
+        @media (max-width: 768px) {
+          #roomHost { height: 78vh !important; }
+        }
+      `}</style>
     </div>
   );
 }
