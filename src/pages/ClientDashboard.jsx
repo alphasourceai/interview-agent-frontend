@@ -3,6 +3,125 @@ import { useEffect, useMemo, useState } from 'react'
 import { apiGet, apiDownload } from '../lib/api'
 import SignOutButton from '../components/SignOutButton.jsx'
 
+// --- Dashboard enhancements: sorting, filtering, tooltips (no summaries) ---
+const TIPS = {
+  experience: 'How well prior roles align with the job requirements.',
+  skills: 'Match between hard/soft skills and the role’s needs.',
+  education: 'Relevance and level of education for the role.',
+  clarity: 'How clearly the candidate communicates ideas.',
+  confidence: 'Apparent confidence and composure while answering.',
+  body_language: 'Non-verbal cues such as posture and eye contact.'
+};
+
+function SortIcon({ dir }) {
+  return <span style={{ marginLeft: 6, opacity: 0.8 }}>{dir === 'asc' ? '▲' : '▼'}</span>;
+}
+
+function HeaderButton({ label, active, dir, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="btn lilac"
+      style={{
+        ...btn,
+        background: active ? '#AD8BF7' : '#f9fafb',
+        color: active ? '#fff' : '#111',
+        borderColor: active ? '#AD8BF7' : '#e5e7eb',
+        padding: '4px 8px'
+      }}
+      title={`Sort by ${label}`}
+      aria-pressed={active}
+    >
+      <span>{label}</span>
+      {active && <SortIcon dir={dir} />}
+    </button>
+  );
+}
+
+function InfoTip({ text }) {
+  const [open, setOpen] = useState(false);
+  const [flip, setFlip] = useState(false);
+  const wrapRef = useState(null)[0] || (typeof document !== 'undefined' ? { current: null } : null);
+  const ref = wrapRef || { current: null };
+
+  // ensure we have a stable ref object
+  if (!wrapRef || !wrapRef.current) {
+    // noop; TextEdit context may not allow creating refs outside render, so we'll use a lazy init below
+  }
+
+  const setWrapRef = (el) => {
+    // store element so we can measure on hover
+    if (ref) ref.current = el;
+  };
+
+  const onEnter = () => {
+    setOpen(true);
+    // next frame: measure and flip if overflowing to the right
+    requestAnimationFrame(() => {
+      const el = ref?.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const TOOLTIP_W = 260; // keep in sync with style maxWidth
+      const overflowRight = rect.right + TOOLTIP_W + 16 > window.innerWidth; // + some padding
+      setFlip(overflowRight);
+    });
+  };
+
+  return (
+    <span
+      ref={setWrapRef}
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+      onMouseEnter={onEnter}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={onEnter}
+      onBlur={() => setOpen(false)}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 14,
+          height: 14,
+          borderRadius: 999,
+          fontSize: 10,
+          background: '#AD8BF7',
+          color: '#fff',
+          marginLeft: 6,
+          cursor: 'help'
+        }}
+      >
+        i
+      </span>
+      {open && (
+        <span
+          role="tooltip"
+          style={{
+            position: 'absolute',
+            top: -8,
+            left: flip ? 'auto' : 12,
+            right: flip ? 12 : 'auto',
+            transform: 'translateY(-100%)',
+            background: '#111827',
+            color: '#EBFEFF',
+            border: '1px solid rgba(255,255,255,0.14)',
+            borderRadius: 8,
+            padding: '8px 10px',
+            whiteSpace: 'normal',
+            fontSize: 12,
+            zIndex: 50,
+            maxWidth: 260,
+            boxShadow: '0 6px 18px rgba(0,0,0,0.3)'
+          }}
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function ClientDashboard() {
   const [me, setMe] = useState(null)
   const [clients, setClients] = useState([])
@@ -12,6 +131,12 @@ export default function ClientDashboard() {
   const [error, setError] = useState('')
   const [opening, setOpening] = useState({})
   const [expanded, setExpanded] = useState({})
+
+  // sort & filter UI state
+  const [sortBy, setSortBy] = useState('created'); // 'name' | 'role' | 'created'
+  const [sortDir, setSortDir] = useState('desc');  // 'asc' | 'desc'
+  const [roleFilter, setRoleFilter] = useState(''); // role title or ''
+  const [minOverall, setMinOverall] = useState(''); // numeric (string input)
 
   const hasMembership = (me?.memberships || []).length > 0
   const canInvite =
@@ -188,8 +313,57 @@ export default function ClientDashboard() {
     }))
   }, [items])
 
+  // unique role titles available in current rows
+  const availableRoles = useMemo(() => {
+    const set = new Set((rows || []).map(r => r.role?.title).filter(Boolean));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  // apply filters + sorting
+  const displayRows = useMemo(() => {
+    let out = [...(rows || [])];
+
+    // filter by role title
+    if (roleFilter) {
+      out = out.filter(r => (r.role?.title || '') === roleFilter);
+    }
+    // filter by min overall score
+    const min = parseInt(minOverall, 10);
+    if (!Number.isNaN(min)) {
+      out = out.filter(r => {
+        const v = typeof r.overall_score === 'number' ? r.overall_score : -1;
+        return v >= min;
+      });
+    }
+
+    // sorting
+    out.sort((a, b) => {
+      let av, bv;
+      if (sortBy === 'name') {
+        av = (a.candidate.name || '').toLowerCase();
+        bv = (b.candidate.name || '').toLowerCase();
+        if (av < bv) return sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      } else if (sortBy === 'role') {
+        av = (a.role?.title || '').toLowerCase();
+        bv = (b.role?.title || '').toLowerCase();
+        if (av < bv) return sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      } else {
+        // created
+        av = new Date(a.created_at || 0).getTime();
+        bv = new Date(b.created_at || 0).getTime();
+        return sortDir === 'asc' ? av - bv : bv - av;
+      }
+    });
+
+    return out;
+  }, [rows, roleFilter, minOverall, sortBy, sortDir]);
+
   return (
-    <div style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="client-dash" style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16 }}>
         <h1 style={{ margin: 0 }}>Dashboard</h1>
         <div style={{ display:'flex', gap: 8 }}>
@@ -234,6 +408,50 @@ export default function ClientDashboard() {
         </div>
       )}
 
+      {/* Filters: Role + Min Overall */}
+      <div style={{ margin: '8px 0 16px', display:'flex', gap: 12, alignItems:'center', flexWrap:'wrap' }}>
+        <div style={{ fontWeight: 600, opacity: 0.9, marginRight: 4 }}>Filters:</div>
+        <div style={{ display:'flex', alignItems:'center', gap: 6 }}>
+          <label htmlFor="roleFilter">Role</label>
+          <select
+            id="roleFilter"
+            value={roleFilter}
+            onChange={e => setRoleFilter(e.target.value)}
+            style={{ padding: 8 }}
+          >
+            <option value="">All roles</option>
+            {availableRoles.map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display:'flex', alignItems:'center', gap: 6 }}>
+          <label htmlFor="minOverall">Min overall</label>
+          <input
+            id="minOverall"
+            type="number"
+            min={0}
+            max={100}
+            step={1}
+            placeholder="e.g. 70"
+            value={minOverall}
+            onChange={e => setMinOverall(e.target.value)}
+            style={{ padding: 8, width: 90 }}
+          />
+          {minOverall !== '' && (
+            <button
+              type="button"
+              onClick={() => setMinOverall('')}
+              className="btn lilac"
+              style={{ ...btn, background:'#AD8BF7', color:'#fff', borderColor:'#AD8BF7' }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
       {!hasMembership && !loading && (
         <div
           style={{
@@ -250,25 +468,55 @@ export default function ClientDashboard() {
 
       {loading && <div>Loading…</div>}
 
-      {!loading && rows.length === 0 && <div>No rows yet.</div>}
+      {!loading && displayRows.length === 0 && <div>No rows yet.</div>}
 
-      {!loading && rows.length > 0 && (
+      {!loading && displayRows.length > 0 && (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
                 <th style={{...th, width: 36}}></th>
-                <th style={th}>Name</th>
+                <th style={th}>
+                  <HeaderButton
+                    label="Name"
+                    active={sortBy === 'name'}
+                    dir={sortDir}
+                    onClick={() => {
+                      setSortBy('name');
+                      setSortDir(d => (sortBy === 'name' ? (d === 'asc' ? 'desc' : 'asc') : 'asc'));
+                    }}
+                  />
+                </th>
                 <th style={th}>Email</th>
-                <th style={th}>Role</th>
+                <th style={th}>
+                  <HeaderButton
+                    label="Role"
+                    active={sortBy === 'role'}
+                    dir={sortDir}
+                    onClick={() => {
+                      setSortBy('role');
+                      setSortDir(d => (sortBy === 'role' ? (d === 'asc' ? 'desc' : 'asc') : 'asc'));
+                    }}
+                  />
+                </th>
                 <th style={th}>Resume</th>
                 <th style={th}>Interview</th>
                 <th style={th}>Overall</th>
-                <th style={th}>Created</th>
+                <th style={th}>
+                  <HeaderButton
+                    label="Created"
+                    active={sortBy === 'created'}
+                    dir={sortDir}
+                    onClick={() => {
+                      setSortBy('created');
+                      setSortDir(d => (sortBy === 'created' ? (d === 'asc' ? 'desc' : 'asc') : 'desc'));
+                    }}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => {
+              {displayRows.map(r => {
                 const trKey = `${r.latest_interview_id || r.id}:transcript`
                 const pdfKey = `${r.latest_interview_id || r.id}:pdf`
                 const opened = !!expanded[r.id]
@@ -301,14 +549,14 @@ function FragmentRow({
 }) {
   return (
     <>
-      <tr style={{ background: opened ? '#f9fafb' : 'transparent' }}>
+      <tr className={opened ? 'cd-row opened' : 'cd-row'}>
         <td style={{ ...td, verticalAlign: 'top' }}>
           <button
             onClick={() => toggleRow(r.id)}
             title={opened ? 'Collapse' : 'Expand'}
             aria-label={opened ? 'Collapse' : 'Expand'}
+            className="btn lilac expand-toggle"
             style={{
-              ...btn,
               width: 28,
               height: 28,
               display: 'inline-flex',
@@ -342,19 +590,15 @@ function FragmentRow({
           <td style={td}></td>
           <td style={{...td, paddingTop: 0}} colSpan={7}>
             <div style={{ display:'grid', gap: 12 }}>
-              <div style={{ display:'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+              <div className="row-actions" style={{ display:'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
                 {r.video_url && (
-                  <a href={r.video_url} target="_blank" rel="noreferrer" style={btn}>Video</a>
+                  <a href={r.video_url} target="_blank" rel="noreferrer" className="btn lilac">Video</a>
                 )}
 
                 <button
                   onClick={() => openSigned(r.latest_interview_id, 'transcript')}
                   disabled={!r.latest_interview_id || !r.has_transcript || !!opening[trKey]}
-                  style={{
-                    ...btn,
-                    ...(r.latest_interview_id && r.has_transcript ? {} : disabledBtn),
-                    ...(opening[trKey] ? disabledBtn : {})
-                  }}
+                  className={`btn lilac${(!r.latest_interview_id || !r.has_transcript || !!opening[trKey]) ? ' is-disabled' : ''}`}
                 >
                   {opening[trKey] ? 'Opening…' : 'Transcript'}
                 </button>
@@ -368,7 +612,7 @@ function FragmentRow({
                     }
                   }}
                   disabled={!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id)}
-                  style={{ ...btn, ...(opening[pdfKey] ? disabledBtn : {}) }}
+                  className={`btn lilac${(!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id)) ? ' is-disabled' : ''}`}
                 >
                   {opening[pdfKey] ? 'Generating…' : 'Download PDF'}
                 </button>
@@ -376,11 +620,11 @@ function FragmentRow({
 
               <div style={{ display:'grid', gridTemplateColumns:'repeat(12,1fr)', gap: 12, marginTop: 8 }}>
                 <div style={{ gridColumn: 'span 6', border:'1px solid #e5e7eb', borderRadius: 12, padding: 12, background:'#fff' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Resume Analysis</div>
+                  <div style={{ fontWeight: 600, marginBottom: 8, color: '#111' }}>Resume Analysis</div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap: 8 }}>
-                    <Meter label="Experience" value={r.resume_analysis.experience} />
-                    <Meter label="Skills" value={r.resume_analysis.skills} />
-                    <Meter label="Education" value={r.resume_analysis.education} />
+                    <div><Meter label="Experience" value={r.resume_analysis.experience} /> <InfoTip text={TIPS.experience} /></div>
+                    <div><Meter label="Skills" value={r.resume_analysis.skills} /> <InfoTip text={TIPS.skills} /></div>
+                    <div><Meter label="Education" value={r.resume_analysis.education} /> <InfoTip text={TIPS.education} /></div>
                   </div>
                   {r.resume_analysis.summary && (
                     <div style={{ marginTop: 8, color:'#374151' }}>
@@ -390,11 +634,11 @@ function FragmentRow({
                 </div>
 
                 <div style={{ gridColumn: 'span 6', border:'1px solid #e5e7eb', borderRadius: 12, padding: 12, background:'#fff' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Interview Analysis</div>
+                  <div style={{ fontWeight: 600, marginBottom: 8, color: '#111' }}>Interview Analysis</div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap: 8 }}>
-                    <Meter label="Clarity" value={r.interview_analysis.clarity} />
-                    <Meter label="Confidence" value={r.interview_analysis.confidence} />
-                    <Meter label="Body Language" value={r.interview_analysis.body_language} />
+                    <div><Meter label="Clarity" value={r.interview_analysis.clarity} /> <InfoTip text={TIPS.clarity} /></div>
+                    <div><Meter label="Confidence" value={r.interview_analysis.confidence} /> <InfoTip text={TIPS.confidence} /></div>
+                    <div><Meter label="Body Language" value={r.interview_analysis.body_language} /> <InfoTip text={TIPS.body_language} /></div>
                   </div>
                 </div>
               </div>
@@ -439,5 +683,5 @@ const btn = {
   cursor: 'pointer',
   textDecoration: 'none',
   display: 'inline-block',
-}
+} 
 const disabledBtn = { opacity: 0.6, cursor: 'not-allowed' }
