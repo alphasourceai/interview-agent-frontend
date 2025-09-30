@@ -572,3 +572,47 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   color: #000 !important;
   -webkit-text-fill-color: #000 !important;
 }
+
+/* === Interview Access — Tavus window sizing ============================== */
+/* A fixed 16:9 stage that the Tavus/Daily embed will fill */
+.tavus-slot {
+  position: relative;
+  width: 100%;
+  max-width: 960px;          /* tweak to match your golden-water width */
+  margin: 0 auto;            /* center on page */
+  aspect-ratio: 16 / 9;      /* exact 16:9 area */
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;          /* fallback behind video */
+}
+
+/* Make any injected iframe/video perfectly cover the slot */
+.tavus-slot > iframe,
+.tavus-slot video,
+.tavus-slot [data-daily-video],
+.tavus-slot .daily-video {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  display: block;
+  object-fit: cover;
+}
+
+/* If you show a placeholder loop before join, make it fill too */
+.tavus-slot .placeholder,
+.tavus-slot .placeholder video,
+.tavus-slot .placeholder img,
+.tavus-slot .placeholder canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Optional: keep the slot comfortably responsive on small screens */
+@media (max-width: 640px) {
+  .tavus-slot { max-width: 100%; border-radius: 8px; }
+}
