@@ -72,8 +72,10 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
       const data = await resp.json();
 
       if (resp.status === 409) {
-        // Duplicate candidate for this role: still let them verify right away
-        setMessage('We found an existing start for this role. Check your email for a fresh code.');
+        // Unified duplicate message; do NOT proceed to OTP or emit payload on duplicates
+        setMessage("You’ve already interviewed for this role with this information. If you believe this is an error, contact support at info@alphasourceai.com");
+        setSubmitting(false);
+        return;
       } else if (!resp.ok) {
         setError(data?.error || 'Something went wrong.');
         return;
@@ -172,8 +174,8 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         {submitting ? 'Submitting…' : 'Submit & Get OTP'}
       </button>
 
-      {error && <p className="text-red-300 text-sm">{error}</p>}
-      {message && <p className="text-green-300 text-sm">{message}</p>}
+      {error && <p className="text-red-300 text-sm" role="alert" aria-live="polite">{error}</p>}
+      {message && <p className="text-green-300 text-sm" role="status" aria-live="polite">{message}</p>}
     </form>
   );
 }
