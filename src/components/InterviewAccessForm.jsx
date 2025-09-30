@@ -73,7 +73,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
 
       if (resp.status === 409) {
         // Duplicate candidate for this role: still let them verify right away
-        setMessage("You’ve already interviewed for this role with this information. If you believe this is an error, contact support at info@alphasourceai.com");
+        setMessage('We found an existing start for this role. Check your email for a fresh code.');
       } else if (!resp.ok) {
         setError(data?.error || 'Something went wrong.');
         return;
