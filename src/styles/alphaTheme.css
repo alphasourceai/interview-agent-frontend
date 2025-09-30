@@ -589,6 +589,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   margin: 24px auto;
   border-radius: 12px;
   overflow: hidden;
+  isolation: isolate;
   background: #000;
 }
 
@@ -596,6 +597,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .tavus-slot {
   position: absolute;
   inset: 0;
+  overflow: hidden;
 }
 
 /* Force the injected media to *stay inside* the box */
@@ -610,6 +612,20 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   border: 0 !important;
   display: block;
   object-fit: contain;           /* show full UI without cropping */
+}
+
+/* Stronger catch-all for vendor iframes mounted into our slot */
+.tavus-stage iframe[src*="tavus."],
+.tavus-stage iframe[src*="daily.co"],
+#tavus-slot iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  border: 0 !important;
+  display: block !important;
 }
 
 /* Optional: small screens keep it neat */

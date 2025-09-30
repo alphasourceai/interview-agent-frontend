@@ -186,6 +186,7 @@ export default function InterviewAccessPage() {
               src={roomUrl}
               loading="lazy"
               allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
+              allowFullScreen
             />
           ) : (
             <div className="placeholder">
@@ -245,17 +246,24 @@ export default function InterviewAccessPage() {
         </div>
       </div>
       <style>{`
-        /* Tavus/Daily fixed 16:9 stage */
+        /* Tavus/Daily stage sizing: mobile keeps 16:9, desktop uses a fixed, shallower height */
         .tavus-stage { width: 100%; }
         .tavus-slot {
           position: relative;
           width: 100%;
-          /* 16:9 aspect ratio via padding-top */
-          padding-top: 56.25%;
           border-radius: 16px;
           border: 1px solid rgba(255,255,255,0.1);
           background: rgba(0,0,0,0.3);
           overflow: hidden;
+        }
+        /* Default (mobile-first): maintain 16:9 so small screens aren't too tall */
+        @media (max-width: 767px) {
+          .tavus-slot { aspect-ratio: 16 / 9; }
+        }
+        /* Desktop/tablet: match Tavus UI minimum so in-iframe controls aren't cropped */
+        @media (min-width: 768px) {
+          /* Match Tavus UI minimum so in-iframe controls aren't cropped */
+          .tavus-slot { height: 520px; }
         }
         /* Make any injected iframe/video perfectly cover the slot */
         .tavus-slot > iframe,
@@ -268,7 +276,8 @@ export default function InterviewAccessPage() {
           height: 100% !important;
           border: 0 !important;
           display: block;
-          object-fit: cover;
+          object-fit: contain;
+          background: #000;
         }
         /* Placeholder center message */
         .tavus-slot .placeholder {
@@ -282,7 +291,7 @@ export default function InterviewAccessPage() {
           text-align: center;
         }
         .tavus-slot .center-msg { max-width: 520px; }
-        /* Optional: keep the slot comfortably responsive on small screens */
+        /* Optional: keep the slot comfortably rounded on small screens */
         @media (max-width: 640px) {
           .tavus-slot { border-radius: 12px; }
         }
