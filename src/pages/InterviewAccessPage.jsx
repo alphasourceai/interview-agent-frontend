@@ -1,94 +1,280 @@
-// src/components/InterviewAccessForm.jsx
-import React, { useState } from 'react';
+// src/pages/InterviewAccessPage.jsx
+// One-page intake → OTP → Start Interview (embedded tall)
+// Uses VITE_BACKEND_URL for API calls
 
-export default function InterviewAccessForm({ roleToken, onSubmitted }) {
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [formError, setFormError] = useState('');
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import InterviewAccessForm from '../components/InterviewAccessForm';
+
+function joinUrl(base, path) {
+  if (!base) return path;
+  if (base.endsWith('/') && path.startsWith('/')) return base.slice(0, -1) + path;
+  if (!base.endsWith('/') && !path.startsWith('/')) return base + '/' + path;
+  return base + path;
+}
+
+const BK = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL)
+  ? String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '')
+  : '';
+
+function OtpInline({ email, candidateId, roleId, onVerified }) {
+  const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-
-  const unifiedMessage =
-    "You’ve already interviewed for this role with this information. If you believe this is an error, contact support at info@alphasourceai.com";
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+  const inputRef = useRef(null);
 
   const submit = async (e) => {
     e.preventDefault();
-    setFormError('');
-    if (!email || !name) {
-      setFormError('Please enter your name and email.');
+    setErr('');
+    setMsg('');
+    if (!email || !/^\d{6}$/.test(code)) {
+      setErr('Enter your email and a 6-digit code.');
       return;
     }
     setBusy(true);
     try {
-      const resp = await fetch('/api/candidate/submit', {
+      const body = { email: String(email).trim().toLowerCase(), code: code.trim() };
+      if (candidateId) body.candidate_id = candidateId;
+      if (roleId) body.role_id = roleId;
+
+      const resp = await fetch(joinUrl(BK, '/api/candidate/verify-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          name,
-          role_token: roleToken,
-        }),
+        body: JSON.stringify(body),
       });
-      if (resp.status === 409) {
-        // Always show a unified, user-friendly message on duplicate attempts
-        try { await resp.json(); } catch (_) {}
-        setFormError(unifiedMessage);
-        return;
-      }
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        setFormError(data.error || 'Submission failed.');
-        return;
-      }
       const data = await resp.json();
-      onSubmitted(data);
+      if (!resp.ok) {
+        setErr(data?.error || 'Verification failed.');
+        return;
+      }
+      setMsg('Verified! You can start your interview.');
+      onVerified?.({
+        candidate_id: data?.candidate_id || candidateId,
+        role_id: data?.role_id || roleId,
+        email: data?.email || email,
+      });
     } catch {
-      setFormError('Network error submitting form.');
+      setErr('Network error verifying code.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="interview-layout">
-      {/* Fixed 16:9 stage for Tavus/Daily room. The SDK should target #tavus-slot */}
-      <div className="tavus-stage">
-        <div id="tavus-slot" className="tavus-slot" aria-label="Interview video area" />
-      </div>
-
-      <form onSubmit={submit} className="space-y-4 interview-form">
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+      <h3 className="text-base font-semibold mb-3">Enter the code we emailed you</h3>
+      <form onSubmit={submit} className="space-y-3">
         <div>
-          <label className="block mb-1 text-sm">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
-            required
-          />
-        </div>
-        <div>
-          <label className="block mb-1 text-sm">Email</label>
+          <label className="block text-sm mb-1">Email</label>
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2"
+            readOnly
+            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2"
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">6-digit code</label>
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 tracking-widest"
+            placeholder="••••••"
             required
           />
         </div>
-        {formError && (
-          <p className="text-red-600 text-sm" role="alert" aria-live="polite">
-            {formError}
-          </p>
-        )}
+        {err && <p className="text-red-300 text-sm">{err}</p>}
+        {msg && <p className="text-green-300 text-sm">{msg}</p>}
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded bg-purple-600 py-2 font-semibold text-white disabled:opacity-50"
+          className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-black hover:opacity-90 disabled:opacity-60"
         >
-          {busy ? 'Submitting…' : 'Submit'}
+          {busy ? 'Verifying…' : 'Verify'}
         </button>
       </form>
+    </div>
+  );
+}
+
+export default function InterviewAccessPage() {
+  const { role_token } = useParams();
+  const roomRef = useRef(null);
+
+  // intake result
+  const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
+  const [verified, setVerified] = useState(false);
+
+  // interview room
+  const [roomUrl, setRoomUrl] = useState('');
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState('');
+
+  const canStart = Boolean(verified && submitted?.candidate_id);
+
+  const startInterview = useCallback(async () => {
+    if (!canStart) return;
+    setStarting(true);
+    setError('');
+    try {
+      const resp = await fetch(joinUrl(BK, '/create-tavus-interview'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidate_id: submitted.candidate_id,
+          role_id: submitted.role_id,
+          email: submitted.email,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        setError(data?.error || 'Could not start interview.');
+        return;
+      }
+      const url =
+        data?.conversation_url ||
+        data?.video_url ||
+        data?.redirect_url ||
+        data?.url ||
+        '';
+      if (url) {
+        setRoomUrl(url);
+        // bring the room into view once it renders
+        setTimeout(() => {
+          try {
+            roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch {}
+        }, 50);
+      } else {
+        setError('Interview room is initializing—try again in a moment.');
+      }
+    } catch {
+      setError('Network error starting interview.');
+    } finally {
+      setStarting(false);
+    }
+  }, [canStart, submitted]);
+
+  const header = useMemo(
+    () => (
+      <div className="max-w-6xl mx-auto w-full">
+        <h1 className="text-2xl font-bold mb-2">Start Your Interview</h1>
+        <p className="opacity-80 mb-4">
+          Enter your details, verify the code we send, then click <em>Start Interview</em>.
+        </p>
+      </div>
+    ),
+    []
+  );
+
+  return (
+    <div className="p-4 max-w-6xl mx-auto space-y-6">
+      {header}
+
+      {/* Top media/room area — tall so Tavus UI isn’t cropped */}
+      <div
+        id="roomHost"
+        ref={roomRef}
+        className="room-host w-full rounded-2xl border border-white/10 overflow-hidden"
+        style={{ height: '72vh', background: 'rgba(0,0,0,0.3)' }}
+      >
+        {roomUrl ? (
+          <iframe
+            title="Interview"
+            src={roomUrl}
+            className="room-frame w-full h-full"
+            loading="lazy"
+            allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center opacity-80">
+            <div className="text-center p-6">Your interview room will appear here after verification.</div>
+          </div>
+        )}
+      </div>
+
+      {/* Two-column: left = form, right = OTP + Start */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Intake form */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+          <InterviewAccessForm
+            roleToken={role_token}
+            onSubmitted={(payload) => {
+              setSubmitted(payload);
+              setVerified(false); // reset if user re-submits
+              setRoomUrl('');
+            }}
+          />
+        </div>
+
+        {/* OTP + Start */}
+        <div className="space-y-4">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+            <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
+            {!submitted ? (
+              <p className="text-sm opacity-80">
+                Submit the form first to receive your 6-digit code by email.
+              </p>
+            ) : (
+              <>
+                <OtpInline
+                  email={submitted.email}
+                  candidateId={submitted.candidate_id}
+                  roleId={submitted.role_id}
+                  onVerified={(info) => {
+                    setVerified(true);
+                    setSubmitted((s) => ({ ...(s || {}), ...info })); // keep latest ids
+                  }}
+                />
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    disabled={!canStart || starting}
+                    onClick={startInterview}
+                    className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-black hover:opacity-90 disabled:opacity-60"
+                  >
+                    {starting ? 'Starting…' : 'Start Interview'}
+                  </button>
+                  {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <style>{`
+        /* Ensure any embed fills the host container */
+        .room-host { position: relative; }
+        .room-host > iframe,
+        .room-host > div,
+        .room-host > section { width: 100% !important; height: 100% !important; display: block !important; }
+
+        /* Common class patterns sometimes used by pre-interview widgets; stretch them too */
+        .room-host [class*="haircheck"],
+        .room-host [class*="wrapper"],
+        .room-host [class*="container"],
+        .room-host [data-component],
+        .room-host [data-widget] {
+          width: 100% !important;
+          height: 100% !important;
+          max-height: 100% !important;
+        }
+
+        /* In case an inner wrapper uses inline auto heights */
+        .room-host *[style*="height: auto"] { height: 100% !important; }
+        .room-host *[style*="min-height"] { min-height: 100% !important; }
+        .room-host *[style*="max-height"] { max-height: 100% !important; }
+
+        /* Mobile: ensure the host is tall enough even with viewport UI chrome */
+        @media (max-width: 768px) {
+          #roomHost { height: 78vh !important; }
+        }
+      `}</style>
     </div>
   );
 }
