@@ -604,49 +604,15 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .tavus-slot [data-daily-video],
 .tavus-slot .daily-video {
   position: absolute !important;
-  inset: 0 !important;
+  inset: 0 !important;          /* top:0; right:0; bottom:0; left:0 */
   width: 100% !important;
-  height: 100% !important;  /* ⟵ kills the 3× tall issue */
+  height: 100% !important;
   border: 0 !important;
   display: block;
-  object-fit: cover;
+  object-fit: contain;           /* show full UI without cropping */
 }
 
 /* Optional: small screens keep it neat */
 @media (max-width: 640px) {
   .tavus-stage { width: 92vw; max-height: 56vw; border-radius: 8px; }
-}
-
-/* --- Interview slot: make embedded Daily/Tavus fill the stage --- */
-.tavus-stage { /* your outer 16:9 wrapper; keep as-is if already present */
-  position: relative;
-}
-
-.tavus-slot {
-  position: relative;
-  overflow: hidden;           /* crop iframe chrome */
-  width: 100%;
-  aspect-ratio: 16 / 9;       /* keep the golden-water proportion */
-  max-width: min(960px, 86vw);
-  margin: 0 auto 24px;
-  border-radius: 12px;
-  background: #0e152b;
-}
-
-/* Fill + crop Daily/Tavus iframe so the video visually covers the slot */
-.tavus-slot > iframe {
-  position: absolute !important;
-  left: 0; top: -58px;        /* hide Daily top bar (~58px) */
-  width: 100% !important;
-  height: calc(100% + 120px) !important;  /* reclaim top+bottom toolbars */
-  border: 0;
-  display: block;
-}
-
-/* On wide screens, nudge right to hide the participant/sidebar strip */
-@media (min-width: 1024px) {
-  .tavus-slot > iframe {
-    right: -240px;            /* crop right sidebar (~240px) */
-    width: calc(100% + 240px) !important;
-  }
 }
