@@ -177,25 +177,22 @@ export default function InterviewAccessPage() {
       {header}
 
       {/* Top media/room area — tall so Tavus UI isn’t cropped */}
-      <div
-        id="roomHost"
-        ref={roomRef}
-        className="room-host w-full rounded-2xl border border-white/10 overflow-hidden"
-        style={{ height: '72vh', background: 'rgba(0,0,0,0.3)' }}
-      >
-        {roomUrl ? (
-          <iframe
-            title="Interview"
-            src={roomUrl}
-            className="room-frame w-full h-full"
-            loading="lazy"
-            allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center opacity-80">
-            <div className="text-center p-6">Your interview room will appear here after verification.</div>
-          </div>
-        )}
+      <div className="tavus-stage" ref={roomRef}>
+        {/* Fixed 16:9 stage for Tavus/Daily room. The SDK should target #tavus-slot */}
+        <div id="tavus-slot" className="tavus-slot" aria-label="Interview video area">
+          {roomUrl ? (
+            <iframe
+              title="Interview"
+              src={roomUrl}
+              loading="lazy"
+              allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
+            />
+          ) : (
+            <div className="placeholder">
+              <div className="center-msg">Your interview room will appear here after verification.</div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Two-column: left = form, right = OTP + Start */}
@@ -248,31 +245,46 @@ export default function InterviewAccessPage() {
         </div>
       </div>
       <style>{`
-        /* Ensure any embed fills the host container */
-        .room-host { position: relative; }
-        .room-host > iframe,
-        .room-host > div,
-        .room-host > section { width: 100% !important; height: 100% !important; display: block !important; }
-
-        /* Common class patterns sometimes used by pre-interview widgets; stretch them too */
-        .room-host [class*="haircheck"],
-        .room-host [class*="wrapper"],
-        .room-host [class*="container"],
-        .room-host [data-component],
-        .room-host [data-widget] {
+        /* Tavus/Daily fixed 16:9 stage */
+        .tavus-stage { width: 100%; }
+        .tavus-slot {
+          position: relative;
+          width: 100%;
+          /* 16:9 aspect ratio via padding-top */
+          padding-top: 56.25%;
+          border-radius: 16px;
+          border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(0,0,0,0.3);
+          overflow: hidden;
+        }
+        /* Make any injected iframe/video perfectly cover the slot */
+        .tavus-slot > iframe,
+        .tavus-slot video,
+        .tavus-slot [data-daily-video],
+        .tavus-slot .daily-video {
+          position: absolute !important;
+          inset: 0 !important;
           width: 100% !important;
           height: 100% !important;
-          max-height: 100% !important;
+          border: 0 !important;
+          display: block;
+          object-fit: cover;
         }
-
-        /* In case an inner wrapper uses inline auto heights */
-        .room-host *[style*="height: auto"] { height: 100% !important; }
-        .room-host *[style*="min-height"] { min-height: 100% !important; }
-        .room-host *[style*="max-height"] { max-height: 100% !important; }
-
-        /* Mobile: ensure the host is tall enough even with viewport UI chrome */
-        @media (max-width: 768px) {
-          #roomHost { height: 78vh !important; }
+        /* Placeholder center message */
+        .tavus-slot .placeholder {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(255,255,255,0.8);
+          padding: 24px;
+          text-align: center;
+        }
+        .tavus-slot .center-msg { max-width: 520px; }
+        /* Optional: keep the slot comfortably responsive on small screens */
+        @media (max-width: 640px) {
+          .tavus-slot { border-radius: 12px; }
         }
       `}</style>
     </div>
