@@ -573,18 +573,6 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   -webkit-text-fill-color: #000 !important;
 }
 
-/* === Interview Access — Tavus window sizing ============================== */
-/* A fixed 16:9 stage that the Tavus/Daily embed will fill */
-.tavus-slot {
-  position: relative;
-  width: 100%;
-  max-width: 960px;          /* tweak to match your golden-water width */
-  margin: 0 auto;            /* center on page */
-  aspect-ratio: 16 / 9;      /* exact 16:9 area */
-  border-radius: 12px;
-  overflow: hidden;
-  background: #000;          /* fallback behind video */
-}
 
 /* --- Tavus/Daily stage: fixed 16:9 box, centered --- */
 .interview-layout {
