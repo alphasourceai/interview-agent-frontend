@@ -594,7 +594,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   width: 100%;
   max-width: 1200px;
   aspect-ratio: auto !important;   /* fixed size across all states */
-  height: 690px;                   /* constant height to fully show pre-join UI */
+  height: 690px !important;        /* constant height to fully show pre-join UI */
   max-height: none !important;     /* prevent 16:9 clamping */
   margin: 24px auto;
   border-radius: 12px;
@@ -610,6 +610,8 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   position: absolute;
   inset: 0;
   overflow: hidden;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* Force the injected media to *stay inside* the box */
@@ -644,11 +646,4 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 /* Optional: small screens keep it neat */
 @media (max-width: 640px) {
   .tavus-stage { width: 92vw; max-height: 56vw; border-radius: 8px; }
-
-  /* Pre-join on small screens: allow more height but keep within viewport */
-  .tavus-stage.prejoin {
-    width: 92vw;
-    height: min(70vh, 92vw);  /* keep roughly square-ish without overflow */
-    max-height: none !important;
-  }
 }
