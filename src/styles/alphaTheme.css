@@ -153,12 +153,11 @@
 .section-head {
   display: flex;
   align-items: center;
-  gap: 10px;                 /* space between pill and title */
+  gap: 10px;
   justify-content: flex-start;
   margin-bottom: 10px;
 }
 .section-title { font-size: 18px; font-weight: 700; margin-top: 12px; }
-
 
 .section { margin-top: 12px; }
 
@@ -241,7 +240,6 @@ button.danger {
 button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 
 /* sizing: inputs & selects match height */
-/* sizing: inputs & selects match EXACT 40px including padding + border */
 .alpha-theme input.alpha-input,
 .alpha-theme .alpha-input[type="text"],
 .alpha-theme .alpha-input[type="email"],
@@ -249,24 +247,21 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .alpha-theme .alpha-input[type="search"],
 .alpha-theme select.alpha-select,
 .alpha-theme .alpha-select {
-  height: 40px !important;        /* total box height */
+  height: 40px !important;
   box-sizing: border-box !important;
-  padding: 8px 10px !important;    /* included in the 40px now */
-  line-height: 24px;               /* keeps text vertically comfy */
+  padding: 8px 10px !important;
+  line-height: 24px;
 }
 
-/* optional: file input tries to match as well */
 .alpha-theme input[type="file"].alpha-input {
   height: 40px !important;
   box-sizing: border-box !important;
   padding: 6px 10px !important;
 }
 
-/* file input wrapper so clear icon can sit beside it */
 .file-stack { position: relative; display: flex; align-items: center; gap: 8px; margin-right: 36px; }
 .file-stack .file { width: 220px; }
 
-/* lilac circular icon buttons; icon itself is white via SVG fill/stroke */
 .btn-icon.lilac {
   background: transparent;
   border: none;
@@ -277,28 +272,21 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   align-items: center;
   justify-content: center;
 }
-.btn-icon.lilac svg {
-  width: 24px;
-  height: 24px;
-  stroke: #fff;
-}
+.btn-icon.lilac svg { width: 24px; height: 24px; stroke: #fff; }
 
-/* Header with logo + title (compact) */
 .alpha-header--dash { display:flex; align-items:center; justify-content:space-between; }
 .alpha-header-left { display:flex; align-items:center; gap:10px; }
-.alpha-logo { width:55px; height:55px; object-fit:contain; }  /* compact logo */
+.alpha-logo { width:55px; height:55px; object-fit:contain; }
 
-/* Thin top bar card */
 .alpha-card--bar { padding:10px 14px; margin-bottom:12px; }
 
-/* Center helper */
 .center { text-align:center; }
 
 /* Roles “table-like” layout */
 .table.like .t-head,
 .table.like .t-row {
   display:grid;
-  grid-template-columns: 1fr 220px 60px 60px 120px 80px; /* Role | Created | KB | JD | Link | Delete */
+  grid-template-columns: 1fr 220px 60px 60px 120px 80px;
   gap: 12px;
   align-items:center;
 }
@@ -306,7 +294,6 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .table.like .t-row { padding:12px; border-top:1px solid rgba(255,255,255,0.06); }
 .table.like .t-empty { padding:14px; }
 
-/* File input + clear icon stacked */
 .file-stack .file-clear { position: absolute; right: -36px; }
 
 .signout-btn {
@@ -323,7 +310,6 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   border-color: var(--alpha-primary-strong) !important;
 }
 
-/* === Icon-only buttons override (trash, etc.) ============================ */
 .alpha-theme button.btn-icon,
 .alpha-theme button.btn-icon.lilac {
   background: transparent !important;
@@ -336,26 +322,13 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   justify-content: center;
   border-radius: 0;
 }
-
 .alpha-theme button.btn-icon:hover,
-.alpha-theme button.btn-icon.lilac:hover {
-  background: transparent !important;
-  filter: none !important;
-}
+.alpha-theme button.btn-icon.lilac:hover { background: transparent !important; filter: none !important; }
+.alpha-theme button.btn-icon > svg { width: 24px !important; height: 24px !important; display: block; }
 
-.alpha-theme button.btn-icon > svg {
-  width: 24px !important;
-  height: 24px !important;
-  display: block;
-}
+.btn-icon.lilac { background: transparent !important; border: none !important; }
 
-/* Neutralize any remaining lilac styles on old class name */
-.btn-icon.lilac {
-  background: transparent !important;
-  border: none !important;
-}
-
-/* ---- Force expanded table rows to stay dark even if the row adds inline white/gray bg ---- */
+/* Expanded rows stay dark */
 .alpha-theme tr[style*="background: rgb(249, 250, 251)"],
 .alpha-theme tr[style*="background:#fff"],
 .alpha-theme tr[style*="background: #fff"],
@@ -367,8 +340,6 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   background: var(--alpha-surface) !important;
   color: var(--alpha-text) !important;
 }
-
-/* Ensure all text inside stays readable */
 .alpha-theme tr[style*="background: rgb(249, 250, 251)"] *,
 .alpha-theme tr[style*="background:#fff"] *,
 .alpha-theme tr[style*="background: #fff"] *,
@@ -382,18 +353,11 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   opacity: 1 !important;
 }
 
-/* Keep borders and hover consistent on dark */
 .alpha-theme table tr td,
-.alpha-theme table tr th {
-  border-color: var(--alpha-border) !important;
-}
-.alpha-theme table tr:hover {
-  background: rgba(255,255,255,0.06) !important;
-}
+.alpha-theme table tr th { border-color: var(--alpha-border) !important; }
+.alpha-theme table tr:hover { background: rgba(255,255,255,0.06) !important; }
 
-/* Pill titles inside the expanded cards (Resume Analysis / Interview Analysis)
-   use a light gray chip background. Force their text to black for readability,
-   without needing JSX changes. */
+/* Light grey chips → black text */
 .alpha-theme [style*="background: rgb(229, 231, 235)"],
 .alpha-theme [style*="background-color: rgb(229, 231, 235)"],
 .alpha-theme [style*="background: #e5e7eb"],
@@ -406,7 +370,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   -webkit-text-fill-color: #000 !important;
 }
 
-/* --- Expand/Collapse buttons: lilac background + white caret/text -------- */
+/* Expand/collapse pill → lilac */
 .alpha-theme button[style*="background: rgb(229, 231, 235)"],
 .alpha-theme button[style*="background-color: rgb(229, 231, 235)"],
 .alpha-theme button[style*="background: #e5e7eb"],
@@ -431,116 +395,14 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   background: var(--alpha-primary-strong) !important;
   border-color: var(--alpha-primary-strong) !important;
 }
-/* Ensure any caret icon inside becomes white as well (text or svg) */
-.alpha-theme button[style*="background: rgb(229, 231, 235)"] *,
-.alpha-theme button[style*="background-color: rgb(229, 231, 235)"] *,
-.alpha-theme button[style*="background: #e5e7eb"] *,
-.alpha-theme button[style*="background-color: #e5e7eb"] *,
-.alpha-theme button[style*="background: rgb(209, 213, 219)"] *,
-.alpha-theme button[style*="background-color: rgb(209, 213, 219)"] *,
-.alpha-theme button[style*="background: #d1d5db"] *,
-.alpha-theme button[style*="background-color: #d1d5db"] * {
+.alpha-theme button[style*="background" ] *,
+.alpha-theme button[style*="background-color" ] * {
   color: #fff !important;
   fill: #fff !important;
   stroke: #fff !important;
 }
 
-/* --- Expanded row action buttons (Video / Transcript / Best Report) -------
-   These are rendered as <a role="button"> or <button> with a light gray
-   inline background. Force them to our lilac with white text. */
-.alpha-theme a[role="button"][style*="background: rgb(249, 250, 251)"],
-.alpha-theme a[role="button"][style*="background-color: rgb(249, 250, 251)"],
-.alpha-theme a[role="button"][style*="background: #f9fafb"],
-.alpha-theme a[role="button"][style*="background-color: #f9fafb"],
-.alpha-theme button[style*="background: rgb(249, 250, 251)"],
-.alpha-theme button[style*="background-color: rgb(249, 250, 251)"],
-.alpha-theme a[role="button"][style*="background: rgb(229, 231, 235)"],
-.alpha-theme a[role="button"][style*="background-color: rgb(229, 231, 235)"],
-.alpha-theme a[role="button"][style*="background: #e5e7eb"],
-.alpha-theme a[role="button"][style*="background-color: #e5e7eb"],
-.alpha-theme button[style*="background: rgb(229, 231, 235)"],
-.alpha-theme button[style*="background-color: rgb(229, 231, 235)"] {
-  background: var(--alpha-primary) !important;
-  border-color: var(--alpha-primary) !important;
-  color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
-}
-.alpha-theme a[role="button"][style*="background: rgb(249, 250, 251)"]:hover,
-.alpha-theme a[role="button"][style*="background-color: rgb(249, 250, 251)"]:hover,
-.alpha-theme a[role="button"][style*="background: #f9fafb"]:hover,
-.alpha-theme a[role="button"][style*="background-color: #f9fafb"]:hover,
-.alpha-theme button[style*="background: rgb(249, 250, 251)"]:hover,
-.alpha-theme button[style*="background-color: rgb(249, 250, 251)"]:hover,
-.alpha-theme a[role="button"][style*="background: rgb(229, 231, 235)"]:hover,
-.alpha-theme a[role="button"][style*="background-color: rgb(229, 231, 235)"]:hover,
-.alpha-theme a[role="button"][style*="background: #e5e7eb"]:hover,
-.alpha-theme a[role="button"][style*="background-color: #e5e7eb"]:hover,
-.alpha-theme button[style*="background: rgb(229, 231, 235)"]:hover,
-.alpha-theme button[style*="background-color: rgb(229, 231, 235)"]:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-/* Ensure any icon/caret inside turns white too */
-.alpha-theme a[role="button"][style*="background" ] *,
-.alpha-theme button[style*="background" ] * {
-  color: #fff !important;
-  fill: #fff !important;
-  stroke: #fff !important;
-}
-
-/* Disabled / unavailable buttons → grey text on lilac pill. We try common
-   states used by the generated markup. */
-.alpha-theme a[role="button"][aria-disabled="true"],
-.alpha-theme a[role="button"].disabled,
-.alpha-theme a[role="button"][style*="opacity: 0.5"],
-.alpha-theme a[role="button"][style*="opacity:.5"],
-.alpha-theme button:disabled {
-  color: #BFC7D6 !important;              /* soft grey text */
-  -webkit-text-fill-color: #BFC7D6 !important;
-  cursor: not-allowed !important;
-}
-
-/* === Client Dashboard (scoped) hardening ===================================
-   These class-based rules back up the inline-style overrides above and ensure
-   the dashboard never flips to white when rows expand. They only apply when
-   the page root has `.alpha-theme` and the dashboard container uses
-   `.client-dash` (present on the dashboard markup).
-*/
-
-/* Keep expanded rows dark */
-.alpha-theme .client-dash .cd-row.opened,
-.alpha-theme .client-dash tr.cd-row.opened {
-  background: var(--alpha-surface) !important;
-  color: var(--alpha-text) !important;
-}
-.alpha-theme .client-dash .cd-row.opened *,
-.alpha-theme .client-dash tr.cd-row.opened * {
-  color: var(--alpha-text) !important;
-  -webkit-text-fill-color: var(--alpha-text) !important;
-}
-
-/* Toggle caret pill: lilac bg with white icon/text */
-.alpha-theme .client-dash .expand-toggle.btn.lilac,
-.alpha-theme .client-dash .expand-toggle[role="button"],
-.alpha-theme .client-dash button.expand-toggle {
-  background: var(--alpha-primary) !important;
-  border-color: var(--alpha-primary) !important;
-  color: #fff !important;
-}
-.alpha-theme .client-dash .expand-toggle.btn.lilac:hover,
-.alpha-theme .client-dash .expand-toggle[role="button"]:hover,
-.alpha-theme .client-dash button.expand-toggle:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-.alpha-theme .client-dash .expand-toggle *,
-.alpha-theme .client-dash button.expand-toggle * {
-  color: #fff !important;
-  fill: #fff !important;
-  stroke: #fff !important;
-}
-
-/* Row action buttons (Video / Transcript / Best Report) */
+/* Row action buttons → lilac */
 .alpha-theme .client-dash .row-actions .btn.lilac,
 .alpha-theme .client-dash .row-actions a[role="button"],
 .alpha-theme .client-dash .row-actions button {
@@ -558,14 +420,13 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .alpha-theme .client-dash .row-actions .btn.lilac.is-disabled,
 .alpha-theme .client-dash .row-actions a[role="button"][aria-disabled="true"],
 .alpha-theme .client-dash .row-actions button:disabled {
-  color: #BFC7D6 !important; /* soft grey text for unavailable */
+  color: #BFC7D6 !important;
   -webkit-text-fill-color: #BFC7D6 !important;
   cursor: not-allowed !important;
-  opacity: 1 !important; /* avoid Tailwind dimming stacking */
+  opacity: 1 !important;
 }
 
-/* Pill headers inside cards ("Resume Analysis" / "Interview Analysis")
-   are rendered as light grey chips — force black text for readability. */
+/* Pill headers in cards → black text */
 .alpha-theme .client-dash .analysis-chip,
 .alpha-theme .client-dash [data-chip="title"],
 .alpha-theme .client-dash .chip-title {
@@ -573,63 +434,38 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   -webkit-text-fill-color: #000 !important;
 }
 
-
-/* --- Tavus/Daily stage: fixed 16:9 box, centered --- */
-.interview-layout {
-  display: flex;
-  justify-content: center;
-  align-items: center;       /* NEW: vertical centering */
-  padding: 24px 0;           /* keep breathing room around the stage */
-  gap: 0;
-}
-
+/* --- Tavus/Daily stage fixed box ---------------------------------------- */
+.interview-layout { display: flex; justify-content: center; align-items: center; padding: 24px 0; gap: 0; }
 @media (min-height: 750px) {
-  .interview-layout {
-    min-height: calc(100vh - 200px); /* center between header/footer on desktops */
-  }
+  .interview-layout { min-height: calc(100vh - 200px); }
 }
-
 .tavus-stage {
   position: relative;
   width: 100%;
   max-width: 1200px;
-  aspect-ratio: auto !important;   /* fixed size across all states */
-  height: 690px !important;        /* constant height to fully show pre-join UI */
-  max-height: none !important;     /* prevent 16:9 clamping */
+  aspect-ratio: auto !important;
+  height: 690px !important;
+  max-height: none !important;
   margin: 24px auto;
   border-radius: 12px;
   overflow: hidden;
   isolation: isolate;
   background: var(--alpha-bg);
 }
-
-
-
-/* Slot that Tavus/Daily mounts into */
-.tavus-slot {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/* Force the injected media to *stay inside* the box */
+.tavus-slot { position: absolute; inset: 0; overflow: hidden; width: 100% !important; height: 100% !important; }
 .tavus-slot > iframe,
 .tavus-slot video,
 .tavus-slot [data-daily-video],
 .tavus-slot .daily-video {
   position: absolute !important;
-  inset: 0 !important;          /* top:0; right:0; bottom:0; left:0 */
+  inset: 0 !important;
   width: 100% !important;
   height: 100% !important;
   border: 0 !important;
   display: block;
   overflow: hidden !important;
-  object-fit: contain;           /* show full UI without cropping */
+  object-fit: contain;
 }
-
-/* Stronger catch-all for vendor iframes mounted into our slot */
 .tavus-stage iframe[src*="tavus."],
 .tavus-stage iframe[src*="daily.co"],
 #tavus-slot iframe {
@@ -642,87 +478,44 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   border: 0 !important;
   display: block !important;
 }
-
-/* Optional: small screens keep it neat */
 @media (max-width: 640px) {
   .tavus-stage { width: 92vw; max-height: 56vw; border-radius: 8px; }
 }
 
-/* === Hero (hallway.jpg) backdrop + glyphs =============================== */
-/* This wraps the Tavus stage and provides the blurred hallway image with a
-   dark overlay, plus the decorative glyphs. It is self-contained so it
-   doesn't affect the rest of the page or Wix shell. */
+/* === Hero (hallway.png) backdrop + overlay ============================== */
 .alpha-hero {
   position: relative;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 48px 24px;                 /* breathing room within hero */
+  padding: 48px 24px;
   border-radius: 16px;
-  overflow: hidden;                    /* clip bg & glyphs to hero bounds */
-  isolation: isolate;                  /* keep overlay layers local */
+  overflow: hidden;
+  isolation: isolate;
 }
 .alpha-hero::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: url("/hallway.jpg") center/cover no-repeat;
+  background: url("/hallway.png") center/cover no-repeat;
   filter: blur(7px);
-  transform: scale(1.06);              /* avoid blur edge clipping */
+  transform: scale(1.06);
   z-index: 0;
 }
 .alpha-hero::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(6, 21, 81, 0.72);   /* --alpha-bg with transparency */
+  background: rgba(6, 21, 81, 0.72);
   z-index: 1;
 }
-/* Ensure hero children paint above the bg/overlay */
 .alpha-hero > * { position: relative; z-index: 2; }
-
-/* Center the Tavus stage inside the hero and remove outer margins here */
-.alpha-hero .tavus-stage {
-  margin: 0 auto;
-}
-
-/* Decorative glyphs inside the hero */
-.alpha-hero .alpha-glyph {
-  position: absolute;
-  z-index: 2;
-  pointer-events: none;
-}
-.alpha-hero .alpha-glyph--x {
-  top: 20px;
-  right: 28px;
-  width: 22px;
-  height: 22px;
-  border: 3px solid var(--alpha-primary);  /* lilac X made from borders */
-  border-left: none;
-  border-top: none;
-  transform: rotate(45deg);
-  box-shadow: 0 0 0 3px rgba(173, 139, 247, 0.15);
-}
-.alpha-hero .alpha-glyph--ring {
-  left: 40px;
-  bottom: 40px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 3px solid #fff;                 /* white ring */
-  box-shadow: 0 0 0 4px rgba(255,255,255,0.15);
-}
+.alpha-hero .tavus-stage { margin: 0 auto; }
 
 /* Spacing below hero before the form area */
-.alpha-hero + .alpha-form {
-  margin-top: 56px;
-}
+.alpha-hero + .alpha-form { margin-top: 56px; }
 
-/* Form container width and spacing (used for Step 1 + Step 2) */
-.alpha-form {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px 48px;
-}
+/* Form container */
+.alpha-form { max-width: 1200px; margin: 0 auto; padding: 0 24px 48px; }
 
 /* Inputs & buttons sized to Wix reference */
 .alpha-form .alpha-input,
@@ -739,7 +532,6 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   color: var(--alpha-text);
   padding: 10px 12px;
 }
-
 .alpha-form .btn-primary,
 .alpha-form button[type="submit"],
 .alpha-form .btn {
@@ -758,21 +550,16 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   border-color: var(--alpha-primary-strong);
 }
 
-/* Make sure the Tavus slot still enforces full containment */
+/* Ensure Tavus slot containment inside hero too */
 .alpha-hero .tavus-slot > iframe,
 .alpha-hero .tavus-slot video,
 .alpha-hero .tavus-slot [data-daily-video],
-.alpha-hero .tavus-slot .daily-video {
-  object-fit: contain !important;
-}
+.alpha-hero .tavus-slot .daily-video { object-fit: contain !important; }
 
 /* Responsive tune-downs */
 @media (max-width: 900px) {
   .alpha-hero { padding: 32px 16px; }
-  .alpha-hero .alpha-glyph--x { top: 14px; right: 18px; transform: rotate(45deg) scale(0.9); }
-  .alpha-hero .alpha-glyph--ring { left: 22px; bottom: 22px; transform: scale(0.85); }
 }
 @media (max-width: 540px) {
   .alpha-hero { padding: 20px 12px; border-radius: 12px; }
-  .alpha-hero .alpha-glyph { display: none; } /* hide glyphs on very small screens */
 }

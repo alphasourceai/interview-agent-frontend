@@ -93,7 +93,7 @@ function OtpInline({ email, candidateId, roleId, onVerified }) {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-black hover:opacity-90 disabled:opacity-60"
+          className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-white hover:opacity-90 disabled:opacity-60"
         >
           {busy ? 'Verifying…' : 'Verify'}
         </button>
@@ -150,13 +150,11 @@ export default function InterviewAccessPage() {
       if (url) {
         setRoomUrl(url);
         setPrejoin(true); // use taller stage while on the pre-join screen
-        // bring the room into view once it renders
         setTimeout(() => {
           try {
             roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           } catch {}
         }, 50);
-        // Fallback: if we never receive a join message, collapse from prejoin after a few seconds
         if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
         joinTimeoutRef.current = setTimeout(() => {
           setPrejoin(false);
@@ -175,46 +173,20 @@ export default function InterviewAccessPage() {
   React.useEffect(() => {
     function onMessage(ev) {
       const d = ev?.data;
-      // Normalize event tag from a few possible shapes
       const tagRaw = typeof d === 'string' ? d : (d?.action || d?.event || d?.name || '');
       const tag = String(tagRaw).toLowerCase();
 
-      // Known join/leave/prejoin signals from Daily/Tavus
-      const joinEvents = new Set([
-        'joined-meeting',
-        'participant-joined',
-        'call-joined',
-        'meeting-joined',
-        'room-joined'
-      ]);
-      const leaveEvents = new Set([
-        'left-meeting',
-        'call-left',
-        'meeting-ended',
-        'meeting-left',
-        'room-left',
-        'room-deleted'
-      ]);
-      const prejoinEvents = new Set([
-        'prejoin',
-        'prejoin-screen',
-        'waiting-room',
-        'lobby-shown'
-      ]);
+      const joinEvents = new Set(['joined-meeting','participant-joined','call-joined','meeting-joined','room-joined']);
+      const leaveEvents = new Set(['left-meeting','call-left','meeting-ended','meeting-left','room-left','room-deleted']);
+      const prejoinEvents = new Set(['prejoin','prejoin-screen','waiting-room','lobby-shown']);
 
       if (joinEvents.has(tag)) {
         if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
         setPrejoin(false);
         return;
       }
-      if (leaveEvents.has(tag)) {
-        setPrejoin(true);
-        return;
-      }
-      if (prejoinEvents.has(tag)) {
-        setPrejoin(true);
-        return;
-      }
+      if (leaveEvents.has(tag)) { setPrejoin(true); return; }
+      if (prejoinEvents.has(tag)) { setPrejoin(true); return; }
     }
     window.addEventListener('message', onMessage);
     return () => {
@@ -225,11 +197,8 @@ export default function InterviewAccessPage() {
 
   const header = useMemo(
     () => (
-      <div className="max-w-6xl mx-auto w-full">
-        <h1 className="text-2xl font-bold mb-2">Start Your Interview</h1>
-        <p className="opacity-80 mb-4">
-          Enter your details, verify the code we send, then click <em>Start Interview</em>.
-        </p>
+      <div className="max-w-6xl mx-auto w-full" aria-hidden="true">
+        <div style={{ height: 56 }} />
       </div>
     ),
     []
@@ -238,152 +207,136 @@ export default function InterviewAccessPage() {
   return (
     <div className="alpha-theme">
       <div className="p-4 max-w-6xl mx-auto space-y-6">
-      {header}
+        {header}
 
-      {/* Hero wrapper with decorative glyphs behind the Tavus stage */}
-      <div className="alpha-hero">
-        <div className="alpha-glyph alpha-glyph--x" />
-        <div className="alpha-glyph alpha-glyph--ring" />
-
-        {/* Top media/room area — tall so Tavus UI isn’t cropped */}
-        <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
-          {/* Fixed 16:9 stage for Tavus/Daily room. The SDK should target #tavus-slot */}
-          <div id="tavus-slot" className="tavus-slot" aria-label="Interview video area">
-            {roomUrl ? (
-              <iframe
-                title="Interview"
-                src={roomUrl}
-                loading="lazy"
-                allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
-                allowFullScreen
-                onLoad={() => {
-                  // Heuristic: if we just loaded (or reloaded) and haven't received a join event yet,
-                  // briefly use prejoin sizing so the UI isn't cropped.
-                  if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); }
-                  // Give the embed a moment to postMessage; if nothing comes, assume prejoin.
-                  joinTimeoutRef.current = setTimeout(() => setPrejoin((p) => p || true), 300);
-                }}
-              />
-            ) : (
-              <div className="placeholder">
-                <div className="center-msg">Your interview room will appear here after verification.</div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Two-column: left = form, right = OTP + Start */}
-      <div className="alpha-form">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Intake form */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-            <InterviewAccessForm
-              roleToken={role_token}
-              onSubmitted={(payload) => {
-                setSubmitted(payload);
-                setVerified(false); // reset if user re-submits
-                setRoomUrl('');
-              }}
-            />
-          </div>
-
-          {/* OTP + Start */}
-          <div className="space-y-4">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-              <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
-              {!submitted ? (
-                <p className="text-sm opacity-80">
-                  Submit the form first to receive your 6-digit code by email.
-                </p>
+        {/* Hero wrapper with background/overlay handled by CSS */}
+        <div className="alpha-hero">
+          {/* Top media/room area — tall so Tavus UI isn’t cropped */}
+          <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
+            <div id="tavus-slot" className="tavus-slot" aria-label="Interview video area">
+              {roomUrl ? (
+                <iframe
+                  title="Interview"
+                  src={roomUrl}
+                  loading="lazy"
+                  allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
+                  allowFullScreen
+                  onLoad={() => {
+                    if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); }
+                    joinTimeoutRef.current = setTimeout(() => setPrejoin((p) => p || true), 300);
+                  }}
+                />
               ) : (
-                <>
-                  <OtpInline
-                    email={submitted.email}
-                    candidateId={submitted.candidate_id}
-                    roleId={submitted.role_id}
-                    onVerified={(info) => {
-                      setVerified(true);
-                      setSubmitted((s) => ({ ...(s || {}), ...info })); // keep latest ids
-                    }}
-                  />
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      disabled={!canStart || starting}
-                      onClick={startInterview}
-                      className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-black hover:opacity-90 disabled:opacity-60"
-                    >
-                      {starting ? 'Starting…' : 'Start Interview'}
-                    </button>
-                    {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
-                  </div>
-                </>
+                <div className="placeholder">
+                  <div className="center-msg">Your interview room will appear here after verification.</div>
+                </div>
               )}
             </div>
           </div>
         </div>
-      </div>
-      <style>{`
-        /* Tavus/Daily stage sizing: mobile keeps 16:9, desktop uses a fixed, shallower height */
-        .tavus-stage { width: 100%; }
-        .tavus-slot {
-          position: relative;
-          width: 100%;
-          border-radius: 16px;
-          border: 1px solid rgba(255,255,255,0.1);
-          background: rgba(0,0,0,0.3);
-          overflow: hidden;
-        }
-        /* Default (mobile-first): maintain 16:9 so small screens aren't too tall */
-        @media (max-width: 767px) {
-          .tavus-slot { aspect-ratio: 16 / 9; }
-        }
-        /* Desktop/tablet: match Tavus UI minimum so in-iframe controls aren't cropped */
-        @media (min-width: 768px) {
-          /* Constrain width and center the stage on desktop */
+
+        {/* Two-column: left = form, right = OTP + Start */}
+        <div className="alpha-form">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Intake form */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+              <InterviewAccessForm
+                roleToken={role_token}
+                onSubmitted={(payload) => {
+                  setSubmitted(payload);
+                  setVerified(false);
+                  setRoomUrl('');
+                }}
+              />
+            </div>
+
+            {/* OTP + Start */}
+            <div className="space-y-4">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
+                {!submitted ? (
+                  <p className="text-sm opacity-80">
+                    Submit the form first to receive your 6-digit code by email.
+                  </p>
+                ) : (
+                  <>
+                    <OtpInline
+                      email={submitted.email}
+                      candidateId={submitted.candidate_id}
+                      roleId={submitted.role_id}
+                      onVerified={(info) => {
+                        setVerified(true);
+                        setSubmitted((s) => ({ ...(s || {}), ...info }));
+                      }}
+                    />
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        disabled={!canStart || starting}
+                        onClick={startInterview}
+                        className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-white hover:opacity-90 disabled:opacity-60"
+                      >
+                        {starting ? 'Starting…' : 'Start Interview'}
+                      </button>
+                      {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <style>{`
           .tavus-stage { width: 100%; }
-          .tavus-stage .tavus-slot {
-            height: 520px;           /* in-call height */
-            max-width: 1200px;       /* requested width cap */
-            margin: 0 auto;          /* center horizontally */
+          .tavus-slot {
+            position: relative;
+            width: 100%;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3);
+            overflow: hidden;
           }
-          /* During prejoin, give extra vertical space to fit the full "Are you ready to join?" UI */
-          .tavus-stage.prejoin .tavus-slot {
-            height: 650px;
+          @media (max-width: 767px) {
+            .tavus-slot { aspect-ratio: 16 / 9; }
           }
-        }
-        /* Make any injected iframe/video perfectly cover the slot */
-        .tavus-slot > iframe,
-        .tavus-slot video,
-        .tavus-slot [data-daily-video],
-        .tavus-slot .daily-video {
-          position: absolute !important;
-          inset: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-          border: 0 !important;
-          display: block;
-          object-fit: contain;
-          background: #000;
-        }
-        /* Placeholder center message */
-        .tavus-slot .placeholder {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: rgba(255,255,255,0.8);
-          padding: 24px;
-          text-align: center;
-        }
-        .tavus-slot .center-msg { max-width: 520px; }
-        /* Optional: keep the slot comfortably rounded on small screens */
-        @media (max-width: 640px) {
-          .tavus-slot { border-radius: 12px; }
-        }
-      `}</style>
+          @media (min-width: 768px) {
+            .tavus-stage { width: 100%; }
+            .tavus-stage .tavus-slot {
+              height: 520px;
+              max-width: 1200px;
+              margin: 0 auto;
+            }
+            .tavus-stage.prejoin .tavus-slot { height: 650px; }
+          }
+          .tavus-slot > iframe,
+          .tavus-slot video,
+          .tavus-slot [data-daily-video],
+          .tavus-slot .daily-video {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            border: 0 !important;
+            display: block;
+            object-fit: contain;
+            background: #000;
+          }
+          .tavus-slot .placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.8);
+            padding: 24px;
+            text-align: center;
+          }
+          .tavus-slot .center-msg { max-width: 520px; }
+          @media (max-width: 640px) {
+            .tavus-slot { border-radius: 12px; }
+          }
+        `}</style>
       </div>
     </div>
   );
