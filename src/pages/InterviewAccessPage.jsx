@@ -281,8 +281,17 @@ export default function InterviewAccessPage() {
         }
         /* Desktop/tablet: match Tavus UI minimum so in-iframe controls aren't cropped */
         @media (min-width: 768px) {
-          /* Match Tavus UI minimum so in-iframe controls aren't cropped */
-          .tavus-slot { height: 520px; }
+          /* Constrain width and center the stage on desktop */
+          .tavus-stage { width: 100%; }
+          .tavus-stage .tavus-slot {
+            height: 520px;           /* in-call height */
+            max-width: 1200px;       /* requested width cap */
+            margin: 0 auto;          /* center horizontally */
+          }
+          /* During prejoin, give extra vertical space to fit the full "Are you ready to join?" UI */
+          .tavus-stage.prejoin .tavus-slot {
+            height: 650px;
+          }
         }
         /* Make any injected iframe/video perfectly cover the slot */
         .tavus-slot > iframe,
