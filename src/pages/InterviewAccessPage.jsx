@@ -115,6 +115,9 @@ export default function InterviewAccessPage() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
 
+  // pre-join sizing toggle (taller until user joins room)
+  const [prejoin, setPrejoin] = useState(false);
+
   const canStart = Boolean(verified && submitted?.candidate_id);
 
   const startInterview = useCallback(async () => {
@@ -144,6 +147,7 @@ export default function InterviewAccessPage() {
         '';
       if (url) {
         setRoomUrl(url);
+        setPrejoin(true); // use taller stage while on the pre-join screen
         // bring the room into view once it renders
         setTimeout(() => {
           try {
@@ -159,6 +163,21 @@ export default function InterviewAccessPage() {
       setStarting(false);
     }
   }, [canStart, submitted]);
+
+  React.useEffect(() => {
+    function onMessage(ev) {
+      const d = ev?.data;
+      const tag = typeof d === 'string' ? d : (d?.action || d?.event || d?.name);
+      if (tag === 'joined-meeting' || tag === 'participant-joined' || tag === 'call-joined') {
+        setPrejoin(false);
+      }
+      if (tag === 'left-meeting' || tag === 'call-left' || tag === 'meeting-ended') {
+        setPrejoin(true);
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
 
   const header = useMemo(
     () => (
@@ -177,7 +196,7 @@ export default function InterviewAccessPage() {
       {header}
 
       {/* Top media/room area — tall so Tavus UI isn’t cropped */}
-      <div className="tavus-stage" ref={roomRef}>
+      <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
         {/* Fixed 16:9 stage for Tavus/Daily room. The SDK should target #tavus-slot */}
         <div id="tavus-slot" className="tavus-slot" aria-label="Interview video area">
           {roomUrl ? (
