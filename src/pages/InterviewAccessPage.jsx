@@ -105,6 +105,7 @@ function OtpInline({ email, candidateId, roleId, onVerified }) {
 export default function InterviewAccessPage() {
   const { role_token } = useParams();
   const roomRef = useRef(null);
+  const joinTimeoutRef = useRef(null);
 
   // intake result
   const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
@@ -137,6 +138,7 @@ export default function InterviewAccessPage() {
       const data = await resp.json();
       if (!resp.ok) {
         setError(data?.error || 'Could not start interview.');
+        if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
         return;
       }
       const url =
@@ -154,8 +156,14 @@ export default function InterviewAccessPage() {
             roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           } catch {}
         }, 50);
+        // Fallback: if we never receive a join message, collapse from prejoin after a few seconds
+        if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
+        joinTimeoutRef.current = setTimeout(() => {
+          setPrejoin(false);
+        }, 4000);
       } else {
         setError('Interview room is initializing—try again in a moment.');
+        if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
       }
     } catch {
       setError('Network error starting interview.');
@@ -167,16 +175,52 @@ export default function InterviewAccessPage() {
   React.useEffect(() => {
     function onMessage(ev) {
       const d = ev?.data;
-      const tag = typeof d === 'string' ? d : (d?.action || d?.event || d?.name);
-      if (tag === 'joined-meeting' || tag === 'participant-joined' || tag === 'call-joined') {
+      // Normalize event tag from a few possible shapes
+      const tagRaw = typeof d === 'string' ? d : (d?.action || d?.event || d?.name || '');
+      const tag = String(tagRaw).toLowerCase();
+
+      // Known join/leave/prejoin signals from Daily/Tavus
+      const joinEvents = new Set([
+        'joined-meeting',
+        'participant-joined',
+        'call-joined',
+        'meeting-joined',
+        'room-joined'
+      ]);
+      const leaveEvents = new Set([
+        'left-meeting',
+        'call-left',
+        'meeting-ended',
+        'meeting-left',
+        'room-left',
+        'room-deleted'
+      ]);
+      const prejoinEvents = new Set([
+        'prejoin',
+        'prejoin-screen',
+        'waiting-room',
+        'lobby-shown'
+      ]);
+
+      if (joinEvents.has(tag)) {
+        if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
         setPrejoin(false);
+        return;
       }
-      if (tag === 'left-meeting' || tag === 'call-left' || tag === 'meeting-ended') {
+      if (leaveEvents.has(tag)) {
         setPrejoin(true);
+        return;
+      }
+      if (prejoinEvents.has(tag)) {
+        setPrejoin(true);
+        return;
       }
     }
     window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
+    };
   }, []);
 
   const header = useMemo(
@@ -195,72 +239,87 @@ export default function InterviewAccessPage() {
     <div className="p-4 max-w-6xl mx-auto space-y-6">
       {header}
 
-      {/* Top media/room area — tall so Tavus UI isn’t cropped */}
-      <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
-        {/* Fixed 16:9 stage for Tavus/Daily room. The SDK should target #tavus-slot */}
-        <div id="tavus-slot" className="tavus-slot" aria-label="Interview video area">
-          {roomUrl ? (
-            <iframe
-              title="Interview"
-              src={roomUrl}
-              loading="lazy"
-              allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
-              allowFullScreen
-            />
-          ) : (
-            <div className="placeholder">
-              <div className="center-msg">Your interview room will appear here after verification.</div>
-            </div>
-          )}
+      {/* Hero wrapper with decorative glyphs behind the Tavus stage */}
+      <div className="alpha-hero">
+        <div className="alpha-glyph alpha-glyph--x" />
+        <div className="alpha-glyph alpha-glyph--ring" />
+
+        {/* Top media/room area — tall so Tavus UI isn’t cropped */}
+        <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
+          {/* Fixed 16:9 stage for Tavus/Daily room. The SDK should target #tavus-slot */}
+          <div id="tavus-slot" className="tavus-slot" aria-label="Interview video area">
+            {roomUrl ? (
+              <iframe
+                title="Interview"
+                src={roomUrl}
+                loading="lazy"
+                allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
+                allowFullScreen
+                onLoad={() => {
+                  // Heuristic: if we just loaded (or reloaded) and haven't received a join event yet,
+                  // briefly use prejoin sizing so the UI isn't cropped.
+                  if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); }
+                  // Give the embed a moment to postMessage; if nothing comes, assume prejoin.
+                  joinTimeoutRef.current = setTimeout(() => setPrejoin((p) => p || true), 300);
+                }}
+              />
+            ) : (
+              <div className="placeholder">
+                <div className="center-msg">Your interview room will appear here after verification.</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Two-column: left = form, right = OTP + Start */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Intake form */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <InterviewAccessForm
-            roleToken={role_token}
-            onSubmitted={(payload) => {
-              setSubmitted(payload);
-              setVerified(false); // reset if user re-submits
-              setRoomUrl('');
-            }}
-          />
-        </div>
-
-        {/* OTP + Start */}
-        <div className="space-y-4">
+      <div className="alpha-form">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Intake form */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-            <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
-            {!submitted ? (
-              <p className="text-sm opacity-80">
-                Submit the form first to receive your 6-digit code by email.
-              </p>
-            ) : (
-              <>
-                <OtpInline
-                  email={submitted.email}
-                  candidateId={submitted.candidate_id}
-                  roleId={submitted.role_id}
-                  onVerified={(info) => {
-                    setVerified(true);
-                    setSubmitted((s) => ({ ...(s || {}), ...info })); // keep latest ids
-                  }}
-                />
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    disabled={!canStart || starting}
-                    onClick={startInterview}
-                    className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-black hover:opacity-90 disabled:opacity-60"
-                  >
-                    {starting ? 'Starting…' : 'Start Interview'}
-                  </button>
-                  {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
-                </div>
-              </>
-            )}
+            <InterviewAccessForm
+              roleToken={role_token}
+              onSubmitted={(payload) => {
+                setSubmitted(payload);
+                setVerified(false); // reset if user re-submits
+                setRoomUrl('');
+              }}
+            />
+          </div>
+
+          {/* OTP + Start */}
+          <div className="space-y-4">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+              <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
+              {!submitted ? (
+                <p className="text-sm opacity-80">
+                  Submit the form first to receive your 6-digit code by email.
+                </p>
+              ) : (
+                <>
+                  <OtpInline
+                    email={submitted.email}
+                    candidateId={submitted.candidate_id}
+                    roleId={submitted.role_id}
+                    onVerified={(info) => {
+                      setVerified(true);
+                      setSubmitted((s) => ({ ...(s || {}), ...info })); // keep latest ids
+                    }}
+                  />
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      disabled={!canStart || starting}
+                      onClick={startInterview}
+                      className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-black hover:opacity-90 disabled:opacity-60"
+                    >
+                      {starting ? 'Starting…' : 'Start Interview'}
+                    </button>
+                    {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
