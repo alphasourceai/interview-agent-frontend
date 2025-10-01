@@ -605,7 +605,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 /* Pre-join: Daily/Tavus shows a taller card; relax aspect ratio so nothing crops */
 .tavus-stage.prejoin {
   aspect-ratio: auto !important;  /* allow intrinsic height */
-  height: 650px;                  /* accommodates pre-join header + device tray */
+  height: 690px;                  /* accommodates pre-join header + device tray (raised +40px) */
   max-height: none !important;    /* override the 16:9 cap while pre-join */
 }
 
