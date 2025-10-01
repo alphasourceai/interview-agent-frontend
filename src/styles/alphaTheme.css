@@ -593,9 +593,9 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   position: relative;
   width: 100%;
   max-width: 1200px;
-  aspect-ratio: 16 / 9;
-  max-height: 675px;
-  height: 520px;
+  aspect-ratio: auto !important;   /* fixed size across all states */
+  height: 690px;                   /* constant height to fully show pre-join UI */
+  max-height: none !important;     /* prevent 16:9 clamping */
   margin: 24px auto;
   border-radius: 12px;
   overflow: hidden;
@@ -603,12 +603,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   background: var(--alpha-bg);
 }
 
-/* Pre-join: Daily/Tavus shows a taller card; relax aspect ratio so nothing crops */
-.tavus-stage.prejoin {
-  aspect-ratio: auto !important;  /* allow intrinsic height */
-  height: 690px;                  /* accommodates pre-join header + device tray (raised +40px) */
-  max-height: none !important;    /* override the 16:9 cap while pre-join */
-}
+
 
 /* Slot that Tavus/Daily mounts into */
 .tavus-slot {
