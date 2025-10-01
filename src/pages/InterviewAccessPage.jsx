@@ -236,7 +236,8 @@ export default function InterviewAccessPage() {
   );
 
   return (
-    <div className="p-4 max-w-6xl mx-auto space-y-6">
+    <div className="alpha-theme">
+      <div className="p-4 max-w-6xl mx-auto space-y-6">
       {header}
 
       {/* Hero wrapper with decorative glyphs behind the Tavus stage */}
@@ -383,6 +384,7 @@ export default function InterviewAccessPage() {
           .tavus-slot { border-radius: 12px; }
         }
       `}</style>
+      </div>
     </div>
   );
 }
