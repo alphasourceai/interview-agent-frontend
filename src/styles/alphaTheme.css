@@ -578,14 +578,23 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .interview-layout {
   display: flex;
   justify-content: center;
+  align-items: center;       /* NEW: vertical centering */
+  padding: 24px 0;           /* keep breathing room around the stage */
+  gap: 0;
+}
+
+@media (min-height: 750px) {
+  .interview-layout {
+    min-height: calc(100vh - 200px); /* center between header/footer on desktops */
+  }
 }
 
 .tavus-stage {
   position: relative;
-  /* target the “golden water” proportions */
-  width: min(58vw, 960px);
-  aspect-ratio: 16 / 9;          /* ⟵ this guarantees the height */
-  max-height: 560px;              /* ~980×553 reference */
+  width: 100%;
+  max-width: 1200px;
+  aspect-ratio: 16 / 9;
+  max-height: 675px;
   margin: 24px auto;
   border-radius: 12px;
   overflow: hidden;
