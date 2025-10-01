@@ -2,7 +2,7 @@
 // One-page intake → OTP → Start Interview (embedded tall)
 // Uses VITE_BACKEND_URL for API calls
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import InterviewAccessForm from '../components/InterviewAccessForm';
 
@@ -13,16 +13,16 @@ function joinUrl(base, path) {
   return base + path;
 }
 
-const BK = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL)
-  ? String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '')
-  : '';
+const BK =
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL
+    ? String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '')
+    : '';
 
 function OtpInline({ email, candidateId, roleId, onVerified }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
-  const inputRef = useRef(null);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -77,7 +77,6 @@ function OtpInline({ email, candidateId, roleId, onVerified }) {
         <div>
           <label className="block text-sm mb-1">6-digit code</label>
           <input
-            ref={inputRef}
             type="text"
             inputMode="numeric"
             maxLength={6}
@@ -93,7 +92,7 @@ function OtpInline({ email, candidateId, roleId, onVerified }) {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-white hover:opacity-90 disabled:opacity-60"
+          className="w-full rounded-full px-5 py-3 font-semibold bg-[#AD8BF7] text-white hover:bg-[#854DFF] disabled:opacity-60"
         >
           {busy ? 'Verifying…' : 'Verify'}
         </button>
@@ -107,7 +106,7 @@ export default function InterviewAccessPage() {
   const roomRef = useRef(null);
   const joinTimeoutRef = useRef(null);
 
-  // intake result
+  // Step 1 result
   const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
   const [verified, setVerified] = useState(false);
 
@@ -141,24 +140,15 @@ export default function InterviewAccessPage() {
         if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
         return;
       }
-      const url =
-        data?.conversation_url ||
-        data?.video_url ||
-        data?.redirect_url ||
-        data?.url ||
-        '';
+      const url = data?.conversation_url || data?.video_url || data?.redirect_url || data?.url || '';
       if (url) {
         setRoomUrl(url);
         setPrejoin(true); // use taller stage while on the pre-join screen
         setTimeout(() => {
-          try {
-            roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } catch {}
+          try { roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
         }, 50);
         if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
-        joinTimeoutRef.current = setTimeout(() => {
-          setPrejoin(false);
-        }, 4000);
+        joinTimeoutRef.current = setTimeout(() => setPrejoin(false), 4000);
       } else {
         setError('Interview room is initializing—try again in a moment.');
         if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
@@ -170,23 +160,18 @@ export default function InterviewAccessPage() {
     }
   }, [canStart, submitted]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     function onMessage(ev) {
       const d = ev?.data;
       const tagRaw = typeof d === 'string' ? d : (d?.action || d?.event || d?.name || '');
       const tag = String(tagRaw).toLowerCase();
-
       const joinEvents = new Set(['joined-meeting','participant-joined','call-joined','meeting-joined','room-joined']);
       const leaveEvents = new Set(['left-meeting','call-left','meeting-ended','meeting-left','room-left','room-deleted']);
       const prejoinEvents = new Set(['prejoin','prejoin-screen','waiting-room','lobby-shown']);
 
-      if (joinEvents.has(tag)) {
-        if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
-        setPrejoin(false);
-        return;
-      }
-      if (leaveEvents.has(tag)) { setPrejoin(true); return; }
-      if (prejoinEvents.has(tag)) { setPrejoin(true); return; }
+      if (joinEvents.has(tag)) { if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current); setPrejoin(false); }
+      if (leaveEvents.has(tag)) { setPrejoin(true); }
+      if (prejoinEvents.has(tag)) { setPrejoin(true); }
     }
     window.addEventListener('message', onMessage);
     return () => {
@@ -195,12 +180,9 @@ export default function InterviewAccessPage() {
     };
   }, []);
 
+  // Keep top spacing but hide the original title/subcopy entirely
   const header = useMemo(
-    () => (
-      <div className="max-w-6xl mx-auto w-full" aria-hidden="true">
-        <div style={{ height: 56 }} />
-      </div>
-    ),
+    () => (<div className="max-w-6xl mx-auto w-full" aria-hidden="true"><div style={{ height: 56 }} /></div>),
     []
   );
 
@@ -209,9 +191,8 @@ export default function InterviewAccessPage() {
       <div className="p-4 max-w-6xl mx-auto space-y-6">
         {header}
 
-        {/* Hero wrapper with background/overlay handled by CSS */}
+        {/* Hero wrapper: hallway.png behind, stage centered inside */}
         <div className="alpha-hero">
-          {/* Top media/room area — tall so Tavus UI isn’t cropped */}
           <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
             <div id="tavus-slot" className="tavus-slot" aria-label="Interview video area">
               {roomUrl ? (
@@ -222,7 +203,7 @@ export default function InterviewAccessPage() {
                   allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
                   allowFullScreen
                   onLoad={() => {
-                    if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); }
+                    if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
                     joinTimeoutRef.current = setTimeout(() => setPrejoin((p) => p || true), 300);
                   }}
                 />
@@ -235,10 +216,9 @@ export default function InterviewAccessPage() {
           </div>
         </div>
 
-        {/* Two-column: left = form, right = OTP + Start */}
+        {/* Two-column: left = form, right = Step 2 (only after submit) */}
         <div className="alpha-form">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Intake form */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
               <InterviewAccessForm
                 roleToken={role_token}
@@ -250,43 +230,37 @@ export default function InterviewAccessPage() {
               />
             </div>
 
-            {/* OTP + Start */}
-            <div className="space-y-4">
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-                <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
-                {!submitted ? (
-                  <p className="text-sm opacity-80">
-                    Submit the form first to receive your 6-digit code by email.
-                  </p>
-                ) : (
-                  <>
-                    <OtpInline
-                      email={submitted.email}
-                      candidateId={submitted.candidate_id}
-                      roleId={submitted.role_id}
-                      onVerified={(info) => {
-                        setVerified(true);
-                        setSubmitted((s) => ({ ...(s || {}), ...info }));
-                      }}
-                    />
-                    <div className="mt-4">
-                      <button
-                        type="button"
-                        disabled={!canStart || starting}
-                        onClick={startInterview}
-                        className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-white hover:opacity-90 disabled:opacity-60"
-                      >
-                        {starting ? 'Starting…' : 'Start Interview'}
-                      </button>
-                      {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
-                    </div>
-                  </>
-                )}
+            {submitted && (
+              <div className="space-y-4">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                  <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
+                  <OtpInline
+                    email={submitted.email}
+                    candidateId={submitted.candidate_id}
+                    roleId={submitted.role_id}
+                    onVerified={(info) => {
+                      setVerified(true);
+                      setSubmitted((s) => ({ ...(s || {}), ...info }));
+                    }}
+                  />
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      disabled={!canStart || starting}
+                      onClick={startInterview}
+                      className="w-full rounded-full px-6 py-4 text-lg font-semibold bg-[#AD8BF7] text-white hover:bg-[#854DFF] disabled:opacity-60"
+                    >
+                      {starting ? 'Starting…' : 'Start Interview'}
+                    </button>
+                    {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
+        {/* Page-local CSS that ONLY controls the Tavus slot behavior */}
         <style>{`
           .tavus-stage { width: 100%; }
           .tavus-slot {
@@ -296,19 +270,17 @@ export default function InterviewAccessPage() {
             border: 1px solid rgba(255,255,255,0.1);
             background: rgba(0,0,0,0.3);
             overflow: hidden;
+            max-width: 1200px;
+            margin: 0 auto;
           }
-          @media (max-width: 767px) {
-            .tavus-slot { aspect-ratio: 16 / 9; }
-          }
+          /* mobile: keep 16:9 */
+          @media (max-width: 767px) { .tavus-slot { aspect-ratio: 16/9; } }
+          /* desktop: in-call vs prejoin heights (these are the ones we agreed on) */
           @media (min-width: 768px) {
-            .tavus-stage { width: 100%; }
-            .tavus-stage .tavus-slot {
-              height: 520px;
-              max-width: 1200px;
-              margin: 0 auto;
-            }
+            .tavus-stage .tavus-slot { height: 520px; }
             .tavus-stage.prejoin .tavus-slot { height: 650px; }
           }
+
           .tavus-slot > iframe,
           .tavus-slot video,
           .tavus-slot [data-daily-video],
@@ -322,20 +294,14 @@ export default function InterviewAccessPage() {
             object-fit: contain;
             background: #000;
           }
+
           .tavus-slot .placeholder {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: rgba(255,255,255,0.8);
-            padding: 24px;
-            text-align: center;
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,0.8); padding: 24px; text-align: center;
           }
           .tavus-slot .center-msg { max-width: 520px; }
-          @media (max-width: 640px) {
-            .tavus-slot { border-radius: 12px; }
-          }
+          @media (max-width: 640px) { .tavus-slot { border-radius: 12px; } }
         `}</style>
       </div>
     </div>
