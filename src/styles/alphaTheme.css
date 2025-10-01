@@ -583,14 +583,14 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .tavus-stage {
   position: relative;
   /* target the “golden water” proportions */
-  width: min(62vw, 980px);
+  width: min(58vw, 960px);
   aspect-ratio: 16 / 9;          /* ⟵ this guarantees the height */
   max-height: 560px;              /* ~980×553 reference */
   margin: 24px auto;
   border-radius: 12px;
   overflow: hidden;
   isolation: isolate;
-  background: #000;
+  background: var(--alpha-bg);
 }
 
 /* Slot that Tavus/Daily mounts into */
