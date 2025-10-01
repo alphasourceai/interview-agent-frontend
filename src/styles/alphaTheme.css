@@ -595,6 +595,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   max-width: 1200px;
   aspect-ratio: 16 / 9;
   max-height: 675px;
+  height: 520px;
   margin: 24px auto;
   border-radius: 12px;
   overflow: hidden;
@@ -627,6 +628,7 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   height: 100% !important;
   border: 0 !important;
   display: block;
+  overflow: hidden !important;
   object-fit: contain;           /* show full UI without cropping */
 }
 
