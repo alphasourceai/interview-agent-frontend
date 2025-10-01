@@ -647,3 +647,132 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 @media (max-width: 640px) {
   .tavus-stage { width: 92vw; max-height: 56vw; border-radius: 8px; }
 }
+
+/* === Hero (hallway.jpg) backdrop + glyphs =============================== */
+/* This wraps the Tavus stage and provides the blurred hallway image with a
+   dark overlay, plus the decorative glyphs. It is self-contained so it
+   doesn't affect the rest of the page or Wix shell. */
+.alpha-hero {
+  position: relative;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 48px 24px;                 /* breathing room within hero */
+  border-radius: 16px;
+  overflow: hidden;                    /* clip bg & glyphs to hero bounds */
+  isolation: isolate;                  /* keep overlay layers local */
+}
+.alpha-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/hallway.jpg") center/cover no-repeat;
+  filter: blur(7px);
+  transform: scale(1.06);              /* avoid blur edge clipping */
+  z-index: 0;
+}
+.alpha-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 21, 81, 0.72);   /* --alpha-bg with transparency */
+  z-index: 1;
+}
+/* Ensure hero children paint above the bg/overlay */
+.alpha-hero > * { position: relative; z-index: 2; }
+
+/* Center the Tavus stage inside the hero and remove outer margins here */
+.alpha-hero .tavus-stage {
+  margin: 0 auto;
+}
+
+/* Decorative glyphs inside the hero */
+.alpha-hero .alpha-glyph {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+.alpha-hero .alpha-glyph--x {
+  top: 20px;
+  right: 28px;
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--alpha-primary);  /* lilac X made from borders */
+  border-left: none;
+  border-top: none;
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 3px rgba(173, 139, 247, 0.15);
+}
+.alpha-hero .alpha-glyph--ring {
+  left: 40px;
+  bottom: 40px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid #fff;                 /* white ring */
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.15);
+}
+
+/* Spacing below hero before the form area */
+.alpha-hero + .alpha-form {
+  margin-top: 56px;
+}
+
+/* Form container width and spacing (used for Step 1 + Step 2) */
+.alpha-form {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+
+/* Inputs & buttons sized to Wix reference */
+.alpha-form .alpha-input,
+.alpha-form input[type="text"],
+.alpha-form input[type="email"],
+.alpha-form input[type="tel"],
+.alpha-form input[type="file"],
+.alpha-form select,
+.alpha-form textarea {
+  height: 52px;
+  border-radius: var(--alpha-radius);
+  background: var(--alpha-surface);
+  border: 1px solid var(--alpha-border);
+  color: var(--alpha-text);
+  padding: 10px 12px;
+}
+
+.alpha-form .btn-primary,
+.alpha-form button[type="submit"],
+.alpha-form .btn {
+  height: 56px;
+  padding: 0 22px;
+  border-radius: 28px;
+  font-weight: 700;
+  background: var(--alpha-primary);
+  border: 1px solid var(--alpha-primary);
+  color: #fff;
+}
+.alpha-form .btn-primary:hover,
+.alpha-form button[type="submit"]:hover,
+.alpha-form .btn:hover {
+  background: var(--alpha-primary-strong);
+  border-color: var(--alpha-primary-strong);
+}
+
+/* Make sure the Tavus slot still enforces full containment */
+.alpha-hero .tavus-slot > iframe,
+.alpha-hero .tavus-slot video,
+.alpha-hero .tavus-slot [data-daily-video],
+.alpha-hero .tavus-slot .daily-video {
+  object-fit: contain !important;
+}
+
+/* Responsive tune-downs */
+@media (max-width: 900px) {
+  .alpha-hero { padding: 32px 16px; }
+  .alpha-hero .alpha-glyph--x { top: 14px; right: 18px; transform: rotate(45deg) scale(0.9); }
+  .alpha-hero .alpha-glyph--ring { left: 22px; bottom: 22px; transform: scale(0.85); }
+}
+@media (max-width: 540px) {
+  .alpha-hero { padding: 20px 12px; border-radius: 12px; }
+  .alpha-hero .alpha-glyph { display: none; } /* hide glyphs on very small screens */
+}
