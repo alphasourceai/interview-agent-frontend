@@ -82,7 +82,6 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
         />
       </div>
 
-      {/* error/success under the field on its own line */}
       {(err || msg) && (
         <div className="mb-2">
           {err && <p className="text-red-300 text-sm">{err}</p>}
@@ -90,7 +89,6 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
         </div>
       )}
 
-      {/* Verify button with inline 'Verified!' to the right when present */}
       <div className="flex items-center gap-3">
         <button type="submit" disabled={busy} className="btn-lg">
           {busy ? 'Verifying…' : 'Verify'}
