@@ -108,7 +108,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
 
   return (
     <form onSubmit={onSubmit} className="alpha-form-grid gap-y-4">
-      {/* Row 1: First / Last */}
+      {/* First / Last */}
       <div>
         <label className="alpha-label">First name</label>
         <input
@@ -132,8 +132,8 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         />
       </div>
 
-      {/* Row 2: Email (right column, 1.5fr) / Phone (right column) */}
-      <div className="col-span-2 sm:col-start-2">
+      {/* Email (right column) */}
+      <div>
         <label className="alpha-label">Email</label>
         <input
           type="email"
@@ -144,7 +144,9 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
           className="alpha-input w-full"
         />
       </div>
-      <div className="col-span-2 sm:col-start-2">
+
+      {/* Phone (right column) */}
+      <div>
         <label className="alpha-label">Phone</label>
         <input
           type="tel"
@@ -161,18 +163,12 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         />
       </div>
 
-      {/* Row 3: Upload Resume (left column), no label text above */}
+      {/* Upload Resume (left column), no label */}
       <div>
-        <button
-          type="button"
-          onClick={onPickResume}
-          className="btn-lg"
-        >
+        <button type="button" onClick={onPickResume} className="btn-lg">
           + Add Resume
         </button>
-        {resumeLabel && (
-          <div className="mt-1 text-xs opacity-80">{resumeLabel}</div>
-        )}
+        {resumeLabel && <div className="mt-1 text-xs opacity-80">{resumeLabel}</div>}
         <input
           ref={fileInputRef}
           type="file"
@@ -183,8 +179,8 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         />
       </div>
 
-      {/* Row 3: Submit (right aligned with Verify in Step 2) */}
-      <div className="col-span-2 sm:col-start-2 flex justify-end">
+      {/* Submit (right aligned within column 2) */}
+      <div className="flex justify-end">
         <button
           type="submit"
           disabled={submitting || !form.resume}
@@ -194,7 +190,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         </button>
       </div>
 
-      {/* Messages under grid */}
+      {/* Messages (full width) */}
       <div className="alpha-col-span-2">
         {error && <p className="text-red-300 text-sm" role="alert">{error}</p>}
         {message && <p className="text-green-300 text-sm" role="status">{message}</p>}
