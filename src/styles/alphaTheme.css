@@ -1,6 +1,91 @@
 /* --- AlphaSource theme (Wix-matched) ------------------------------------- */
 @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap');
 
+/* alphaTheme.css (appenditions/overrides) */
+
+/* Full-bleed opaque hallway hero */
+.alpha-hero.fullbleed{
+  position: relative;
+  width: 100vw;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  background: url("/hallway.png") center/cover no-repeat; /* opaque */
+  padding: 150px 24px; /* ~25% taller than before; centers Tavus nicely */
+}
+
+/* Keep children constrained */
+.alpha-hero.fullbleed .tavus-stage{ max-width: 1400px; margin: 0 auto; }
+
+/* Same two-column grid everywhere (1fr | 1.5fr) */
+.alpha-form-grid{
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: var(--alpha-gap);
+}
+@media (max-width: 640px){
+  .alpha-form-grid{ grid-template-columns: 1fr; }
+}
+
+/* Labels + inputs */
+.alpha-label{
+  display:block;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+.alpha-input{
+  height: 52px;
+  border-radius: var(--alpha-radius);
+  background: var(--alpha-surface);
+  border: 1px solid var(--alpha-border);
+  color: var(--alpha-text);
+  padding: 10px 12px;
+  width: 100%;
+}
+
+/* Buttons */
+.btn-lg{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height: 56px;
+  padding: 0 22px;
+  border-radius: 28px;
+  font-weight: 700;
+  background: var(--alpha-primary);
+  color: #fff;
+  border: 1px solid var(--alpha-primary);
+  transition: filter .15s ease, background .15s ease, border-color .15s ease;
+}
+.btn-lg:hover{ background: var(--alpha-primary-strong); border-color: var(--alpha-primary-strong); }
+
+.btn-xl{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height: 64px;
+  padding: 0 28px;
+  border-radius: 32px;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+/* White with lilac outline/text (Start Interview) */
+.btn-outline-lilac{
+  background: #fff;
+  color: var(--alpha-primary);
+  border: 2px solid var(--alpha-primary);
+}
+.btn-outline-lilac:hover{
+  color: #fff;
+  background: var(--alpha-primary);
+  border-color: var(--alpha-primary);
+}
+
+/* Form container spacing */
+.alpha-form{ padding: 0 24px 48px; }
+
+/* (pre-existing theme rules stay as-is below this line) */
+
 .alpha-theme{
   --alpha-bg:#061551;
   --alpha-surface:rgba(255,255,255,0.06);

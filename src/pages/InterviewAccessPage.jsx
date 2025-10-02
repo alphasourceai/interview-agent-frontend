@@ -2,7 +2,7 @@
 // One-page intake → OTP → Start Interview (embedded tall)
 // Uses VITE_BACKEND_URL for API calls
 
-import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import InterviewAccessForm from '../components/InterviewAccessForm';
 
@@ -13,12 +13,11 @@ function joinUrl(base, path) {
   return base + path;
 }
 
-const BK =
-  typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL
-    ? String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '')
-    : '';
+const BK = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL)
+  ? String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '')
+  : '';
 
-function OtpInline({ email, candidateId, roleId, onVerified }) {
+function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -45,7 +44,9 @@ function OtpInline({ email, candidateId, roleId, onVerified }) {
       });
       const data = await resp.json();
       if (!resp.ok) {
-        setErr(data?.error || 'Verification failed.');
+        const m = data?.error || 'Verification failed.';
+        setErr(m);
+        onError?.(m);
         return;
       }
       setMsg('Verified! You can start your interview.');
@@ -56,48 +57,53 @@ function OtpInline({ email, candidateId, roleId, onVerified }) {
       });
     } catch {
       setErr('Network error verifying code.');
+      onError?.('Network error verifying code.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-      <h3 className="text-base font-semibold mb-3">Enter the code we emailed you</h3>
-      <form onSubmit={submit} className="space-y-3">
-        <div>
-          <label className="block text-sm mb-1">Email</label>
-          <input
-            type="email"
-            value={email}
-            readOnly
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2"
-          />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">6-digit code</label>
-          <input
-            type="text"
-            inputMode="numeric"
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 tracking-widest"
-            placeholder="••••••"
-            required
-          />
-        </div>
+    <form onSubmit={submit} className="alpha-form-grid gap-y-3">
+      {/* Email (read-only) in right column to align with Step 1 */}
+      <div className="col-span-2 sm:col-start-2">
+        <label className="alpha-label">Email</label>
+        <input
+          type="email"
+          value={email}
+          readOnly
+          className="alpha-input w-full"
+        />
+      </div>
+
+      {/* 6-digit code (right column) */}
+      <div className="col-span-2 sm:col-start-2">
+        <label className="alpha-label">6-digit code</label>
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+          className="alpha-input w-full tracking-widest"
+          placeholder="••••••"
+          required
+        />
+      </div>
+
+      {/* Error/Success */}
+      <div className="col-span-2 sm:col-start-2">
         {err && <p className="text-red-300 text-sm">{err}</p>}
         {msg && <p className="text-green-300 text-sm">{msg}</p>}
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full rounded-full px-5 py-3 font-semibold bg-[#AD8BF7] text-white hover:bg-[#854DFF] disabled:opacity-60"
-        >
+      </div>
+
+      {/* Verify button aligned right with Submit */}
+      <div className="col-span-2 sm:col-start-2 flex justify-end">
+        <button type="submit" disabled={busy} className="btn-lg">
           {busy ? 'Verifying…' : 'Verify'}
         </button>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 }
 
@@ -106,16 +112,13 @@ export default function InterviewAccessPage() {
   const roomRef = useRef(null);
   const joinTimeoutRef = useRef(null);
 
-  // Step 1 result
   const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
   const [verified, setVerified] = useState(false);
 
-  // interview room
   const [roomUrl, setRoomUrl] = useState('');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
 
-  // pre-join sizing toggle (taller until user joins room)
   const [prejoin, setPrejoin] = useState(false);
 
   const canStart = Boolean(verified && submitted?.candidate_id);
@@ -140,10 +143,15 @@ export default function InterviewAccessPage() {
         if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
         return;
       }
-      const url = data?.conversation_url || data?.video_url || data?.redirect_url || data?.url || '';
+      const url =
+        data?.conversation_url ||
+        data?.video_url ||
+        data?.redirect_url ||
+        data?.url ||
+        '';
       if (url) {
         setRoomUrl(url);
-        setPrejoin(true); // use taller stage while on the pre-join screen
+        setPrejoin(true);
         setTimeout(() => {
           try { roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
         }, 50);
@@ -160,18 +168,23 @@ export default function InterviewAccessPage() {
     }
   }, [canStart, submitted]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     function onMessage(ev) {
       const d = ev?.data;
       const tagRaw = typeof d === 'string' ? d : (d?.action || d?.event || d?.name || '');
       const tag = String(tagRaw).toLowerCase();
+
       const joinEvents = new Set(['joined-meeting','participant-joined','call-joined','meeting-joined','room-joined']);
       const leaveEvents = new Set(['left-meeting','call-left','meeting-ended','meeting-left','room-left','room-deleted']);
       const prejoinEvents = new Set(['prejoin','prejoin-screen','waiting-room','lobby-shown']);
 
-      if (joinEvents.has(tag)) { if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current); setPrejoin(false); }
-      if (leaveEvents.has(tag)) { setPrejoin(true); }
-      if (prejoinEvents.has(tag)) { setPrejoin(true); }
+      if (joinEvents.has(tag)) {
+        if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
+        setPrejoin(false);
+        return;
+      }
+      if (leaveEvents.has(tag)) { setPrejoin(true); return; }
+      if (prejoinEvents.has(tag)) { setPrejoin(true); return; }
     }
     window.addEventListener('message', onMessage);
     return () => {
@@ -180,21 +193,31 @@ export default function InterviewAccessPage() {
     };
   }, []);
 
-  // Keep top spacing but hide the original title/subcopy entirely
+  // keep top spacing, but no text
   const header = useMemo(
-    () => (<div className="max-w-6xl mx-auto w-full" aria-hidden="true"><div style={{ height: 56 }} /></div>),
+    () => (
+      <div className="max-w-6xl mx-auto w-full" aria-hidden="true">
+        <div style={{ height: 56 }} />
+      </div>
+    ),
     []
   );
 
+  const noRoom = !roomUrl;
+
   return (
     <div className="alpha-theme">
-      <div className="p-4 max-w-6xl mx-auto space-y-6">
+      <div className="space-y-6">
         {header}
 
-        {/* Hero wrapper: hallway.png behind, stage centered inside */}
-        <div className="alpha-hero">
+        {/* Full-bleed, opaque hallway hero */}
+        <div className="alpha-hero fullbleed">
           <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
-            <div id="tavus-slot" className="tavus-slot" aria-label="Interview video area">
+            <div
+              id="tavus-slot"
+              className={`tavus-slot${noRoom ? ' no-room' : ''}`}
+              aria-label="Interview video area"
+            >
               {roomUrl ? (
                 <iframe
                   title="Interview"
@@ -203,83 +226,105 @@ export default function InterviewAccessPage() {
                   allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
                   allowFullScreen
                   onLoad={() => {
-                    if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
+                    if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); }
                     joinTimeoutRef.current = setTimeout(() => setPrejoin((p) => p || true), 300);
                   }}
                 />
               ) : (
                 <div className="placeholder">
-                  <div className="center-msg">Your interview room will appear here after verification.</div>
+                  <div className="center-msg">
+                    Your interview room will appear here after verification.
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Two-column: left = form, right = Step 2 (only after submit) */}
+        {/* Same grid for Step 1 + Step 2 */}
         <div className="alpha-form">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-              <InterviewAccessForm
-                roleToken={role_token}
-                onSubmitted={(payload) => {
-                  setSubmitted(payload);
-                  setVerified(false);
-                  setRoomUrl('');
-                }}
-              />
-            </div>
-
-            {submitted && (
-              <div className="space-y-4">
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-                  <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
-                  <OtpInline
-                    email={submitted.email}
-                    candidateId={submitted.candidate_id}
-                    roleId={submitted.role_id}
-                    onVerified={(info) => {
-                      setVerified(true);
-                      setSubmitted((s) => ({ ...(s || {}), ...info }));
-                    }}
-                  />
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      disabled={!canStart || starting}
-                      onClick={startInterview}
-                      className="w-full rounded-full px-6 py-4 text-lg font-semibold bg-[#AD8BF7] text-white hover:bg-[#854DFF] disabled:opacity-60"
-                    >
-                      {starting ? 'Starting…' : 'Start Interview'}
-                    </button>
-                    {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 gap-6 max-w-[1200px] mx-auto">
+            {/* Card-like surface just to match the theme (optional) */}
+            <div className="space-y-8">
+              {/* STEP 1 */}
+              <div className="alpha-form-grid">
+                <InterviewAccessForm
+                  roleToken={role_token}
+                  onSubmitted={(payload) => {
+                    setSubmitted(payload);
+                    setVerified(false);
+                    setRoomUrl('');
+                  }}
+                />
               </div>
-            )}
+
+              {/* STEP 2 (only shows after Step 1 submitted) */}
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold">Step 2 — Verify & Start</h3>
+                {!submitted ? (
+                  <p className="text-sm opacity-80">
+                    Submit the form first to receive your 6-digit code by email.
+                  </p>
+                ) : (
+                  <>
+                    <OtpInline
+                      email={submitted.email}
+                      candidateId={submitted.candidate_id}
+                      roleId={submitted.role_id}
+                      onVerified={(info) => {
+                        setVerified(true);
+                        setSubmitted((s) => ({ ...(s || {}), ...info }));
+                      }}
+                      onError={() => setVerified(false)}
+                    />
+
+                    {/* Start Interview appears ONLY after verified */}
+                    {verified && (
+                      <div className="mt-2 flex justify-center">
+                        <button
+                          type="button"
+                          disabled={!canStart || starting}
+                          onClick={startInterview}
+                          className="btn-xl btn-outline-lilac"
+                        >
+                          {starting ? 'Starting…' : 'Start Interview'}
+                        </button>
+                      </div>
+                    )}
+                    {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Page-local CSS that ONLY controls the Tavus slot behavior */}
+        {/* local CSS specific to this page */}
         <style>{`
+          /* --- Tavus/Daily container --- */
           .tavus-stage { width: 100%; }
           .tavus-slot {
             position: relative;
             width: 100%;
             border-radius: 16px;
             border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.85);
             overflow: hidden;
-            max-width: 1200px;
             margin: 0 auto;
+            max-width: 1200px;
           }
-          /* mobile: keep 16:9 */
-          @media (max-width: 767px) { .tavus-slot { aspect-ratio: 16/9; } }
-          /* desktop: in-call vs prejoin heights (these are the ones we agreed on) */
+
+          /* joined/in-call */
           @media (min-width: 768px) {
             .tavus-stage .tavus-slot { height: 520px; }
             .tavus-stage.prejoin .tavus-slot { height: 650px; }
           }
+          @media (max-width: 767px) {
+            .tavus-slot { aspect-ratio: 16 / 9; }
+          }
+
+          /* placeholder = fixed 1200×690 until roomUrl exists */
+          .tavus-slot.no-room { height: 690px !important; }
 
           .tavus-slot > iframe,
           .tavus-slot video,
@@ -294,14 +339,12 @@ export default function InterviewAccessPage() {
             object-fit: contain;
             background: #000;
           }
-
           .tavus-slot .placeholder {
             position: absolute; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            color: rgba(255,255,255,0.8); padding: 24px; text-align: center;
+            display:flex; align-items:center; justify-content:center;
+            color: rgba(255,255,255,0.85); padding:24px; text-align:center;
           }
           .tavus-slot .center-msg { max-width: 520px; }
-          @media (max-width: 640px) { .tavus-slot { border-radius: 12px; } }
         `}</style>
       </div>
     </div>
