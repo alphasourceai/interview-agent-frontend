@@ -1,4 +1,7 @@
 // src/pages/InterviewAccessPage.jsx
+// One-page intake → OTP → Start Interview (embedded tall)
+// Uses VITE_BACKEND_URL for API calls
+
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import InterviewAccessForm from '../components/InterviewAccessForm';
@@ -17,8 +20,8 @@ const BK = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_
 function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const [verified, setVerified] = useState(false);
   const [err, setErr] = useState('');
+  const [isVerified, setIsVerified] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -45,7 +48,7 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
         onError?.(m);
         return;
       }
-      setVerified(true);
+      setIsVerified(true);
       onVerified?.({
         candidate_id: data?.candidate_id || candidateId,
         role_id: data?.role_id || roleId,
@@ -59,17 +62,11 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
     }
   };
 
-  if (verified) {
-    return (
-      <div className="alpha-step2">
-        <span className="verified-inline">Verified! You can start your interview.</span>
-      </div>
-    );
-  }
-
   return (
     <form onSubmit={submit} className="alpha-step2">
+      {/* Show heading ONLY after Step 1 is submitted (parent controls rendering of OtpInline) */}
       <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
+
       <div className="mb-3">
         <label className="alpha-label">6-digit code</label>
         <input
@@ -81,12 +78,20 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
           className="alpha-input w-full tracking-widest"
           placeholder="••••••"
           required
+          disabled={isVerified}
         />
       </div>
+
       {err && <p className="text-red-300 text-sm mb-2">{err}</p>}
-      <button type="submit" disabled={busy} className="btn-lg">
-        {busy ? 'Verifying…' : 'Verify'}
-      </button>
+
+      {/* Replace button with inline confirmation when verified */}
+      {isVerified ? (
+        <span className="verified-inline">Verified! You can start your interview.</span>
+      ) : (
+        <button type="submit" disabled={busy} className="btn-lg">
+          {busy ? 'Verifying…' : 'Verify'}
+        </button>
+      )}
     </form>
   );
 }
@@ -94,10 +99,10 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
 export default function InterviewAccessPage() {
   const { role_token } = useParams();
   const roomRef = useRef(null);
-  const joinTimeoutRef = useRef(null);
 
-  const [submitted, setSubmitted] = useState(null);
+  const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
   const [verified, setVerified] = useState(false);
+
   const [roomUrl, setRoomUrl] = useState('');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
@@ -131,7 +136,7 @@ export default function InterviewAccessPage() {
         data?.url ||
         '';
       if (url) {
-        setRoomUrl(url);
+        setRoomUrl(url);          // triggers “hide everything” below
         setPrejoin(true);
         setTimeout(() => {
           try { roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
@@ -146,7 +151,7 @@ export default function InterviewAccessPage() {
     }
   }, [canStart, submitted]);
 
-  // header spacing
+  // top spacing only
   const header = useMemo(
     () => (
       <div className="max-w-6xl mx-auto w-full" aria-hidden="true">
@@ -155,6 +160,8 @@ export default function InterviewAccessPage() {
     ),
     []
   );
+
+  const noRoom = !roomUrl;
 
   return (
     <div className="alpha-theme">
@@ -166,7 +173,7 @@ export default function InterviewAccessPage() {
           <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
             <div
               id="tavus-slot"
-              className={`tavus-slot${!roomUrl ? ' no-room' : ''}`}
+              className={`tavus-slot${noRoom ? ' no-room' : ''}`}
               aria-label="Interview video area"
             >
               {roomUrl ? (
@@ -188,48 +195,100 @@ export default function InterviewAccessPage() {
           </div>
         </div>
 
-        {/* Unified 3-column grid */}
-        <div className="alpha-form">
-          <div className="alpha-form-grid-3">
-            <div className="alpha-span-2">
-              <InterviewAccessForm
-                roleToken={role_token}
-                onSubmitted={(payload) => {
-                  setSubmitted(payload);
-                  setVerified(false);
-                  setRoomUrl('');
-                }}
-              />
+        {/* Forms + actions are shown until the room URL actually exists */}
+        {!roomUrl && (
+          <div className="alpha-form">
+            <div className="alpha-form-grid-3">
+              {/* Step 1 spans columns 1–2 */}
+              <div className="alpha-span-2">
+                <InterviewAccessForm
+                  roleToken={role_token}
+                  onSubmitted={(payload) => {
+                    setSubmitted(payload);
+                    setVerified(false);
+                    setRoomUrl('');
+                  }}
+                />
+              </div>
+
+              {/* Step 2 only renders once Step 1 is submitted */}
+              {submitted ? (
+                <OtpInline
+                  email={submitted.email}
+                  candidateId={submitted.candidate_id}
+                  roleId={submitted.role_id}
+                  onVerified={(info) => {
+                    setVerified(true);
+                    setSubmitted((s) => ({ ...(s || {}), ...info }));
+                  }}
+                  onError={() => setVerified(false)}
+                />
+              ) : (
+                <div className="alpha-step2">
+                  {/* Hidden until submitted; left here for layout stability if needed */}
+                </div>
+              )}
             </div>
 
-            {submitted && (
-              <OtpInline
-                email={submitted.email}
-                candidateId={submitted.candidate_id}
-                roleId={submitted.role_id}
-                onVerified={(info) => {
-                  setVerified(true);
-                  setSubmitted((s) => ({ ...(s || {}), ...info }));
-                }}
-                onError={() => setVerified(false)}
-              />
+            {/* Start Interview appears ONLY after verified; centered below the grid */}
+            {verified && (
+              <div className="start-block">
+                <button
+                  type="button"
+                  disabled={!canStart || starting}
+                  onClick={startInterview}
+                  className="btn-xl btn-outline-lilac btn-wide"
+                >
+                  {starting ? 'Starting…' : 'Start Interview'}
+                </button>
+              </div>
             )}
+            {error && <p className="text-red-300 text-sm mt-2 center">{error}</p>}
           </div>
+        )}
 
-          {verified && (
-            <div className="start-block">
-              <button
-                type="button"
-                disabled={!canStart || starting}
-                onClick={startInterview}
-                className="btn-xl btn-outline-lilac btn-wide"
-              >
-                {starting ? 'Starting…' : 'Start Interview'}
-              </button>
-            </div>
-          )}
-          {error && <p className="text-red-300 text-sm mt-2 center">{error}</p>}
-        </div>
+        {/* Page-scoped CSS for the Tavus slot */}
+        <style>{`
+          .tavus-stage { width: 100%; }
+          .tavus-slot {
+            position: relative;
+            width: 100%;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.85);
+            overflow: hidden;
+            margin: 0 auto;
+            max-width: 1200px;
+          }
+          @media (min-width: 768px) {
+            .tavus-stage .tavus-slot { height: 520px; }
+            .tavus-stage.prejoin .tavus-slot { height: 650px; }
+          }
+          @media (max-width: 767px) {
+            .tavus-slot { aspect-ratio: 16 / 9; }
+          }
+          .tavus-slot.no-room { height: 690px !important; }
+
+          .tavus-slot > iframe,
+          .tavus-slot video,
+          .tavus-slot [data-daily-video],
+          .tavus-slot .daily-video {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            border: 0 !important;
+            display: block;
+            object-fit: contain;
+            background: #000;
+          }
+          .tavus-slot .placeholder {
+            position: absolute; inset: 0;
+            display:flex; align-items:center; justify-content:center;
+            color: rgba(255,255,255,0.85); padding:24px; text-align:center;
+          }
+          .tavus-slot .center-msg { max-width: 520px; }
+        `}</style>
       </div>
     </div>
   );

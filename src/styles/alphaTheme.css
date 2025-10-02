@@ -3,21 +3,22 @@
 
 /* alphaTheme.css (appenditions/overrides) */
 
-/* Full-bleed opaque hallway hero (no translucency; spans entire viewport width)
-   Use robust negative-margin method so it's perfectly centered inside any wrapper. */
+/* Full-bleed opaque hallway hero (historical/working translateX method) */
 .alpha-hero.fullbleed{
   position: relative;
   width: 100vw;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
+  max-width: 100vw;                  /* ensure no wrapper max-width clips it */
+  margin-left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0;
+  margin-right: 0;
+  margin-bottom: 0;
   border-radius: 0;
   background: url("/hallway.png") center/cover no-repeat; /* opaque */
-  padding: 165px 0;                 /* ~10% taller */
-  display: flex;                    /* center Tavus stage inside the hero */
-  align-items: center;              /* vertical centering */
-  justify-content: center;          /* horizontal centering */
+  padding: 165px 0;                  /* ~10% taller */
+  display: flex;                     /* center Tavus stage inside the hero */
+  align-items: center;               /* vertical centering */
+  justify-content: center;           /* horizontal centering */
   box-sizing: border-box;
 }
 /* Constrain Tavus stage within the hero */
@@ -126,6 +127,7 @@
 .verified-inline{
   font-size: 0.95rem;
   opacity: 0.9;
+  color: #4ade80; /* consistent with earlier inline style */
 }
 
 /* (pre-existing theme rules stay as-is below this line) */
@@ -190,21 +192,7 @@
 
 .alpha-theme select option{ color:#111; }
 
-/* ===== Legacy alpha-hero with translucent overlay (kept for other pages) */
-.alpha-hero{
-  position:relative;
-  max-width:1400px;
-  margin:0 auto;
-  border-radius:16px;
-  padding:96px 24px;
-  background:
-    linear-gradient(rgba(6,21,81,0.82), rgba(6,21,81,0.82)),
-    url("/hallway.png") center/cover no-repeat;
-  overflow:hidden;
-  isolation:isolate;
-}
-.alpha-hero .tavus-stage{ margin:0 auto; }
-.alpha-hero + .alpha-form{ margin-top:56px; }
+/* ===== Removed legacy .alpha-hero (translucent overlay) per your direction ===== */
 
 /* ===== Form container (outer) ============================================ */
 .alpha-form{ max-width:1200px; margin:0 auto; padding:0 24px 48px; }
@@ -236,33 +224,8 @@
   padding-bottom: 24px;
 }
 
-/* Hallway Hero fix */
-.alpha-hero.fullbleed {
-  position: relative;
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
-  border-radius: 0;
-  background: url("/hallway.png") center/cover no-repeat;
-  padding: 165px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-.alpha-hero.fullbleed .tavus-stage {
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* Scoped input sizing for Interview page */
+/* Scoped input sizing for Interview page (prevents overlap) */
 .alpha-form-grid-3 .alpha-input {
   width: 250px !important;
   height: 70px !important;
-}
-
-/* Verified inline style */
-.verified-inline {
-  font-size: 0.95rem;
-  color: #4ade80;
 }
