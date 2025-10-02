@@ -405,9 +405,36 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 }
 .admin-page .row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* keep controls on one line on wide screens */
   gap: 10px;
   align-items: center;
+}
+
+/* Uniform control sizing for Admin rows */
+.admin-page .row .alpha-input,
+.admin-page .row select.alpha-select,
+.admin-page .row input.alpha-input,
+.admin-page .row input[type="file"].alpha-input {
+  width: 240px !important;
+  max-width: 240px !important;
+  flex: 0 0 240px !important;
+  display: inline-block;
+}
+.admin-page .row .alpha-select {
+  width: 240px !important;
+  max-width: 240px !important;
+  flex: 0 0 240px !important;
+}
+/* Keep buttons/icons compact in the row */
+.admin-page .row button,
+.admin-page .row .btn-icon {
+  flex: 0 0 auto !important;
+}
+/* Ensure file picker matches input sizing */
+.admin-page .file-stack .file {
+  width: 240px !important;
+  max-width: 240px !important;
+  flex: 0 0 240px !important;
 }
 .admin-page .section-head {
   display: flex;
@@ -572,6 +599,18 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .admin-page .btn-icon.lilac {
   background: transparent !important;
   border: none !important;
+}
+
+/* Responsive fallback: allow wrap on small screens */
+@media (max-width: 700px) {
+  .admin-page .row { flex-wrap: wrap; }
+  .admin-page .row .alpha-input,
+  .admin-page .row select.alpha-select,
+  .admin-page .file-stack .file {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
 }
 .admin-page tr[style*="background: rgb(249, 250, 251)"],
 .admin-page tr[style*="background:#fff"],
