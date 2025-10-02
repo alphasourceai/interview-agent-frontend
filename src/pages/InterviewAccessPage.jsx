@@ -17,8 +17,6 @@ const BK = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_
   ? String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '')
   : '';
 
-// Step 2: OTP — email display removed; code field sits in column 1 width,
-// Verify button left-aligned with the code field; larger text via .btn-lg.
 function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,7 +28,7 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
     setErr('');
     setMsg('');
     if (!email || !/^\d{6}$/.test(code)) {
-      setErr('Enter your email and a 6-digit code.');
+      setErr('Enter the 6-digit code.');
       return;
     }
     setBusy(true);
@@ -67,8 +65,8 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
 
   return (
     <form onSubmit={submit} className="alpha-form-grid gap-y-3">
-      {/* 6-digit code — left column width */}
-      <div>
+      {/* 6-digit code in COLUMN 1 (same width as First name/Email) */}
+      <div className="col-span-2 sm:col-start-1 sm:col-end-2">
         <label className="alpha-label">6-digit code</label>
         <input
           type="text"
@@ -82,14 +80,14 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
         />
       </div>
 
-      {/* messages under the code field */}
-      <div className="alpha-col-span-2">
+      {/* Error/Success */}
+      <div className="col-span-2 sm:col-start-1 sm:col-end-2">
         {err && <p className="text-red-300 text-sm">{err}</p>}
         {msg && <p className="text-green-300 text-sm">{msg}</p>}
       </div>
 
-      {/* Verify button — left aligned with the code field */}
-      <div>
+      {/* Verify button aligned with the left edge of the code field */}
+      <div className="col-span-2 sm:col-start-1 sm:col-end-2 flex justify-start">
         <button type="submit" disabled={busy} className="btn-lg">
           {busy ? 'Verifying…' : 'Verify'}
         </button>
@@ -201,7 +199,7 @@ export default function InterviewAccessPage() {
       <div className="space-y-6">
         {header}
 
-        {/* Full-bleed, opaque hallway hero (no translucency, full width) */}
+        {/* Full-bleed, opaque hallway hero */}
         <div className="alpha-hero fullbleed">
           <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
             <div
@@ -232,7 +230,7 @@ export default function InterviewAccessPage() {
           </div>
         </div>
 
-        {/* Step 1 + Step 2, on the same 2-col grid system */}
+        {/* Step 1 + Step 2 (same grid system) */}
         <div className="alpha-form">
           <div className="grid grid-cols-1 gap-6 max-w-[1200px] mx-auto">
             <div className="space-y-8">
@@ -268,14 +266,14 @@ export default function InterviewAccessPage() {
                       onError={() => setVerified(false)}
                     />
 
-                    {/* Start Interview appears ONLY after verified; centered, white/lilac */}
+                    {/* Start Interview appears ONLY after verified */}
                     {verified && (
-                      <div className="mt-2 start-block">
+                      <div className="start-block">
                         <button
                           type="button"
                           disabled={!canStart || starting}
                           onClick={startInterview}
-                          className="btn-xl btn-outline-lilac"
+                          className="btn-xl btn-outline-lilac btn-wide"
                         >
                           {starting ? 'Starting…' : 'Start Interview'}
                         </button>
@@ -289,9 +287,8 @@ export default function InterviewAccessPage() {
           </div>
         </div>
 
-        {/* local CSS specific to this page (keeps Tavus sizing unchanged) */}
+        {/* Page-scoped CSS for the Tavus slot */}
         <style>{`
-          /* --- Tavus/Daily container --- */
           .tavus-stage { width: 100%; }
           .tavus-slot {
             position: relative;
@@ -303,8 +300,6 @@ export default function InterviewAccessPage() {
             margin: 0 auto;
             max-width: 1200px;
           }
-
-          /* joined/in-call */
           @media (min-width: 768px) {
             .tavus-stage .tavus-slot { height: 520px; }
             .tavus-stage.prejoin .tavus-slot { height: 650px; }
@@ -312,8 +307,6 @@ export default function InterviewAccessPage() {
           @media (max-width: 767px) {
             .tavus-slot { aspect-ratio: 16 / 9; }
           }
-
-          /* placeholder = fixed 1200×690 until roomUrl exists (do NOT change Tavus sizing) */
           .tavus-slot.no-room { height: 690px !important; }
 
           .tavus-slot > iframe,
