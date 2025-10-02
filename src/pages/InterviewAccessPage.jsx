@@ -17,19 +17,17 @@ const BK = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_
   ? String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '')
   : '';
 
-function OtpInline({ email, candidateId, roleId, onVerified }) {
+function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const [msg, setMsg] = useState('');
-  const inputRef = useRef(null);
+  const [isVerified, setIsVerified] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setErr('');
-    setMsg('');
-    if (!email || !/^\d{6}$/.test(code)) {
-      setErr('Enter your email and a 6-digit code.');
+    if (!/^\d{6}$/.test(code)) {
+      setErr('Enter the 6-digit code.');
       return;
     }
     setBusy(true);
@@ -45,10 +43,12 @@ function OtpInline({ email, candidateId, roleId, onVerified }) {
       });
       const data = await resp.json();
       if (!resp.ok) {
-        setErr(data?.error || 'Verification failed.');
+        const m = data?.error || 'Verification failed.';
+        setErr(m);
+        onError?.(m);
         return;
       }
-      setMsg('Verified! You can start your interview.');
+      setIsVerified(true);
       onVerified?.({
         candidate_id: data?.candidate_id || candidateId,
         role_id: data?.role_id || roleId,
@@ -56,49 +56,43 @@ function OtpInline({ email, candidateId, roleId, onVerified }) {
       });
     } catch {
       setErr('Network error verifying code.');
+      onError?.('Network error verifying code.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-      <h3 className="text-base font-semibold mb-3">Enter the code we emailed you</h3>
-      <form onSubmit={submit} className="space-y-3">
-        <div>
-          <label className="block text-sm mb-1">Email</label>
-          <input
-            type="email"
-            value={email}
-            readOnly
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2"
-          />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">6-digit code</label>
-          <input
-            ref={inputRef}
-            type="text"
-            inputMode="numeric"
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 tracking-widest"
-            placeholder="••••••"
-            required
-          />
-        </div>
-        {err && <p className="text-red-300 text-sm">{err}</p>}
-        {msg && <p className="text-green-300 text-sm">{msg}</p>}
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-black hover:opacity-90 disabled:opacity-60"
-        >
+    <form onSubmit={submit} className="alpha-step2">
+      {/* Show heading ONLY after Step 1 is submitted (parent controls rendering of OtpInline) */}
+      <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
+
+      <div className="mb-3">
+        <label className="alpha-label">6-digit code</label>
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+          className="alpha-input w-full tracking-widest"
+          placeholder="••••••"
+          required
+          disabled={isVerified}
+        />
+      </div>
+
+      {err && <p className="text-red-300 text-sm mb-2">{err}</p>}
+
+      {/* Replace button with inline confirmation when verified */}
+      {isVerified ? (
+        <span className="verified-inline">Verified! You can start your interview.</span>
+      ) : (
+        <button type="submit" disabled={busy} className="btn-lg">
           {busy ? 'Verifying…' : 'Verify'}
         </button>
-      </form>
-    </div>
+      )}
+    </form>
   );
 }
 
@@ -106,14 +100,13 @@ export default function InterviewAccessPage() {
   const { role_token } = useParams();
   const roomRef = useRef(null);
 
-  // intake result
   const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
   const [verified, setVerified] = useState(false);
 
-  // interview room
   const [roomUrl, setRoomUrl] = useState('');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
+  const [prejoin, setPrejoin] = useState(false);
 
   const canStart = Boolean(verified && submitted?.candidate_id);
 
@@ -143,12 +136,10 @@ export default function InterviewAccessPage() {
         data?.url ||
         '';
       if (url) {
-        setRoomUrl(url);
-        // bring the room into view once it renders
+        setRoomUrl(url);          // triggers “hide everything” below
+        setPrejoin(true);
         setTimeout(() => {
-          try {
-            roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } catch {}
+          try { roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
         }, 50);
       } else {
         setError('Interview room is initializing—try again in a moment.');
@@ -160,121 +151,145 @@ export default function InterviewAccessPage() {
     }
   }, [canStart, submitted]);
 
+  // top spacing only
   const header = useMemo(
     () => (
-      <div className="max-w-6xl mx-auto w-full">
-        <h1 className="text-2xl font-bold mb-2">Start Your Interview</h1>
-        <p className="opacity-80 mb-4">
-          Enter your details, verify the code we send, then click <em>Start Interview</em>.
-        </p>
+      <div className="max-w-6xl mx-auto w-full" aria-hidden="true">
+        <div style={{ height: 56 }} />
       </div>
     ),
     []
   );
 
+  const noRoom = !roomUrl;
+
   return (
-    <div className="p-4 max-w-6xl mx-auto space-y-6">
-      {header}
+    <div className="alpha-theme">
+      <div className="space-y-6">
+        {header}
 
-      {/* Top media/room area — tall so Tavus UI isn’t cropped */}
-      <div
-        id="roomHost"
-        ref={roomRef}
-        className="room-host w-full rounded-2xl border border-white/10 overflow-hidden"
-        style={{ height: '72vh', background: 'rgba(0,0,0,0.3)' }}
-      >
-        {roomUrl ? (
-          <iframe
-            title="Interview"
-            src={roomUrl}
-            className="room-frame w-full h-full"
-            loading="lazy"
-            allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center opacity-80">
-            <div className="text-center p-6">Your interview room will appear here after verification.</div>
+        {/* Full-bleed, opaque hallway hero */}
+        <div className="alpha-hero fullbleed">
+          <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
+            <div
+              id="tavus-slot"
+              className={`tavus-slot${noRoom ? ' no-room' : ''}`}
+              aria-label="Interview video area"
+            >
+              {roomUrl ? (
+                <iframe
+                  title="Interview"
+                  src={roomUrl}
+                  loading="lazy"
+                  allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="placeholder">
+                  <div className="center-msg">
+                    Your interview room will appear here after verification.
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* Two-column: left = form, right = OTP + Start */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Intake form */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <InterviewAccessForm
-            roleToken={role_token}
-            onSubmitted={(payload) => {
-              setSubmitted(payload);
-              setVerified(false); // reset if user re-submits
-              setRoomUrl('');
-            }}
-          />
         </div>
 
-        {/* OTP + Start */}
-        <div className="space-y-4">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-            <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
-            {!submitted ? (
-              <p className="text-sm opacity-80">
-                Submit the form first to receive your 6-digit code by email.
-              </p>
-            ) : (
-              <>
+        {/* Forms + actions are shown until the room URL actually exists */}
+        {!roomUrl && (
+          <div className="alpha-form">
+            <div className="alpha-form-grid-3">
+              {/* Step 1 spans columns 1–2 */}
+              <div className="alpha-span-2">
+                <InterviewAccessForm
+                  roleToken={role_token}
+                  onSubmitted={(payload) => {
+                    setSubmitted(payload);
+                    setVerified(false);
+                    setRoomUrl('');
+                  }}
+                />
+              </div>
+
+              {/* Step 2 only renders once Step 1 is submitted */}
+              {submitted ? (
                 <OtpInline
                   email={submitted.email}
                   candidateId={submitted.candidate_id}
                   roleId={submitted.role_id}
                   onVerified={(info) => {
                     setVerified(true);
-                    setSubmitted((s) => ({ ...(s || {}), ...info })); // keep latest ids
+                    setSubmitted((s) => ({ ...(s || {}), ...info }));
                   }}
+                  onError={() => setVerified(false)}
                 />
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    disabled={!canStart || starting}
-                    onClick={startInterview}
-                    className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-black hover:opacity-90 disabled:opacity-60"
-                  >
-                    {starting ? 'Starting…' : 'Start Interview'}
-                  </button>
-                  {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
+              ) : (
+                <div className="alpha-step2">
+                  {/* Hidden until submitted; left here for layout stability if needed */}
                 </div>
-              </>
+              )}
+            </div>
+
+            {/* Start Interview appears ONLY after verified; centered below the grid */}
+            {verified && (
+              <div className="start-block">
+                <button
+                  type="button"
+                  disabled={!canStart || starting}
+                  onClick={startInterview}
+                  className="btn-xl btn-outline-lilac btn-wide"
+                >
+                  {starting ? 'Starting…' : 'Start Interview'}
+                </button>
+              </div>
             )}
+            {error && <p className="text-red-300 text-sm mt-2 center">{error}</p>}
           </div>
-        </div>
+        )}
+
+        {/* Page-scoped CSS for the Tavus slot */}
+        <style>{`
+          .tavus-stage { width: 100%; }
+          .tavus-slot {
+            position: relative;
+            width: 100%;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.85);
+            overflow: hidden;
+            margin: 0 auto;
+            max-width: 1200px;
+          }
+          @media (min-width: 768px) {
+            .tavus-stage .tavus-slot { height: 520px; }
+            .tavus-stage.prejoin .tavus-slot { height: 650px; }
+          }
+          @media (max-width: 767px) {
+            .tavus-slot { aspect-ratio: 16 / 9; }
+          }
+          .tavus-slot.no-room { height: 690px !important; }
+
+          .tavus-slot > iframe,
+          .tavus-slot video,
+          .tavus-slot [data-daily-video],
+          .tavus-slot .daily-video {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            border: 0 !important;
+            display: block;
+            object-fit: contain;
+            background: #000;
+          }
+          .tavus-slot .placeholder {
+            position: absolute; inset: 0;
+            display:flex; align-items:center; justify-content:center;
+            color: rgba(255,255,255,0.85); padding:24px; text-align:center;
+          }
+          .tavus-slot .center-msg { max-width: 520px; }
+        `}</style>
       </div>
-      <style>{`
-        /* Ensure any embed fills the host container */
-        .room-host { position: relative; }
-        .room-host > iframe,
-        .room-host > div,
-        .room-host > section { width: 100% !important; height: 100% !important; display: block !important; }
-
-        /* Common class patterns sometimes used by pre-interview widgets; stretch them too */
-        .room-host [class*="haircheck"],
-        .room-host [class*="wrapper"],
-        .room-host [class*="container"],
-        .room-host [data-component],
-        .room-host [data-widget] {
-          width: 100% !important;
-          height: 100% !important;
-          max-height: 100% !important;
-        }
-
-        /* In case an inner wrapper uses inline auto heights */
-        .room-host *[style*="height: auto"] { height: 100% !important; }
-        .room-host *[style*="min-height"] { min-height: 100% !important; }
-        .room-host *[style*="max-height"] { max-height: 100% !important; }
-
-        /* Mobile: ensure the host is tall enough even with viewport UI chrome */
-        @media (max-width: 768px) {
-          #roomHost { height: 78vh !important; }
-        }
-      `}</style>
     </div>
   );
 }

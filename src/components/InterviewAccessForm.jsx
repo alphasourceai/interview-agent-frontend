@@ -1,7 +1,7 @@
 // src/components/InterviewAccessForm.jsx
 // Submits candidate info + resume -> returns candidate/role/email to parent (no navigation)
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 function joinUrl(base, path) {
   if (!base) return path;
@@ -22,20 +22,23 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
     phone: '',
     resume: null,
   });
-
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+
+  const fileInputRef = useRef(null);
 
   const onChange = (e) => {
     const { name, value, files } = e.target;
     setForm((prev) => ({ ...prev, [name]: files ? files[0] : value }));
   };
 
+  const onPickResume = () => fileInputRef.current?.click();
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setMessage('');
+
     if (!roleToken) {
       setError('Missing role link. Please use the correct interview URL.');
       return;
@@ -46,51 +49,31 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
     }
 
     setSubmitting(true);
-    // normalize inputs
-    const first = (form.first_name || '').trim();
-    const last = (form.last_name || '').trim();
-    const email = (form.email || '').trim();
-    const phoneDigits = String(form.phone || '').replace(/\D/g, '');
-    if (!phoneDigits || phoneDigits.length < 7 || phoneDigits.length > 15) {
-      setSubmitting(false);
-      setError('Please enter a valid phone number (7–15 digits).');
-      return;
-    }
+
     try {
       const body = new FormData();
-      body.append('first_name', first);
-      body.append('last_name', last);
-      body.append('email', email);
-      body.append('phone', phoneDigits);
+      body.append('first_name', form.first_name.trim());
+      body.append('last_name', form.last_name.trim());
+      body.append('email', form.email.trim());
+      body.append('phone', String(form.phone || '').replace(/\D/g, ''));
       body.append('resume', form.resume);
       body.append('role_token', roleToken);
 
-      const resp = await fetch(joinUrl(BK, '/api/candidate/submit'), {
-        method: 'POST',
-        body,
-      });
+      const resp = await fetch(joinUrl(BK, '/api/candidate/submit'), { method: 'POST', body });
       const data = await resp.json();
 
-      if (resp.status === 409) {
-        // Unified duplicate message; do NOT proceed to OTP or emit payload on duplicates
-        setMessage("You’ve already interviewed for this role with this information. If you believe this is an error, contact support at info@alphasourceai.com");
-        setSubmitting(false);
-        return;
-      } else if (!resp.ok) {
+      if (!resp.ok) {
         setError(data?.error || 'Something went wrong.');
         return;
-      } else {
-        setMessage(data?.message || 'OTP created. Check your email.');
       }
 
-      // hand key info up so the page can open OTP inline
-      const payload = {
+      setSubmitted(true); // replaces only the submit button with confirmation
+      onSubmitted?.({
         candidate_id: data?.candidate_id || null,
         role_id: data?.role_id || null,
         email: data?.email || form.email,
         resume_url: data?.resume_url || null,
-      };
-      onSubmitted?.(payload);
+      });
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -98,47 +81,52 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
     }
   };
 
+  const isLocked = submitted;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm mb-1">First name</label>
-          <input
-            type="text"
-            name="first_name"
-            value={form.first_name}
-            onChange={onChange}
-            required
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2"
-          />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">Last name</label>
-          <input
-            type="text"
-            name="last_name"
-            value={form.last_name}
-            onChange={onChange}
-            required
-            className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2"
-          />
-        </div>
+    // INTERNAL 2-column grid (1fr | 1.5fr). This whole form sits across cols 1–2
+    <form onSubmit={onSubmit} className="alpha-form-grid gap-y-4">
+      {/* First / Last (row 1) */}
+      <div>
+        <label className="alpha-label">First name</label>
+        <input
+          type="text"
+          name="first_name"
+          value={form.first_name}
+          onChange={onChange}
+          required
+          className="alpha-input w-full"
+          disabled={isLocked}
+        />
+      </div>
+      <div>
+        <label className="alpha-label">Last name</label>
+        <input
+          type="text"
+          name="last_name"
+          value={form.last_name}
+          onChange={onChange}
+          required
+          className="alpha-input w-full"
+          disabled={isLocked}
+        />
       </div>
 
+      {/* Email / Phone (row 2) */}
       <div>
-        <label className="block text-sm mb-1">Email</label>
+        <label className="alpha-label">Email</label>
         <input
           type="email"
           name="email"
           value={form.email}
           onChange={onChange}
           required
-          className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2"
+          className="alpha-input w-full"
+          disabled={isLocked}
         />
       </div>
-
       <div>
-        <label className="block text-sm mb-1">Phone</label>
+        <label className="alpha-label">Phone</label>
         <input
           type="tel"
           name="phone"
@@ -150,32 +138,50 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
           pattern="[0-9]{7,15}"
           title="Enter 7–15 digits"
           autoComplete="tel"
-          className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2"
+          className="alpha-input w-full"
+          disabled={isLocked}
         />
       </div>
 
+      {/* Upload Resume (left column, row 3) */}
       <div>
-        <label className="block text-sm mb-1">Resume (PDF/Doc)</label>
-        <input
-          type="file"
-          name="resume"
-          accept=".pdf,.doc,.docx"
-          onChange={onChange}
-          required
-          className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 file:mr-3 file:px-3 file:py-2 file:rounded-lg"
-        />
+        {isLocked ? (
+          <div className="text-green-300 text-sm">Candidate created. OTP emailed.</div>
+        ) : (
+          <>
+            <button type="button" onClick={onPickResume} className="btn-lg">
+              + Add Resume
+            </button>
+            {form.resume && <div className="mt-1 text-xs opacity-80">{form.resume.name}</div>}
+            <input
+              ref={fileInputRef}
+              type="file"
+              name="resume"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={onChange}
+              className="hidden"
+            />
+          </>
+        )}
       </div>
 
-      <button
-        type="submit"
-        disabled={submitting || !form.resume}
-        className="w-full rounded-xl px-4 py-2 font-medium bg-[#c09cff] text-black hover:opacity-90 disabled:opacity-60"
-      >
-        {submitting ? 'Submitting…' : 'Submit & Get OTP'}
-      </button>
+      {/* Submit (right column, row 3) */}
+      <div className="flex justify-end">
+        {isLocked ? (
+          <div className="text-green-300 text-sm self-center">Form submitted.</div>
+        ) : (
+          <button
+            type="submit"
+            disabled={submitting || !form.resume}
+            className="btn-lg"
+          >
+            {submitting ? 'Submitting…' : 'Submit & Get OTP'}
+          </button>
+        )}
+      </div>
 
-      {error && <p className="text-red-300 text-sm" role="alert" aria-live="polite">{error}</p>}
-      {message && <p className="text-green-300 text-sm" role="status" aria-live="polite">{message}</p>}
+      {/* Error across both columns, if any */}
+      {error && <div className="alpha-col-span-2 text-red-300 text-sm">{error}</div>}
     </form>
   );
 }

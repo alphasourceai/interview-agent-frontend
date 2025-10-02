@@ -1,574 +1,231 @@
 /* --- AlphaSource theme (Wix-matched) ------------------------------------- */
-
 @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap');
 
-.alpha-theme {
-  --alpha-bg: #061551;
-  --alpha-surface: rgba(255,255,255,0.06);
-  --alpha-border: rgba(255,255,255,0.14);
-  --alpha-text: #EBFEFF;
-  --alpha-muted: rgba(235,254,255,0.75);
-  --alpha-primary: #AD8BF7;
-  --alpha-primary-strong: #854DFF;
-  --alpha-darktext: #2F2E2E;
-  --alpha-radius: 12px;
-  --alpha-gap: 14px;
+/* alphaTheme.css (appenditions/overrides) */
+
+/* Full-bleed opaque hallway hero (historical/working translateX method) */
+.alpha-hero.fullbleed{
+  position: relative;
+  width: 100vw;
+  max-width: 100vw;                  /* ensure no wrapper max-width clips it */
+  margin-left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0;
+  margin-right: 0;
+  margin-bottom: 0;
+  border-radius: 0;
+  background: url("/hallway.png") center/cover no-repeat; /* opaque */
+  padding: 165px 0;                  /* ~10% taller */
+  display: flex;                     /* center Tavus stage inside the hero */
+  align-items: center;               /* vertical centering */
+  justify-content: center;           /* horizontal centering */
+  box-sizing: border-box;
+}
+/* Constrain Tavus stage within the hero */
+.alpha-hero.fullbleed .tavus-stage{
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
 }
 
-.alpha-theme, .alpha-theme body {
-  background: var(--alpha-bg);
-  color: var(--alpha-text);
-  font-family: 'Raleway', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  min-height: 100vh;
+/* ---------- Form grids ---------- */
+
+/* Existing 2-col grid (1fr | 1.5fr) used INSIDE Step-1 form */
+.alpha-form-grid{
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: var(--alpha-gap);
+}
+@media (max-width: 640px){
+  .alpha-form-grid{ grid-template-columns: 1fr; }
 }
 
-/* Links */
-.alpha-theme a { color: var(--alpha-primary); text-decoration: none; }
-.alpha-theme a:hover { text-decoration: underline; }
+/* New outer 3-col grid for desktop alignment (equal columns) */
+.alpha-form-grid-3{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;                        /* fixed ~20px gutter so cols never touch */
+  max-width: 1200px;                /* centered cap */
+  margin: 0 auto;
+  align-items: start;               /* align Step 2 to the top */
+}
+@media (max-width: 1023px){
+  .alpha-form-grid-3{ grid-template-columns: 1fr; }
+}
 
-/* Generic surfaces */
-.alpha-theme .card,
-.alpha-theme .panel,
-.alpha-theme .box,
-.alpha-theme .section,
-.alpha-theme .container,
-.alpha-theme .expanded,
-.alpha-theme .expand,
-.alpha-theme .expander-content,
-.alpha-theme .details,
-.alpha-theme .details-content,
-.alpha-theme .row-details,
-.alpha-theme details[open],
-.alpha-theme .report,
-.alpha-theme [class*="Card"],
-.alpha-theme [class*="Panel"] {
-  background: var(--alpha-surface) !important;
-  border: 1px solid var(--alpha-border) !important;
+/* Utilities for placement inside the 3-col grid */
+.alpha-span-2{ grid-column: 1 / span 2; }
+@media (max-width:1023px){ .alpha-span-2{ grid-column: 1 / -1; } }
+
+/* Step 2 column base styling (sits in col 3 on desktop) */
+.alpha-step2{ grid-column: 3; }
+@media (max-width:1023px){ .alpha-step2{ grid-column: 1; } }
+
+/* ---------- Form controls ---------- */
+
+.alpha-label{
+  display:block;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+.alpha-input{
+  height: 52px;
   border-radius: var(--alpha-radius);
+  background: var(--alpha-surface);
+  border: 1px solid var(--alpha-border);
   color: var(--alpha-text);
+  padding: 10px 12px;
+  width: 100%;
+  font-size: 1.05rem; /* slightly larger input text */
 }
-
-/* Headings inside panels use darker text */
-.alpha-theme .panel h1,
-.alpha-theme .panel h2,
-.alpha-theme .panel h3,
-.alpha-theme .panel h4,
-.alpha-theme .report h1,
-.alpha-theme .report h2,
-.alpha-theme .report h3,
-.alpha-theme .report h4,
-.alpha-theme .expanded h1,
-.alpha-theme .expanded h2,
-.alpha-theme .expanded h3,
-.alpha-theme .expanded h4 {
-  color: var(--alpha-darktext) !important;
-}
-
-/* Table text */
-.alpha-theme table { color: var(--alpha-text); }
 
 /* Buttons */
-.alpha-theme button,
-.alpha-theme .btn,
-.alpha-theme input[type="button"],
-.alpha-theme input[type="submit"] {
-  appearance: none;
+.btn-lg{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height: 56px;
+  padding: 0 22px;
+  border-radius: 28px;
+  font-weight: 700;
   background: var(--alpha-primary);
   color: #fff;
   border: 1px solid var(--alpha-primary);
-  border-radius: 20px;
-  padding: 8px 14px;
-  font-weight: 600;
-  cursor: pointer;
+  transition: filter .15s ease, background .15s ease, border-color .15s ease;
+  font-size: 1.05rem; /* larger text for Resume / Submit / Verify */
 }
-.alpha-theme button:hover,
-.alpha-theme .btn:hover,
-.alpha-theme input[type="button"]:hover,
-.alpha-theme input[type="submit"]:hover {
-  background: var(--alpha-primary-strong);
-  border-color: var(--alpha-primary-strong);
-}
+.btn-lg:hover{ background: var(--alpha-primary-strong); border-color: var(--alpha-primary-strong); }
 
-/* Ghost / link-like buttons */
-.alpha-theme .btn-ghost {
-  background: transparent;
-  color: var(--alpha-primary);
-  border-color: transparent;
+.btn-xl{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height: 64px;
+  padding: 0 28px;
+  border-radius: 9999px;            /* pill */
+  font-weight: 800;
+  font-size: 1.125rem;              /* larger Start Interview */
 }
-.alpha-theme .btn-ghost:hover {
+.btn-wide{ min-width: 360px; }      /* ~1.5× wider */
+
+/* White with lilac outline/text (Start Interview) */
+.btn-outline-lilac{
+  background: #fff;
+  color: var(--alpha-primary);
+  border: 2px solid var(--alpha-primary);
+}
+.btn-outline-lilac:hover{
   color: #fff;
   background: var(--alpha-primary);
+  border-color: var(--alpha-primary);
 }
 
-/* Inputs on dark */
-.alpha-theme input,
-.alpha-theme select,
-.alpha-theme textarea {
-  background: rgba(255,255,255,0.08);
-  color: var(--alpha-text);
-  border: 1px solid var(--alpha-border);
-  border-radius: 10px;
-  padding: 8px 10px;
-}
-.alpha-theme input::placeholder,
-.alpha-theme textarea::placeholder { color: var(--alpha-muted); }
+/* Form container spacing */
+.alpha-form{ padding: 0 24px 48px; }
 
-/* Auth card */
-.alpha-theme .auth-wrap {
-  max-width: 520px;
-  margin: 12vh auto 8vh;
-  padding: 24px;
-  background: var(--alpha-surface);
-  border: 1px solid var(--alpha-border);
-  border-radius: var(--alpha-radius);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+/* Inline “Verified” text next to the Verify button */
+.verified-inline{
+  font-size: 0.95rem;
+  opacity: 0.9;
+  color: #4ade80; /* consistent with earlier inline style */
 }
 
-/* ====== alpha-theme overrides (append only) ================================= */
+/* (pre-existing theme rules stay as-is below this line) */
 
-.alpha-theme select option { color: #111; }
-
-/* === Admin polish additions === */
-
-.alpha-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-.alpha-actions {
-  display: inline-flex;
-  gap: 12px;
-  align-items: center;
+.alpha-theme{
+  --alpha-bg:#061551;
+  --alpha-surface:rgba(255,255,255,0.06);
+  --alpha-border:rgba(255,255,255,0.14);
+  --alpha-text:#EBFEFF;
+  --alpha-muted:rgba(235,254,255,0.75);
+  --alpha-primary:#AD8BF7;
+  --alpha-primary-strong:#854DFF;
+  --alpha-darktext:#2F2E2E;
+  --alpha-radius:12px;
+  --alpha-gap:14px;
 }
 
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
+.alpha-theme, .alpha-theme body{
+  background:var(--alpha-bg);
+  color:var(--alpha-text);
+  font-family:'Raleway',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+  min-height:100vh;
 }
 
-/* SECTION HEADER: toggle + title grouped on the LEFT */
-.section-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;                 /* space between pill and title */
-  justify-content: flex-start;
-  margin-bottom: 10px;
-}
-.section-title { font-size: 18px; font-weight: 700; margin-top: 12px; }
+/* links */
+.alpha-theme a{ color:var(--alpha-primary); text-decoration:none; }
+.alpha-theme a:hover{ text-decoration:underline; }
 
-
-.section { margin-top: 12px; }
-
-/* helper: spacing for the Show/Hide toggle row beneath input rows */
-.toggle-row { margin-top: 8px; }
-
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.15);
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.toggle:hover { border-color: rgba(255,255,255,0.3); }
-
-.icon { display: block; }
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 32px;
-  width: 32px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: transparent;
-  cursor: pointer;
-}
-.icon-btn:hover { border-color: rgba(255,255,255,0.3); }
-
-.ml-2 { margin-left: 8px; }
-.mr-8 { margin-right: 16px; }
-
-.select-lg {
-  height: 44px;
-  padding: 0 10px;
-  font-size: 1.05rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.05);
-  color: inherit;
+/* generic surface helpers */
+.alpha-theme .card, .alpha-theme .panel, .alpha-theme .box, .alpha-theme .section,
+.alpha-theme .container, .alpha-theme .expanded, .alpha-theme .expand, .alpha-theme .expander-content,
+.alpha-theme .details, .alpha-theme .details-content, .alpha-theme .row-details, .alpha-theme details[open],
+.alpha-theme .report, .alpha-theme [class*="Card"], .alpha-theme [class*="Panel"]{
+  background:var(--alpha-surface)!important;
+  border:1px solid var(--alpha-border)!important;
+  border-radius:var(--alpha-radius);
+  color:var(--alpha-text);
 }
 
-.file-wrap { display: inline-flex; align-items: center; }
-
-.list { margin-top: 10px; }
-.list.compact .list-row { padding-top: 8px; padding-bottom: 8px; }
-.list-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto auto;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.list-row.header { font-weight: 600; opacity: 0.8; }
-.list-row .grow { min-width: 220px; }
-.list-row .col { min-width: 90px; }
-.list-row .col.center { display: flex; justify-content: center; }
-
-.title { font-weight: 600; }
-.sub { font-size: 12px; opacity: 0.8; }
-
-.linklike {
-  background: none !important;
-  border: none !important;
-  padding: 0;
-  text-decoration: underline;
-  cursor: pointer;
-  color: inherit;
+/* headings inside panels use darker text */
+.alpha-theme .panel h1, .alpha-theme .panel h2, .alpha-theme .panel h3, .alpha-theme .panel h4,
+.alpha-theme .report h1, .alpha-theme .report h2, .alpha-theme .report h3, .alpha-theme .report h4,
+.alpha-theme .expanded h1, .alpha-theme .expanded h2, .alpha-theme .expanded h3, .alpha-theme .expanded h4{
+  color:var(--alpha-darktext)!important;
 }
 
-button.danger {
-  background: transparent;
-  border: 1px solid rgba(255, 50, 50, 0.5);
+/* buttons (base) */
+.alpha-theme button, .alpha-theme .btn, .alpha-theme input[type="button"], .alpha-theme input[type="submit"]{
+  appearance:none; background:var(--alpha-primary); color:#fff; border:1px solid var(--alpha-primary);
+  border-radius:20px; padding:8px 14px; font-weight:600; cursor:pointer;
 }
-button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
-
-/* sizing: inputs & selects match height */
-/* sizing: inputs & selects match EXACT 40px including padding + border */
-.alpha-theme input.alpha-input,
-.alpha-theme .alpha-input[type="text"],
-.alpha-theme .alpha-input[type="email"],
-.alpha-theme .alpha-input[type="password"],
-.alpha-theme .alpha-input[type="search"],
-.alpha-theme select.alpha-select,
-.alpha-theme .alpha-select {
-  height: 40px !important;        /* total box height */
-  box-sizing: border-box !important;
-  padding: 8px 10px !important;    /* included in the 40px now */
-  line-height: 24px;               /* keeps text vertically comfy */
+.alpha-theme button:hover, .alpha-theme .btn:hover, .alpha-theme input[type="button"]:hover, .alpha-theme input[type="submit"]:hover{
+  background:var(--alpha-primary-strong); border-color:var(--alpha-primary-strong);
 }
 
-/* optional: file input tries to match as well */
-.alpha-theme input[type="file"].alpha-input {
-  height: 40px !important;
-  box-sizing: border-box !important;
-  padding: 6px 10px !important;
+/* inputs (base) */
+.alpha-theme input, .alpha-theme select, .alpha-theme textarea{
+  background:rgba(255,255,255,0.08); color:var(--alpha-text); border:1px solid var(--alpha-border);
+  border-radius:10px; padding:8px 10px;
 }
+.alpha-theme input::placeholder, .alpha-theme textarea::placeholder{ color:var(--alpha-muted); }
 
-/* file input wrapper so clear icon can sit beside it */
-.file-stack { position: relative; display: flex; align-items: center; gap: 8px; margin-right: 36px; }
-.file-stack .file { width: 220px; }
+.alpha-theme select option{ color:#111; }
 
-/* lilac circular icon buttons; icon itself is white via SVG fill/stroke */
-.btn-icon.lilac {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  width: auto;
-  height: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.btn-icon.lilac svg {
-  width: 24px;
-  height: 24px;
-  stroke: #fff;
-}
+/* ===== Removed legacy .alpha-hero (translucent overlay) per your direction ===== */
 
-/* Header with logo + title (compact) */
-.alpha-header--dash { display:flex; align-items:center; justify-content:space-between; }
-.alpha-header-left { display:flex; align-items:center; gap:10px; }
-.alpha-logo { width:55px; height:55px; object-fit:contain; }  /* compact logo */
+/* ===== Form container (outer) ============================================ */
+.alpha-form{ max-width:1200px; margin:0 auto; padding:0 24px 48px; }
 
-/* Thin top bar card */
-.alpha-card--bar { padding:10px 14px; margin-bottom:12px; }
-
-/* Center helper */
-.center { text-align:center; }
-
-/* Roles “table-like” layout */
-.table.like .t-head,
-.table.like .t-row {
+/* two-column grid used inside Step-1 (kept) */
+.alpha-form-grid{
   display:grid;
-  grid-template-columns: 1fr 220px 60px 60px 120px 80px; /* Role | Created | KB | JD | Link | Delete */
-  gap: 12px;
-  align-items:center;
+  grid-template-columns: 1fr 1.5fr;
+  gap: var(--alpha-gap);
 }
-.table.like .t-head { font-weight:700; opacity:0.9; padding:10px 12px; }
-.table.like .t-row { padding:12px; border-top:1px solid rgba(255,255,255,0.06); }
-.table.like .t-empty { padding:14px; }
-
-/* File input + clear icon stacked */
-.file-stack .file-clear { position: absolute; right: -36px; }
-
-.signout-btn {
-  background: var(--alpha-primary) !important;
-  color: #fff !important;
-  border: 1px solid var(--alpha-primary) !important;
-  border-radius: 18px !important;
-  padding: 6px 12px !important;
-  font-weight: 600 !important;
-  cursor: pointer;
+@media (max-width: 768px){
+  .alpha-form-grid{ grid-template-columns: 1fr; }
 }
-.signout-btn:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
+.alpha-col-span-2{ grid-column: 1 / -1; }
 
-/* === Icon-only buttons override (trash, etc.) ============================ */
-.alpha-theme button.btn-icon,
-.alpha-theme button.btn-icon.lilac {
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
+/* hide any native file inputs; we trigger via a styled button */
+.alpha-form input[type="file"]{ display:none !important; }
+
+/* place the submit button bottom-right of the grid */
+.alpha-form .actions-right{ display:flex; justify-content:flex-end; align-items:center; }
+
+/* small filename text under the resume button */
+.alpha-form .file-note{ margin-top:4px; font-size:12px; opacity:.8; }
+
+/* Centered block for Start Interview + bottom padding */
+.start-block {
+  display: flex;
   justify-content: center;
-  border-radius: 0;
+  padding-bottom: 24px;
 }
 
-.alpha-theme button.btn-icon:hover,
-.alpha-theme button.btn-icon.lilac:hover {
-  background: transparent !important;
-  filter: none !important;
-}
-
-.alpha-theme button.btn-icon > svg {
-  width: 24px !important;
-  height: 24px !important;
-  display: block;
-}
-
-/* Neutralize any remaining lilac styles on old class name */
-.btn-icon.lilac {
-  background: transparent !important;
-  border: none !important;
-}
-
-/* ---- Force expanded table rows to stay dark even if the row adds inline white/gray bg ---- */
-.alpha-theme tr[style*="background: rgb(249, 250, 251)"],
-.alpha-theme tr[style*="background:#fff"],
-.alpha-theme tr[style*="background: #fff"],
-.alpha-theme tr[style*="background: white"],
-.alpha-theme tr[style*="background-color: rgb(249, 250, 251)"],
-.alpha-theme tr[style*="background-color:#fff"],
-.alpha-theme tr[style*="background-color: #fff"],
-.alpha-theme tr[style*="background-color: white"] {
-  background: var(--alpha-surface) !important;
-  color: var(--alpha-text) !important;
-}
-
-/* Ensure all text inside stays readable */
-.alpha-theme tr[style*="background: rgb(249, 250, 251)"] *,
-.alpha-theme tr[style*="background:#fff"] *,
-.alpha-theme tr[style*="background: #fff"] *,
-.alpha-theme tr[style*="background: white"] *,
-.alpha-theme tr[style*="background-color: rgb(249, 250, 251)"] *,
-.alpha-theme tr[style*="background-color:#fff"] *,
-.alpha-theme tr[style*="background-color: #fff"] *,
-.alpha-theme tr[style*="background-color: white"] * {
-  color: var(--alpha-text) !important;
-  -webkit-text-fill-color: var(--alpha-text) !important;
-  opacity: 1 !important;
-}
-
-/* Keep borders and hover consistent on dark */
-.alpha-theme table tr td,
-.alpha-theme table tr th {
-  border-color: var(--alpha-border) !important;
-}
-.alpha-theme table tr:hover {
-  background: rgba(255,255,255,0.06) !important;
-}
-
-/* Pill titles inside the expanded cards (Resume Analysis / Interview Analysis)
-   use a light gray chip background. Force their text to black for readability,
-   without needing JSX changes. */
-.alpha-theme [style*="background: rgb(229, 231, 235)"],
-.alpha-theme [style*="background-color: rgb(229, 231, 235)"],
-.alpha-theme [style*="background: #e5e7eb"],
-.alpha-theme [style*="background-color: #e5e7eb"],
-.alpha-theme [style*="background: rgb(209, 213, 219)"],
-.alpha-theme [style*="background-color: rgb(209, 213, 219)"],
-.alpha-theme [style*="background: #d1d5db"],
-.alpha-theme [style*="background-color: #d1d5db"] {
-  color: #000 !important;
-  -webkit-text-fill-color: #000 !important;
-}
-
-/* --- Expand/Collapse buttons: lilac background + white caret/text -------- */
-.alpha-theme button[style*="background: rgb(229, 231, 235)"],
-.alpha-theme button[style*="background-color: rgb(229, 231, 235)"],
-.alpha-theme button[style*="background: #e5e7eb"],
-.alpha-theme button[style*="background-color: #e5e7eb"],
-.alpha-theme button[style*="background: rgb(209, 213, 219)"],
-.alpha-theme button[style*="background-color: rgb(209, 213, 219)"],
-.alpha-theme button[style*="background: #d1d5db"],
-.alpha-theme button[style*="background-color: #d1d5db"] {
-  background: var(--alpha-primary) !important;
-  border-color: var(--alpha-primary) !important;
-  color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
-}
-.alpha-theme button[style*="background: rgb(229, 231, 235)"]:hover,
-.alpha-theme button[style*="background-color: rgb(229, 231, 235)"]:hover,
-.alpha-theme button[style*="background: #e5e7eb"]:hover,
-.alpha-theme button[style*="background-color: #e5e7eb"]:hover,
-.alpha-theme button[style*="background: rgb(209, 213, 219)"]:hover,
-.alpha-theme button[style*="background-color: rgb(209, 213, 219)"]:hover,
-.alpha-theme button[style*="background: #d1d5db"]:hover,
-.alpha-theme button[style*="background-color: #d1d5db"]:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-/* Ensure any caret icon inside becomes white as well (text or svg) */
-.alpha-theme button[style*="background: rgb(229, 231, 235)"] *,
-.alpha-theme button[style*="background-color: rgb(229, 231, 235)"] *,
-.alpha-theme button[style*="background: #e5e7eb"] *,
-.alpha-theme button[style*="background-color: #e5e7eb"] *,
-.alpha-theme button[style*="background: rgb(209, 213, 219)"] *,
-.alpha-theme button[style*="background-color: rgb(209, 213, 219)"] *,
-.alpha-theme button[style*="background: #d1d5db"] *,
-.alpha-theme button[style*="background-color: #d1d5db"] * {
-  color: #fff !important;
-  fill: #fff !important;
-  stroke: #fff !important;
-}
-
-/* --- Expanded row action buttons (Video / Transcript / Best Report) -------
-   These are rendered as <a role="button"> or <button> with a light gray
-   inline background. Force them to our lilac with white text. */
-.alpha-theme a[role="button"][style*="background: rgb(249, 250, 251)"],
-.alpha-theme a[role="button"][style*="background-color: rgb(249, 250, 251)"],
-.alpha-theme a[role="button"][style*="background: #f9fafb"],
-.alpha-theme a[role="button"][style*="background-color: #f9fafb"],
-.alpha-theme button[style*="background: rgb(249, 250, 251)"],
-.alpha-theme button[style*="background-color: rgb(249, 250, 251)"],
-.alpha-theme a[role="button"][style*="background: rgb(229, 231, 235)"],
-.alpha-theme a[role="button"][style*="background-color: rgb(229, 231, 235)"],
-.alpha-theme a[role="button"][style*="background: #e5e7eb"],
-.alpha-theme a[role="button"][style*="background-color: #e5e7eb"],
-.alpha-theme button[style*="background: rgb(229, 231, 235)"],
-.alpha-theme button[style*="background-color: rgb(229, 231, 235)"] {
-  background: var(--alpha-primary) !important;
-  border-color: var(--alpha-primary) !important;
-  color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
-}
-.alpha-theme a[role="button"][style*="background: rgb(249, 250, 251)"]:hover,
-.alpha-theme a[role="button"][style*="background-color: rgb(249, 250, 251)"]:hover,
-.alpha-theme a[role="button"][style*="background: #f9fafb"]:hover,
-.alpha-theme a[role="button"][style*="background-color: #f9fafb"]:hover,
-.alpha-theme button[style*="background: rgb(249, 250, 251)"]:hover,
-.alpha-theme button[style*="background-color: rgb(249, 250, 251)"]:hover,
-.alpha-theme a[role="button"][style*="background: rgb(229, 231, 235)"]:hover,
-.alpha-theme a[role="button"][style*="background-color: rgb(229, 231, 235)"]:hover,
-.alpha-theme a[role="button"][style*="background: #e5e7eb"]:hover,
-.alpha-theme a[role="button"][style*="background-color: #e5e7eb"]:hover,
-.alpha-theme button[style*="background: rgb(229, 231, 235)"]:hover,
-.alpha-theme button[style*="background-color: rgb(229, 231, 235)"]:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-/* Ensure any icon/caret inside turns white too */
-.alpha-theme a[role="button"][style*="background" ] *,
-.alpha-theme button[style*="background" ] * {
-  color: #fff !important;
-  fill: #fff !important;
-  stroke: #fff !important;
-}
-
-/* Disabled / unavailable buttons → grey text on lilac pill. We try common
-   states used by the generated markup. */
-.alpha-theme a[role="button"][aria-disabled="true"],
-.alpha-theme a[role="button"].disabled,
-.alpha-theme a[role="button"][style*="opacity: 0.5"],
-.alpha-theme a[role="button"][style*="opacity:.5"],
-.alpha-theme button:disabled {
-  color: #BFC7D6 !important;              /* soft grey text */
-  -webkit-text-fill-color: #BFC7D6 !important;
-  cursor: not-allowed !important;
-}
-
-/* === Client Dashboard (scoped) hardening ===================================
-   These class-based rules back up the inline-style overrides above and ensure
-   the dashboard never flips to white when rows expand. They only apply when
-   the page root has `.alpha-theme` and the dashboard container uses
-   `.client-dash` (present on the dashboard markup).
-*/
-
-/* Keep expanded rows dark */
-.alpha-theme .client-dash .cd-row.opened,
-.alpha-theme .client-dash tr.cd-row.opened {
-  background: var(--alpha-surface) !important;
-  color: var(--alpha-text) !important;
-}
-.alpha-theme .client-dash .cd-row.opened *,
-.alpha-theme .client-dash tr.cd-row.opened * {
-  color: var(--alpha-text) !important;
-  -webkit-text-fill-color: var(--alpha-text) !important;
-}
-
-/* Toggle caret pill: lilac bg with white icon/text */
-.alpha-theme .client-dash .expand-toggle.btn.lilac,
-.alpha-theme .client-dash .expand-toggle[role="button"],
-.alpha-theme .client-dash button.expand-toggle {
-  background: var(--alpha-primary) !important;
-  border-color: var(--alpha-primary) !important;
-  color: #fff !important;
-}
-.alpha-theme .client-dash .expand-toggle.btn.lilac:hover,
-.alpha-theme .client-dash .expand-toggle[role="button"]:hover,
-.alpha-theme .client-dash button.expand-toggle:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-.alpha-theme .client-dash .expand-toggle *,
-.alpha-theme .client-dash button.expand-toggle * {
-  color: #fff !important;
-  fill: #fff !important;
-  stroke: #fff !important;
-}
-
-/* Row action buttons (Video / Transcript / Best Report) */
-.alpha-theme .client-dash .row-actions .btn.lilac,
-.alpha-theme .client-dash .row-actions a[role="button"],
-.alpha-theme .client-dash .row-actions button {
-  background: var(--alpha-primary) !important;
-  border-color: var(--alpha-primary) !important;
-  color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
-}
-.alpha-theme .client-dash .row-actions .btn.lilac:hover,
-.alpha-theme .client-dash .row-actions a[role="button"]:hover,
-.alpha-theme .client-dash .row-actions button:hover {
-  background: var(--alpha-primary-strong) !important;
-  border-color: var(--alpha-primary-strong) !important;
-}
-.alpha-theme .client-dash .row-actions .btn.lilac.is-disabled,
-.alpha-theme .client-dash .row-actions a[role="button"][aria-disabled="true"],
-.alpha-theme .client-dash .row-actions button:disabled {
-  color: #BFC7D6 !important; /* soft grey text for unavailable */
-  -webkit-text-fill-color: #BFC7D6 !important;
-  cursor: not-allowed !important;
-  opacity: 1 !important; /* avoid Tailwind dimming stacking */
-}
-
-/* Pill headers inside cards ("Resume Analysis" / "Interview Analysis")
-   are rendered as light grey chips — force black text for readability. */
-.alpha-theme .client-dash .analysis-chip,
-.alpha-theme .client-dash [data-chip="title"],
-.alpha-theme .client-dash .chip-title {
-  color: #000 !important;
-  -webkit-text-fill-color: #000 !important;
+/* Scoped input sizing for Interview page (prevents overlap) */
+.alpha-form-grid-3 .alpha-input {
+  width: 250px !important;
+  height: 70px !important;
 }
