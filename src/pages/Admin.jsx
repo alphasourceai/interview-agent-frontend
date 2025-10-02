@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { apiGet, apiPost, apiDelete, api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
-import '../styles/alphaTheme.css';
+import '../styles/adminTheme.css';
 
 /* bright white trash icon */
 const IconTrash = ({ size = 24 }) => (
@@ -340,13 +340,13 @@ export default function Admin() {
   const selectedClient = useMemo(() => clients.find(c => c.id === selectedClientId) || null, [clients, selectedClientId]);
 
   if (loading) {
-    return <div className="alpha-container"><div className="alpha-card"><h2>Loading…</h2></div></div>;
+    return <div className="alpha-container admin-page"><div className="alpha-card"><h2>Loading…</h2></div></div>;
   }
 
   // ---------- Reset UI ----------
   if (showReset) {
     return (
-      <div className="alpha-container">
+      <div className="alpha-container admin-page">
         <div className="alpha-card alpha-form">
           <h2>Reset Password</h2>
           <form onSubmit={submitReset}>
@@ -369,7 +369,7 @@ export default function Admin() {
   // ---------- Auth screens ----------
   if (!session) {
     return (
-      <div className="alpha-container">
+      <div className="alpha-container admin-page">
         <div className="alpha-card alpha-form">
           <h2>Admin Sign In</h2>
           <form onSubmit={handleSignIn}>
@@ -395,7 +395,7 @@ export default function Admin() {
 
   if (!isAdmin) {
     return (
-      <div className="alpha-container">
+      <div className="alpha-container admin-page">
         <div className="alpha-card">
           <h2>Access denied</h2>
           <p>Your account is not an admin.</p>
@@ -407,7 +407,7 @@ export default function Admin() {
 
   // ---------- Admin app ----------
   return (
-    <div className="alpha-container">
+    <div className="alpha-container admin-page">
       {/* Header with logo (left), title, and account (right) */}
       <div className="alpha-header alpha-header--dash">
         <div className="alpha-header-left">
