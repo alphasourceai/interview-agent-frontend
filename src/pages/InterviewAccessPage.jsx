@@ -1,7 +1,4 @@
 // src/pages/InterviewAccessPage.jsx
-// One-page intake → OTP → Start Interview (embedded tall)
-// Uses VITE_BACKEND_URL for API calls
-
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import InterviewAccessForm from '../components/InterviewAccessForm';
@@ -20,13 +17,12 @@ const BK = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_
 function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const [verified, setVerified] = useState(false);
   const [err, setErr] = useState('');
-  const [msg, setMsg] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
     setErr('');
-    setMsg('');
     if (!/^\d{6}$/.test(code)) {
       setErr('Enter the 6-digit code.');
       return;
@@ -49,7 +45,7 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
         onError?.(m);
         return;
       }
-      setMsg('Verified! You can start your interview.');
+      setVerified(true);
       onVerified?.({
         candidate_id: data?.candidate_id || candidateId,
         role_id: data?.role_id || roleId,
@@ -63,11 +59,17 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
     }
   };
 
+  if (verified) {
+    return (
+      <div className="alpha-step2">
+        <span className="verified-inline">Verified! You can start your interview.</span>
+      </div>
+    );
+  }
+
   return (
-    // COL 3 content (same visual width as the other columns)
     <form onSubmit={submit} className="alpha-step2">
       <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
-
       <div className="mb-3">
         <label className="alpha-label">6-digit code</label>
         <input
@@ -81,20 +83,10 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
           required
         />
       </div>
-
-      {(err || msg) && (
-        <div className="mb-2">
-          {err && <p className="text-red-300 text-sm">{err}</p>}
-          {msg && <p className="text-green-300 text-sm">{msg}</p>}
-        </div>
-      )}
-
-      <div className="flex items-center gap-3">
-        <button type="submit" disabled={busy} className="btn-lg">
-          {busy ? 'Verifying…' : 'Verify'}
-        </button>
-        {msg && <span className="verified-inline">Verified! You can start your interview.</span>}
-      </div>
+      {err && <p className="text-red-300 text-sm mb-2">{err}</p>}
+      <button type="submit" disabled={busy} className="btn-lg">
+        {busy ? 'Verifying…' : 'Verify'}
+      </button>
     </form>
   );
 }
@@ -104,13 +96,11 @@ export default function InterviewAccessPage() {
   const roomRef = useRef(null);
   const joinTimeoutRef = useRef(null);
 
-  const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
+  const [submitted, setSubmitted] = useState(null);
   const [verified, setVerified] = useState(false);
-
   const [roomUrl, setRoomUrl] = useState('');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
-
   const [prejoin, setPrejoin] = useState(false);
 
   const canStart = Boolean(verified && submitted?.candidate_id);
@@ -132,7 +122,6 @@ export default function InterviewAccessPage() {
       const data = await resp.json();
       if (!resp.ok) {
         setError(data?.error || 'Could not start interview.');
-        if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
         return;
       }
       const url =
@@ -147,11 +136,8 @@ export default function InterviewAccessPage() {
         setTimeout(() => {
           try { roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
         }, 50);
-        if (joinTimeoutRef.current) clearTimeout(joinTimeoutRef.current);
-        joinTimeoutRef.current = setTimeout(() => setPrejoin(false), 4000);
       } else {
         setError('Interview room is initializing—try again in a moment.');
-        if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
       }
     } catch {
       setError('Network error starting interview.');
@@ -160,32 +146,7 @@ export default function InterviewAccessPage() {
     }
   }, [canStart, submitted]);
 
-  React.useEffect(() => {
-    function onMessage(ev) {
-      const d = ev?.data;
-      const tagRaw = typeof d === 'string' ? d : (d?.action || d?.event || d?.name || '');
-      const tag = String(tagRaw).toLowerCase();
-
-      const joinEvents = new Set(['joined-meeting','participant-joined','call-joined','meeting-joined','room-joined']);
-      const leaveEvents = new Set(['left-meeting','call-left','meeting-ended','meeting-left','room-left','room-deleted']);
-      const prejoinEvents = new Set(['prejoin','prejoin-screen','waiting-room','lobby-shown']);
-
-      if (joinEvents.has(tag)) {
-        if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
-        setPrejoin(false);
-        return;
-      }
-      if (leaveEvents.has(tag)) { setPrejoin(true); return; }
-      if (prejoinEvents.has(tag)) { setPrejoin(true); return; }
-    }
-    window.addEventListener('message', onMessage);
-    return () => {
-      window.removeEventListener('message', onMessage);
-      if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); joinTimeoutRef.current = null; }
-    };
-  }, []);
-
-  // keep top spacing, but no text
+  // header spacing
   const header = useMemo(
     () => (
       <div className="max-w-6xl mx-auto w-full" aria-hidden="true">
@@ -194,8 +155,6 @@ export default function InterviewAccessPage() {
     ),
     []
   );
-
-  const noRoom = !roomUrl;
 
   return (
     <div className="alpha-theme">
@@ -207,7 +166,7 @@ export default function InterviewAccessPage() {
           <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
             <div
               id="tavus-slot"
-              className={`tavus-slot${noRoom ? ' no-room' : ''}`}
+              className={`tavus-slot${!roomUrl ? ' no-room' : ''}`}
               aria-label="Interview video area"
             >
               {roomUrl ? (
@@ -217,10 +176,6 @@ export default function InterviewAccessPage() {
                   loading="lazy"
                   allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
                   allowFullScreen
-                  onLoad={() => {
-                    if (joinTimeoutRef.current) { clearTimeout(joinTimeoutRef.current); }
-                    joinTimeoutRef.current = setTimeout(() => setPrejoin((p) => p || true), 300);
-                  }}
                 />
               ) : (
                 <div className="placeholder">
@@ -233,10 +188,9 @@ export default function InterviewAccessPage() {
           </div>
         </div>
 
-        {/* Unified 3-column grid (desktop). Col 1–2 = Step 1, Col 3 = Step 2 */}
+        {/* Unified 3-column grid */}
         <div className="alpha-form">
           <div className="alpha-form-grid-3">
-            {/* Step 1 spans columns 1–2 */}
             <div className="alpha-span-2">
               <InterviewAccessForm
                 roleToken={role_token}
@@ -248,8 +202,7 @@ export default function InterviewAccessPage() {
               />
             </div>
 
-            {/* Step 2 sits in column 3, aligned to top; hidden until submitted */}
-            {submitted ? (
+            {submitted && (
               <OtpInline
                 email={submitted.email}
                 candidateId={submitted.candidate_id}
@@ -260,17 +213,9 @@ export default function InterviewAccessPage() {
                 }}
                 onError={() => setVerified(false)}
               />
-            ) : (
-              <div className="alpha-step2">
-                <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
-                <p className="text-sm opacity-80">
-                  Submit the form first to receive your 6-digit code by email.
-                </p>
-              </div>
             )}
           </div>
 
-          {/* Start Interview appears ONLY after verified; centered below the grid */}
           {verified && (
             <div className="start-block">
               <button
@@ -285,49 +230,6 @@ export default function InterviewAccessPage() {
           )}
           {error && <p className="text-red-300 text-sm mt-2 center">{error}</p>}
         </div>
-
-        {/* Page-scoped CSS for the Tavus slot */}
-        <style>{`
-          .tavus-stage { width: 100%; }
-          .tavus-slot {
-            position: relative;
-            width: 100%;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(0,0,0,0.85);
-            overflow: hidden;
-            margin: 0 auto;
-            max-width: 1200px;
-          }
-          @media (min-width: 768px) {
-            .tavus-stage .tavus-slot { height: 520px; }
-            .tavus-stage.prejoin .tavus-slot { height: 650px; }
-          }
-          @media (max-width: 767px) {
-            .tavus-slot { aspect-ratio: 16 / 9; }
-          }
-          .tavus-slot.no-room { height: 690px !important; }
-
-          .tavus-slot > iframe,
-          .tavus-slot video,
-          .tavus-slot [data-daily-video],
-          .tavus-slot .daily-video {
-            position: absolute !important;
-            inset: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            border: 0 !important;
-            display: block;
-            object-fit: contain;
-            background: #000;
-          }
-          .tavus-slot .placeholder {
-            position: absolute; inset: 0;
-            display:flex; align-items:center; justify-content:center;
-            color: rgba(255,255,255,0.85); padding:24px; text-align:center;
-          }
-          .tavus-slot .center-msg { max-width: 520px; }
-        `}</style>
       </div>
     </div>
   );
