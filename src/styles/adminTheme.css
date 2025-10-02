@@ -601,6 +601,13 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   border: none !important;
 }
 
+/* Make the JD file input wider than standard inputs */
+.admin-page .row input.alpha-input.file {
+  width: 320px !important;
+  max-width: 320px !important;
+  flex: 0 0 320px !important;
+}
+
 /* Responsive fallback: allow wrap on small screens */
 @media (max-width: 700px) {
   .admin-page .row { flex-wrap: wrap; }
