@@ -1,4 +1,6 @@
 // src/components/InterviewAccessForm.jsx
+// Submits candidate info + resume -> returns candidate/role/email to parent (no navigation)
+
 import React, { useRef, useState } from 'react';
 
 function joinUrl(base, path) {
@@ -65,7 +67,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         return;
       }
 
-      setSubmitted(true);
+      setSubmitted(true); // replaces only the submit button with confirmation
       onSubmitted?.({
         candidate_id: data?.candidate_id || null,
         role_id: data?.role_id || null,
@@ -79,46 +81,106 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
     }
   };
 
-  if (submitted) {
-    return (
-      <div className="alpha-col-span-2 text-green-300 text-sm">
-        Candidate created. OTP emailed.
-      </div>
-    );
-  }
+  const isLocked = submitted;
 
   return (
+    // INTERNAL 2-column grid (1fr | 1.5fr). This whole form sits across cols 1–2
     <form onSubmit={onSubmit} className="alpha-form-grid gap-y-4">
+      {/* First / Last (row 1) */}
       <div>
         <label className="alpha-label">First name</label>
-        <input type="text" name="first_name" value={form.first_name} onChange={onChange} required className="alpha-input w-full" />
+        <input
+          type="text"
+          name="first_name"
+          value={form.first_name}
+          onChange={onChange}
+          required
+          className="alpha-input w-full"
+          disabled={isLocked}
+        />
       </div>
       <div>
         <label className="alpha-label">Last name</label>
-        <input type="text" name="last_name" value={form.last_name} onChange={onChange} required className="alpha-input w-full" />
+        <input
+          type="text"
+          name="last_name"
+          value={form.last_name}
+          onChange={onChange}
+          required
+          className="alpha-input w-full"
+          disabled={isLocked}
+        />
       </div>
 
+      {/* Email / Phone (row 2) */}
       <div>
         <label className="alpha-label">Email</label>
-        <input type="email" name="email" value={form.email} onChange={onChange} required className="alpha-input w-full" />
+        <input
+          type="email"
+          name="email"
+          value={form.email}
+          onChange={onChange}
+          required
+          className="alpha-input w-full"
+          disabled={isLocked}
+        />
       </div>
       <div>
         <label className="alpha-label">Phone</label>
-        <input type="tel" name="phone" value={form.phone} onChange={onChange} placeholder="Digits only" required inputMode="numeric" pattern="[0-9]{7,15}" className="alpha-input w-full" />
+        <input
+          type="tel"
+          name="phone"
+          value={form.phone}
+          onChange={onChange}
+          placeholder="Digits only"
+          required
+          inputMode="numeric"
+          pattern="[0-9]{7,15}"
+          title="Enter 7–15 digits"
+          autoComplete="tel"
+          className="alpha-input w-full"
+          disabled={isLocked}
+        />
       </div>
 
+      {/* Upload Resume (left column, row 3) */}
       <div>
-        <button type="button" onClick={onPickResume} className="btn-lg">+ Add Resume</button>
-        {form.resume && <div className="mt-1 text-xs opacity-80">{form.resume.name}</div>}
-        <input ref={fileInputRef} type="file" name="resume" accept=".pdf,.doc,.docx" onChange={onChange} className="hidden" />
+        {isLocked ? (
+          <div className="text-green-300 text-sm">Candidate created. OTP emailed.</div>
+        ) : (
+          <>
+            <button type="button" onClick={onPickResume} className="btn-lg">
+              + Add Resume
+            </button>
+            {form.resume && <div className="mt-1 text-xs opacity-80">{form.resume.name}</div>}
+            <input
+              ref={fileInputRef}
+              type="file"
+              name="resume"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={onChange}
+              className="hidden"
+            />
+          </>
+        )}
       </div>
 
+      {/* Submit (right column, row 3) */}
       <div className="flex justify-end">
-        <button type="submit" disabled={submitting || !form.resume} className="btn-lg">
-          {submitting ? 'Submitting…' : 'Submit & Get OTP'}
-        </button>
+        {isLocked ? (
+          <div className="text-green-300 text-sm self-center">Form submitted.</div>
+        ) : (
+          <button
+            type="submit"
+            disabled={submitting || !form.resume}
+            className="btn-lg"
+          >
+            {submitting ? 'Submitting…' : 'Submit & Get OTP'}
+          </button>
+        )}
       </div>
 
+      {/* Error across both columns, if any */}
       {error && <div className="alpha-col-span-2 text-red-300 text-sm">{error}</div>}
     </form>
   );
