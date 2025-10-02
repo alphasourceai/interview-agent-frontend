@@ -17,6 +17,8 @@ const BK = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_
   ? String(import.meta.env.VITE_BACKEND_URL).replace(/\/+$/, '')
   : '';
 
+// Step 2: OTP — email display removed; code field sits in column 1 width,
+// Verify button left-aligned with the code field; larger text via .btn-lg.
 function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,19 +67,8 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
 
   return (
     <form onSubmit={submit} className="alpha-form-grid gap-y-3">
-      {/* Email (read-only) in right column to align with Step 1 */}
-      <div className="col-span-2 sm:col-start-2">
-        <label className="alpha-label">Email</label>
-        <input
-          type="email"
-          value={email}
-          readOnly
-          className="alpha-input w-full"
-        />
-      </div>
-
-      {/* 6-digit code (right column) */}
-      <div className="col-span-2 sm:col-start-2">
+      {/* 6-digit code — left column width */}
+      <div>
         <label className="alpha-label">6-digit code</label>
         <input
           type="text"
@@ -91,14 +82,14 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
         />
       </div>
 
-      {/* Error/Success */}
-      <div className="col-span-2 sm:col-start-2">
+      {/* messages under the code field */}
+      <div className="alpha-col-span-2">
         {err && <p className="text-red-300 text-sm">{err}</p>}
         {msg && <p className="text-green-300 text-sm">{msg}</p>}
       </div>
 
-      {/* Verify button aligned right with Submit */}
-      <div className="col-span-2 sm:col-start-2 flex justify-end">
+      {/* Verify button — left aligned with the code field */}
+      <div>
         <button type="submit" disabled={busy} className="btn-lg">
           {busy ? 'Verifying…' : 'Verify'}
         </button>
@@ -210,7 +201,7 @@ export default function InterviewAccessPage() {
       <div className="space-y-6">
         {header}
 
-        {/* Full-bleed, opaque hallway hero */}
+        {/* Full-bleed, opaque hallway hero (no translucency, full width) */}
         <div className="alpha-hero fullbleed">
           <div className={`tavus-stage${prejoin ? ' prejoin' : ''}`} ref={roomRef}>
             <div
@@ -241,10 +232,9 @@ export default function InterviewAccessPage() {
           </div>
         </div>
 
-        {/* Same grid for Step 1 + Step 2 */}
+        {/* Step 1 + Step 2, on the same 2-col grid system */}
         <div className="alpha-form">
           <div className="grid grid-cols-1 gap-6 max-w-[1200px] mx-auto">
-            {/* Card-like surface just to match the theme (optional) */}
             <div className="space-y-8">
               {/* STEP 1 */}
               <div className="alpha-form-grid">
@@ -258,7 +248,7 @@ export default function InterviewAccessPage() {
                 />
               </div>
 
-              {/* STEP 2 (only shows after Step 1 submitted) */}
+              {/* STEP 2 */}
               <div className="space-y-3">
                 <h3 className="text-base font-semibold">Step 2 — Verify & Start</h3>
                 {!submitted ? (
@@ -278,9 +268,9 @@ export default function InterviewAccessPage() {
                       onError={() => setVerified(false)}
                     />
 
-                    {/* Start Interview appears ONLY after verified */}
+                    {/* Start Interview appears ONLY after verified; centered, white/lilac */}
                     {verified && (
-                      <div className="mt-2 flex justify-center">
+                      <div className="mt-2 start-block">
                         <button
                           type="button"
                           disabled={!canStart || starting}
@@ -299,7 +289,7 @@ export default function InterviewAccessPage() {
           </div>
         </div>
 
-        {/* local CSS specific to this page */}
+        {/* local CSS specific to this page (keeps Tavus sizing unchanged) */}
         <style>{`
           /* --- Tavus/Daily container --- */
           .tavus-stage { width: 100%; }
@@ -323,7 +313,7 @@ export default function InterviewAccessPage() {
             .tavus-slot { aspect-ratio: 16 / 9; }
           }
 
-          /* placeholder = fixed 1200×690 until roomUrl exists */
+          /* placeholder = fixed 1200×690 until roomUrl exists (do NOT change Tavus sizing) */
           .tavus-slot.no-room { height: 690px !important; }
 
           .tavus-slot > iframe,

@@ -108,7 +108,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
 
   return (
     <form onSubmit={onSubmit} className="alpha-form-grid gap-y-4">
-      {/* First / Last */}
+      {/* Row 1: First / Last */}
       <div>
         <label className="alpha-label">First name</label>
         <input
@@ -132,7 +132,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         />
       </div>
 
-      {/* Email (right column, wider) */}
+      {/* Row 2: Email (right column, 1.5fr) / Phone (right column) */}
       <div className="col-span-2 sm:col-start-2">
         <label className="alpha-label">Email</label>
         <input
@@ -144,8 +144,6 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
           className="alpha-input w-full"
         />
       </div>
-
-      {/* Phone (right column) */}
       <div className="col-span-2 sm:col-start-2">
         <label className="alpha-label">Phone</label>
         <input
@@ -163,7 +161,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         />
       </div>
 
-      {/* Upload Resume button (left column), no label text above */}
+      {/* Row 3: Upload Resume (left column), no label text above */}
       <div>
         <button
           type="button"
@@ -185,7 +183,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         />
       </div>
 
-      {/* Submit (right aligned with Verify) */}
+      {/* Row 3: Submit (right aligned with Verify in Step 2) */}
       <div className="col-span-2 sm:col-start-2 flex justify-end">
         <button
           type="submit"
@@ -197,7 +195,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
       </div>
 
       {/* Messages under grid */}
-      <div className="col-span-2">
+      <div className="alpha-col-span-2">
         {error && <p className="text-red-300 text-sm" role="alert">{error}</p>}
         {message && <p className="text-green-300 text-sm" role="status">{message}</p>}
       </div>
