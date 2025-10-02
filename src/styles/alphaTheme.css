@@ -235,3 +235,34 @@
   justify-content: center;
   padding-bottom: 24px;
 }
+
+/* Hallway Hero fix */
+.alpha-hero.fullbleed {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  border-radius: 0;
+  background: url("/hallway.png") center/cover no-repeat;
+  padding: 165px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.alpha-hero.fullbleed .tavus-stage {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Scoped input sizing for Interview page */
+.alpha-form-grid-3 .alpha-input {
+  width: 250px !important;
+  height: 70px !important;
+}
+
+/* Verified inline style */
+.verified-inline {
+  font-size: 0.95rem;
+  color: #4ade80;
+}
