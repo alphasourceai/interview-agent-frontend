@@ -3,17 +3,18 @@
 
 /* alphaTheme.css (appenditions/overrides) */
 
-/* Full-bleed opaque hallway hero */
+/* Full-bleed opaque hallway hero (no translucency; spans entire viewport width) */
 .alpha-hero.fullbleed{
   position: relative;
   width: 100vw;
   margin-left: 50%;
   transform: translateX(-50%);
   background: url("/hallway.png") center/cover no-repeat; /* opaque */
-  padding: 150px 24px; /* ~25% taller than before; centers Tavus nicely */
+  /* keep the vertical rhythm you already had; if you want taller, adjust padding here */
+  /* padding: 150px 24px; */
 }
 
-/* Keep children constrained */
+/* Keep children constrained inside the hero */
 .alpha-hero.fullbleed .tavus-stage{ max-width: 1400px; margin: 0 auto; }
 
 /* Same two-column grid everywhere (1fr | 1.5fr) */
@@ -55,6 +56,7 @@
   color: #fff;
   border: 1px solid var(--alpha-primary);
   transition: filter .15s ease, background .15s ease, border-color .15s ease;
+  font-size: 1.05rem; /* larger text for Resume / Submit / Verify */
 }
 .btn-lg:hover{ background: var(--alpha-primary-strong); border-color: var(--alpha-primary-strong); }
 
@@ -66,7 +68,7 @@
   padding: 0 28px;
   border-radius: 32px;
   font-weight: 800;
-  font-size: 1.05rem;
+  font-size: 1.125rem; /* larger Start Interview */
 }
 
 /* White with lilac outline/text (Start Interview) */
@@ -128,7 +130,7 @@
   color:var(--alpha-darktext)!important;
 }
 
-/* buttons */
+/* buttons (base) */
 .alpha-theme button, .alpha-theme .btn, .alpha-theme input[type="button"], .alpha-theme input[type="submit"]{
   appearance:none; background:var(--alpha-primary); color:#fff; border:1px solid var(--alpha-primary);
   border-radius:20px; padding:8px 14px; font-weight:600; cursor:pointer;
@@ -137,7 +139,7 @@
   background:var(--alpha-primary-strong); border-color:var(--alpha-primary-strong);
 }
 
-/* inputs */
+/* inputs (base) */
 .alpha-theme input, .alpha-theme select, .alpha-theme textarea{
   background:rgba(255,255,255,0.08); color:var(--alpha-text); border:1px solid var(--alpha-border);
   border-radius:10px; padding:8px 10px;
@@ -146,13 +148,13 @@
 
 .alpha-theme select option{ color:#111; }
 
-/* ===== Hero (hallway.png) ================================================= */
+/* ===== Hero (legacy alpha-hero with translucent overlay — kept for other pages) */
 .alpha-hero{
   position:relative;
   max-width:1400px;
   margin:0 auto;
   border-radius:16px;
-  padding:96px 24px;             /* creates the banner height around the stage */
+  padding:96px 24px;             /* banner height */
   background:
     linear-gradient(rgba(6,21,81,0.82), rgba(6,21,81,0.82)),
     url("/hallway.png") center/cover no-repeat;
@@ -160,8 +162,6 @@
   isolation:isolate;
 }
 .alpha-hero .tavus-stage{ margin:0 auto; }
-
-/* spacing to the form block */
 .alpha-hero + .alpha-form{ margin-top:56px; }
 
 /* ===== Form container + grid ============================================= */
@@ -176,8 +176,6 @@
 @media (max-width: 768px){
   .alpha-form-grid{ grid-template-columns: 1fr; }
 }
-
-/* utility to place across both columns when needed */
 .alpha-col-span-2{ grid-column: 1 / -1; }
 
 /* inputs & buttons sized like the Wix mock */
@@ -190,6 +188,7 @@
   height:52px; border-radius:var(--alpha-radius);
   background:var(--alpha-surface); border:1px solid var(--alpha-border);
   color:var(--alpha-text); padding:10px 12px;
+  font-size: 1.05rem; /* slightly larger input text */
 }
 
 .alpha-form .btn-primary,
@@ -204,7 +203,7 @@
   background:var(--alpha-primary-strong); border-color:var(--alpha-primary-strong);
 }
 
-/* hide any native file inputs inside the form; we trigger via a styled button */
+/* hide any native file inputs; we trigger via a styled button */
 .alpha-form input[type="file"]{ display:none !important; }
 
 /* place the submit button bottom-right of the grid */
@@ -212,3 +211,24 @@
 
 /* small filename text under the resume button */
 .alpha-form .file-note{ margin-top:4px; font-size:12px; opacity:.8; }
+
+/* === Interview page final tweaks (append-only) =========================== */
+
+/* Ensure the full-bleed hero stays full width and opaque on the interview page */
+.alpha-hero.fullbleed{
+  position: relative;
+  width: 100vw;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  background: url("/hallway.png") center/cover no-repeat;
+}
+
+/* Add ~20px between col 1 and col 2 so columns never touch */
+.alpha-form-grid { gap: 20px !important; }
+
+/* Centered block for Start Interview + bottom padding */
+.start-block {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 24px;
+}
