@@ -27,7 +27,7 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
     e.preventDefault();
     setErr('');
     setMsg('');
-    if (!email || !/^\d{6}$/.test(code)) {
+    if (!/^\d{6}$/.test(code)) {
       setErr('Enter the 6-digit code.');
       return;
     }
@@ -64,9 +64,11 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
   };
 
   return (
-    <form onSubmit={submit} className="alpha-form-grid gap-y-3">
-      {/* 6-digit code in COLUMN 1 (same width as First name/Email) */}
-      <div className="col-span-2 sm:col-start-1 sm:col-end-2">
+    // COL 3 content (same visual width as the other columns)
+    <form onSubmit={submit} className="alpha-step2">
+      <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
+
+      <div className="mb-3">
         <label className="alpha-label">6-digit code</label>
         <input
           type="text"
@@ -80,17 +82,20 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
         />
       </div>
 
-      {/* Error/Success */}
-      <div className="col-span-2 sm:col-start-1 sm:col-end-2">
-        {err && <p className="text-red-300 text-sm">{err}</p>}
-        {msg && <p className="text-green-300 text-sm">{msg}</p>}
-      </div>
+      {/* error/success under the field on its own line */}
+      {(err || msg) && (
+        <div className="mb-2">
+          {err && <p className="text-red-300 text-sm">{err}</p>}
+          {msg && <p className="text-green-300 text-sm">{msg}</p>}
+        </div>
+      )}
 
-      {/* Verify button aligned with the left edge of the code field */}
-      <div className="col-span-2 sm:col-start-1 sm:col-end-2 flex justify-start">
+      {/* Verify button with inline 'Verified!' to the right when present */}
+      <div className="flex items-center gap-3">
         <button type="submit" disabled={busy} className="btn-lg">
           {busy ? 'Verifying…' : 'Verify'}
         </button>
+        {msg && <span className="verified-inline">Verified! You can start your interview.</span>}
       </div>
     </form>
   );
@@ -230,61 +235,57 @@ export default function InterviewAccessPage() {
           </div>
         </div>
 
-        {/* Step 1 + Step 2 (same grid system) */}
+        {/* Unified 3-column grid (desktop). Col 1–2 = Step 1, Col 3 = Step 2 */}
         <div className="alpha-form">
-          <div className="grid grid-cols-1 gap-6 max-w-[1200px] mx-auto">
-            <div className="space-y-8">
-              {/* STEP 1 */}
-              <div className="alpha-form-grid">
-                <InterviewAccessForm
-                  roleToken={role_token}
-                  onSubmitted={(payload) => {
-                    setSubmitted(payload);
-                    setVerified(false);
-                    setRoomUrl('');
-                  }}
-                />
-              </div>
-
-              {/* STEP 2 */}
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold">Step 2 — Verify & Start</h3>
-                {!submitted ? (
-                  <p className="text-sm opacity-80">
-                    Submit the form first to receive your 6-digit code by email.
-                  </p>
-                ) : (
-                  <>
-                    <OtpInline
-                      email={submitted.email}
-                      candidateId={submitted.candidate_id}
-                      roleId={submitted.role_id}
-                      onVerified={(info) => {
-                        setVerified(true);
-                        setSubmitted((s) => ({ ...(s || {}), ...info }));
-                      }}
-                      onError={() => setVerified(false)}
-                    />
-
-                    {/* Start Interview appears ONLY after verified */}
-                    {verified && (
-                      <div className="start-block">
-                        <button
-                          type="button"
-                          disabled={!canStart || starting}
-                          onClick={startInterview}
-                          className="btn-xl btn-outline-lilac btn-wide"
-                        >
-                          {starting ? 'Starting…' : 'Start Interview'}
-                        </button>
-                      </div>
-                    )}
-                    {error && <p className="text-red-300 text-sm mt-2">{error}</p>}
-                  </>
-                )}
-              </div>
+          <div className="alpha-form-grid-3">
+            {/* Step 1 spans columns 1–2 */}
+            <div className="alpha-span-2">
+              <InterviewAccessForm
+                roleToken={role_token}
+                onSubmitted={(payload) => {
+                  setSubmitted(payload);
+                  setVerified(false);
+                  setRoomUrl('');
+                }}
+              />
             </div>
+
+            {/* Step 2 sits in column 3, aligned to top; hidden until submitted */}
+            {submitted ? (
+              <OtpInline
+                email={submitted.email}
+                candidateId={submitted.candidate_id}
+                roleId={submitted.role_id}
+                onVerified={(info) => {
+                  setVerified(true);
+                  setSubmitted((s) => ({ ...(s || {}), ...info }));
+                }}
+                onError={() => setVerified(false)}
+              />
+            ) : (
+              <div className="alpha-step2">
+                <h3 className="text-base font-semibold mb-3">Step 2 — Verify & Start</h3>
+                <p className="text-sm opacity-80">
+                  Submit the form first to receive your 6-digit code by email.
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Start Interview appears ONLY after verified; centered below the grid */}
+          {verified && (
+            <div className="start-block">
+              <button
+                type="button"
+                disabled={!canStart || starting}
+                onClick={startInterview}
+                className="btn-xl btn-outline-lilac btn-wide"
+              >
+                {starting ? 'Starting…' : 'Start Interview'}
+              </button>
+            </div>
+          )}
+          {error && <p className="text-red-300 text-sm mt-2 center">{error}</p>}
         </div>
 
         {/* Page-scoped CSS for the Tavus slot */}

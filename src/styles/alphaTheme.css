@@ -7,30 +7,28 @@
 .alpha-hero.fullbleed{
   position: relative;
   width: 100vw;
-  max-width: 100vw;                  /* override legacy .alpha-hero max-width */
+  max-width: 100vw;                 /* override legacy max-width */
   margin-left: 50%;
   transform: translateX(-50%);
-  margin-top: 0;                     /* defeat legacy margin:0 auto */
-  margin-right: 0;
-  margin-bottom: 0;
-  border-radius: 0;                  /* no clipping on edges */
+  margin: 0;
+  border-radius: 0;
   background: url("/hallway.png") center/cover no-repeat; /* opaque */
-  /* +10% taller than your earlier band, with no horizontal padding */
-  padding: 165px 0;
-  display: flex;                     /* center Tavus stage inside the hero */
-  align-items: center;               /* vertical centering */
-  justify-content: center;           /* horizontal centering */
+  padding: 165px 0;                 /* ~10% taller */
+  display: flex;                    /* center Tavus stage inside the hero */
+  align-items: center;              /* vertical centering */
+  justify-content: center;          /* horizontal centering */
   box-sizing: border-box;
 }
-
-/* Keep children constrained inside the hero */
+/* Constrain Tavus stage within the hero */
 .alpha-hero.fullbleed .tavus-stage{
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
 }
 
-/* Same two-column grid everywhere (1fr | 1.5fr) */
+/* ---------- Form grids ---------- */
+
+/* Existing 2-col grid (1fr | 1.5fr) used INSIDE Step-1 form */
 .alpha-form-grid{
   display: grid;
   grid-template-columns: 1fr 1.5fr;
@@ -40,7 +38,29 @@
   .alpha-form-grid{ grid-template-columns: 1fr; }
 }
 
-/* Labels + inputs */
+/* New outer 3-col grid for desktop alignment (equal columns) */
+.alpha-form-grid-3{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;                        /* fixed ~20px gutter so cols never touch */
+  max-width: 1200px;                /* centered cap */
+  margin: 0 auto;
+  align-items: start;               /* align Step 2 to the top */
+}
+@media (max-width: 1023px){
+  .alpha-form-grid-3{ grid-template-columns: 1fr; }
+}
+
+/* Utilities for placement inside the 3-col grid */
+.alpha-span-2{ grid-column: 1 / span 2; }
+@media (max-width:1023px){ .alpha-span-2{ grid-column: 1 / -1; } }
+
+/* Step 2 column base styling (sits in col 3 on desktop) */
+.alpha-step2{ grid-column: 3; }
+@media (max-width:1023px){ .alpha-step2{ grid-column: 1; } }
+
+/* ---------- Form controls ---------- */
+
 .alpha-label{
   display:block;
   font-size: 0.9rem;
@@ -54,6 +74,7 @@
   color: var(--alpha-text);
   padding: 10px 12px;
   width: 100%;
+  font-size: 1.05rem; /* slightly larger input text */
 }
 
 /* Buttons */
@@ -79,13 +100,11 @@
   justify-content:center;
   height: 64px;
   padding: 0 28px;
-  border-radius: 9999px;             /* pill for Start Interview */
+  border-radius: 9999px;            /* pill */
   font-weight: 800;
-  font-size: 1.125rem;               /* larger Start Interview */
+  font-size: 1.125rem;              /* larger Start Interview */
 }
-
-/* Optional wider Start button (~1.5×) */
-.btn-wide{ min-width: 360px; }
+.btn-wide{ min-width: 360px; }      /* ~1.5× wider */
 
 /* White with lilac outline/text (Start Interview) */
 .btn-outline-lilac{
@@ -101,6 +120,12 @@
 
 /* Form container spacing */
 .alpha-form{ padding: 0 24px 48px; }
+
+/* Inline “Verified” text next to the Verify button */
+.verified-inline{
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
 
 /* (pre-existing theme rules stay as-is below this line) */
 
@@ -164,13 +189,13 @@
 
 .alpha-theme select option{ color:#111; }
 
-/* ===== Hero (legacy alpha-hero with translucent overlay — kept for other pages) */
+/* ===== Legacy alpha-hero with translucent overlay (kept for other pages) */
 .alpha-hero{
   position:relative;
   max-width:1400px;
   margin:0 auto;
   border-radius:16px;
-  padding:96px 24px;             /* banner height */
+  padding:96px 24px;
   background:
     linear-gradient(rgba(6,21,81,0.82), rgba(6,21,81,0.82)),
     url("/hallway.png") center/cover no-repeat;
@@ -180,10 +205,10 @@
 .alpha-hero .tavus-stage{ margin:0 auto; }
 .alpha-hero + .alpha-form{ margin-top:56px; }
 
-/* ===== Form container + grid ============================================= */
+/* ===== Form container (outer) ============================================ */
 .alpha-form{ max-width:1200px; margin:0 auto; padding:0 24px 48px; }
 
-/* two-column grid: 1fr | 1.5fr */
+/* two-column grid used inside Step-1 (kept) */
 .alpha-form-grid{
   display:grid;
   grid-template-columns: 1fr 1.5fr;
@@ -194,31 +219,6 @@
 }
 .alpha-col-span-2{ grid-column: 1 / -1; }
 
-/* inputs & buttons sized like the Wix mock */
-.alpha-form .alpha-input,
-.alpha-form input[type="text"],
-.alpha-form input[type="email"],
-.alpha-form input[type="tel"],
-.alpha-form select,
-.alpha-form textarea{
-  height:52px; border-radius:var(--alpha-radius);
-  background:var(--alpha-surface); border:1px solid var(--alpha-border);
-  color:var(--alpha-text); padding:10px 12px;
-  font-size: 1.05rem; /* slightly larger input text */
-}
-
-.alpha-form .btn-primary,
-.alpha-form button[type="submit"],
-.alpha-form .btn{
-  height:56px; padding:0 22px; border-radius:28px; font-weight:700;
-  background:var(--alpha-primary); border:1px solid var(--alpha-primary); color:#fff;
-}
-.alpha-form .btn-primary:hover,
-.alpha-form button[type="submit"]:hover,
-.alpha-form .btn:hover{
-  background:var(--alpha-primary-strong); border-color:var(--alpha-primary-strong);
-}
-
 /* hide any native file inputs; we trigger via a styled button */
 .alpha-form input[type="file"]{ display:none !important; }
 
@@ -227,17 +227,6 @@
 
 /* small filename text under the resume button */
 .alpha-form .file-note{ margin-top:4px; font-size:12px; opacity:.8; }
-
-/* === Interview page final tweaks (append-only) =========================== */
-
-/* Ensure the full-bleed hero stays full width and opaque on the interview page */
-.alpha-hero.fullbleed{
-  /* properties consolidated above; this duplicate rule is intentionally left
-     to keep “append-only” structure while preserving specificity */
-}
-
-/* Add ~20px between col 1 and col 2 so columns never touch */
-.alpha-form-grid { gap: 20px !important; }
 
 /* Centered block for Start Interview + bottom padding */
 .start-block {

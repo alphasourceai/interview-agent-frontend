@@ -107,8 +107,9 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
   const resumeLabel = form.resume ? form.resume.name : '';
 
   return (
+    // INTERNAL 2-column grid (1fr | 1.5fr). This whole form will sit across cols 1–2
     <form onSubmit={onSubmit} className="alpha-form-grid gap-y-4">
-      {/* First / Last */}
+      {/* First / Last (row 1) */}
       <div>
         <label className="alpha-label">First name</label>
         <input
@@ -132,7 +133,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         />
       </div>
 
-      {/* Email (right column) */}
+      {/* Email / Phone (row 2) */}
       <div>
         <label className="alpha-label">Email</label>
         <input
@@ -144,8 +145,6 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
           className="alpha-input w-full"
         />
       </div>
-
-      {/* Phone (right column) */}
       <div>
         <label className="alpha-label">Phone</label>
         <input
@@ -163,7 +162,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         />
       </div>
 
-      {/* Upload Resume (left column), no label */}
+      {/* Upload Resume (left column, row 3) */}
       <div>
         <button type="button" onClick={onPickResume} className="btn-lg">
           + Add Resume
@@ -179,7 +178,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         />
       </div>
 
-      {/* Submit (right aligned within column 2) */}
+      {/* Submit (right column, row 3) */}
       <div className="flex justify-end">
         <button
           type="submit"
@@ -190,7 +189,7 @@ export default function InterviewAccessForm({ roleToken, onSubmitted }) {
         </button>
       </div>
 
-      {/* Messages (full width) */}
+      {/* Messages (full width under the 2-col form) */}
       <div className="alpha-col-span-2">
         {error && <p className="text-red-300 text-sm" role="alert">{error}</p>}
         {message && <p className="text-green-300 text-sm" role="status">{message}</p>}
