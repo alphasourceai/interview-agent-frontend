@@ -608,6 +608,17 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   flex: 0 0 320px !important;
 }
 
+/* Admin Sign In: input width and spacing under title */
+.admin-page .alpha-form form {
+  margin-top: 30px;
+}
+.admin-page .alpha-form input.alpha-input {
+  width: 600px !important;
+  max-width: 600px !important;
+  flex: 0 0 600px !important;
+  display: inline-block;
+}
+
 /* Responsive fallback: allow wrap on small screens */
 @media (max-width: 700px) {
   .admin-page .row { flex-wrap: wrap; }
