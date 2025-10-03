@@ -2,7 +2,7 @@
 /* Client Sign In (scoped to .client-auth) */
 
 /* Theme variables come from the global alpha theme; we only style the auth card */
-.client-auth .card {
+.client-auth .alpha-card.auth-wrap.client-card {
   max-width: 480px;
   margin: 80px auto 0;
   padding: 24px;
@@ -10,6 +10,7 @@
   border: 1px solid var(--alpha-border) !important;
   border-radius: var(--alpha-radius);
   color: var(--alpha-text);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
 }
 
 .client-auth .auth-head {
@@ -19,7 +20,7 @@
   margin-bottom: 12px;
 }
 
-.client-auth .auth-head .title { margin: 0; }
+.client-auth .auth-head h2 { margin: 0; }
 
 .client-auth .auth-logo {
   width: 36px;
@@ -27,26 +28,14 @@
   object-fit: contain;
 }
 
-.client-auth .label {
-  display: block;
-  margin: 10px 0 6px;
-}
-
-.client-auth .input {
+.client-auth label { display: block; margin: 10px 0 6px; }
+.client-auth .alpha-input {
   width: 100% !important;
   max-width: 100% !important;
   display: block;
-  height: 52px;
-  padding: 10px 12px;
-  border-radius: var(--alpha-radius);
-  background: var(--alpha-surface);
-  border: 1px solid var(--alpha-border);
-  color: var(--alpha-text);
   margin-bottom: 8px;
 }
-
-.client-auth .btn[type="submit"],
-.client-auth button.btn {
+.client-auth button[type="submit"] {
   width: 100%;
   font-size: 1rem;
   margin-top: 12px;
