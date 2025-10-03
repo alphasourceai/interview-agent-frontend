@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiGet, apiDownload } from '../lib/api'
 import SignOutButton from '../components/SignOutButton.jsx'
+import '../styles/clientDashboard.css';
 
 // --- Dashboard enhancements: sorting, filtering, tooltips (no summaries) ---
 const TIPS = {
@@ -364,9 +365,9 @@ export default function ClientDashboard() {
 
   return (
     <div className="client-dash" style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1200, margin: '0 auto' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16 }}>
+      <div className="dash-head">
         <h1 style={{ margin: 0 }}>Dashboard</h1>
-        <div style={{ display:'flex', gap: 8 }}>
+        <div className="dash-actions">
           {canInvite && (
             <a
               href="/invite"
@@ -409,7 +410,7 @@ export default function ClientDashboard() {
       )}
 
       {/* Filters: Role + Min Overall */}
-      <div style={{ margin: '8px 0 16px', display:'flex', gap: 12, alignItems:'center', flexWrap:'wrap' }}>
+      <div className="filters">
         <div style={{ fontWeight: 600, opacity: 0.9, marginRight: 4 }}>Filters:</div>
         <div style={{ display:'flex', alignItems:'center', gap: 6 }}>
           <label htmlFor="roleFilter">Role</label>
@@ -619,8 +620,8 @@ function FragmentRow({
               </div>
 
               <div style={{ display:'grid', gridTemplateColumns:'repeat(12,1fr)', gap: 12, marginTop: 8 }}>
-                <div style={{ gridColumn: 'span 6', border:'1px solid #e5e7eb', borderRadius: 12, padding: 12, background:'#fff' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8, color: '#111' }}>Resume Analysis</div>
+                <div className="detail-card" style={{ gridColumn: 'span 6' }}>
+                  <div className="detail-title">Resume Analysis</div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap: 8 }}>
                     <div><Meter label="Experience" value={r.resume_analysis.experience} /> <InfoTip text={TIPS.experience} /></div>
                     <div><Meter label="Skills" value={r.resume_analysis.skills} /> <InfoTip text={TIPS.skills} /></div>
@@ -633,8 +634,8 @@ function FragmentRow({
                   )}
                 </div>
 
-                <div style={{ gridColumn: 'span 6', border:'1px solid #e5e7eb', borderRadius: 12, padding: 12, background:'#fff' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8, color: '#111' }}>Interview Analysis</div>
+                <div className="detail-card" style={{ gridColumn: 'span 6' }}>
+                  <div className="detail-title">Interview Analysis</div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap: 8 }}>
                     <div><Meter label="Clarity" value={r.interview_analysis.clarity} /> <InfoTip text={TIPS.clarity} /></div>
                     <div><Meter label="Confidence" value={r.interview_analysis.confidence} /> <InfoTip text={TIPS.confidence} /></div>

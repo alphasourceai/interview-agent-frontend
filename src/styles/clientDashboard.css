@@ -1,0 +1,103 @@
+/* src/styles/clientDashboard.css */
+/* Scoped styles for the Client Dashboard page (no bleed to other pages) */
+.client-dash {}
+
+/* Header bar */
+.client-dash .dash-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.client-dash .dash-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Filters row */
+.client-dash .filters {
+  margin: 8px 0 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.client-dash .filters label { font-weight: 600; opacity: 0.9; }
+.client-dash .filters select,
+.client-dash .filters input[type="number"] {
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+}
+
+/* Table */
+.client-dash table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.client-dash th {
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px 6px;
+  white-space: nowrap;
+  background: #fafafa;
+  color: #111;
+}
+.client-dash td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 8px 6px;
+  vertical-align: top;
+  color: #111;
+}
+
+/* Buttons */
+.client-dash .btn.lilac {
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #f9fafb;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  color: inherit;
+}
+.client-dash .btn.lilac.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Expand toggle button */
+.client-dash .expand-toggle {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Row actions in expanded view */
+.client-dash .row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Expanded detail cards */
+.client-dash .detail-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+.client-dash .detail-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #111;
+}
+
+/* Utility */
+.client-dash .muted { color: #6b7280; }
