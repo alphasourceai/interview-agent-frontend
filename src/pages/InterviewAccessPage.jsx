@@ -187,7 +187,9 @@ export default function InterviewAccessPage() {
               ) : (
                 <div className="placeholder">
                   <div className="center-msg">
-                    Your interview room will appear here after verification.
+                    {!role_token
+                      ? "You’re almost there—this page needs a role link. Open the invite link you were sent, or contact your recruiter to resend it."
+                      : "Your interview room will appear here after verification."}
                   </div>
                 </div>
               )}
