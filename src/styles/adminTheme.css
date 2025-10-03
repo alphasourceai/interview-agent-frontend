@@ -1,3 +1,20 @@
+/* Admin Sign In to match client login */
+.admin-auth.auth-wrap { max-width: 480px; }
+.admin-auth .auth-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.admin-auth .auth-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.admin-auth label { display: block; margin: 10px 0 6px; }
+.admin-auth input.alpha-input { width: 100% !important; max-width: 100% !important; display: block; }
+.admin-auth button[type="submit"] { width: 100%; }
+
 /* --- AlphaSource theme (Wix-matched) ------------------------------------- */
 
 @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap');
