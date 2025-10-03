@@ -1,88 +1,121 @@
 // src/pages/SignIn.jsx
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import '../styles/clientTheme.css';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [newPass1, setNewPass1] = useState('');
+  const [newPass2, setNewPass2] = useState('');
 
-  // Preserve any ?next=/path on the current URL, and prefer an explicit redirect URL if provided.
-  const { redirectTo } = useMemo(() => {
+  // Preserve any ?next=/path on the current URL
+  const { nextPath } = useMemo(() => {
     const url = new URL(window.location.href);
     const next = url.searchParams.get('next') || '';
-    const base =
-      import.meta.env.VITE_AUTH_REDIRECT_URL ||
-      `${window.location.origin}/auth/callback`;
-
-    const finalRedirect = next
-      ? `${base}?next=${encodeURIComponent(next)}`
-      : base;
-
-    return { redirectTo: finalRedirect };
+    return { nextPath: next };
   }, []);
 
-  async function onSubmit(e) {
+  // Detect Supabase recovery redirect (?pwreset=1 or hash with recovery)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const needsReset =
+      url.searchParams.get('pwreset') === '1' ||
+      window.location.hash.includes('type=recovery') ||
+      window.location.hash.includes('recovery');
+    if (needsReset) setShowReset(true);
+  }, []);
+
+  async function handleSignIn(e) {
     e.preventDefault();
-    if (!email || loading) return;
+    if (!email || !password || loading) return;
     setErr('');
     setLoading(true);
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo },
-    });
-
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) setErr(error.message || 'Could not send magic link.');
-    else setSent(true);
+    if (error) {
+      setErr(error.message || 'Could not sign in.');
+      return;
+    }
+    const url = new URL(window.location.href);
+    const next = url.searchParams.get('next');
+    window.location.href = next || '/dashboard';
   }
 
-  if (sent) {
+  async function startReset() {
+    if (!email) {
+      alert('Enter your email first.');
+      return;
+    }
+    const origin = window.location.origin;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/signin?pwreset=1`
+    });
+    if (error) alert('Could not start reset: ' + error.message);
+    else alert('Check your email for a password reset link.');
+  }
+
+  async function submitReset(e) {
+    e.preventDefault();
+    if (!newPass1 || newPass1 !== newPass2) {
+      alert('Passwords do not match.');
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPass1 });
+    if (error) return alert('Could not update password: ' + error.message);
+    alert('Password updated. You can sign in now.');
+    setShowReset(false);
+    setNewPass1(''); setNewPass2('');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('pwreset');
+    window.history.replaceState({}, '', url.toString());
+    await supabase.auth.signOut();
+    window.location.href = '/signin';
+  }
+
+  if (showReset) {
     return (
-      <div className="alpha-theme" style={{ minHeight: '100vh' }}>
-        <div
-          className="card"
-          style={{
-            maxWidth: 420,
-            margin: '80px auto',
-            padding: 24,
-          }}
-        >
-          <h1 className="title" style={{ marginBottom: 8 }}>
-            Check your email
-          </h1>
-          <p className="muted">
-            We sent a magic link to <strong>{email}</strong>. Click it to sign
-            in.
-          </p>
+      <div className="alpha-theme client-auth" style={{ minHeight: '100vh' }}>
+        <div className="card" style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <img src="/alpha-symbol.png" alt="AlphaSourceAI" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+            <h1 className="title" style={{ margin: 0 }}>Reset Password</h1>
+          </div>
+          <form onSubmit={submitReset}>
+            <label className="label">New password</label>
+            <input className="input" type="password" value={newPass1} onChange={(e) => setNewPass1(e.target.value)} required style={{ width: '100%', marginBottom: 10 }} />
+            <label className="label">Confirm new password</label>
+            <input className="input" type="password" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} required style={{ width: '100%', marginBottom: 12 }} />
+            <button type="submit" className="btn" style={{ width: '100%', fontSize: '1rem' }}>Update Password</button>
+            <div style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => { setShowReset(false); window.location.href = '/signin'; }}
+                style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
+              >
+                Back to sign in
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="alpha-theme" style={{ minHeight: '100vh' }}>
-      <div
-        className="card"
-        style={{
-          maxWidth: 420,
-          margin: '80px auto',
-          padding: 24,
-        }}
-      >
-        <h1 className="title" style={{ marginBottom: 8 }}>
-          Sign in
-        </h1>
-        <p className="muted" style={{ marginBottom: 16 }}>
-          We’ll email you a magic link to sign in.
-        </p>
+    <div className="alpha-theme client-auth" style={{ minHeight: '100vh' }}>
+      <div className="card" style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <img src="/alpha-symbol.png" alt="AlphaSourceAI" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+          <h1 className="title" style={{ margin: 0 }}>Client Sign In</h1>
+        </div>
 
-        <form onSubmit={onSubmit}>
-          <label htmlFor="email" className="label">
-            Email
-          </label>
+        <form onSubmit={handleSignIn}>
+          <label htmlFor="email" className="label">Email</label>
           <input
             id="email"
             className="input"
@@ -92,24 +125,39 @@ export default function SignIn() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
+            style={{ width: '100%', marginBottom: 10 }}
+          />
+
+          <label htmlFor="password" className="label">Password</label>
+          <input
+            id="password"
+            className="input"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
             style={{ width: '100%', marginBottom: 12 }}
           />
 
-          <button
-            type="submit"
-            className="btn"
-            disabled={!email || loading}
-            style={{ width: '100%' }}
-          >
-            {loading ? 'Sending…' : 'Send magic link'}
+          <button type="submit" className="btn" disabled={!email || !password || loading} style={{ width: '100%', fontSize: '1rem' }}>
+            {loading ? 'Signing in…' : 'Sign In'}
           </button>
+
+          <div style={{ marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={startReset}
+              className="btn-ghost"
+              style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
+            >
+              Forgot password?
+            </button>
+          </div>
         </form>
 
         {err && (
-          <div
-            role="alert"
-            style={{ color: '#ffb4b4', marginTop: 12, fontSize: 14 }}
-          >
+          <div role="alert" style={{ color: '#ffb4b4', marginTop: 12, fontSize: 14 }}>
             {err}
           </div>
         )}
