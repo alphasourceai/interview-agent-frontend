@@ -79,17 +79,17 @@ export default function SignIn() {
   if (showReset) {
     return (
       <div className="alpha-theme client-auth" style={{ minHeight: '100vh' }}>
-        <div className="card" style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <div className="alpha-card auth-wrap client-card">
+          <div className="auth-head">
             <img src="/alpha-symbol.png" alt="AlphaSourceAI" style={{ width: 36, height: 36, objectFit: 'contain' }} />
-            <h1 className="title" style={{ margin: 0 }}>Reset Password</h1>
+            <h2>Reset Password</h2>
           </div>
           <form onSubmit={submitReset}>
-            <label className="label">New password</label>
-            <input className="input" type="password" value={newPass1} onChange={(e) => setNewPass1(e.target.value)} required style={{ width: '100%', marginBottom: 10 }} />
-            <label className="label">Confirm new password</label>
-            <input className="input" type="password" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} required style={{ width: '100%', marginBottom: 12 }} />
-            <button type="submit" className="btn" style={{ width: '100%', fontSize: '1rem' }}>Update Password</button>
+            <label>New password</label>
+            <input className="alpha-input" type="password" value={newPass1} onChange={(e) => setNewPass1(e.target.value)} required />
+            <label>Confirm new password</label>
+            <input className="alpha-input" type="password" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} required />
+            <button type="submit">Update Password</button>
             <div style={{ marginTop: 8 }}>
               <button
                 type="button"
@@ -108,39 +108,37 @@ export default function SignIn() {
 
   return (
     <div className="alpha-theme client-auth" style={{ minHeight: '100vh' }}>
-      <div className="card" style={{ maxWidth: 480, margin: '80px auto', padding: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+      <div className="alpha-card auth-wrap client-card">
+        <div className="auth-head">
           <img src="/alpha-symbol.png" alt="AlphaSourceAI" style={{ width: 36, height: 36, objectFit: 'contain' }} />
-          <h1 className="title" style={{ margin: 0 }}>Client Sign In</h1>
+          <h2>Client Sign In</h2>
         </div>
 
         <form onSubmit={handleSignIn}>
-          <label htmlFor="email" className="label">Email</label>
+          <label htmlFor="email">Email</label>
           <input
             id="email"
-            className="input"
+            className="alpha-input"
             type="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            style={{ width: '100%', marginBottom: 10 }}
           />
 
-          <label htmlFor="password" className="label">Password</label>
+          <label htmlFor="password">Password</label>
           <input
             id="password"
-            className="input"
+            className="alpha-input"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            style={{ width: '100%', marginBottom: 12 }}
           />
 
-          <button type="submit" className="btn" disabled={!email || !password || loading} style={{ width: '100%', fontSize: '1rem' }}>
+          <button type="submit" disabled={!email || !password || loading}>
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
 
