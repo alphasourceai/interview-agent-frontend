@@ -28,8 +28,9 @@ const router = createBrowserRouter([
   // public
   { path: '/signin', element: <SignIn /> },
   { path: '/verify-otp', element: <VerifyOtp /> },
+  { path: '/interview-access', element: <InterviewAccessPage /> },
   { path: '/interview-access/:role_token', element: <InterviewAccessPage /> },
-{ path: '/admin', element: <Admin /> },
+  { path: '/admin', element: <Admin /> },
 
   // legacy single-page + role views
   { path: '/dashboard', element: <ProtectedRoute><ClientDashboard /></ProtectedRoute> },
