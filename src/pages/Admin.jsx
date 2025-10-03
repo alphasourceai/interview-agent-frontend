@@ -370,18 +370,22 @@ export default function Admin() {
   if (!session) {
     return (
       <div className="alpha-container admin-page">
-        <div className="alpha-card alpha-form">
-          <h2>Admin Sign In</h2>
+        <div className="alpha-card auth-wrap admin-auth">
+          <div className="auth-head">
+            <img src="/alpha-symbol.png" alt="AlphaSourceAI" className="auth-logo" />
+            <h2>Admin Sign In</h2>
+          </div>
           <form onSubmit={handleSignIn}>
-            <label>Email</label>
-            <input className="alpha-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-            <label>Password</label>
-            <input className="alpha-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-            <button type="submit">Sign In</button>
+            <label htmlFor="admin-email">Email</label>
+            <input id="admin-email" className="alpha-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <label htmlFor="admin-password">Password</label>
+            <input id="admin-password" className="alpha-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            <button type="submit" style={{ width: '100%' }}>Sign In</button>
             <div style={{ marginTop: 10 }}>
               <button
                 type="button"
                 onClick={startReset}
+                className="btn-ghost"
                 style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
               >
                 Forgot password?
