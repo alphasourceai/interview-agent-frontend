@@ -7,13 +7,17 @@
   margin-bottom: 12px;
 }
 .admin-auth .auth-logo {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
 }
 .admin-auth label { display: block; margin: 10px 0 6px; }
 .admin-auth input.alpha-input { width: 100% !important; max-width: 100% !important; display: block; }
-.admin-auth button[type="submit"] { width: 100%; }
+.admin-auth button[type="submit"] {
+  width: 100%;
+  margin-top: 12px;
+  font-size: 1rem; /* larger button text */
+}
 
 /* --- AlphaSource theme (Wix-matched) ------------------------------------- */
 
@@ -692,3 +696,4 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .admin-page table tr:hover {
   background: rgba(255,255,255,0.06) !important;
 }
+.admin-page .admin-auth input.alpha-input { margin-bottom: 8px; }
