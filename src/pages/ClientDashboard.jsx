@@ -9,7 +9,7 @@ const TIPS = {
   experience: 'How well prior roles align with the job requirements.',
   skills: 'Match between hard/soft skills and the role’s needs.',
   education: 'Relevance and level of education for the role.',
-  clarity: 'How clearly the candidate communicates ideas.',
+  clarity: 'How clearly the candidate communicates ideas/use of filler words.',
   confidence: 'Apparent confidence and composure while answering.',
   body_language: 'Non-verbal cues such as posture and eye contact.'
 };
@@ -310,6 +310,7 @@ export default function ClientDashboard() {
         clarity: r.interview_analysis?.clarity ?? null,
         confidence: r.interview_analysis?.confidence ?? null,
         body_language: r.interview_analysis?.body_language ?? null,
+        summary: r.interview_analysis?.summary || '',
       },
     }))
   }, [items])
@@ -428,7 +429,7 @@ export default function ClientDashboard() {
         </div>
 
         <div style={{ display:'flex', alignItems:'center', gap: 6 }}>
-          <label htmlFor="minOverall">Min overall</label>
+          <label htmlFor="minOverall">Min Overall Score</label>
           <input
             id="minOverall"
             type="number"
@@ -641,6 +642,11 @@ function FragmentRow({
                     <div><Meter label="Confidence" value={r.interview_analysis.confidence} /> <InfoTip text={TIPS.confidence} /></div>
                     <div><Meter label="Body Language" value={r.interview_analysis.body_language} /> <InfoTip text={TIPS.body_language} /></div>
                   </div>
+                  {r.interview_analysis.summary && (
+                    <div style={{ marginTop: 8, color:'#374151' }}>
+                      {r.interview_analysis.summary}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

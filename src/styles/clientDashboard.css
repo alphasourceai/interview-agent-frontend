@@ -39,33 +39,46 @@
 }
 .client-dash th {
   text-align: left;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--alpha-border, rgba(255,255,255,0.14));
   padding: 8px 6px;
   white-space: nowrap;
-  background: #fafafa;
-  color: #111;
+  background: transparent; /* match dark page bg */
+  color: var(--alpha-text, #EBFEFF); /* white on dark */
 }
+.client-dash thead { background: transparent; }
 .client-dash td {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   padding: 8px 6px;
   vertical-align: top;
-  color: #111;
+  color: var(--alpha-text, #EBFEFF); /* collapsed row text white */
 }
 
 /* Buttons */
 .client-dash .btn.lilac {
-  border: 1px solid #e5e7eb;
+  appearance: none;
+  border: 1px solid var(--alpha-primary, #AD8BF7);
   padding: 6px 10px;
   border-radius: 6px;
-  background: #f9fafb;
+  background: var(--alpha-primary, #AD8BF7);
+  color: #fff; /* white text */
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
-  color: inherit;
+  font-weight: 600;
 }
-.client-dash .btn.lilac.is-disabled {
+.client-dash .btn.lilac:hover {
+  background: var(--alpha-primary-strong, #854DFF);
+  border-color: var(--alpha-primary-strong, #854DFF);
+}
+.client-dash .btn.lilac.is-disabled,
+.client-dash .btn.lilac[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
+  filter: grayscale(0.2);
+}
+.client-dash .btn.lilac svg {
+  width: 14px; height: 14px;
+  stroke: #fff; fill: none;
 }
 
 /* Expand toggle button */
@@ -76,6 +89,17 @@
   align-items: center;
   justify-content: center;
   padding: 0;
+  border-radius: 6px;
+  background: var(--alpha-primary, #AD8BF7); /* lilac */
+  border: 1px solid var(--alpha-primary, #AD8BF7);
+  color: #fff;
+}
+.client-dash .expand-toggle:hover {
+  background: var(--alpha-primary-strong, #854DFF);
+  border-color: var(--alpha-primary-strong, #854DFF);
+}
+.client-dash .expand-toggle svg {
+  stroke: #fff; fill: none;
 }
 
 /* Row actions in expanded view */
