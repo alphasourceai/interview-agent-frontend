@@ -307,13 +307,31 @@ export default function ClientDashboard() {
         summary: r.resume_analysis?.summary || '',
       },
       interview_analysis: {
-        clarity: r.interview_analysis?.clarity ?? null,
-        confidence: r.interview_analysis?.confidence ?? null,
-        body_language: r.interview_analysis?.body_language ?? null,
-        summary: r.interview_analysis?.summary || '',
+        clarity:
+          r.interview_analysis?.clarity ??
+          r.interview?.analysis?.scores?.clarity ??
+          null,
+        confidence:
+          r.interview_analysis?.confidence ??
+          r.interview?.analysis?.scores?.confidence ??
+          null,
+        body_language:
+          r.interview_analysis?.body_language ??
+          r.interview?.analysis?.scores?.body_language ??
+          null,
+        summary:
+          r.interview_analysis?.summary ||
+          r.interview?.analysis?.summary ||
+          '',
       },
     }))
   }, [items])
+
+  useEffect(() => {
+    if (rows && rows.length) {
+      console.debug('[dashboard] normalized interview_analysis sample:', rows[0].interview_analysis);
+    }
+  }, [rows]);
 
   // unique role titles available in current rows
   const availableRoles = useMemo(() => {

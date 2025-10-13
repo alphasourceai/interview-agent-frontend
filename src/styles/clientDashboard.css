@@ -125,3 +125,43 @@
 
 /* Utility */
 .client-dash .muted { color: #6b7280; }
+
+/* ------- parity tweaks (buttons, header sorts, video font) ------- */
+
+/* Ensure consistent button text sizing (e.g., "Video") */
+.client-dash .btn.lilac {
+  font-size: 14px;
+  line-height: 1;
+  padding: 6px 12px;
+  background: var(--alpha-primary, #AD8BF7) !important;
+  border-color: var(--alpha-primary, #AD8BF7) !important;
+  color: #fff !important;
+}
+.client-dash .btn.lilac:hover {
+  background: var(--alpha-primary-strong, #854DFF) !important;
+  border-color: var(--alpha-primary-strong, #854DFF) !important;
+}
+
+/* Style the Name/Role sort buttons in the header like "Created" */
+.client-dash th button {
+  appearance: none;
+  border: 1px solid var(--alpha-primary, #AD8BF7) !important;
+  padding: 6px 10px !important;
+  border-radius: 6px !important;
+  background: var(--alpha-primary, #AD8BF7) !important;
+  color: #fff !important;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-weight: 600;
+}
+.client-dash th button:hover {
+  background: var(--alpha-primary-strong, #854DFF) !important;
+  border-color: var(--alpha-primary-strong, #854DFF) !important;
+}
+.client-dash th button svg {
+  width: 14px; height: 14px;
+  stroke: #fff; fill: none;
+}
