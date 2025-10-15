@@ -1,6 +1,6 @@
 // src/pages/ClientDashboard.jsx
-import { useEffect, useMemo, useState } from 'react'
-import { apiGet, apiDownload } from '../lib/api'
+import { useEffect, useMemo, useState, useRef } from 'react'
+import { apiGet, apiDownload, apiPost } from '../lib/api'
 import SignOutButton from '../components/SignOutButton.jsx'
 import '../styles/clientDashboard.css';
 
@@ -133,6 +133,22 @@ export default function ClientDashboard() {
   const [opening, setOpening] = useState({})
   const [expanded, setExpanded] = useState({})
 
+  // lightweight toast (success / error)
+  const [toast, setToast] = useState({ visible: false, type: 'success', msg: '' });
+  const toastTimerRef = useRef(null);
+  function showToast(msg, type = 'success', ttlMs = 3000) {
+    // clear any existing timer
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToast({ visible: true, type, msg });
+    toastTimerRef.current = setTimeout(() => {
+      setToast(t => ({ ...t, visible: false }));
+      toastTimerRef.current = null;
+    }, ttlMs);
+  }
+
   // sort & filter UI state
   const [sortBy, setSortBy] = useState('created'); // 'name' | 'role' | 'created'
   const [sortDir, setSortDir] = useState('desc');  // 'asc' | 'desc'
@@ -184,26 +200,55 @@ export default function ClientDashboard() {
       const { url } = await apiGet('/files/signed-url' + qs)
       if (!url) throw new Error('No signed URL returned')
       window.open(url, '_blank', 'noopener,noreferrer')
+      showToast(kind === 'transcript' ? 'Transcript opened' : 'File opened', 'success')
     } catch (e) {
       setError(String(e?.message || e))
+      showToast(String(e?.message || 'Could not open file'), 'error')
     } finally {
       setOpening(p => ({ ...p, [key]: false }))
     }
   }
 
-  async function generatePdf(interviewId) {
-    if (!interviewId) return
-    const key = `${interviewId}:pdf`
+  async function generatePdfForRow(row) {
+    // Prefer the new on-demand generator with a signed URL; fall back to legacy download
+    const interviewId = row.latest_interview_id || null;
+    const key = `${interviewId || row.id}:pdf`;
     try {
-      setOpening(p => ({ ...p, [key]: true }))
-      await apiDownload(
-        `/reports/${encodeURIComponent(interviewId)}/download`,
-        `Candidate_Report_${interviewId}.pdf`
-      )
+      setOpening(p => ({ ...p, [key]: true }));
+      // If we already have a pre-generated report URL, open it directly
+      if (row.latest_report_url) {
+        window.open(row.latest_report_url, '_blank', 'noopener,noreferrer');
+        showToast('Report opened', 'success');
+        return;
+      }
+      // Call new generator endpoint; include candidate/role for BE flexibility
+      const payload = {
+        candidate_id: row.candidate?.id || null,
+        role_id: row.role?.id || null,
+        interview_id: interviewId
+      };
+      const resp = await apiPost('/reports/generate', payload);
+      const url = resp?.signed_url || resp?.url || resp?.report_url || null;
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        showToast('Report ready — opening PDF', 'success');
+        return;
+      }
+      // Fallback: if BE didn't return a URL but we have an interview id, try legacy download route
+      if (interviewId) {
+        await apiDownload(
+          `/reports/${encodeURIComponent(interviewId)}/download`,
+          `Candidate_Report_${interviewId}.pdf`
+        );
+        showToast('Report downloaded', 'success');
+        return;
+      }
+      throw new Error('Report URL not available.');
     } catch (e) {
-      setError(String(e?.message || e))
+      setError(String(e?.message || e));
+      showToast(String(e?.message || 'Could not generate report'), 'error');
     } finally {
-      setOpening(p => ({ ...p, [key]: false }))
+      setOpening(p => ({ ...p, [key]: false }));
     }
   }
 
@@ -550,7 +595,7 @@ export default function ClientDashboard() {
                     fmtDate={fmtDate}
                     openSigned={openSigned}
                     opening={opening}
-                    generatePdf={generatePdf}
+                    generatePdfForRow={generatePdfForRow}
                     trKey={trKey}
                     pdfKey={pdfKey}
                   />
@@ -560,12 +605,35 @@ export default function ClientDashboard() {
           </table>
         </div>
       )}
+      {/* Toast */}
+      {toast.visible && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            right: 16,
+            bottom: 16,
+            background: toast.type === 'error' ? 'rgba(220, 38, 38, 0.95)' : 'rgba(16, 185, 129, 0.95)',
+            color: '#fff',
+            borderRadius: 8,
+            padding: '10px 12px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+            maxWidth: 360,
+            zIndex: 1000,
+            fontSize: 14,
+            lineHeight: 1.3
+          }}
+        >
+          {toast.msg}
+        </div>
+      )}
     </div>
   )
 }
 
 function FragmentRow({
-  r, opened, toggleRow, pctText, fmtDate, openSigned, opening, generatePdf, trKey, pdfKey
+  r, opened, toggleRow, pctText, fmtDate, openSigned, opening, generatePdfForRow, trKey, pdfKey
 }) {
   return (
     <>
@@ -624,15 +692,10 @@ function FragmentRow({
                 </button>
 
                 <button
-                  onClick={() => {
-                    if (r.latest_report_url) {
-                      window.open(r.latest_report_url, '_blank', 'noopener,noreferrer')
-                    } else if (r.latest_interview_id) {
-                      generatePdf(r.latest_interview_id)
-                    }
-                  }}
-                  disabled={!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id)}
-                  className={`btn lilac${(!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id)) ? ' is-disabled' : ''}`}
+                  onClick={() => generatePdfForRow(r)}
+                  disabled={!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id && !r.candidate?.id)}
+                  className={`btn lilac${(!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id && !r.candidate?.id)) ? ' is-disabled' : ''}`}
+                  title="Generate a fresh PDF and download"
                 >
                   {opening[pdfKey] ? 'Generating…' : 'Download PDF'}
                 </button>
@@ -646,11 +709,12 @@ function FragmentRow({
                     <div><Meter label="Skills" value={r.resume_analysis.skills} /> <InfoTip text={TIPS.skills} /></div>
                     <div><Meter label="Education" value={r.resume_analysis.education} /> <InfoTip text={TIPS.education} /></div>
                   </div>
-                  {r.resume_analysis.summary && (
-                    <div style={{ marginTop: 8, color:'#374151' }}>
-                      {r.resume_analysis.summary}
-                    </div>
-                  )}
+                  <div style={{ marginTop: 8, color:'#374151' }}>
+                    <strong>Summary:</strong>{' '}
+                    {r.resume_analysis.summary
+                      ? r.resume_analysis.summary
+                      : <span style={{ color: '#6b7280' }}>Summary not available</span>}
+                  </div>
                 </div>
 
                 <div className="detail-card" style={{ gridColumn: 'span 6' }}>
@@ -660,11 +724,12 @@ function FragmentRow({
                     <div><Meter label="Confidence" value={r.interview_analysis.confidence} /> <InfoTip text={TIPS.confidence} /></div>
                     <div><Meter label="Body Language" value={r.interview_analysis.body_language} /> <InfoTip text={TIPS.body_language} /></div>
                   </div>
-                  {r.interview_analysis.summary && (
-                    <div style={{ marginTop: 8, color:'#374151' }}>
-                      {r.interview_analysis.summary}
-                    </div>
-                  )}
+                  <div style={{ marginTop: 8, color:'#374151' }}>
+                    <strong>Summary:</strong>{' '}
+                    {r.interview_analysis.summary
+                      ? r.interview_analysis.summary
+                      : <span style={{ color: '#6b7280' }}>Summary not available</span>}
+                  </div>
                 </div>
               </div>
             </div>
