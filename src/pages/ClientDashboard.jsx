@@ -215,23 +215,17 @@ export default function ClientDashboard() {
     const key = `${interviewId || row.id}:pdf`;
     try {
       setOpening(p => ({ ...p, [key]: true }));
-      // If we already have a pre-generated report URL, open it directly
-      if (row.latest_report_url) {
-        window.open(row.latest_report_url, '_blank', 'noopener,noreferrer');
-        showToast('Report opened', 'success');
-        return;
-      }
       // Call new generator endpoint; include candidate/role for BE flexibility
       const payload = {
         candidate_id: row.candidate?.id || null,
         role_id: row.role?.id || null,
         interview_id: interviewId
       };
-      const resp = await apiPost('/reports/generate', payload);
+      const resp = await apiPost('/reports/generate-and-store', payload);
       const url = resp?.signed_url || resp?.url || resp?.report_url || null;
       if (url) {
         window.open(url, '_blank', 'noopener,noreferrer');
-        showToast('Report ready — opening PDF', 'success');
+        showToast('Report generated — opening PDF', 'success');
         return;
       }
       // Fallback: if BE didn't return a URL but we have an interview id, try legacy download route
@@ -693,9 +687,9 @@ function FragmentRow({
 
                 <button
                   onClick={() => generatePdfForRow(r)}
-                  disabled={!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id && !r.candidate?.id)}
-                  className={`btn lilac${(!!opening[pdfKey] || (!r.latest_report_url && !r.latest_interview_id && !r.candidate?.id)) ? ' is-disabled' : ''}`}
-                  title="Generate a fresh PDF and download"
+                  disabled={!!opening[pdfKey] || (!r.latest_interview_id && !r.candidate?.id)}
+                  className={`btn lilac${(!!opening[pdfKey] || (!r.latest_interview_id && !r.candidate?.id)) ? ' is-disabled' : ''}`}
+                  title="Generate and download a fresh PDF"
                 >
                   {opening[pdfKey] ? 'Generating…' : 'Download PDF'}
                 </button>
