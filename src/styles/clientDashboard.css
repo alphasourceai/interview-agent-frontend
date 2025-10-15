@@ -165,3 +165,43 @@
   width: 14px; height: 14px;
   stroke: #fff; fill: none;
 }
+
+/* ------- usability polish: focus states, hover, truncation, filter width ------- */
+
+/* Visible focus for keyboard users */
+.client-dash .btn.lilac:focus-visible,
+.client-dash th button:focus-visible,
+.client-dash .expand-toggle:focus-visible,
+.client-dash .filters select:focus-visible,
+.client-dash .filters input[type="number"]:focus-visible {
+  outline: 2px solid var(--alpha-primary, #AD8BF7);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(173, 139, 247, 0.35);
+}
+
+/* Subtle hover on table rows for discoverability (dark-friendly) */
+.client-dash tbody tr:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Keep disabled buttons clearly not interactive */
+.client-dash .btn.lilac.is-disabled,
+.client-dash .btn.lilac[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+/* Constrain the numeric filter width so it doesn't sprawl */
+.client-dash .filters input[type="number"] {
+  width: 120px;
+  min-width: 100px;
+}
+
+/* Utility: truncate long inline strings (names/roles) when needed */
+.client-dash .truncate {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
