@@ -17,6 +17,8 @@
 ## ✅ 2. Recently Completed
 | Area | Task | Status | Date |
 |------|-------|--------|------|
+| Client Dashboard | 🪄 Added success/failure toast notifications and a11y styling polish (focus, hover, truncate) | ✅ | Oct 15 |
+| PDF Generation | ⚙️ Replace PDFMonkey with internal HTML→PDF generator | ✅ | Oct 15 |
 | Client Dashboard | Added **Interview Summary** under score metrics | ✅ | Oct 13 |
 | Client Dashboard | Fixed **“Min Overall Score”** label | ✅ | Oct 13 |
 | Client Dashboard | 🎨 Apply color/style tweaks (transparent header row, lilac buttons, white text) | ✅ | Oct |
@@ -30,7 +32,6 @@
 ## 🔧 3. In Progress / Upcoming
 | Area | Task | Owner | Target |
 |------|-------|--------|--------|
-| PDF Generation | ⚙️ Replace PDFMonkey with internal HTML→PDF generator | Jason | Oct 15 |
 | Monitoring | 📈 Sentry instrumentation (FE + BE) with DSN + Teams alert routing | Jason | Oct 15-16 |
 | Client Dashboard | 🧩 Revisit candidate filtering logic and fix Interview Summary display | Jason | Oct 16-17 |
 | Wix Integration | 🔗 Clean up redirects, embeds, and candidate token handling | Jason | Oct 17-20 |
@@ -38,6 +39,7 @@
 | Database | 🧹 Remove test data; normalize `candidates`/`interviews` | Jason | Oct 22-23 |
 | Admin Tools | ✉️ Add admin-initiated password setup/reset email | Jason | Late October- Nov |
 | Email Templates | 💌 Finalize branded invite + reset templates | Jason | Late October- Nov |
+| Client Dashboard | 🔘 Wire 'Download PDF' button to on-demand generator (BE integration + spinner) | Jason | Oct 16 |
 
 ---
 
