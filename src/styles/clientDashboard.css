@@ -205,3 +205,27 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* --- lightweight spinner --- */
+@keyframes cd-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.cd-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.6);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: cd-spin 0.9s linear infinite;
+  vertical-align: -2px;
+}
+.btn .cd-spinner {
+  margin-right: 6px;
+}
+/* when on light background (disabled / gray btns), use dark stroke */
+.cd-spinner--dark {
+  border: 2px solid rgba(0,0,0,0.25);
+  border-top-color: rgba(0,0,0,0.55);
+}
