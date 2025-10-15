@@ -19,6 +19,7 @@
 |------|-------|--------|------|
 | Client Dashboard | Added **Interview Summary** under score metrics | ✅ | Oct 13 |
 | Client Dashboard | Fixed **“Min Overall Score”** label | ✅ | Oct 13 |
+| Client Dashboard | 🎨 Apply color/style tweaks (transparent header row, lilac buttons, white text) | ✅ | Oct |
 | Admin Portal | Full parity between **Admin** and **Client** sign-in pages | ✅ | Oct 3 |
 | Auth | Client dashboard switched from **magic link** to **password-based** login | ✅ | Oct 3 |
 | UI | Global polish for button sizing, inputs, spacing | ✅ | Oct 3 |
@@ -29,14 +30,14 @@
 ## 🔧 3. In Progress / Upcoming
 | Area | Task | Owner | Target |
 |------|-------|--------|--------|
-| Client Dashboard | 🎨 Apply color/style tweaks (transparent header row, lilac buttons, white text) | Jason | Oct |
-| PDF Generation | ⚙️ Replace PDFMonkey with internal HTML→PDF generator | Jason | Oct |
-| Monitoring | 📈 Sentry instrumentation (FE + BE) with DSN + Teams alert routing | Jason | Oct |
-| Wix Integration | 🔗 Clean up redirects, embeds, and candidate token handling | Jason | Nov |
-| Security | 🧩 Review & tighten RLS policies for clients/roles/members/interviews | Jason | Nov |
-| Database | 🧹 Remove test data; normalize `candidates`/`interviews` | Jason | Nov |
-| Admin Tools | ✉️ Add admin-initiated password setup/reset email | Jason | Nov |
-| Email Templates | 💌 Finalize branded invite + reset templates | Jason | Nov |
+| PDF Generation | ⚙️ Replace PDFMonkey with internal HTML→PDF generator | Jason | Oct 15 |
+| Monitoring | 📈 Sentry instrumentation (FE + BE) with DSN + Teams alert routing | Jason | Oct 15-16 |
+| Client Dashboard | 🧩 Revisit candidate filtering logic and fix Interview Summary display | Jason | Oct 16-17 |
+| Wix Integration | 🔗 Clean up redirects, embeds, and candidate token handling | Jason | Oct 17-20 |
+| Security | 🧩 Review & tighten RLS policies for clients/roles/members/interviews | Jason | Oct 21-22 |
+| Database | 🧹 Remove test data; normalize `candidates`/`interviews` | Jason | Oct 22-23 |
+| Admin Tools | ✉️ Add admin-initiated password setup/reset email | Jason | Late October- Nov |
+| Email Templates | 💌 Finalize branded invite + reset templates | Jason | Late October- Nov |
 
 ---
 
