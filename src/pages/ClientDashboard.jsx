@@ -221,7 +221,7 @@ export default function ClientDashboard() {
         role_id: row.role?.id || null,
         interview_id: interviewId
       };
-      const resp = await apiPost('/reports/generate-and-store', payload);
+      const resp = await apiPost('/reports/generate', payload);
       const url = resp?.signed_url || resp?.url || resp?.report_url || null;
       if (url) {
         window.open(url, '_blank', 'noopener,noreferrer');
