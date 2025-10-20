@@ -10,6 +10,7 @@
     "start": "serve -s dist"
   },
   "dependencies": {
+    "@sentry/react": "^10.20.0",
     "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.11.0",
     "react": "^19.1.0",
