@@ -29,7 +29,7 @@ if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: import.meta.env.VITE_SENTRY_ENV || import.meta.env.MODE || 'production',
-    release: import.meta.env.VITE_COMMIT_SHA,
+    release: import.meta.env.VITE_COMMIT_SHA || (typeof __COMMIT_SHA__ !== 'undefined' ? __COMMIT_SHA__ : undefined),
     tracesSampleRate: Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE ?? 0.02), // low perf sample rate by default
     beforeSend(event) {
       try {
