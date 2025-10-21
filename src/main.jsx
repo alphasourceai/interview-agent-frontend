@@ -45,6 +45,14 @@ if (SENTRY_DSN) {
       return event
     },
   })
+
+  // Capture global errors that may bypass React boundaries (e.g., router render failures)
+  window.onerror = (message, source, lineno, colno, error) => {
+    try { Sentry.captureException(error || new Error(String(message))); } catch {}
+  };
+  window.onunhandledrejection = (event) => {
+    try { Sentry.captureException(event?.reason || new Error('Unhandled promise rejection')); } catch {}
+  };
 }
 
 // --- Wix auto-resize for embedded mode (ResizeObserver, no inner scrollbars) ---

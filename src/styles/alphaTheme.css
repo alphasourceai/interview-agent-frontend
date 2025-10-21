@@ -239,3 +239,24 @@ body.embedded {
 #root {
   overflow: visible !important; /* allow content to define height in iframe */
 }
+
+/* Embedded: prevent nested scroll areas (dashboards, tables, reports) */
+html.embedded body,
+html.embedded main,
+html.embedded .alpha-theme,
+html.embedded .alpha-page,
+html.embedded .alpha-container,
+html.embedded .page-content,
+html.embedded .panel,
+html.embedded .card,
+html.embedded .table-wrap,
+html.embedded .table-container,
+html.embedded .data-grid,
+html.embedded .alpha-table,
+html.embedded .report {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* Stop nested scroll chaining/bounce inside the iframe */
+html.embedded * { overscroll-behavior: contain; }
