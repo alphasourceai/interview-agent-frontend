@@ -187,8 +187,27 @@ export default function ClientDashboard() {
   }
 
   function toggleRow(id) {
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
+    setExpanded(prev => {
+      const next = { ...prev, [id]: !prev[id] };
+      // schedule a resize so the iframe grows/shrinks to fit the expanded row
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.__EMBED__?.updateSize) {
+          window.__EMBED__.updateSize();
+        }
+      }, 60);
+      return next;
+    });
   }
+  // --- Embedded (Wix) auto-resize: notify parent when content changes ---
+  useEffect(() => {
+    // defer slightly so DOM has settled
+    const t = setTimeout(() => {
+      if (typeof window !== 'undefined' && window.__EMBED__ && typeof window.__EMBED__.updateSize === 'function') {
+        window.__EMBED__.updateSize();
+      }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [loading, rows.length, roleFilter, minOverall, sortBy, sortDir]);
 
   async function openSigned(interviewId, kind) {
     if (!interviewId) return

@@ -57,6 +57,19 @@ export default function Admin() {
   const [showRoles, setShowRoles] = useState(readToggle('adm_show_roles'));
   const [showMembers, setShowMembers] = useState(readToggle('adm_show_members'));
 
+  // --- Embedded (Wix) auto-resize helper ---
+  const pingEmbedSize = () => {
+    if (typeof window !== 'undefined' && window.__EMBED__ && typeof window.__EMBED__.updateSize === 'function') {
+      window.__EMBED__.updateSize();
+    }
+  };
+
+  // Notify parent (Wix) whenever key UI pieces change size/content
+  useEffect(() => {
+    const t = setTimeout(pingEmbedSize, 60);
+    return () => clearTimeout(t);
+  }, [loading, isAdmin, clients.length, roles.length, members.length, showClients, showRoles, showMembers, selectedClientId]);
+
   useEffect(() => localStorage.setItem('adm_show_clients', showClients ? '1' : '0'), [showClients]);
   useEffect(() => localStorage.setItem('adm_show_roles', showRoles ? '1' : '0'), [showRoles]);
   useEffect(() => localStorage.setItem('adm_show_members', showMembers ? '1' : '0'), [showMembers]);
@@ -275,6 +288,7 @@ export default function Admin() {
         alert('Role created, but JD processing failed: ' + e.message);
       }
       await refreshRoles(selectedClientId);
+      pingEmbedSize();
       setNewRoleTitle('');
       setJobFile(null);
     } finally {
@@ -304,6 +318,7 @@ export default function Admin() {
   
       if (ok) {
         setRoles(prev => prev.filter(r => r.id !== id));
+        setTimeout(pingEmbedSize, 80);
       }
     } catch (err) {
       const msg =
@@ -327,6 +342,7 @@ export default function Admin() {
       setMemberEmail('');
       setMemberName('');
       setMemberRole('member');
+      setTimeout(pingEmbedSize, 80);
       alert('Invite sent and member added');
     }
   };
@@ -335,6 +351,7 @@ export default function Admin() {
     if (!confirm('Remove this member?')) return;
     await apiDelete('/admin/client-members/' + id);
     setMembers(members.filter(m => m.id !== id));
+    setTimeout(pingEmbedSize, 80);
   };
 
   const selectedClient = useMemo(() => clients.find(c => c.id === selectedClientId) || null, [clients, selectedClientId]);
@@ -372,7 +389,6 @@ export default function Admin() {
       <div className="alpha-container admin-page">
         <div className="alpha-card auth-wrap admin-auth">
           <div className="auth-head">
-            <img src="/alpha-symbol.png" alt="AlphaSourceAI" className="auth-logo" />
             <h2>Admin Sign In</h2>
           </div>
           <form onSubmit={handleSignIn}>
@@ -415,8 +431,6 @@ export default function Admin() {
       {/* Header with logo (left), title, and account (right) */}
       <div className="alpha-header alpha-header--dash">
         <div className="alpha-header-left">
-          {/* place the file at /public/alpha-symbol.png */}
-          <img src="/alpha-symbol.png" alt="AlphaSourceAI" className="alpha-logo" />
           <h1>Admin Dashboard</h1>
         </div>
         <div className="alpha-actions">
@@ -453,7 +467,12 @@ export default function Admin() {
 
           {/* toggle UNDER inputs */}
           <div className="toggle-row">
-            <button type="button" className="toggle" aria-pressed={showClients} onClick={() => setShowClients(v => !v)}>
+            <button
+              type="button"
+              className="toggle"
+              aria-pressed={showClients}
+              onClick={() => { setShowClients(v => !v); setTimeout(pingEmbedSize, 80); }}
+            >
               {showClients ? 'Hide clients' : 'Show clients'}
             </button>
           </div>
@@ -527,7 +546,12 @@ export default function Admin() {
 
           {/* toggle UNDER inputs */}
           <div className="toggle-row">
-            <button type="button" className="toggle" aria-pressed={showRoles} onClick={() => setShowRoles(v => !v)}>
+            <button
+              type="button"
+              className="toggle"
+              aria-pressed={showRoles}
+              onClick={() => { setShowRoles(v => !v); setTimeout(pingEmbedSize, 80); }}
+            >
               {showRoles ? 'Hide roles' : 'Show roles'}
             </button>
           </div>
@@ -587,7 +611,12 @@ export default function Admin() {
 
           {/* toggle UNDER inputs */}
           <div className="toggle-row">
-            <button type="button" className="toggle" aria-pressed={showMembers} onClick={() => setShowMembers(v => !v)}>
+            <button
+              type="button"
+              className="toggle"
+              aria-pressed={showMembers}
+              onClick={() => { setShowMembers(v => !v); setTimeout(pingEmbedSize, 80); }}
+            >
               {showMembers ? 'Hide members' : 'Show members'}
             </button>
           </div>

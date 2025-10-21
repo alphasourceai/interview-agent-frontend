@@ -47,6 +47,28 @@ if (SENTRY_DSN) {
   })
 }
 
+// --- Wix auto-resize for embedded mode ---
+(function () {
+  // Only when this app is inside an iframe (e.g., Wix HTML Embed)
+  if (window === window.parent) return;
+  const postSize = () => {
+    const h = Math.max(
+      document.documentElement.scrollHeight,
+      document.body?.scrollHeight || 0,
+      document.documentElement.offsetHeight
+    );
+    window.parent.postMessage({ type: 'EMBED_SIZE', height: h }, '*');
+  };
+  // Initial + window resizes
+  window.addEventListener('load', postSize);
+  window.addEventListener('resize', () => setTimeout(postSize, 50));
+  // React route/content changes
+  const obs = new MutationObserver(() => setTimeout(postSize, 50));
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+  // Expose manual trigger for pages (e.g., after "Start Interview")
+  window.__EMBED__ = { updateSize: postSize };
+})();
+
 const router = createBrowserRouter([
   // default → dashboard (single page)
   { path: '/', element: <ProtectedRoute><ClientDashboard /></ProtectedRoute> },

@@ -2,7 +2,7 @@
 // One-page intake → OTP → Start Interview (embedded tall)
 // Uses VITE_BACKEND_URL for API calls
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import InterviewAccessForm from '../components/InterviewAccessForm';
 
@@ -97,6 +97,11 @@ function OtpInline({ email, candidateId, roleId, onVerified, onError }) {
 }
 
 export default function InterviewAccessPage() {
+  const pingEmbedSize = () => {
+    if (typeof window !== 'undefined' && window.__EMBED__ && typeof window.__EMBED__.updateSize === 'function') {
+      window.__EMBED__.updateSize();
+    }
+  };
   const { role_token } = useParams();
   const roomRef = useRef(null);
 
@@ -108,7 +113,19 @@ export default function InterviewAccessPage() {
   const [error, setError] = useState('');
   const [prejoin, setPrejoin] = useState(false);
 
+  // Notify Wix parent to resize when layout changes (mount, state changes)
+  useEffect(() => {
+    const t = setTimeout(pingEmbedSize, 60);
+    return () => clearTimeout(t);
+  }, []);
+
   const canStart = Boolean(verified && submitted?.candidate_id);
+
+  // Recalculate height whenever layout-affecting state changes
+  useEffect(() => {
+    const t = setTimeout(pingEmbedSize, 80);
+    return () => clearTimeout(t);
+  }, [submitted, verified, roomUrl, starting, prejoin, error]);
 
   const startInterview = useCallback(async () => {
     if (!canStart) return;
@@ -141,6 +158,7 @@ export default function InterviewAccessPage() {
         setTimeout(() => {
           try { roomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
         }, 50);
+        setTimeout(pingEmbedSize, 120);
       } else {
         setError('Interview room is initializing—try again in a moment.');
       }
@@ -209,6 +227,7 @@ export default function InterviewAccessPage() {
                     setSubmitted(payload);
                     setVerified(false);
                     setRoomUrl('');
+                    setTimeout(pingEmbedSize, 80);
                   }}
                 />
               </div>
@@ -222,8 +241,9 @@ export default function InterviewAccessPage() {
                   onVerified={(info) => {
                     setVerified(true);
                     setSubmitted((s) => ({ ...(s || {}), ...info }));
+                    setTimeout(pingEmbedSize, 80);
                   }}
-                  onError={() => setVerified(false)}
+                  onError={() => { setVerified(false); setTimeout(pingEmbedSize, 80); }}
                 />
               ) : (
                 <div className="alpha-step2">

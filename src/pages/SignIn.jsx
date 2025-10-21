@@ -29,6 +29,16 @@ export default function SignIn() {
     if (needsReset) setShowReset(true);
   }, []);
 
+  // Notify parent (Wix) to resize when layout changes
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (typeof window !== 'undefined' && window.__EMBED__?.updateSize) {
+        window.__EMBED__.updateSize();
+      }
+    }, 60);
+    return () => clearTimeout(t);
+  }, [showReset, err, loading]);
+
   async function handleSignIn(e) {
     e.preventDefault();
     if (!email || !password || loading) return;
@@ -81,7 +91,6 @@ export default function SignIn() {
       <div className="alpha-theme client-auth" style={{ minHeight: '100vh' }}>
         <div className="alpha-card auth-wrap client-card">
           <div className="auth-head">
-            <img src="/alpha-symbol.png" alt="AlphaSourceAI" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             <h2>Reset Password</h2>
           </div>
           <form onSubmit={submitReset}>
@@ -110,7 +119,6 @@ export default function SignIn() {
     <div className="alpha-theme client-auth" style={{ minHeight: '100vh' }}>
       <div className="alpha-card auth-wrap client-card">
         <div className="auth-head">
-          <img src="/alpha-symbol.png" alt="AlphaSourceAI" style={{ width: 36, height: 36, objectFit: 'contain' }} />
           <h2>Client Sign In</h2>
         </div>
 

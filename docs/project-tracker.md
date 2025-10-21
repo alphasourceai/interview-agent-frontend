@@ -9,14 +9,18 @@
 
 ## 🗂️ 1. Current Phase
 **Phase:** MVP Finalization (Client Dashboard polish → Internal PDF system → Sentry setup)  
-**Status:** Active  
-**Last Updated:** _October 13, 2025_
+**Status:** Completed  
+**Last Updated:** _October 21, 2025_
 
 ---
 
 ## ✅ 2. Recently Completed
 | Area | Task | Status | Date |
 |------|-------|--------|------|
+| Security | 🔐 RLS enabled across clients/roles/members/candidates/interviews/reports; constraints & FKs enforced; role helpers added (admin/manager/member) | ✅ | Oct 21 |
+| Client Dashboard | 🔘 Wired 'Download PDF' button to on-demand generator (BE integration + spinner) | ✅ | Oct 20 |
+| Client Dashboard | 🧩 Revisited candidate filtering logic and fixed Interview Summary display | ✅ | Oct 21 |
+| Monitoring | 📈 Implemented Sentry instrumentation (FE + BE) with DSN, release tagging, source maps, and Slack alerts | ✅ | Oct 20 |
 | Client Dashboard | 🪄 Added success/failure toast notifications and a11y styling polish (focus, hover, truncate) | ✅ | Oct 15 |
 | PDF Generation | ⚙️ Replace PDFMonkey with internal HTML→PDF generator | ✅ | Oct 15 |
 | Client Dashboard | Added **Interview Summary** under score metrics | ✅ | Oct 13 |
@@ -32,14 +36,12 @@
 ## 🔧 3. In Progress / Upcoming
 | Area | Task | Owner | Target |
 |------|-------|--------|--------|
-| Monitoring | 📈 Sentry instrumentation (FE + BE) with DSN + Teams alert routing | Jason | Oct 15-16 |
-| Client Dashboard | 🧩 Revisit candidate filtering logic and fix Interview Summary display | Jason | Oct 16-17 |
 | Wix Integration | 🔗 Clean up redirects, embeds, and candidate token handling | Jason | Oct 17-20 |
-| Security | 🧩 Review & tighten RLS policies for clients/roles/members/interviews | Jason | Oct 21-22 |
-| Database | 🧹 Remove test data; normalize `candidates`/`interviews` | Jason | Oct 22-23 |
+| Database | 🧹 Remove test data; normalize 
+`candidates`/`interviews`; **Investigate Client Dashboard candidate filtering mismatch** (not all DB candidates visible in UI though they appear in Network) — reconcile SQL/API filters & RLS | Jason | Oct 22-23 |
+| Security Audit | 🛡️ Evaluate application, codebase, database, and hosting configuration to ensure no sensitive data exposure before MVP testing release | Jason | Oct 23-24 |
 | Admin Tools | ✉️ Add admin-initiated password setup/reset email | Jason | Late October- Nov |
 | Email Templates | 💌 Finalize branded invite + reset templates | Jason | Late October- Nov |
-| Client Dashboard | 🔘 Wire 'Download PDF' button to on-demand generator (BE integration + spinner) | Jason | Oct 16 |
 
 ---
 
