@@ -47,25 +47,42 @@ if (SENTRY_DSN) {
   })
 }
 
-// --- Wix auto-resize for embedded mode ---
+// --- Wix auto-resize for embedded mode (ResizeObserver, no inner scrollbars) ---
 (function () {
-  // Only when this app is inside an iframe (e.g., Wix HTML Embed)
-  if (window === window.parent) return;
+  if (window === window.parent) return; // only when embedded
+
+  // Tag document as embedded and prevent inner scrollbars
+  try {
+    document.documentElement.classList.add('embedded');
+    if (document.body) document.body.style.overflow = 'hidden';
+  } catch {}
+
+  const root = document.getElementById('root') || document.documentElement;
+
   const postSize = () => {
-    const h = Math.max(
-      document.documentElement.scrollHeight,
-      document.body?.scrollHeight || 0,
-      document.documentElement.offsetHeight
-    );
+    // Use root.scrollHeight so expanded content is included
+    const h = Math.max(600, Math.min(6000, Math.ceil(root.scrollHeight)));
     window.parent.postMessage({ type: 'EMBED_SIZE', height: h }, '*');
   };
-  // Initial + window resizes
-  window.addEventListener('load', postSize);
-  window.addEventListener('resize', () => setTimeout(postSize, 50));
-  // React route/content changes
-  const obs = new MutationObserver(() => setTimeout(postSize, 50));
-  obs.observe(document.documentElement, { childList: true, subtree: true });
-  // Expose manual trigger for pages (e.g., after "Start Interview")
+
+  // Observe size changes of the root for stable updates
+  try {
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(postSize);
+    });
+    ro.observe(root);
+  } catch {
+    // Fallback: minimal listeners
+    window.addEventListener('resize', () => setTimeout(postSize, 50));
+    const mo = new MutationObserver(() => setTimeout(postSize, 50));
+    mo.observe(root, { childList: true, subtree: true });
+  }
+
+  // Initial measure
+  window.addEventListener('load', () => setTimeout(postSize, 30));
+  setTimeout(postSize, 60);
+
+  // Manual trigger API for pages (Start Interview, toggles, etc.)
   window.__EMBED__ = { updateSize: postSize };
 })();
 
