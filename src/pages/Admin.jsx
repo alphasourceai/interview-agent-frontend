@@ -80,10 +80,19 @@ export default function Admin() {
       setSession(sess || null);
       // On a fresh sign-in inside an embed, do a hard replace to avoid stale state
       if (sess && window.location.pathname !== '/admin') {
-        window.location.replace('/admin');
+        // Delay redirect slightly to allow Supabase session to settle
+        setTimeout(() => {
+          window.location.replace('/admin');
+        }, 250);
       }
     });
-    return () => { sub.subscription?.unsubscribe?.(); };
+    return () => {
+      try {
+        sub.subscription?.unsubscribe?.();
+      } catch (e) {
+        console.warn('Auth subscription cleanup error:', e);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -151,29 +160,37 @@ export default function Admin() {
 
   useEffect(() => {
     let alive = true;
+    let initializing = true;
     (async () => {
+      // Only run if initializing is true
+      if (!initializing) return;
       const { data } = await supabase.auth.getSession();
-      if (!alive) return;
+      if (!alive || !initializing) return;
+      // Add a small delay to allow Supabase to settle
+      await new Promise(res => setTimeout(res, 200));
+      if (!alive || !initializing) return;
       setSession(data?.session || null);
       if (data?.session) {
         try {
+          if (!alive || !initializing) return;
           const u = await apiGet('/auth/me');
-          if (!alive) return;
+          if (!alive || !initializing) return;
           setMe(u || null);
           const probe = await apiGet('/admin/clients');
+          if (!alive || !initializing) return;
           const list = (probe?.items || []).sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
-          if (!alive) return;
           setIsAdmin(true);
           setClients(list);
           if (list.length && !selectedClientId) setSelectedClientId(list[0].id);
         } catch {
-          if (!alive) return;
+          if (!alive || !initializing) return;
           setIsAdmin(false);
         }
       }
-      if (alive) setLoading(false);
+      if (alive && initializing) setLoading(false);
+      initializing = false;
     })();
-    return () => { alive = false; };
+    return () => { alive = false; initializing = false; };
   }, []);
 
   async function refreshClients() {
@@ -442,7 +459,7 @@ export default function Admin() {
   }
 
   // ---------- Auth screens ----------
-  if (!session) {
+  if (!loading && !session) {
     return (
       <div className="alpha-container admin-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
         <div className="alpha-card auth-wrap admin-auth">
@@ -471,7 +488,7 @@ export default function Admin() {
     );
   }
 
-  if (!isAdmin) {
+  if (!loading && !isAdmin) {
     return (
       <div className="alpha-container admin-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
         <div className="alpha-card">

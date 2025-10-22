@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { ErrorBoundary } from "react-error-boundary";
-import { useClientContext } from "../lib/clientContext.jsx";
+import { useClientContext } from "../lib/clientContext";
 import { apiGet, apiPost } from "../lib/api";
 
 const label = { fontSize: 14, fontWeight: 600, marginRight: 8 };
@@ -15,7 +15,7 @@ async function loadMembers(clientId) {
   return r?.members ?? [];
 }
 
-export default function Account() {
+function Account() {
   const { clients: ctxClients, currentClientId, setCurrentClientId } = useClientContext();
   const clients = Array.isArray(ctxClients) ? ctxClients : [];
   const EMBEDDED = typeof window !== 'undefined' && window !== window.parent;
@@ -146,3 +146,5 @@ export default function Account() {
     </ErrorBoundary>
   );
 }
+
+export default require("react").lazy(() => import('./Account.jsx'));

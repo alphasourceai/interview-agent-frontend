@@ -104,39 +104,48 @@ export default function InterviewAccessPage() {
   };
   const location = useLocation();
   const navigate = useNavigate();
-  const { role_token } = useParams();
-  const [roleToken, setRoleToken] = useState(role_token || '');
+  // Normalize param names for token
+  const params = useParams();
+  const paramToken = params?.role_token || params?.token || params?.role || params?.id || '';
+  const [roleToken, setRoleToken] = useState(paramToken || '');
 
   // Keep local roleToken in sync if the route param appears later (after redirects)
   useEffect(() => {
-    if (role_token && role_token !== roleToken) setRoleToken(role_token);
-  }, [role_token]);
+    if (paramToken && paramToken !== roleToken) {
+      setRoleToken(paramToken);
+      try { window.__ROLE_TOKEN = paramToken; } catch {}
+    }
+  }, [paramToken]);
 
   useEffect(() => {
     try {
       const u = new URL(window.location.href);
       const q = u.searchParams.get('role');
-      if (q && !role_token) {
+      if (q && !paramToken) {
         setRoleToken(q);
+        try { window.__ROLE_TOKEN = q; } catch {}
         navigate(`/interview-access/${encodeURIComponent(q)}`, { replace: true });
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search, role_token, navigate]);
+  }, [location.search, paramToken, navigate]);
 
   useEffect(() => {
     const onMsg = (e) => {
       const d = e?.data;
       if (d && d.type === 'ROLE_TOKEN' && typeof d.token === 'string' && d.token) {
-        if (!role_token) {
+        try { window.__ROLE_TOKEN = d.token; } catch {}
+        if (!paramToken) {
           navigate(`/interview-access/${encodeURIComponent(d.token)}`, { replace: true });
         }
         setRoleToken(d.token);
+        // Acknowledge receipt so Wix can stop retrying, if implemented
+        try { if (window !== window.parent) window.parent.postMessage({ type: 'ROLE_TOKEN_CONFIRMED', token: d.token }, '*'); } catch {}
       }
     };
     window.addEventListener('message', onMsg);
     return () => window.removeEventListener('message', onMsg);
-  }, [role_token, navigate]);
+  }, [paramToken, navigate]);
   const roomRef = useRef(null);
 
   const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
