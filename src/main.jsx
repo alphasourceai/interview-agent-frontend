@@ -94,6 +94,31 @@ if (SENTRY_DSN) {
   window.__EMBED__ = { updateSize: postSize };
 })();
 
+// --- Embedded interview token bridge (from Wix wrapper -> app) ---
+(function () {
+  if (window === window.parent) return; // only when embedded
+  window.addEventListener('message', (e) => {
+    const data = e?.data;
+    if (data && data.type === 'ROLE_TOKEN' && typeof data.token === 'string' && data.token.length > 0) {
+      const target = `/interview-access/${encodeURIComponent(data.token)}`;
+      if (window.location.pathname !== target) {
+        window.location.replace(target); // ensure loaders run
+      }
+    }
+  });
+})();
+
+// --- Fallback: allow /interview-access?role=<uuid> to redirect to /interview-access/<uuid> ---
+(function () {
+  try {
+    const u = new URL(window.location.href);
+    const role = u.searchParams.get('role');
+    if (role && window.location.pathname === '/interview-access') {
+      window.location.replace(`/interview-access/${encodeURIComponent(role)}`);
+    }
+  } catch {}
+})();
+
 const router = createBrowserRouter([
   // default → dashboard (single page)
   { path: '/', element: <ProtectedRoute><ClientDashboard /></ProtectedRoute> },

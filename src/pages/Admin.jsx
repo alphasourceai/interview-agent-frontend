@@ -2,7 +2,16 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { apiGet, apiPost, apiDelete, api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
+
 import '../styles/adminTheme.css';
+
+// Detect if running inside an iframe (Wix embed)
+const EMBEDDED = typeof window !== 'undefined' && window !== window.parent;
+
+// Add a marker class to <html> so CSS can disable inner scrollbars when embedded
+if (typeof document !== 'undefined' && EMBEDDED) {
+  try { document.documentElement.classList.add('embedded'); } catch {}
+}
 
 /* bright white trash icon */
 const IconTrash = ({ size = 24 }) => (
@@ -65,6 +74,18 @@ export default function Admin() {
   };
 
   // Notify parent (Wix) whenever key UI pieces change size/content
+  // Keep session in sync with Supabase and handle fresh sign-ins
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+      setSession(sess || null);
+      // On a fresh sign-in inside an embed, do a hard replace to avoid stale state
+      if (sess && window.location.pathname !== '/admin') {
+        window.location.replace('/admin');
+      }
+    });
+    return () => { sub.subscription?.unsubscribe?.(); };
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(pingEmbedSize, 60);
     return () => clearTimeout(t);
@@ -191,7 +212,7 @@ export default function Admin() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return alert('Sign in failed: ' + error.message);
     setSession(data?.session || null);
-    window.location.reload();
+    window.location.replace('/admin');
   };
 
   const startReset = async () => {
@@ -228,7 +249,7 @@ export default function Admin() {
     localStorage.removeItem('adm_show_clients');
     localStorage.removeItem('adm_show_roles');
     localStorage.removeItem('adm_show_members');
-    window.location.href = '/admin';
+    window.location.replace('/signin');
   };
 
   // ---------- Clients ----------
@@ -357,13 +378,13 @@ export default function Admin() {
   const selectedClient = useMemo(() => clients.find(c => c.id === selectedClientId) || null, [clients, selectedClientId]);
 
   if (loading) {
-    return <div className="alpha-container admin-page"><div className="alpha-card"><h2>Loading…</h2></div></div>;
+    return <div className="alpha-container admin-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}><div className="alpha-card"><h2>Loading…</h2></div></div>;
   }
 
   // ---------- Reset UI ----------
   if (showReset) {
     return (
-      <div className="alpha-container admin-page">
+      <div className="alpha-container admin-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
         <div className="alpha-card alpha-form">
           <h2>Reset Password</h2>
           <form onSubmit={submitReset}>
@@ -386,7 +407,7 @@ export default function Admin() {
   // ---------- Auth screens ----------
   if (!session) {
     return (
-      <div className="alpha-container admin-page">
+      <div className="alpha-container admin-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
         <div className="alpha-card auth-wrap admin-auth">
           <div className="auth-head">
             <h2>Admin Sign In</h2>
@@ -415,7 +436,7 @@ export default function Admin() {
 
   if (!isAdmin) {
     return (
-      <div className="alpha-container admin-page">
+      <div className="alpha-container admin-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
         <div className="alpha-card">
           <h2>Access denied</h2>
           <p>Your account is not an admin.</p>
@@ -427,7 +448,7 @@ export default function Admin() {
 
   // ---------- Admin app ----------
   return (
-    <div className="alpha-container admin-page">
+    <div className="alpha-container admin-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
       {/* Header with logo (left), title, and account (right) */}
       <div className="alpha-header alpha-header--dash">
         <div className="alpha-header-left">

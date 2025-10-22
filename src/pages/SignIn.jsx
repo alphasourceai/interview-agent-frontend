@@ -12,6 +12,12 @@ export default function SignIn() {
   const [newPass1, setNewPass1] = useState('');
   const [newPass2, setNewPass2] = useState('');
 
+  // Embedded (Wix) detection and HTML hook
+  const EMBEDDED = typeof window !== 'undefined' && window !== window.parent;
+  if (typeof document !== 'undefined' && EMBEDDED) {
+    try { document.documentElement.classList.add('embedded'); } catch {}
+  }
+
   // Preserve any ?next=/path on the current URL
   const { nextPath } = useMemo(() => {
     const url = new URL(window.location.href);
@@ -46,13 +52,16 @@ export default function SignIn() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
+    if (typeof window !== 'undefined' && window.__EMBED__?.updateSize) {
+      setTimeout(() => window.__EMBED__.updateSize(), 40);
+    }
     if (error) {
       setErr(error.message || 'Could not sign in.');
       return;
     }
     const url = new URL(window.location.href);
     const next = url.searchParams.get('next');
-    window.location.href = next || '/dashboard';
+    window.location.replace(next || '/dashboard');
   }
 
   async function startReset() {
@@ -83,12 +92,12 @@ export default function SignIn() {
     url.searchParams.delete('pwreset');
     window.history.replaceState({}, '', url.toString());
     await supabase.auth.signOut();
-    window.location.href = '/signin';
+    window.location.replace('/signin');
   }
 
   if (showReset) {
     return (
-      <div className="alpha-theme client-auth" style={{ minHeight: '100vh' }}>
+      <div className="alpha-theme client-auth" style={EMBEDDED ? { overflow: 'visible' } : { minHeight: '100vh' }}>
         <div className="alpha-card auth-wrap client-card">
           <div className="auth-head">
             <h2>Reset Password</h2>
@@ -103,7 +112,7 @@ export default function SignIn() {
               <button
                 type="button"
                 className="btn-ghost"
-                onClick={() => { setShowReset(false); window.location.href = '/signin'; }}
+                onClick={() => { setShowReset(false); window.location.replace('/signin'); }}
                 style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
               >
                 Back to sign in
@@ -116,7 +125,7 @@ export default function SignIn() {
   }
 
   return (
-    <div className="alpha-theme client-auth" style={{ minHeight: '100vh' }}>
+    <div className="alpha-theme client-auth" style={EMBEDDED ? { overflow: 'visible' } : { minHeight: '100vh' }}>
       <div className="alpha-card auth-wrap client-card">
         <div className="auth-head">
           <h2>Client Sign In</h2>

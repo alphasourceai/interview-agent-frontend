@@ -14,13 +14,27 @@ async function loadMembers(clientId) {
 }
 
 export default function Account() {
-  const { clients, currentClientId, setCurrentClientId } = useClientContext();
+  const { clients: ctxClients, currentClientId, setCurrentClientId } = useClientContext();
+  const clients = Array.isArray(ctxClients) ? ctxClients : [];
+  const EMBEDDED = typeof window !== 'undefined' && window !== window.parent;
+  if (typeof document !== 'undefined' && EMBEDDED) {
+    try { document.documentElement.classList.add('embedded'); } catch {}
+  }
+
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!clients.length) return;
+    const exists = currentClientId && clients.some(c => c.id === currentClientId);
+    if (!exists) {
+      setCurrentClientId(clients[0].id);
+    }
+  }, [clients, currentClientId, setCurrentClientId]);
 
   async function refresh() {
     if (!currentClientId) return;
@@ -30,6 +44,16 @@ export default function Account() {
     finally { setLoading(false); }
   }
   useEffect(() => { refresh(); }, [currentClientId]);
+
+  // Notify Wix parent to resize when content changes
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (typeof window !== 'undefined' && window.__EMBED__?.updateSize) {
+        window.__EMBED__.updateSize();
+      }
+    }, 60);
+    return () => clearTimeout(t);
+  }, [loading, members.length, clients.length, currentClientId, inviteName, inviteEmail, inviteRole]);
 
   async function invite() {
     if (!currentClientId || !inviteEmail) return;
@@ -50,13 +74,15 @@ export default function Account() {
   }
 
   return (
-    <div>
+    <div className="alpha-container account-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
       <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Account</h1>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
         <div style={label}>Client</div>
         <select style={select} value={currentClientId || ""} onChange={(e) => setCurrentClientId(e.target.value)}>
-          {clients.map(c => <option key={c.id} value={c.id}>{c.name || c.id}</option>)}
+          {clients && clients.length > 0 && clients.map(c => (
+            <option key={c.id} value={c.id}>{c.name || c.id}</option>
+          ))}
         </select>
       </div>
 
@@ -85,7 +111,9 @@ export default function Account() {
         <input type="text" placeholder="Full name" value={inviteName} onChange={(e) => setInviteName(e.target.value)} style={input} />
         <input type="email" placeholder="email@example.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} style={input} />
         <select style={select} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-          <option value="member">member</option><option value="owner">owner</option><option value="admin">admin</option>
+          <option value="member">member</option>
+          <option value="manager">manager</option>
+          <option value="admin">admin</option>
         </select>
         <button style={btn} onClick={invite}>Invite</button>
       </div>
