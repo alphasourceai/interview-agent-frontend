@@ -42,7 +42,8 @@
 **Implemented:** FE and BE edits completed to support Wix embedding (auto-resize observer, removal of scrollbars, scaling fixes). Added CSP header in backend for frame-ancestors (allowing Wix + alphasourceai.com), integrated Sentry across FE/BE, added window.onerror/onunhandledrejection handlers for runtime capture. FE styling updates (alphaTheme.css) to remove nested overflow and stabilize iframe layout. <br><br>
 **Next Steps:** Verify candidate/interview token recognition on `/interview-access/<token>` route (ensure correct role linkage and Tavus redirect), retest iframe scaling after BE redeploy, confirm all pages (Interview, Account, Admin) display properly in Wix embed with no clipping or scrollbars. <br><br>
 **Testing Checklist:** ① Verify Sentry reports FE route/runtime errors. ② Validate autoResize observer triggers on height changes. ③ Confirm camera/mic permissions are not blocked in Wix embed. ④ Test Interview token-based routing and session handling. <br><br>
-**Open Items:**  • Add `autoResize.js` to FE folder.  • Adjust remaining embedded pages for uniform scaling.  • Consider future optimization for dynamic height via postMessage. | Jason | Oct 22 |
+**Open Items:**  • Add `autoResize.js` to FE folder.  • Adjust remaining embedded pages for uniform scaling.  • Consider future optimization for dynamic height via postMessage.  
+• Begin implementation of Option 3 (Token‑Based Deep Link & Embed Handshake – current best path) per outlined tasks. | Jason | Oct 22 |
 
 ---
 
@@ -53,6 +54,7 @@
 | Security Audit | 🛡️ Evaluate application, codebase, database, and hosting configuration to ensure no sensitive data exposure before MVP testing release | In Progress — Sentry instrumentation complete; next step — verify error capture, check environment variable exposure; testing and review phase ongoing | Jason | Oct 23-24 |
 | Admin Tools | ✉️ Add admin-initiated password setup/reset email | Jason | Late October- Nov |
 | Email Templates | 💌 Finalize branded invite + reset templates | Jason | Late October- Nov |
+| Integration Strategy | 🌐 Explore long‑term embedding solutions (Option 1 – Reverse Proxy / Same‑Site Embedding and Option 2 – Pop‑Out Auth Embed) for V2 to improve cross‑origin auth stability and Wix integration scalability | Planned for V2 — to be scoped post‑MVP testing cycle | Jason | November 2025 |
 
 ---
 

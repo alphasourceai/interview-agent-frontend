@@ -182,6 +182,8 @@ export default function InterviewAccessPage() {
           candidate_id: submitted.candidate_id,
           role_id: submitted.role_id,
           email: submitted.email,
+          roleToken: roleToken,
+          role_token: roleToken
         }),
       });
       const data = await resp.json();
@@ -210,7 +212,7 @@ export default function InterviewAccessPage() {
     } finally {
       setStarting(false);
     }
-  }, [canStart, submitted]);
+  }, [canStart, submitted, roleToken]);
 
   // top spacing only
   const header = useMemo(

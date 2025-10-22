@@ -117,7 +117,7 @@ export default function Admin() {
         localStorage.removeItem('adm_show_clients');
         localStorage.removeItem('adm_show_roles');
         localStorage.removeItem('adm_show_members');
-        window.location.replace('/signin');
+        window.location.replace('/admin');
       }
     };
 
@@ -258,7 +258,7 @@ export default function Admin() {
     localStorage.removeItem('adm_show_clients');
     localStorage.removeItem('adm_show_roles');
     localStorage.removeItem('adm_show_members');
-    window.location.replace('/signin');
+    window.location.replace('/admin');
   };
 
   const handleSignOut = async () => {
@@ -266,7 +266,7 @@ export default function Admin() {
     localStorage.removeItem('adm_show_clients');
     localStorage.removeItem('adm_show_roles');
     localStorage.removeItem('adm_show_members');
-    window.location.replace('/signin');
+    window.location.replace('/admin');
   };
 
   // ---------- Clients ----------
@@ -448,7 +448,7 @@ export default function Admin() {
             <input className="alpha-input" type="password" value={newPass2} onChange={e => setNewPass2(e.target.value)} required />
             <button type="submit">Update Password</button>
             <div style={{ marginTop: 8 }}>
-              <button type="button" onClick={() => { setShowReset(false); window.location.replace('/signin'); }}>
+              <button type="button" onClick={() => { setShowReset(false); window.location.replace('/admin'); }}>
                 Back to sign in
               </button>
             </div>
@@ -650,7 +650,7 @@ export default function Admin() {
                       <div className="center">{hasKB ? '✓' : '—'}</div>
                       <div className="center">{hasJD ? '✓' : '—'}</div>
                       <div>
-                        <button onClick={() => safeCopy(`${shareBase}?role=${r.slug_or_token}`)}>Copy link</button>
+                        <button onClick={() => safeCopy(`${shareBase}/interview-access/${r.slug_or_token}`)}>Copy link</button>
                       </div>
                       <div className="center">
                         <button className="btn-icon" onClick={() => deleteRole(r.id)} title="Delete role">
