@@ -23,6 +23,9 @@ import RoleCandidates from './pages/RoleCandidates.jsx'
 // Auth guard
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
+import { supabase } from './lib/supabaseClient'
+import { useEffect } from 'react'
+
 // --- Sentry (frontend) ---
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN
 if (SENTRY_DSN) {
@@ -140,10 +143,31 @@ const router = createBrowserRouter([
   { path: '*', element: <Navigate to="/dashboard" replace /> },
 ])
 
+function SessionRecoveryWrapper({ children }) {
+  useEffect(() => {
+    async function recoverSession() {
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (error || !data?.session) {
+          await supabase.auth.refreshSession()
+        }
+      } catch (e) {
+        console.warn('Session recovery failed:', e)
+      }
+    }
+    recoverSession()
+  }, [])
+  return <>{children}</>
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Sentry.ErrorBoundary fallback={<div style={{ padding: 16 }}>Something went wrong. Please refresh and try again.</div>}>
-      <RouterProvider router={router} />
+      <SessionRecoveryWrapper>
+        <div style={{ height: '100vh', overflow: 'hidden' }}>
+          <RouterProvider router={router} />
+        </div>
+      </SessionRecoveryWrapper>
     </Sentry.ErrorBoundary>
   </React.StrictMode>
 )

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
+import { ErrorBoundary } from "react-error-boundary";
 import { useClientContext } from "../lib/clientContext.jsx";
 import { apiGet, apiPost } from "../lib/api";
 
@@ -27,6 +29,21 @@ export default function Account() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [error, setError] = useState("");
+
+  const [authReady, setAuthReady] = useState(false);
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) console.warn("Session check failed:", error);
+      } catch (err) {
+        console.warn("Supabase auth init error:", err);
+      } finally {
+        setAuthReady(true);
+      }
+    }
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     if (!clients.length) return;
@@ -72,51 +89,60 @@ export default function Account() {
     try { await apiPost("/clients/members/revoke", { client_id: currentClientId, user_id }); await refresh(); }
     catch (e) { setError(e.message || "Revoke failed"); }
   }
+  if (!authReady) {
+    return <div style={{ padding: 20 }}>Loading...</div>;
+  }
 
   return (
-    <div className="alpha-container account-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
-      <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Account</h1>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <div style={label}>Client</div>
-        <select style={select} value={currentClientId || ""} onChange={(e) => setCurrentClientId(e.target.value)}>
-          {clients && clients.length > 0 && clients.map(c => (
-            <option key={c.id} value={c.id}>{c.name || c.id}</option>
-          ))}
-        </select>
+    <ErrorBoundary fallbackRender={({ error }) => (
+      <div style={{ padding: 20, color: '#dc2626' }}>
+        <h2>Something went wrong.</h2>
+        <pre>{error.message}</pre>
       </div>
-
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Members</h2>
-      {error && <div style={{ color: "#dc2626", marginBottom: 8 }}>{error}</div>}
-      {loading ? <div>Loading…</div> : members.length === 0 ? <div>No members yet.</div> : (
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
-          <thead>
-            <tr><th style={{ ...cell, textAlign: "left" }}>Name</th><th style={{ ...cell, textAlign: "left" }}>Email</th><th style={{ ...cell, textAlign: "left" }}>Role</th><th style={{ ...cell, textAlign: "left" }}>Actions</th></tr>
-          </thead>
-          <tbody>
-            {members.map(m => (
-              <tr key={m.user_id || m.id || m.email}>
-                <td style={cell}>{m.name || "—"}</td>
-                <td style={cell}>{m.email || m.user_email || "—"}</td>
-                <td style={cell}>{m.role || "member"}</td>
-                <td style={cell}>{(m.user_id || m.id) ? <button style={btn} onClick={() => revoke(m.user_id || m.id)}>Revoke</button> : "—"}</td>
-              </tr>
+    )}>
+      <div className="alpha-container account-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
+        <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Account</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <div style={label}>Client</div>
+          <select style={select} value={currentClientId || ""} onChange={(e) => setCurrentClientId(e.target.value)}>
+            {clients && clients.length > 0 && clients.map(c => (
+              <option key={c.id} value={c.id}>{c.name || c.id}</option>
             ))}
-          </tbody>
-        </table>
-      )}
+          </select>
+        </div>
 
-      <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Invite a member</h3>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <input type="text" placeholder="Full name" value={inviteName} onChange={(e) => setInviteName(e.target.value)} style={input} />
-        <input type="email" placeholder="email@example.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} style={input} />
-        <select style={select} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-          <option value="member">member</option>
-          <option value="manager">manager</option>
-          <option value="admin">admin</option>
-        </select>
-        <button style={btn} onClick={invite}>Invite</button>
+        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Members</h2>
+        {error && <div style={{ color: "#dc2626", marginBottom: 8 }}>{error}</div>}
+        {loading ? <div>Loading…</div> : members.length === 0 ? <div>No members yet.</div> : (
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+            <thead>
+              <tr><th style={{ ...cell, textAlign: "left" }}>Name</th><th style={{ ...cell, textAlign: "left" }}>Email</th><th style={{ ...cell, textAlign: "left" }}>Role</th><th style={{ ...cell, textAlign: "left" }}>Actions</th></tr>
+            </thead>
+            <tbody>
+              {members.map(m => (
+                <tr key={m.user_id || m.id || m.email}>
+                  <td style={cell}>{m.name || "—"}</td>
+                  <td style={cell}>{m.email || m.user_email || "—"}</td>
+                  <td style={cell}>{m.role || "member"}</td>
+                  <td style={cell}>{(m.user_id || m.id) ? <button style={btn} onClick={() => revoke(m.user_id || m.id)}>Revoke</button> : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Invite a member</h3>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input type="text" placeholder="Full name" value={inviteName} onChange={(e) => setInviteName(e.target.value)} style={input} />
+          <input type="email" placeholder="email@example.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} style={input} />
+          <select style={select} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+            <option value="member">member</option>
+            <option value="manager">manager</option>
+            <option value="admin">admin</option>
+          </select>
+          <button style={btn} onClick={invite}>Invite</button>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

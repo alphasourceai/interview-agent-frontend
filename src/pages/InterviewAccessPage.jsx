@@ -3,7 +3,7 @@
 // Uses VITE_BACKEND_URL for API calls
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import InterviewAccessForm from '../components/InterviewAccessForm';
 
 function joinUrl(base, path) {
@@ -102,7 +102,41 @@ export default function InterviewAccessPage() {
       window.__EMBED__.updateSize();
     }
   };
+  const location = useLocation();
+  const navigate = useNavigate();
   const { role_token } = useParams();
+  const [roleToken, setRoleToken] = useState(role_token || '');
+
+  // Keep local roleToken in sync if the route param appears later (after redirects)
+  useEffect(() => {
+    if (role_token && role_token !== roleToken) setRoleToken(role_token);
+  }, [role_token]);
+
+  useEffect(() => {
+    try {
+      const u = new URL(window.location.href);
+      const q = u.searchParams.get('role');
+      if (q && !role_token) {
+        setRoleToken(q);
+        navigate(`/interview-access/${encodeURIComponent(q)}`, { replace: true });
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, role_token, navigate]);
+
+  useEffect(() => {
+    const onMsg = (e) => {
+      const d = e?.data;
+      if (d && d.type === 'ROLE_TOKEN' && typeof d.token === 'string' && d.token) {
+        if (!role_token) {
+          navigate(`/interview-access/${encodeURIComponent(d.token)}`, { replace: true });
+        }
+        setRoleToken(d.token);
+      }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [role_token, navigate]);
   const roomRef = useRef(null);
 
   const [submitted, setSubmitted] = useState(null); // { candidate_id, role_id, email, resume_url }
@@ -205,7 +239,7 @@ export default function InterviewAccessPage() {
               ) : (
                 <div className="placeholder">
                   <div className="center-msg">
-                    {!role_token
+                    {!roleToken
                       ? "You’re almost there—this page needs a role link. Open the invite link you were sent, or contact your recruiter to resend it."
                       : "Your interview room will appear here after verification."}
                   </div>
@@ -222,7 +256,7 @@ export default function InterviewAccessPage() {
               {/* Step 1 spans columns 1–2 */}
               <div className="alpha-span-2">
                 <InterviewAccessForm
-                  roleToken={role_token}
+                  roleToken={roleToken}
                   onSubmitted={(payload) => {
                     setSubmitted(payload);
                     setVerified(false);
