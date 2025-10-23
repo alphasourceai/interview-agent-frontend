@@ -29,10 +29,37 @@ export default function SignIn() {
     }
   }
 
+  function postEmbedSizeBurst() {
+    // fire immediately
+    postEmbedSize();
+    // and again after layout settles
+    setTimeout(postEmbedSize, 60);
+    setTimeout(postEmbedSize, 180);
+    setTimeout(postEmbedSize, 400);
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => postEmbedSize());
+    }
+  }
+
   // Embedded (Wix) detection and HTML hook
   const EMBEDDED = typeof window !== 'undefined' && window !== window.parent;
   if (typeof document !== 'undefined' && EMBEDDED) {
-    try { document.documentElement.classList.add('embedded'); } catch {}
+    try {
+      document.documentElement.classList.add('embedded');
+      // Ensure the iframe can shrink as content collapses
+      const style = document.createElement('style');
+      style.setAttribute('data-embed-overflow', '1');
+      style.textContent = `
+        .embedded, .embedded body {
+          overflow: visible !important;
+          height: auto !important;
+        }
+      `;
+      // Avoid duplicating the style tag
+      if (!document.querySelector('style[data-embed-overflow="1"]')) {
+        document.head.appendChild(style);
+      }
+    } catch {}
   }
 
   // Preserve any ?next=/path on the current URL
@@ -55,7 +82,7 @@ export default function SignIn() {
   // Notify parent (Wix) to resize when layout changes
   useEffect(() => {
     const t = setTimeout(() => {
-      postEmbedSize();
+      postEmbedSizeBurst();
     }, 60);
     return () => clearTimeout(t);
   }, [showReset, err, loading]);
@@ -63,9 +90,15 @@ export default function SignIn() {
   // Initial size on mount (helps Wix editor/preview too)
   useEffect(() => {
     const t = setTimeout(() => {
-      postEmbedSize();
+      postEmbedSizeBurst();
     }, 40);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    function onLoad() { postEmbedSizeBurst(); }
+    window.addEventListener('load', onLoad);
+    return () => window.removeEventListener('load', onLoad);
   }, []);
 
   // Safari/WebKit: request third‑party storage access when embedded (Wix)
@@ -89,7 +122,7 @@ export default function SignIn() {
     try { await requestSafariStorageAccess(); } catch (_) {}
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    setTimeout(() => postEmbedSize(), 40);
+    setTimeout(() => postEmbedSizeBurst(), 40);
     if (error) {
       setErr(error.message || 'Could not sign in.');
       return;
@@ -123,7 +156,7 @@ export default function SignIn() {
     alert('Password updated. You can sign in now.');
     setShowReset(false);
     setNewPass1(''); setNewPass2('');
-    setTimeout(() => postEmbedSize(), 40);
+    setTimeout(() => postEmbedSizeBurst(), 40);
     const url = new URL(window.location.href);
     url.searchParams.delete('pwreset');
     window.history.replaceState({}, '', url.toString());
