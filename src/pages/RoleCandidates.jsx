@@ -5,30 +5,52 @@ import { supabase } from '../lib/supabaseClient';
 export default function RoleCandidates() {
   const { roleId } = useParams();
   const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
 
   useEffect(() => {
-    const fetchCandidates = async () => {
-      const { data, error } = await supabase
-        .from('candidates')
-        .select('*')
-        .eq('role_id', roleId);
+    let alive = true;
+    async function fetchCandidates() {
+      setErr('');
+      setLoading(true);
+      try {
+        if (!roleId) throw new Error('Missing roleId');
+        // Ensure supabase session is settled (helps Safari/Wix embedded auth timing)
+        try { await supabase.auth.getSession(); } catch {}
 
-      if (error) {
-        console.error('Error fetching candidates:', error.message);
-      } else {
-        setCandidates(data);
+        const { data, error } = await supabase
+          .from('candidates')
+          .select('*')
+          .eq('role_id', roleId)
+          .order('created_at', { ascending: false });
+
+        if (!alive) return;
+        if (error) throw new Error(error.message || 'Failed to fetch candidates');
+        setCandidates(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (!alive) return;
+        console.error('Error fetching candidates:', e);
+        setErr(String(e.message || e));
+        setCandidates([]);
+      } finally {
+        if (alive) setLoading(false);
       }
-    };
-
+    }
     fetchCandidates();
+    return () => { alive = false; };
   }, [roleId]);
 
   return (
     <div style={{ padding: '2rem' }}>
       <h2>Candidates for Role</h2>
-      {candidates.length === 0 ? (
+      {loading && <p>Loading…</p>}
+      {!loading && err && (
+        <p style={{ color: '#c00' }}>Unable to load candidates: {err}</p>
+      )}
+      {!loading && !err && candidates.length === 0 ? (
         <p>No candidates found for this role.</p>
-      ) : (
+      ) : null}
+      {!loading && !err && candidates.length > 0 && (
         <table>
           <thead>
             <tr>

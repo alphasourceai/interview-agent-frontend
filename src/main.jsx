@@ -1,24 +1,22 @@
 // src/main.jsx
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, useRouteError } from 'react-router-dom'
 
 import * as Sentry from '@sentry/react'
 
 import './styles/alphaTheme.css'
 
-// Public pages
-import SignIn from './pages/SignIn.jsx'
-import VerifyOtp from './pages/VerifyOtp.jsx'
-import InterviewAccessPage from './pages/InterviewAccessPage.jsx'
-import Admin from './pages/Admin.jsx'
+// Route components (lazy to prevent TDZ/circular init during first render)
+const SignIn = React.lazy(() => import('./pages/SignIn.jsx'))
+const VerifyOtp = React.lazy(() => import('./pages/VerifyOtp.jsx'))
+const InterviewAccessPage = React.lazy(() => import('./pages/InterviewAccessPage.jsx'))
+const Admin = React.lazy(() => import('./pages/Admin.jsx'))
 
-
-// Legacy single-page dashboard + role views
-import ClientDashboard from './pages/ClientDashboard.jsx'
-import RoleCreator from './pages/RoleCreator.jsx'
-import RoleReports from './pages/RoleReports.jsx'
-import RoleCandidates from './pages/RoleCandidates.jsx'
+const ClientDashboard = React.lazy(() => import('./pages/ClientDashboard.jsx'))
+const RoleCreator = React.lazy(() => import('./pages/RoleCreator.jsx'))
+const RoleReports = React.lazy(() => import('./pages/RoleReports.jsx'))
+const RoleCandidates = React.lazy(() => import('./pages/RoleCandidates.jsx'))
 
 // Auth guard
 import ProtectedRoute from './components/ProtectedRoute.jsx'
@@ -122,25 +120,39 @@ if (SENTRY_DSN) {
   } catch {}
 })();
 
+function RouteErrorFallback() {
+  const err = useRouteError?.() || null
+  // minimal, safe fallback to avoid React Router default crash screen
+  return (
+    <div style={{ padding: 16 }}>
+      <h3>Something went wrong loading this page.</h3>
+      <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>
+        {err && (err.message || String(err))}
+      </pre>
+      <button onClick={() => window.location.reload()}>Reload</button>
+    </div>
+  )
+}
+const errorElement = <RouteErrorFallback />
+
 const router = createBrowserRouter([
-  // default → dashboard (single page)
-  { path: '/', element: <ProtectedRoute><ClientDashboard /></ProtectedRoute> },
+  { path: '/', element: <ProtectedRoute><ClientDashboard /></ProtectedRoute>, errorElement },
 
   // public
-  { path: '/signin', element: <SignIn /> },
-  { path: '/verify-otp', element: <VerifyOtp /> },
-  { path: '/interview-access', element: <InterviewAccessPage /> },
-  { path: '/interview-access/:role_token', element: <InterviewAccessPage /> },
-  { path: '/admin', element: <Admin /> },
+  { path: '/signin', element: <SignIn />, errorElement },
+  { path: '/verify-otp', element: <VerifyOtp />, errorElement },
+  { path: '/interview-access', element: <InterviewAccessPage />, errorElement },
+  { path: '/interview-access/:role_token', element: <InterviewAccessPage />, errorElement },
+  { path: '/admin', element: <Admin />, errorElement },
 
   // legacy single-page + role views
-  { path: '/dashboard', element: <ProtectedRoute><ClientDashboard /></ProtectedRoute> },
-  { path: '/create-role', element: <ProtectedRoute><RoleCreator /></ProtectedRoute> },
-  { path: '/reports/:roleId', element: <ProtectedRoute><RoleReports /></ProtectedRoute> },
-  { path: '/candidates/:roleId', element: <ProtectedRoute><RoleCandidates /></ProtectedRoute> },
+  { path: '/dashboard', element: <ProtectedRoute><ClientDashboard /></ProtectedRoute>, errorElement },
+  { path: '/create-role', element: <ProtectedRoute><RoleCreator /></ProtectedRoute>, errorElement },
+  { path: '/reports/:roleId', element: <ProtectedRoute><RoleReports /></ProtectedRoute>, errorElement },
+  { path: '/candidates/:roleId', element: <ProtectedRoute><RoleCandidates /></ProtectedRoute>, errorElement },
 
   // catch-all → dashboard
-  { path: '*', element: <Navigate to="/dashboard" replace /> },
+  { path: '*', element: <Navigate to="/dashboard" replace />, errorElement },
 ])
 
 function SessionRecoveryWrapper({ children }) {
@@ -165,7 +177,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Sentry.ErrorBoundary fallback={<div style={{ padding: 16 }}>Something went wrong. Please refresh and try again.</div>}>
       <SessionRecoveryWrapper>
         <div style={{ height: '100vh', overflow: 'hidden' }}>
-          <RouterProvider router={router} />
+          <React.Suspense fallback={<div style={{ padding: 16 }}>Loading…</div>}>
+            <RouterProvider router={router} />
+          </React.Suspense>
         </div>
       </SessionRecoveryWrapper>
     </Sentry.ErrorBoundary>

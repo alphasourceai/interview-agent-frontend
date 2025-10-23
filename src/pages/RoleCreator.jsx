@@ -18,18 +18,39 @@ export default function RoleCreator() {
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
 
+  const [loadingClients, setLoadingClients] = useState(true)
+  const [err, setErr] = useState('')
+
   useEffect(() => {
-    (async () => {
+    let alive = true
+    ;(async () => {
       try {
+        setErr('')
+        setLoadingClients(true)
+        // Ensure session is settled (Safari/Wix timing)
+        try { await supabase.auth.getSession() } catch {}
         const me = await api.getMe(getToken)
-        if (!me?.memberships?.length) return
-        const { clients } = await api.getMyClients(getToken)
-        setClients(clients || [])
-        if (clients?.[0]?.client_id) setClientId(clients[0].client_id)
+        if (!alive) return
+        if (!me?.memberships?.length) {
+          setClients([])
+          setMessage('No client memberships found for this account.')
+          return
+        }
+        const { clients: list } = await api.getMyClients(getToken)
+        if (!alive) return
+        setClients(Array.isArray(list) ? list : [])
+        if (!clientId && Array.isArray(list) && list[0]?.client_id) {
+          setClientId(list[0].client_id)
+        }
       } catch (e) {
-        setMessage(`Error loading clients: ${e.message}`)
+        if (!alive) return
+        setErr(String(e.message || e))
+        setMessage(`Error loading clients: ${e.message || e}`)
+      } finally {
+        if (alive) setLoadingClients(false)
       }
     })()
+    return () => { alive = false }
   }, [])
 
   async function onSubmit(e) {
@@ -61,13 +82,18 @@ export default function RoleCreator() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-semibold mb-4">Create a Role</h1>
-      <form onSubmit={onSubmit} className="space-y-4">
+      {loadingClients && <p className="text-sm mb-2">Loading clients…</p>}
+      {err && !loadingClients && (
+        <p className="text-sm mb-2" style={{ color: '#c00' }}>{err}</p>
+      )}
+      <form onSubmit={onSubmit} className="space-y-4" aria-busy={submitting || loadingClients}>
         <div>
           <label className="block text-sm mb-1">Client</label>
           <select
             className="border rounded p-2 w-full"
             value={clientId}
             onChange={e => setClientId(e.target.value)}
+            disabled={loadingClients || !clients.length}
           >
             {clients.map(c => (
               <option key={c.client_id} value={c.client_id}>

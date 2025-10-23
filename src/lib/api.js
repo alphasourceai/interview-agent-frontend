@@ -24,7 +24,7 @@ async function handleJson(res) {
 export async function apiGet(path) {
   const res = await fetch(`${base}${path}`, {
     headers: await authHeaders(),
-    credentials: 'include'
+    credentials: 'omit'
   });
   return handleJson(res);
 }
@@ -34,7 +34,7 @@ export async function apiPost(path, body) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(body || {}),
-    credentials: 'include'
+    credentials: 'omit'
   });
   return handleJson(res);
 }
@@ -43,7 +43,7 @@ export async function apiDelete(path) {
   const res = await fetch(`${base}${path}`, {
     method: 'DELETE',
     headers: await authHeaders(),
-    credentials: 'include'
+    credentials: 'omit'
   });
   return handleJson(res);
 }
@@ -59,7 +59,7 @@ export async function apiDownload(path, filename = 'report.pdf') {
   const res = await fetch(`${base}${path}`, {
     method: 'GET',
     headers: await authHeaders(),
-    credentials: 'include'
+    credentials: 'omit'
   });
   if (!res.ok) {
     const text = await res.text();
@@ -89,7 +89,7 @@ export async function apiUpload(path, formData) {
     method: 'POST',
     headers,
     body: formData,
-    credentials: 'include'
+    credentials: 'omit'
   });
   return handleJson(res);
 }
