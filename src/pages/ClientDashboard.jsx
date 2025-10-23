@@ -133,6 +133,10 @@ export default function ClientDashboard() {
   const [opening, setOpening] = useState({})
   const [expanded, setExpanded] = useState({})
 
+  // --- Row visibility controls (Show more / Show less) ---
+  const INITIAL_COUNT = 20;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
+
   // lightweight toast (success / error)
   const [toast, setToast] = useState({ visible: false, type: 'success', msg: '' });
   const toastTimerRef = useRef(null);
@@ -441,6 +445,22 @@ export default function ClientDashboard() {
     return out;
   }, [rows, roleFilter, minOverall, sortBy, sortDir]);
 
+  // rows actually shown in the table (respect "Show more / Show less")
+  const visibleRows = useMemo(() => {
+    return (displayRows || []).slice(0, visibleCount);
+  }, [displayRows, visibleCount]);
+
+  // reset visible count when data scope or ordering changes
+  useEffect(() => {
+    setVisibleCount(INITIAL_COUNT);
+    // let the Wix embed grow/shrink as needed
+    setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        window.__EMBED__?.updateSize?.();
+      }
+    }, 60);
+  }, [clientId, roleFilter, minOverall, sortBy, sortDir]);
+
   return (
     <div className="client-dash" style={{ padding: 24, fontFamily: 'system-ui', maxWidth: 1200, margin: '0 auto' }}>
       <div className="dash-head">
@@ -595,7 +615,7 @@ export default function ClientDashboard() {
               </tr>
             </thead>
             <tbody>
-              {displayRows.map(r => {
+              {visibleRows.map(r => {
                 const trKey = `${r.latest_interview_id || r.id}:transcript`
                 const pdfKey = `${r.latest_interview_id || r.id}:pdf`
                 const opened = !!expanded[r.id]
@@ -617,6 +637,38 @@ export default function ClientDashboard() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+      {!loading && displayRows.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+          <div style={{ color: '#6b7280' }}>
+            Showing <strong>{Math.min(visibleCount, displayRows.length)}</strong> of <strong>{displayRows.length}</strong>
+          </div>
+          {visibleCount < displayRows.length && (
+            <button
+              type="button"
+              className="btn lilac"
+              onClick={() => {
+                const next = Math.min(displayRows.length, visibleCount + INITIAL_COUNT);
+                setVisibleCount(next);
+                setTimeout(() => { window.__EMBED__?.updateSize?.(); }, 50);
+              }}
+            >
+              Show more
+            </button>
+          )}
+          {visibleCount > INITIAL_COUNT && (
+            <button
+              type="button"
+              className="btn lilac"
+              onClick={() => {
+                setVisibleCount(INITIAL_COUNT);
+                setTimeout(() => { window.__EMBED__?.updateSize?.(); }, 50);
+              }}
+            >
+              Show less
+            </button>
+          )}
         </div>
       )}
       {/* Toast */}
