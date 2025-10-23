@@ -10,7 +10,18 @@ const EMBEDDED = typeof window !== 'undefined' && window !== window.parent;
 
 // Add a marker class to <html> so CSS can disable inner scrollbars when embedded
 if (typeof document !== 'undefined' && EMBEDDED) {
-  try { document.documentElement.classList.add('embedded'); } catch {}
+  try {
+    document.documentElement.classList.add('embedded');
+    // Add CSS override to disable scrollbars and auto height when embedded
+    const style = document.createElement('style');
+    style.innerHTML = `
+      html.embedded, html.embedded body {
+        overflow: visible !important;
+        height: auto !important;
+      }
+    `;
+    document.head.appendChild(style);
+  } catch {}
 }
 
 /* bright white trash icon */
@@ -68,16 +79,21 @@ export default function Admin() {
 
   // --- Embedded (Wix) auto-resize helper ---
   // Posts the current document height to the parent (Wix) so the iframe resizes.
+  // Now posts multiple times (immediate and delayed) to ensure resizes on both grow and shrink.
   const postEmbedSize = () => {
     if (typeof window === 'undefined') return;
     try {
-      const h = Math.max(
-        document.body?.scrollHeight || 0,
-        document.documentElement?.scrollHeight || 0,
-        document.body?.offsetHeight || 0,
-        document.documentElement?.offsetHeight || 0
-      );
-      window.parent?.postMessage({ type: 'EMBED_SIZE', height: h }, '*');
+      const send = () => {
+        const h = Math.max(
+          document.body?.scrollHeight || 0,
+          document.documentElement?.scrollHeight || 0,
+          document.body?.offsetHeight || 0,
+          document.documentElement?.offsetHeight || 0
+        );
+        window.parent?.postMessage({ type: 'EMBED_SIZE', height: h }, '*');
+      };
+      send();
+      setTimeout(send, 250);
     } catch (_) {}
   };
 
@@ -105,7 +121,9 @@ export default function Admin() {
 
   useEffect(() => {
     const t = setTimeout(postEmbedSize, 60);
-    return () => clearTimeout(t);
+    // also post again after a longer delay to ensure shrinkage is handled
+    const t2 = setTimeout(postEmbedSize, 320);
+    return () => { clearTimeout(t); clearTimeout(t2); };
   }, [loading, isAdmin, clients.length, roles.length, members.length, showClients, showRoles, showMembers, selectedClientId]);
 
   useEffect(() => localStorage.setItem('adm_show_clients', showClients ? '1' : '0'), [showClients]);
@@ -205,6 +223,8 @@ export default function Admin() {
     const probe = await apiGet('/admin/clients');
     const list = (probe?.items || []).sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
     setClients(list);
+    postEmbedSize();
+    setTimeout(postEmbedSize, 300);
   }
 
   async function refreshRoles(clientId = selectedClientId) {
@@ -212,12 +232,16 @@ export default function Admin() {
     const items = r?.items || [];
     items.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     setRoles(items);
+    postEmbedSize();
+    setTimeout(postEmbedSize, 300);
   }
 
   async function refreshMembers(clientId = selectedClientId) {
-    if (!clientId) { setMembers([]); return; }
+    if (!clientId) { setMembers([]); postEmbedSize(); setTimeout(postEmbedSize, 300); return; }
     const m = await apiGet('/admin/client-members?client_id=' + encodeURIComponent(clientId));
     setMembers(m?.items || []);
+    postEmbedSize();
+    setTimeout(postEmbedSize, 300);
   }
 
   useEffect(() => {
@@ -310,6 +334,8 @@ export default function Admin() {
       setNewClientAdminEmail('');
       setSelectedClientId(item.id);
       if (resp?.seeded_member) setMembers([resp.seeded_member, ...members]);
+      postEmbedSize();
+      setTimeout(postEmbedSize, 300);
     }
   };
 
@@ -320,6 +346,8 @@ export default function Admin() {
     if (selectedClientId === id) setSelectedClientId(clients[0]?.id || '');
     setRoles([]);
     setMembers([]);
+    postEmbedSize();
+    setTimeout(postEmbedSize, 300);
   };
 
   // Robust clipboard helper: tries modern Clipboard API, falls back to execCommand, then prompt
@@ -389,9 +417,10 @@ export default function Admin() {
         alert('Role created, but JD processing failed: ' + e.message);
       }
       await refreshRoles(selectedClientId);
-      postEmbedSize();
       setNewRoleTitle('');
       setJobFile(null);
+      postEmbedSize();
+      setTimeout(postEmbedSize, 300);
     } finally {
       setRoleBusy(false);
     }
@@ -416,10 +445,11 @@ export default function Admin() {
           throw e;
         }
       }
-  
+
       if (ok) {
         setRoles(prev => prev.filter(r => r.id !== id));
-        setTimeout(postEmbedSize, 80);
+        postEmbedSize();
+        setTimeout(postEmbedSize, 300);
       }
     } catch (err) {
       const msg =
@@ -443,7 +473,8 @@ export default function Admin() {
       setMemberEmail('');
       setMemberName('');
       setMemberRole('member');
-      setTimeout(postEmbedSize, 80);
+      postEmbedSize();
+      setTimeout(postEmbedSize, 300);
       alert('Invite sent and member added');
     }
   };
@@ -452,7 +483,8 @@ export default function Admin() {
     if (!confirm('Remove this member?')) return;
     await apiDelete('/admin/client-members/' + id);
     setMembers(members.filter(m => m.id !== id));
-    setTimeout(postEmbedSize, 80);
+    postEmbedSize();
+    setTimeout(postEmbedSize, 300);
   };
 
   const selectedClient = useMemo(() => clients.find(c => c.id === selectedClientId) || null, [clients, selectedClientId]);
@@ -572,7 +604,11 @@ export default function Admin() {
               type="button"
               className="toggle"
               aria-pressed={showClients}
-              onClick={() => { setShowClients(v => !v); setTimeout(postEmbedSize, 80); }}
+              onClick={() => {
+                setShowClients(v => !v);
+                postEmbedSize();
+                setTimeout(postEmbedSize, 300);
+              }}
             >
               {showClients ? 'Hide clients' : 'Show clients'}
             </button>
@@ -651,7 +687,11 @@ export default function Admin() {
               type="button"
               className="toggle"
               aria-pressed={showRoles}
-              onClick={() => { setShowRoles(v => !v); setTimeout(postEmbedSize, 80); }}
+              onClick={() => {
+                setShowRoles(v => !v);
+                postEmbedSize();
+                setTimeout(postEmbedSize, 300);
+              }}
             >
               {showRoles ? 'Hide roles' : 'Show roles'}
             </button>
@@ -716,7 +756,11 @@ export default function Admin() {
               type="button"
               className="toggle"
               aria-pressed={showMembers}
-              onClick={() => { setShowMembers(v => !v); setTimeout(postEmbedSize, 80); }}
+              onClick={() => {
+                setShowMembers(v => !v);
+                postEmbedSize();
+                setTimeout(postEmbedSize, 300);
+              }}
             >
               {showMembers ? 'Hide members' : 'Show members'}
             </button>
