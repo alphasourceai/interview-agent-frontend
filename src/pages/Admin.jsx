@@ -224,8 +224,26 @@ export default function Admin() {
     return () => { alive = false; };
   }, [isAdmin, selectedClientId]);
 
+  // Ask Safari/WebKit for storage access when embedded (fixes third‑party cookie auth inside Wix)
+  async function requestSafariStorageAccess() {
+    try {
+      if (document.hasStorageAccess && document.requestStorageAccess) {
+        const has = await document.hasStorageAccess();
+        if (!has) {
+          // Must be called in response to a user gesture (our sign‑in submit)
+          await document.requestStorageAccess();
+        }
+      }
+    } catch (e) {
+      // non‑Safari or not needed
+    }
+  }
+
   const handleSignIn = async (e) => {
     e.preventDefault();
+    try {
+      await requestSafariStorageAccess();
+    } catch {}
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return alert('Sign in failed: ' + error.message);
     setSession(data?.session || null);
@@ -650,7 +668,7 @@ export default function Admin() {
                       <div className="center">{hasKB ? '✓' : '—'}</div>
                       <div className="center">{hasJD ? '✓' : '—'}</div>
                       <div>
-                        <button onClick={() => safeCopy(`${shareBase}/interview-access/${r.slug_or_token}`)}>Copy link</button>
+                        <button onClick={() => safeCopy(`${shareBase}/${r.slug_or_token}`)}>Copy link</button>
                       </div>
                       <div className="center">
                         <button className="btn-icon" onClick={() => deleteRole(r.id)} title="Delete role">

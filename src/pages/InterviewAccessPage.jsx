@@ -244,7 +244,8 @@ export default function InterviewAccessPage() {
                   title="Interview"
                   src={roomUrl}
                   loading="lazy"
-                  allow="camera; microphone; autoplay; fullscreen; display-capture; clipboard-write"
+                  allow="camera; microphone; autoplay; clipboard-read; clipboard-write; display-capture; fullscreen; storage-access"
+                  referrerPolicy="no-referrer"
                   allowFullScreen
                 />
               ) : (

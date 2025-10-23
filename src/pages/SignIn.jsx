@@ -45,11 +45,25 @@ export default function SignIn() {
     return () => clearTimeout(t);
   }, [showReset, err, loading]);
 
+  // Safari/WebKit: request third‑party storage access when embedded (Wix)
+  async function requestSafariStorageAccess() {
+    try {
+      if (typeof document !== 'undefined' && document.hasStorageAccess && document.requestStorageAccess) {
+        const has = await document.hasStorageAccess();
+        if (!has) {
+          // must be called in response to a user gesture
+          await document.requestStorageAccess();
+        }
+      }
+    } catch (_) {}
+  }
+
   async function handleSignIn(e) {
     e.preventDefault();
     if (!email || !password || loading) return;
     setErr('');
     setLoading(true);
+    try { await requestSafariStorageAccess(); } catch (_) {}
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (typeof window !== 'undefined' && window.__EMBED__?.updateSize) {
