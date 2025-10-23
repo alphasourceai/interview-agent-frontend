@@ -12,6 +12,23 @@ export default function SignIn() {
   const [newPass1, setNewPass1] = useState('');
   const [newPass2, setNewPass2] = useState('');
 
+  // --- Wix embed: report our height to the parent so the iframe can auto-resize ---
+  function postEmbedSize() {
+    if (typeof window === 'undefined') return;
+    const doc = document;
+    const h = Math.max(
+      doc.body?.scrollHeight || 0,
+      doc.documentElement?.scrollHeight || 0,
+      doc.body?.offsetHeight || 0,
+      doc.documentElement?.offsetHeight || 0
+    );
+    try {
+      window.parent?.postMessage({ type: 'EMBED_SIZE', height: h }, '*');
+    } catch (_) {
+      // noop
+    }
+  }
+
   // Embedded (Wix) detection and HTML hook
   const EMBEDDED = typeof window !== 'undefined' && window !== window.parent;
   if (typeof document !== 'undefined' && EMBEDDED) {
@@ -38,12 +55,18 @@ export default function SignIn() {
   // Notify parent (Wix) to resize when layout changes
   useEffect(() => {
     const t = setTimeout(() => {
-      if (typeof window !== 'undefined' && window.__EMBED__?.updateSize) {
-        window.__EMBED__.updateSize();
-      }
+      postEmbedSize();
     }, 60);
     return () => clearTimeout(t);
   }, [showReset, err, loading]);
+
+  // Initial size on mount (helps Wix editor/preview too)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      postEmbedSize();
+    }, 40);
+    return () => clearTimeout(t);
+  }, []);
 
   // Safari/WebKit: request third‑party storage access when embedded (Wix)
   async function requestSafariStorageAccess() {
@@ -66,9 +89,7 @@ export default function SignIn() {
     try { await requestSafariStorageAccess(); } catch (_) {}
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (typeof window !== 'undefined' && window.__EMBED__?.updateSize) {
-      setTimeout(() => window.__EMBED__.updateSize(), 40);
-    }
+    setTimeout(() => postEmbedSize(), 40);
     if (error) {
       setErr(error.message || 'Could not sign in.');
       return;
@@ -102,6 +123,7 @@ export default function SignIn() {
     alert('Password updated. You can sign in now.');
     setShowReset(false);
     setNewPass1(''); setNewPass2('');
+    setTimeout(() => postEmbedSize(), 40);
     const url = new URL(window.location.href);
     url.searchParams.delete('pwreset');
     window.history.replaceState({}, '', url.toString());

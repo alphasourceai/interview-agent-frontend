@@ -67,10 +67,18 @@ export default function Admin() {
   const [showMembers, setShowMembers] = useState(readToggle('adm_show_members'));
 
   // --- Embedded (Wix) auto-resize helper ---
-  const pingEmbedSize = () => {
-    if (typeof window !== 'undefined' && window.__EMBED__ && typeof window.__EMBED__.updateSize === 'function') {
-      window.__EMBED__.updateSize();
-    }
+  // Posts the current document height to the parent (Wix) so the iframe resizes.
+  const postEmbedSize = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const h = Math.max(
+        document.body?.scrollHeight || 0,
+        document.documentElement?.scrollHeight || 0,
+        document.body?.offsetHeight || 0,
+        document.documentElement?.offsetHeight || 0
+      );
+      window.parent?.postMessage({ type: 'EMBED_SIZE', height: h }, '*');
+    } catch (_) {}
   };
 
   // Notify parent (Wix) whenever key UI pieces change size/content
@@ -96,7 +104,7 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(pingEmbedSize, 60);
+    const t = setTimeout(postEmbedSize, 60);
     return () => clearTimeout(t);
   }, [loading, isAdmin, clients.length, roles.length, members.length, showClients, showRoles, showMembers, selectedClientId]);
 
@@ -381,7 +389,7 @@ export default function Admin() {
         alert('Role created, but JD processing failed: ' + e.message);
       }
       await refreshRoles(selectedClientId);
-      pingEmbedSize();
+      postEmbedSize();
       setNewRoleTitle('');
       setJobFile(null);
     } finally {
@@ -411,7 +419,7 @@ export default function Admin() {
   
       if (ok) {
         setRoles(prev => prev.filter(r => r.id !== id));
-        setTimeout(pingEmbedSize, 80);
+        setTimeout(postEmbedSize, 80);
       }
     } catch (err) {
       const msg =
@@ -435,7 +443,7 @@ export default function Admin() {
       setMemberEmail('');
       setMemberName('');
       setMemberRole('member');
-      setTimeout(pingEmbedSize, 80);
+      setTimeout(postEmbedSize, 80);
       alert('Invite sent and member added');
     }
   };
@@ -444,7 +452,7 @@ export default function Admin() {
     if (!confirm('Remove this member?')) return;
     await apiDelete('/admin/client-members/' + id);
     setMembers(members.filter(m => m.id !== id));
-    setTimeout(pingEmbedSize, 80);
+    setTimeout(postEmbedSize, 80);
   };
 
   const selectedClient = useMemo(() => clients.find(c => c.id === selectedClientId) || null, [clients, selectedClientId]);
@@ -564,7 +572,7 @@ export default function Admin() {
               type="button"
               className="toggle"
               aria-pressed={showClients}
-              onClick={() => { setShowClients(v => !v); setTimeout(pingEmbedSize, 80); }}
+              onClick={() => { setShowClients(v => !v); setTimeout(postEmbedSize, 80); }}
             >
               {showClients ? 'Hide clients' : 'Show clients'}
             </button>
@@ -643,7 +651,7 @@ export default function Admin() {
               type="button"
               className="toggle"
               aria-pressed={showRoles}
-              onClick={() => { setShowRoles(v => !v); setTimeout(pingEmbedSize, 80); }}
+              onClick={() => { setShowRoles(v => !v); setTimeout(postEmbedSize, 80); }}
             >
               {showRoles ? 'Hide roles' : 'Show roles'}
             </button>
@@ -708,7 +716,7 @@ export default function Admin() {
               type="button"
               className="toggle"
               aria-pressed={showMembers}
-              onClick={() => { setShowMembers(v => !v); setTimeout(pingEmbedSize, 80); }}
+              onClick={() => { setShowMembers(v => !v); setTimeout(postEmbedSize, 80); }}
             >
               {showMembers ? 'Hide members' : 'Show members'}
             </button>

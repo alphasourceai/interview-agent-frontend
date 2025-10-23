@@ -20,7 +20,7 @@
   margin-bottom: 12px;
 }
 
-.client-auth .auth-head h2 { margin: 0; }
+.client-auth .auth-head h2 { margin: 0; margin-bottom: 24px; }
 
 .client-auth .auth-logo {
   width: 36px;
@@ -44,7 +44,9 @@
   width: 100%;
   margin-top: 12px;
   height: 40px;         /* match Admin button height */
-  line-height: 40px;    /* vertical alignment */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 16px;      /* match Admin text size */
 }
 

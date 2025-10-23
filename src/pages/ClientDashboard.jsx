@@ -18,6 +18,24 @@ function SortIcon({ dir }) {
   return <span style={{ marginLeft: 6, opacity: 0.8 }}>{dir === 'asc' ? '▲' : '▼'}</span>;
 }
 
+const btn = {
+  border: '1px solid #e5e7eb',
+  padding: '6px 10px',
+  borderRadius: 6,
+  background: '#f9fafb',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  display: 'inline-block',
+};
+const th = {
+  textAlign: 'left',
+  borderBottom: '1px solid #e5e7eb',
+  padding: '8px 6px',
+  whiteSpace: 'nowrap',
+};
+const td = { borderBottom: '1px solid #f1f5f9', padding: '8px 6px', verticalAlign: 'top' };
+const disabledBtn = { opacity: 0.6, cursor: 'not-allowed' };
+
 function HeaderButton({ label, active, dir, onClick }) {
   return (
     <button
@@ -42,35 +60,23 @@ function HeaderButton({ label, active, dir, onClick }) {
 function InfoTip({ text }) {
   const [open, setOpen] = useState(false);
   const [flip, setFlip] = useState(false);
-  const wrapRef = useState(null)[0] || (typeof document !== 'undefined' ? { current: null } : null);
-  const ref = wrapRef || { current: null };
-
-  // ensure we have a stable ref object
-  if (!wrapRef || !wrapRef.current) {
-    // noop; TextEdit context may not allow creating refs outside render, so we'll use a lazy init below
-  }
-
-  const setWrapRef = (el) => {
-    // store element so we can measure on hover
-    if (ref) ref.current = el;
-  };
+  const ref = useRef(null);
 
   const onEnter = () => {
     setOpen(true);
-    // next frame: measure and flip if overflowing to the right
     requestAnimationFrame(() => {
-      const el = ref?.current;
+      const el = ref.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const TOOLTIP_W = 260; // keep in sync with style maxWidth
-      const overflowRight = rect.right + TOOLTIP_W + 16 > window.innerWidth; // + some padding
+      const TOOLTIP_W = 260;
+      const overflowRight = rect.right + TOOLTIP_W + 16 > window.innerWidth;
       setFlip(overflowRight);
     });
   };
 
   return (
     <span
-      ref={setWrapRef}
+      ref={ref}
       style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
       onMouseEnter={onEnter}
       onMouseLeave={() => setOpen(false)}
@@ -141,7 +147,6 @@ export default function ClientDashboard() {
   const [toast, setToast] = useState({ visible: false, type: 'success', msg: '' });
   const toastTimerRef = useRef(null);
   function showToast(msg, type = 'success', ttlMs = 3000) {
-    // clear any existing timer
     if (toastTimerRef.current) {
       clearTimeout(toastTimerRef.current);
       toastTimerRef.current = null;
@@ -152,6 +157,42 @@ export default function ClientDashboard() {
       toastTimerRef.current = null;
     }, ttlMs);
   }
+
+  // --- Wix embed: report our height to parent so the iframe can auto-resize ---
+  function postEmbedSize() {
+    if (typeof window === 'undefined') return;
+    const doc = document;
+    const h = Math.max(
+      doc.body?.scrollHeight || 0,
+      doc.documentElement?.scrollHeight || 0,
+      doc.body?.offsetHeight || 0,
+      doc.documentElement?.offsetHeight || 0
+    );
+    try {
+      window.parent?.postMessage({ type: 'EMBED_SIZE', height: h }, '*');
+    } catch (_) {
+      // noop
+    }
+  }
+  const postSizeSoon = () => setTimeout(() => postEmbedSize(), 50);
+
+  // initial ping; also on viewport resize
+  useEffect(() => {
+    postEmbedSize();
+    const onResize = () => postSizeSoon();
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // observe DOM mutations to catch expand/collapse or dynamic content changes
+  useEffect(() => {
+    if (typeof MutationObserver === 'undefined') return;
+    const mo = new MutationObserver(() => postSizeSoon());
+    try {
+      mo.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+    } catch (_) { /* noop */ }
+    return () => mo.disconnect();
+  }, []);
 
   // sort & filter UI state
   const [sortBy, setSortBy] = useState('created'); // 'name' | 'role' | 'created'
@@ -193,12 +234,7 @@ export default function ClientDashboard() {
   function toggleRow(id) {
     setExpanded(prev => {
       const next = { ...prev, [id]: !prev[id] };
-      // schedule a resize so the iframe grows/shrinks to fit the expanded row
-      setTimeout(() => {
-        if (typeof window !== 'undefined' && window.__EMBED__?.updateSize) {
-          window.__EMBED__.updateSize();
-        }
-      }, 60);
+      postSizeSoon(); // grow/shrink when row toggles
       return next;
     });
   }
@@ -223,12 +259,10 @@ export default function ClientDashboard() {
   }
 
   async function generatePdfForRow(row) {
-    // Prefer the new on-demand generator with a signed URL; fall back to legacy download
     const interviewId = row.latest_interview_id || null;
     const key = `${interviewId || row.id}:pdf`;
     try {
       setOpening(p => ({ ...p, [key]: true }));
-      // Call new generator endpoint; include candidate/role for BE flexibility
       const payload = {
         candidate_id: row.candidate?.id || null,
         role_id: row.role?.id || null,
@@ -241,7 +275,6 @@ export default function ClientDashboard() {
         showToast('Report generated — opening PDF', 'success');
         return;
       }
-      // Fallback: if BE didn't return a URL but we have an interview id, try legacy download route
       if (interviewId) {
         await apiDownload(
           `/reports/${encodeURIComponent(interviewId)}/download`,
@@ -284,9 +317,7 @@ export default function ClientDashboard() {
         setLoading(false)
       }
     })()
-    return () => {
-      alive = false
-    }
+    return () => { alive = false }
   }, [])
 
   // Load candidate-centric rows for selected client
@@ -302,16 +333,7 @@ export default function ClientDashboard() {
         const qs = `?client_id=${encodeURIComponent(clientId)}`
         const resp = await apiGet('/dashboard/rows' + qs)
         const raw = resp?.items || []
-
-        const scrubbed = (raw || []).filter(r => r && r.id) // basic sanity
-
-        console.debug('[dashboard] fetched rows:', {
-          requestedClientId: clientId,
-          rawCount: raw.length,
-          scrubbedCount: scrubbed.length,
-          sample: scrubbed.slice(0, 3),
-        })
-
+        const scrubbed = (raw || []).filter(r => r && r.id)
         if (!alive) return
         setItems(scrubbed)
       } catch (e) {
@@ -320,15 +342,13 @@ export default function ClientDashboard() {
         setLoading(false)
       }
     })()
-    return () => {
-      alive = false
-    }
+    return () => { alive = false }
   }, [clientId])
 
   // Normalize for table
   const rows = useMemo(() => {
     return (items || []).map(r => ({
-      id: r.id, // candidate id
+      id: r.id,
       created_at: r.created_at,
       latest_interview_id: r.latest_interview_id || null,
       latest_report_url: r.latest_report_url || null,
@@ -379,21 +399,9 @@ export default function ClientDashboard() {
     }))
   }, [items])
 
+  // Ping parent when table scope changes (or first load completes)
   useEffect(() => {
-    if (rows && rows.length) {
-      console.debug('[dashboard] normalized interview_analysis sample:', rows[0].interview_analysis);
-    }
-  }, [rows]);
-
-  // --- Embedded (Wix) auto-resize: notify parent when content changes ---
-  useEffect(() => {
-    // defer slightly so DOM has settled
-    const t = setTimeout(() => {
-      if (typeof window !== 'undefined' && window.__EMBED__ && typeof window.__EMBED__.updateSize === 'function') {
-        window.__EMBED__.updateSize();
-      }
-    }, 50);
-    return () => clearTimeout(t);
+    postSizeSoon();
   }, [loading, rows.length, roleFilter, minOverall, sortBy, sortDir]);
 
   // unique role titles available in current rows
@@ -406,11 +414,9 @@ export default function ClientDashboard() {
   const displayRows = useMemo(() => {
     let out = [...(rows || [])];
 
-    // filter by role title
     if (roleFilter) {
       out = out.filter(r => (r.role?.title || '') === roleFilter);
     }
-    // filter by min overall score
     const min = parseInt(minOverall, 10);
     if (!Number.isNaN(min)) {
       out = out.filter(r => {
@@ -419,7 +425,6 @@ export default function ClientDashboard() {
       });
     }
 
-    // sorting
     out.sort((a, b) => {
       let av, bv;
       if (sortBy === 'name') {
@@ -435,7 +440,6 @@ export default function ClientDashboard() {
         if (av > bv) return sortDir === 'asc' ? 1 : -1;
         return 0;
       } else {
-        // created
         av = new Date(a.created_at || 0).getTime();
         bv = new Date(b.created_at || 0).getTime();
         return sortDir === 'asc' ? av - bv : bv - av;
@@ -450,15 +454,10 @@ export default function ClientDashboard() {
     return (displayRows || []).slice(0, visibleCount);
   }, [displayRows, visibleCount]);
 
-  // reset visible count when data scope or ordering changes
+  // reset visible count when scope/order changes (and resize)
   useEffect(() => {
     setVisibleCount(INITIAL_COUNT);
-    // let the Wix embed grow/shrink as needed
-    setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        window.__EMBED__?.updateSize?.();
-      }
-    }, 60);
+    postSizeSoon();
   }, [clientId, roleFilter, minOverall, sortBy, sortDir]);
 
   return (
@@ -566,7 +565,6 @@ export default function ClientDashboard() {
       )}
 
       {loading && <div>Loading…</div>}
-
       {!loading && displayRows.length === 0 && <div>No rows yet.</div>}
 
       {!loading && displayRows.length > 0 && (
@@ -639,11 +637,9 @@ export default function ClientDashboard() {
           </table>
         </div>
       )}
+
       {!loading && displayRows.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
-          <div style={{ color: '#6b7280' }}>
-            Showing <strong>{Math.min(visibleCount, displayRows.length)}</strong> of <strong>{displayRows.length}</strong>
-          </div>
           {visibleCount < displayRows.length && (
             <button
               type="button"
@@ -651,7 +647,7 @@ export default function ClientDashboard() {
               onClick={() => {
                 const next = Math.min(displayRows.length, visibleCount + INITIAL_COUNT);
                 setVisibleCount(next);
-                setTimeout(() => { window.__EMBED__?.updateSize?.(); }, 50);
+                postSizeSoon();
               }}
             >
               Show more
@@ -663,7 +659,7 @@ export default function ClientDashboard() {
               className="btn lilac"
               onClick={() => {
                 setVisibleCount(INITIAL_COUNT);
-                setTimeout(() => { window.__EMBED__?.updateSize?.(); }, 50);
+                postSizeSoon();
               }}
             >
               Show less
@@ -671,6 +667,7 @@ export default function ClientDashboard() {
           )}
         </div>
       )}
+
       {/* Toast */}
       {toast.visible && (
         <div
@@ -753,6 +750,7 @@ function FragmentRow({
                   onClick={() => openSigned(r.latest_interview_id, 'transcript')}
                   disabled={!r.latest_interview_id || !r.has_transcript || !!opening[trKey]}
                   className={`btn lilac${(!r.latest_interview_id || !r.has_transcript || !!opening[trKey]) ? ' is-disabled' : ''}`}
+                  style={(!r.latest_interview_id || !r.has_transcript || !!opening[trKey]) ? disabledBtn : undefined}
                 >
                   {opening[trKey] ? 'Opening…' : 'Transcript'}
                 </button>
@@ -761,6 +759,7 @@ function FragmentRow({
                   onClick={() => generatePdfForRow(r)}
                   disabled={!!opening[pdfKey] || (!r.latest_interview_id && !r.candidate?.id)}
                   className={`btn lilac${(!!opening[pdfKey] || (!r.latest_interview_id && !r.candidate?.id)) ? ' is-disabled' : ''}`}
+                  style={(!!opening[pdfKey] || (!r.latest_interview_id && !r.candidate?.id)) ? disabledBtn : undefined}
                   title="Generate and download a fresh PDF"
                 >
                   {opening[pdfKey] ? 'Generating…' : 'Download PDF'}
@@ -823,21 +822,3 @@ function Meter({ label, value }) {
     </div>
   )
 }
-
-const th = {
-  textAlign: 'left',
-  borderBottom: '1px solid #e5e7eb',
-  padding: '8px 6px',
-  whiteSpace: 'nowrap',
-}
-const td = { borderBottom: '1px solid #f1f5f9', padding: '8px 6px', verticalAlign: 'top' }
-const btn = {
-  border: '1px solid #e5e7eb',
-  padding: '6px 10px',
-  borderRadius: 6,
-  background: '#f9fafb',
-  cursor: 'pointer',
-  textDecoration: 'none',
-  display: 'inline-block',
-} 
-const disabledBtn = { opacity: 0.6, cursor: 'not-allowed' }
