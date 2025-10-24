@@ -51,7 +51,7 @@ export default function SignIn() {
       style.setAttribute('data-embed-overflow', '1');
       style.textContent = `
         .embedded, .embedded body {
-          overflow: visible !important;
+          overflow: hidden !important;
           height: auto !important;
         }
       `;
@@ -166,7 +166,7 @@ export default function SignIn() {
 
   if (showReset) {
     return (
-      <div className="alpha-theme client-auth" style={EMBEDDED ? { overflow: 'visible' } : { minHeight: '100vh' }}>
+      <div className="alpha-theme client-auth" style={EMBEDDED ? { overflow: 'hidden' } : { minHeight: '100vh' }}>
         <div className="alpha-card auth-wrap client-card">
           <div className="auth-head">
             <h2>Reset Password</h2>
@@ -194,7 +194,7 @@ export default function SignIn() {
   }
 
   return (
-    <div className="alpha-theme client-auth" style={EMBEDDED ? { overflow: 'visible' } : { minHeight: '100vh' }}>
+    <div className="alpha-theme client-auth" style={EMBEDDED ? { overflow: 'hidden' } : { minHeight: '100vh' }}>
       <div className="alpha-card auth-wrap client-card">
         <div className="auth-head">
           <h2>Client Sign In</h2>
