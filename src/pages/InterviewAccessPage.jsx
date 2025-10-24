@@ -109,6 +109,47 @@ export default function InterviewAccessPage() {
   const paramToken = params?.role_token || params?.token || params?.role || params?.id || '';
   const [roleToken, setRoleToken] = useState(paramToken || '');
 
+  useEffect(() => {
+    // Lightweight diagnostics for camera/mic embed issues.
+    // Only run the active probe when ?camdebug=1 is present to avoid changing UX.
+    try {
+      const embedded = window.top !== window;
+      const url = new URL(window.location.href);
+      const camDebug = url.searchParams.get('camdebug') === '1';
+      console.debug('[interview-debug] embedded:', embedded, 'origin:', window.location.origin, 'referrer:', document.referrer, 'camdebug:', camDebug);
+
+      // Always log basic capability info
+      const hasMD = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+      console.debug('[interview-debug] mediaDevices.getUserMedia available:', hasMD);
+
+      if (navigator.permissions && navigator.permissions.query) {
+        ['camera', 'microphone'].forEach((name) => {
+          navigator.permissions.query({ name })
+            .then((status) => console.debug('[interview-debug] permission', name, status.state))
+            .catch((err) => console.warn('[interview-debug] permission query failed for', name, err?.name || err));
+        });
+      } else {
+        console.warn('[interview-debug] Permissions API not available');
+      }
+
+      // Active probe (prompts user) only when explicitly requested
+      if (camDebug && hasMD) {
+        (async () => {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            console.debug('[interview-debug] getUserMedia success. tracks:', stream.getTracks().map(t => t.kind));
+            // Immediately stop tracks so Tavus can request again later
+            stream.getTracks().forEach(t => t.stop());
+          } catch (e) {
+            console.error('[interview-debug] getUserMedia error:', e && (e.name || e.message), e);
+          }
+        })();
+      }
+    } catch (e) {
+      console.warn('[interview-debug] probe init failed:', e?.message || e);
+    }
+  }, []);
+
   // Keep local roleToken in sync if the route param appears later (after redirects)
   useEffect(() => {
     if (paramToken && paramToken !== roleToken) {

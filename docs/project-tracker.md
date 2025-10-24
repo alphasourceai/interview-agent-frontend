@@ -40,10 +40,12 @@
 |------|-------|----------------|--------|--------|
 | Wix Integration | 🔗 Embed cleanup, scaling, and token routing improvements for Interview, Admin, and Account pages | In Progress —
 **Implemented:** FE and BE edits completed to support Wix embedding (auto-resize observer, removal of scrollbars, scaling fixes). Added CSP header in backend for frame-ancestors (allowing Wix + alphasourceai.com), integrated Sentry across FE/BE, added window.onerror/onunhandledrejection handlers for runtime capture. FE styling updates (alphaTheme.css) to remove nested overflow and stabilize iframe layout. <br><br>
-**Next Steps:** Verify candidate/interview token recognition on `/interview-access/<token>` route (ensure correct role linkage and Tavus redirect), retest iframe scaling after BE redeploy, confirm all pages (Interview, Account, Admin) display properly in Wix embed with no clipping or scrollbars. <br><br>
+**Next Steps:** Verify candidate/interview token recognition on `/interview-access/<token>` route (ensure correct role linkage and Tavus redirect), retest iframe scaling after BE redeploy, confirm all pages (Interview, Account, Admin) display properly in Wix embed with no clipping or scrollbars. Additionally, remaining iframe visual and scrollbar behavior must be resolved; ensure consistent height auto-resize and no overflow across all embedded pages. <br><br>
 **Testing Checklist:** ① Verify Sentry reports FE route/runtime errors. ② Validate autoResize observer triggers on height changes. ③ Confirm camera/mic permissions are not blocked in Wix embed. ④ Test Interview token-based routing and session handling. <br><br>
 **Open Items:**  • Add `autoResize.js` to FE folder.  • Adjust remaining embedded pages for uniform scaling.  • Consider future optimization for dynamic height via postMessage.  
 • Begin implementation of Option 3 (Token‑Based Deep Link & Embed Handshake – current best path) per outlined tasks. | Jason | Oct 22 |
+| Permissions | 🎥 Fix camera/mic permission flow for Interview page within Wix embed (ensure browser prompts propagate and permissions granted to iframe context) | In Progress — Investigate Wix embed sandbox settings and cross-origin isolation; plan to verify user media capture compatibility with Tavus SDK; fallback plan for pop-out auth flow if needed | Jason | Oct 24 |
+| Token Flow | 🔑 Resolve token-based deep link flow from Wix → Render for Interview access (ensure secure propagation of candidate tokens and route recognition within /interview-access/<token>) | Planned — Confirm Supabase session mapping, handshake, and redirect behavior; implement per Option 3 Token-Based Deep Link & Embed Handshake | Jason | Oct 25 |
 
 ---
 
