@@ -6,6 +6,11 @@ services:
     branch: prod-single-dashboard
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
+    headers:
+      - key: Permissions-Policy
+        value: camera=(self "https://tavus.daily.co" "https://*.daily.co"), microphone=(self "https://tavus.daily.co" "https://*.daily.co"), fullscreen=*
+      - key: Feature-Policy
+        value: camera 'self' https://tavus.daily.co https://*.daily.co; microphone 'self' https://tavus.daily.co https://*.daily.co; fullscreen *
     envVars:
       - key: VITE_BACKEND_URL
         value: https://ia-backend-prod.onrender.com
