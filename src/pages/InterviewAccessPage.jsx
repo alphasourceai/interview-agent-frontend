@@ -211,6 +211,48 @@ export default function InterviewAccessPage() {
     return () => clearTimeout(t);
   }, [submitted, verified, roomUrl, starting, prejoin, error]);
 
+  // Ensure Tavus/Daily iframe has the required "allow" permissions
+  useEffect(() => {
+    const REQUIRED = 'camera; microphone; autoplay; display-capture; fullscreen; clipboard-read; clipboard-write; storage-access';
+    const matchesDaily = (src = '') => /(^https?:\/\/)?([a-z0-9-]+\.)?(tavus\.daily\.co|c\.daily\.co)(\/|\?|$)/i.test(String(src || ''));
+
+    const patch = (el) => {
+      if (!el || el.tagName !== 'IFRAME') return;
+      const src = el.getAttribute('src') || '';
+      if (!matchesDaily(src)) return;
+      try {
+        const allow = (el.getAttribute('allow') || '').toLowerCase();
+        // Only update if missing or insufficient
+        const needs = !allow.includes('camera') || !allow.includes('microphone') || !allow.includes('display-capture') || !allow.includes('autoplay') || !allow.includes('fullscreen');
+        if (needs) {
+          el.setAttribute('allow', REQUIRED);
+        }
+        // Helpful extras that sometimes get stripped
+        if (!el.hasAttribute('allowfullscreen')) el.setAttribute('allowfullscreen', '');
+        if (!el.getAttribute('referrerpolicy')) el.setAttribute('referrerpolicy', 'no-referrer');
+      } catch {}
+    };
+
+    const scan = () => {
+      try {
+        const root = document.getElementById('tavus-slot') || document.body;
+        const frames = root.querySelectorAll('iframe');
+        frames.forEach(patch);
+      } catch {}
+    };
+
+    // Initial pass and periodic nudge (in case Tavus re-renders)
+    scan();
+    const tick = setInterval(scan, 800);
+
+    // Observe DOM mutations under the Tavus slot
+    const target = document.getElementById('tavus-slot') || document.body;
+    const mo = new MutationObserver(() => scan());
+    try { mo.observe(target, { subtree: true, childList: true, attributes: true, attributeFilter: ['src', 'allow'] }); } catch {}
+
+    return () => { clearInterval(tick); try { mo.disconnect(); } catch {} };
+  }, []);
+
   const startInterview = useCallback(async () => {
     if (!canStart) return;
     setStarting(true);
