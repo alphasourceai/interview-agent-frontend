@@ -265,10 +265,10 @@ html.embedded * { overscroll-behavior: contain; }
 
 /* ===================== Branded Header (Wix‑matched) ====================== */
 .alpha-theme{
-  --alpha-header-h: 72px;
-  --alpha-header-bg: rgba(6,21,81,.88);
+  --alpha-header-h: 140px;
+  --alpha-header-bg: #0A1547;
   --alpha-header-border: rgba(255,255,255,.10);
-  --alpha-header-blur: 8px;
+  --alpha-header-blur: 0;
 }
 
 /* When a fixed header is present, offset page content */
@@ -283,13 +283,16 @@ body.alpha-has-header{ padding-top: 0; }
   z-index: 1000;
   height: 140px;
   width: 100%;
-  background: #0A1547;
+  background: #0A1547 !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: flex-start;
   padding: 0 40px;
   box-sizing: border-box;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
 }
 
 .alpha-header .inner {
@@ -297,6 +300,12 @@ body.alpha-has-header{ padding-top: 0; }
   display: flex;
   align-items: center;
   justify-content: flex-start;
+}
+
+/* Remove any pseudo-element overlays that may tint the header */
+.alpha-header::before,
+.alpha-header::after {
+  content: none !important;
 }
 
 /* Brand (logo at left) */
@@ -327,3 +336,10 @@ body.alpha-has-header{ padding-top: 0; }
 
 /* Ensure the hero sits comfortably below the header if used */
 .alpha-hero.fullbleed{ margin-top: 0; }
+
+/* Neutralize wrapper/parent overlays so the header color is exact */
+.alpha-theme .alpha-page,
+.alpha-theme.alpha-has-header,
+body.alpha-has-header {
+  background: transparent !important;
+}
