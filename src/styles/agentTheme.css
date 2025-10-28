@@ -122,7 +122,10 @@
 
 /* Form container spacing */
 .alpha-form{ padding: 0 24px 48px; }
-.alpha-form { background: #0A1547 !important; }
+.alpha-form {
+  background-color: #0A1547 !important;
+  background: #0A1547 !important;
+}
 
 /* Inline “Verified” text next to the Verify button */
 .verified-inline{
@@ -147,7 +150,8 @@
 }
 
 .alpha-theme, .alpha-theme body{
-  background:var(--alpha-bg);
+  background-color: #0A1547 !important;
+  background: #0A1547 !important;
   color:var(--alpha-text);
   font-family:'Raleway',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
   min-height:100vh;
@@ -345,6 +349,7 @@ body.alpha-has-header{ padding-top: 0; }
 .alpha-theme .alpha-page,
 .alpha-theme.alpha-has-header,
 body.alpha-has-header {
+  background-color: #0A1547 !important;
   background: #0A1547 !important;
 }
 
@@ -355,6 +360,7 @@ html, body, #root,
 .alpha-theme,
 .alpha-theme .alpha-page {
   background-color: #0A1547 !important;
+  background: #0A1547 !important;
   background-image: none !important;
 }
 
@@ -379,8 +385,11 @@ body::after {
 /* Final safety net: ensure all top wrappers render exact brand blue */
 .alpha-theme, .alpha-theme body, .alpha-theme .alpha-page, .alpha-theme .alpha-header {
   background-color: #0A1547 !important;
+  background: #0A1547 !important;
   background-image: none !important;
 }
+/* Replace any near-dark shades (e.g., #0D153E) with #0A1547 */
+
 
 /* Ensure no wrapper inside header/hero tints the brand blue */
 .alpha-header .container,
@@ -392,4 +401,9 @@ body::after {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+}
+/* Explicit override for all elements to enforce uniform color rendering */
+* {
+  background-color: #0A1547 !important;
+  background: #0A1547 !important;
 }
