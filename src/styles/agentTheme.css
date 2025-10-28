@@ -1,4 +1,4 @@
-/* --- AlphaSource theme (Wix-matched) ------------------------------------- */
+/ * --- AlphaSource theme (Wix-matched) ------------------------------------- */
 @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap');
 
 /* alphaTheme.css (appenditions/overrides) */
@@ -291,7 +291,7 @@ body.alpha-has-header{ padding-top: var(--alpha-header-h); }
   margin: 0 auto;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 0 20px;
   box-sizing: border-box;
 }
@@ -304,10 +304,10 @@ body.alpha-has-header{ padding-top: var(--alpha-header-h); }
   text-decoration: none;
 }
 .alpha-header .brand img{
-  height: 40px;
-  max-height: 40px;
+  height: 77px;
+  max-height: 77px;
   width: auto;
-  max-width: 220px;
+  max-width: 383px;
   display: block;
 }
 
