@@ -152,6 +152,8 @@
   min-height:100vh;
 }
 
+html, body { margin: 0; padding: 0; }
+
 /* links */
 .alpha-theme a{ color:var(--alpha-primary); text-decoration:none; }
 .alpha-theme a:hover{ text-decoration:underline; }
@@ -270,7 +272,9 @@ html.embedded * { overscroll-behavior: contain; }
 }
 
 /* When a fixed header is present, offset page content */
-body.alpha-has-header{ padding-top: var(--alpha-header-h); }
+body.alpha-has-header{ padding-top: 0; }
+
+.alpha-theme .alpha-page { margin-top: var(--alpha-header-h); }
 
 /* Fixed, translucent header bar */
 .alpha-header {
