@@ -104,6 +104,10 @@ export default function InterviewAccessPage() {
   };
   const location = useLocation();
   const navigate = useNavigate();
+  useEffect(() => {
+    try { document.body.classList.add('alpha-has-header'); } catch {}
+    return () => { try { document.body.classList.remove('alpha-has-header'); } catch {} };
+  }, []);
   // Normalize param names for token
   const params = useParams();
   const paramToken = params?.role_token || params?.token || params?.role || params?.id || '';
@@ -297,12 +301,21 @@ export default function InterviewAccessPage() {
     }
   }, [canStart, submitted, roleToken]);
 
-  // top spacing only
   const header = useMemo(
     () => (
-      <div className="max-w-6xl mx-auto w-full" aria-hidden="true">
-        <div style={{ height: 56 }} />
-      </div>
+      <header className="alpha-header" role="banner" aria-label="AlphaSource site header">
+        <div className="inner">
+          <a className="brand" href="https://www.alphasourceai.com" aria-label="AlphaSource Home">
+            <img src="/alpha-logo.png" alt="AlphaSource" />
+          </a>
+          <nav className="nav" aria-label="Primary">
+            <a href="https://www.alphasourceai.com/">Home</a>
+            <a href="https://www.alphasourceai.com/about">About</a>
+            <a href="https://www.alphasourceai.com/how-it-works">How it works</a>
+            <a href="https://www.alphasourceai.com/request-demo">Request demo</a>
+          </nav>
+        </div>
+      </header>
     ),
     []
   );
@@ -310,7 +323,7 @@ export default function InterviewAccessPage() {
   const noRoom = !roomUrl;
 
   return (
-    <div className="alpha-theme">
+    <div className="alpha-theme alpha-page">
       <div className="space-y-6">
         {header}
 
