@@ -345,7 +345,7 @@ body.alpha-has-header{ padding-top: 0; }
 .alpha-theme .alpha-page,
 .alpha-theme.alpha-has-header,
 body.alpha-has-header {
-  background: transparent !important;
+  background: #0A1547 !important;
 }
 
 .alpha-theme .alpha-page > *:first-child { margin-top: 0 !important; }
@@ -370,7 +370,6 @@ body::after {
 }
 
 /* Ensure form areas never flip to white */
-.alpha-theme .alpha-form,
 .alpha-theme .panel,
 .alpha-theme .card,
 .alpha-theme .container {
@@ -381,4 +380,16 @@ body::after {
 .alpha-theme, .alpha-theme body, .alpha-theme .alpha-page, .alpha-theme .alpha-header {
   background-color: #0A1547 !important;
   background-image: none !important;
+}
+
+/* Ensure no wrapper inside header/hero tints the brand blue */
+.alpha-header .container,
+.alpha-hero.fullbleed .container,
+.alpha-header .section,
+.alpha-hero.fullbleed .section,
+.alpha-header .panel,
+.alpha-hero.fullbleed .panel {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
