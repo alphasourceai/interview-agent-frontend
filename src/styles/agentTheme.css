@@ -229,7 +229,7 @@ html, body { margin: 0; padding: 0; }
 /* Scoped input sizing for Interview page (prevents overlap) */
 .alpha-form-grid-3 .alpha-input {
   width: 250px !important;
-  height: 70px !important;
+  height: 44px !important;
 }
 
 /* --- Embedded-in-Wix adjustments ----------------------------------------- */
@@ -274,16 +274,16 @@ html.embedded * { overscroll-behavior: contain; }
 /* When a fixed header is present, offset page content */
 body.alpha-has-header{ padding-top: 0; }
 
-.alpha-theme .alpha-page { margin-top: var(--alpha-header-h); }
+.alpha-theme .alpha-page { margin-top: 0; }
 
 /* Fixed, translucent header bar */
 .alpha-header {
   position: sticky;
   top: 0;
   z-index: 1000;
-  height: 140px; /* increased height to match full blue strip */
+  height: 140px;
   width: 100%;
-  background: #0b1a47; /* exact blue color from Wix */
+  background: #0A1547;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
