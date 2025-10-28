@@ -402,8 +402,30 @@ body::after {
   border: none !important;
   box-shadow: none !important;
 }
-/* Explicit override for all elements to enforce uniform color rendering */
-* {
-  background-color: #0A1547 !important;
-  background: #0A1547 !important;
+
+
+
+/* === Restore hallway hero image (overrides global page color) === */
+.alpha-hero.fullbleed{
+  background: #0A1547 url("/hallway.png") center/cover no-repeat !important;
+}
+
+/* === Force Tavus stage placeholder to be black === */
+.tavus-slot .placeholder,
+.tavus-slot .no-room {
+  background: #000000 !important;
+}
+
+/* === Lilac action buttons (keep text white) === */
+.alpha-theme button,
+.alpha-theme .btn,
+.alpha-theme input[type="submit"]{
+  background-color: #BBA9F5 !important;
+  color: #FFFFFF !important;
+  border: none !important;
+}
+.alpha-theme button:hover,
+.alpha-theme .btn:hover,
+.alpha-theme input[type="submit"]:hover{
+  background-color: #A38BEF !important;
 }
