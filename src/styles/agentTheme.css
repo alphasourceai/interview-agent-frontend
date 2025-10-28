@@ -286,7 +286,7 @@ body.alpha-has-header{ padding-top: 0; }
   height: 140px;
   width: 100%;
   background: #0A1547 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -347,3 +347,19 @@ body.alpha-has-header {
 }
 
 .alpha-theme .alpha-page > *:first-child { margin-top: 0 !important; }
+
+/* --- Global background normalization to enforce brand blue and remove white gaps --- */
+html, body, #root,
+.alpha-theme,
+.alpha-theme .alpha-page {
+  background-color: #0A1547 !important;
+  background-image: none !important;
+}
+
+/* Ensure form areas never flip to white */
+.alpha-theme .alpha-form,
+.alpha-theme .panel,
+.alpha-theme .card,
+.alpha-theme .container {
+  background-color: transparent !important;
+}
