@@ -5,6 +5,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import InterviewAccessForm from '../components/InterviewAccessForm';
+import '../styles/agentTheme.css';
 
 function joinUrl(base, path) {
   if (!base) return path;
@@ -308,12 +309,6 @@ export default function InterviewAccessPage() {
           <a className="brand" href="https://www.alphasourceai.com" aria-label="AlphaSource Home">
             <img src="/alpha-logo.png" alt="AlphaSource" />
           </a>
-          <nav className="nav" aria-label="Primary">
-            <a href="https://www.alphasourceai.com/">Home</a>
-            <a href="https://www.alphasourceai.com/about">About</a>
-            <a href="https://www.alphasourceai.com/how-it-works">How it works</a>
-            <a href="https://www.alphasourceai.com/request-demo">Request demo</a>
-          </nav>
         </div>
       </header>
     ),
