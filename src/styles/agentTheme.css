@@ -69,7 +69,7 @@
   margin-bottom: 6px;
 }
 .alpha-input{
-  height: 52px;
+  height: 44px;
   border-radius: var(--alpha-radius);
   background: var(--alpha-surface);
   border: 1px solid var(--alpha-border);
@@ -122,6 +122,7 @@
 
 /* Form container spacing */
 .alpha-form{ padding: 0 24px 48px; }
+.alpha-form { background: transparent !important; }
 
 /* Inline “Verified” text next to the Verify button */
 .verified-inline{
@@ -133,7 +134,7 @@
 /* (pre-existing theme rules stay as-is below this line) */
 
 .alpha-theme{
-  --alpha-bg:#061551;
+  --alpha-bg:#0A1547;
   --alpha-surface:rgba(255,255,255,0.06);
   --alpha-border:rgba(255,255,255,0.14);
   --alpha-text:#EBFEFF;
@@ -198,6 +199,7 @@ html, body { margin: 0; padding: 0; }
 
 /* ===== Form container (outer) ============================================ */
 .alpha-form{ max-width:1200px; margin:0 auto; padding:0 24px 48px; }
+.alpha-form { background: transparent !important; }
 
 /* two-column grid used inside Step-1 (kept) */
 .alpha-form-grid{
@@ -343,3 +345,5 @@ body.alpha-has-header{ padding-top: 0; }
 body.alpha-has-header {
   background: transparent !important;
 }
+
+.alpha-theme .alpha-page > *:first-child { margin-top: 0 !important; }
