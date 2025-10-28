@@ -273,26 +273,26 @@ html.embedded * { overscroll-behavior: contain; }
 body.alpha-has-header{ padding-top: var(--alpha-header-h); }
 
 /* Fixed, translucent header bar */
-.alpha-header{
+.alpha-header {
   position: sticky;
   top: 0;
   z-index: 1000;
-  height: var(--alpha-header-h);
+  height: 140px; /* increased height to match full blue strip */
   width: 100%;
-  background: var(--alpha-header-bg);
-  border-bottom: 1px solid var(--alpha-header-border);
-  backdrop-filter: blur(var(--alpha-header-blur));
-  -webkit-backdrop-filter: blur(var(--alpha-header-blur));
-}
-.alpha-header .inner{
-  max-width: 1200px;
-  height: 100%;
-  margin: 0 auto;
+  background: #0b1a47; /* exact blue color from Wix */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 20px;
+  padding: 0 40px;
   box-sizing: border-box;
+}
+
+.alpha-header .inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 /* Brand (logo at left) */
@@ -303,11 +303,9 @@ body.alpha-has-header{ padding-top: var(--alpha-header-h); }
   text-decoration: none;
 }
 /* Final logo size to match Wix: 383×77, keep aspect ratio */
-.alpha-header .brand img{
+.alpha-header .brand img {
   width: 383px;
   height: 77px;
-  max-width: 383px;
-  max-height: 77px;
   object-fit: contain;
   display: block;
 }
