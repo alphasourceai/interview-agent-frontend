@@ -122,7 +122,7 @@
 
 /* Form container spacing */
 .alpha-form{ padding: 0 24px 48px; }
-.alpha-form { background: transparent !important; }
+.alpha-form { background: #0A1547 !important; }
 
 /* Inline “Verified” text next to the Verify button */
 .verified-inline{
@@ -199,7 +199,7 @@ html, body { margin: 0; padding: 0; }
 
 /* ===== Form container (outer) ============================================ */
 .alpha-form{ max-width:1200px; margin:0 auto; padding:0 24px 48px; }
-.alpha-form { background: transparent !important; }
+.alpha-form { background: #0A1547 !important; }
 
 /* two-column grid used inside Step-1 (kept) */
 .alpha-form-grid{
@@ -286,6 +286,8 @@ body.alpha-has-header{ padding-top: 0; }
   height: 140px;
   width: 100%;
   background: #0A1547 !important;
+  background-color: #0A1547 !important;
+  background-image: none !important;
   border-bottom: none;
   display: flex;
   align-items: center;
@@ -354,6 +356,17 @@ html, body, #root,
 .alpha-theme .alpha-page {
   background-color: #0A1547 !important;
   background-image: none !important;
+}
+
+.alpha-theme::before,
+.alpha-theme::after,
+.alpha-theme .alpha-page::before,
+.alpha-theme .alpha-page::after,
+body::before,
+body::after {
+  content: none !important;
+  display: none !important;
+  background: none !important;
 }
 
 /* Ensure form areas never flip to white */
