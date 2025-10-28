@@ -306,9 +306,9 @@ export default function InterviewAccessPage() {
     () => (
       <header className="alpha-header" role="banner" aria-label="AlphaSource site header">
         <div className="inner">
-          <a className="brand" href="https://www.alphasourceai.com" aria-label="AlphaSource Home">
+          <div className="brand" aria-label="AlphaSource Home">
             <img src="/alpha-logo.png" alt="AlphaSource" />
-          </a>
+          </div>
         </div>
       </header>
     ),
