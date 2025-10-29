@@ -172,7 +172,7 @@ export default function Admin() {
     };
   }, []);
 
-  const shareBase = 'https://www.alphasourceai.com/interview-agent';
+  const shareBase = 'https://interviews.alphasourceai.com/interview-host';
 
   // Detect Supabase recovery redirect
   useEffect(() => {
