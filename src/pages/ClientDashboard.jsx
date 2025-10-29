@@ -226,9 +226,6 @@ export default function ClientDashboard() {
   const [minOverall, setMinOverall] = useState(''); // numeric (string input)
 
   const hasMembership = (me?.memberships || []).length > 0
-  const canInvite =
-    hasMembership &&
-    (me?.memberships || []).some(m => ['owner', 'admin'].includes(m.role))
 
   const nameById = useMemo(
     () => Object.fromEntries(clients.map(c => [c.client_id, c.name])),
@@ -500,20 +497,6 @@ export default function ClientDashboard() {
       <div className="dash-head">
         <h1 style={{ margin: 0 }}>Dashboard</h1>
         <div className="dash-actions">
-          {canInvite && (
-            <a
-              href="/invite"
-              style={{
-                textDecoration:'none',
-                border:'1px solid #e5e7eb',
-                padding:'8px 12px',
-                borderRadius:8,
-                background:'#f9fafb'
-              }}
-            >
-              Invite teammate
-            </a>
-          )}
           <SignOutButton />
         </div>
       </div>
