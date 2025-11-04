@@ -34,6 +34,19 @@ const IconTrash = ({ size = 24 }) => (
   </svg>
 );
 
+const IconKey = ({ size = 24 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    aria-hidden="true"
+  >
+    <path d="M14 7a5 5 0 1 0-2.197 4.12L15 14h2v2h2v2h2v-3.172a2 2 0 0 0-.586-1.414l-4.828-4.828A4.98 4.98 0 0 0 14 7Z" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="10" cy="7" r="1.5" fill="#FFFFFF"/>
+  </svg>
+);
+
 export default function Admin() {
   const [session, setSession] = useState(null);
   const [me, setMe] = useState(null);
@@ -319,6 +332,44 @@ export default function Admin() {
     window.location.replace('/admin');
   };
 
+  async function resetMemberPassword(member) {
+    try {
+      // First attempt: canonical backend route using member id
+      try {
+        await apiPost(`/admin/users/${encodeURIComponent(member.id)}/reset-password`, {});
+        alert(`Password reset email triggered for ${member.email}`);
+        return;
+      } catch (e1) {
+        if (e1?.response?.status !== 404) throw e1;
+      }
+      // Fallback route: email-based reset
+      try {
+        await apiPost('/admin/reset-password', { email: member.email });
+        alert(`Password reset email triggered for ${member.email}`);
+        return;
+      } catch (e2) {
+        if (e2?.response?.status !== 404) throw e2;
+      }
+      // Last-resort client-side attempt (may be blocked without service role on backend)
+      try {
+        const origin = window.location.origin;
+        const { error } = await supabase.auth.resetPasswordForEmail(member.email, {
+          redirectTo: `${origin}/admin?pwreset=1`
+        });
+        if (error) throw error;
+        alert(`Password reset email requested for ${member.email}`);
+      } catch (e3) {
+        throw e3;
+      }
+    } catch (err) {
+      const msg =
+        (err?.response?.data?.error) ||
+        err?.message ||
+        'Could not initiate password reset. Please try again.';
+      console.error('resetMemberPassword failed:', err);
+      alert(msg);
+    }
+  }
   // ---------- Clients ----------
   const createClient = async () => {
     const name = newClientName.trim();
@@ -774,7 +825,24 @@ export default function Admin() {
                     <div className="title">{m.name}</div>
                     <div className="sub">{m.email} • {m.role || 'member'}</div>
                   </div>
-                  <button onClick={() => removeMember(m.id)}>Remove</button>
+                  <div className="row" style={{ gap: 8 }}>
+                    <button
+                      className="btn-icon"
+                      onClick={() => resetMemberPassword(m)}
+                      title="Send password reset email"
+                      aria-label="Send password reset email"
+                    >
+                      <IconKey size={24} />
+                    </button>
+                    <button
+                      className="btn-icon"
+                      onClick={() => removeMember(m.id)}
+                      title="Remove member"
+                      aria-label="Remove member"
+                    >
+                      <IconTrash size={24} />
+                    </button>
+                  </div>
                 </div>
               ))}
               {members.length === 0 && <div className="muted">No members for this client</div>}
