@@ -334,30 +334,54 @@ export default function Admin() {
 
   async function resetMemberPassword(member) {
     try {
-      // First attempt: canonical backend route using member id
+      const raw = (member && member.email) ? String(member.email) : '';
+      const email = raw.trim().toLowerCase();
+      if (!email) {
+        alert('This member has no email address on file.');
+        return;
+      }
+
+      console.debug('[resetMemberPassword] starting for', { id: member.id, email });
+
+      // Primary path: backend email-based reset (preferred and simplest)
       try {
-        await apiPost(`/admin/users/${encodeURIComponent(member.id)}/reset-password`, {});
-        alert(`Password reset email triggered for ${member.email}`);
+        await apiPost('/admin/reset-password', { email });
+        alert(`Password reset email triggered for ${email}`);
+        console.debug('[resetMemberPassword] success via /admin/reset-password');
         return;
       } catch (e1) {
-        if (e1?.response?.status !== 404) throw e1;
+        // If backend says user not found, surface that clearly
+        const code = e1?.response?.data?.error || e1?.message || '';
+        if (code && /user_email_not_found/i.test(code)) {
+          alert(`No Supabase user exists for ${email}. Ask the user to accept their invite, or create an account for them.`);
+          console.warn('[resetMemberPassword] user_email_not_found for', email);
+          return;
+        }
+        // If the route is missing (404), fall back to id-based route
+        if (e1?.response?.status !== 404) {
+          throw e1;
+        }
       }
-      // Fallback route: email-based reset
+
+      // Fallback path: id-based route, if supported
       try {
-        await apiPost('/admin/reset-password', { email: member.email });
-        alert(`Password reset email triggered for ${member.email}`);
+        await apiPost(`/admin/users/${encodeURIComponent(member.id)}/reset-password`, {});
+        alert(`Password reset email triggered for ${email}`);
+        console.debug('[resetMemberPassword] success via /admin/users/:id/reset-password');
         return;
       } catch (e2) {
         if (e2?.response?.status !== 404) throw e2;
       }
-      // Last-resort client-side attempt (may be blocked without service role on backend)
+
+      // Last resort: client-side request (works only if backend allows public flow)
       try {
         const origin = window.location.origin;
-        const { error } = await supabase.auth.resetPasswordForEmail(member.email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${origin}/admin?pwreset=1`
         });
         if (error) throw error;
-        alert(`Password reset email requested for ${member.email}`);
+        alert(`Password reset email requested for ${email}`);
+        console.debug('[resetMemberPassword] success via supabase.auth.resetPasswordForEmail');
       } catch (e3) {
         throw e3;
       }
@@ -829,8 +853,9 @@ export default function Admin() {
                     <button
                       className="btn-icon"
                       onClick={() => resetMemberPassword(m)}
-                      title="Send password reset email"
+                      title={m.email ? `Send password reset email to ${m.email}` : 'No email on file'}
                       aria-label="Send password reset email"
+                      disabled={!m.email}
                     >
                       <IconKey size={24} />
                     </button>
