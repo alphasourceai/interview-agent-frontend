@@ -39,12 +39,21 @@ export async function apiPost(path, body) {
   return handleJson(res);
 }
 
-export async function apiDelete(path) {
-  const res = await fetch(`${base}${path}`, {
+export async function apiDelete(path, body) {
+  const auth = await authHeaders();
+  const headers = { ...auth };
+  const options = {
     method: 'DELETE',
-    headers: await authHeaders(),
+    headers,
     credentials: 'omit'
-  });
+  };
+
+  if (typeof body !== 'undefined') {
+    headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(body || {});
+  }
+
+  const res = await fetch(`${base}${path}`, options);
   return handleJson(res);
 }
 

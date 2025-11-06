@@ -1,5 +1,5 @@
 // src/pages/SignIn.jsx
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import '../styles/clientTheme.css';
 
@@ -8,9 +8,6 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showReset, setShowReset] = useState(false);
-  const [newPass1, setNewPass1] = useState('');
-  const [newPass2, setNewPass2] = useState('');
 
   // --- Wix embed: report our height to the parent so the iframe can auto-resize ---
   function postEmbedSize() {
@@ -63,29 +60,13 @@ export default function SignIn() {
   }
 
   // Preserve any ?next=/path on the current URL
-  const { nextPath } = useMemo(() => {
-    const url = new URL(window.location.href);
-    const next = url.searchParams.get('next') || '';
-    return { nextPath: next };
-  }, []);
-
-  // Detect Supabase recovery redirect (?pwreset=1 or hash with recovery)
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const needsReset =
-      url.searchParams.get('pwreset') === '1' ||
-      window.location.hash.includes('type=recovery') ||
-      window.location.hash.includes('recovery');
-    if (needsReset) setShowReset(true);
-  }, []);
-
   // Notify parent (Wix) to resize when layout changes
   useEffect(() => {
     const t = setTimeout(() => {
       postEmbedSizeBurst();
     }, 60);
     return () => clearTimeout(t);
-  }, [showReset, err, loading]);
+  }, [err, loading]);
 
   // Initial size on mount (helps Wix editor/preview too)
   useEffect(() => {
@@ -139,58 +120,10 @@ export default function SignIn() {
     }
     const origin = window.location.origin;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/signin?pwreset=1`
+      redirectTo: `${origin}/set-password?mode=recovery`
     });
     if (error) alert('Could not start reset: ' + error.message);
     else alert('Check your email for a password reset link.');
-  }
-
-  async function submitReset(e) {
-    e.preventDefault();
-    if (!newPass1 || newPass1 !== newPass2) {
-      alert('Passwords do not match.');
-      return;
-    }
-    const { error } = await supabase.auth.updateUser({ password: newPass1 });
-    if (error) return alert('Could not update password: ' + error.message);
-    alert('Password updated. You can sign in now.');
-    setShowReset(false);
-    setNewPass1(''); setNewPass2('');
-    setTimeout(() => postEmbedSizeBurst(), 40);
-    const url = new URL(window.location.href);
-    url.searchParams.delete('pwreset');
-    window.history.replaceState({}, '', url.toString());
-    await supabase.auth.signOut();
-    window.location.replace('/signin');
-  }
-
-  if (showReset) {
-    return (
-      <div className="alpha-theme client-auth" style={EMBEDDED ? { overflow: 'hidden' } : { minHeight: '100vh' }}>
-        <div className="alpha-card auth-wrap client-card">
-          <div className="auth-head">
-            <h2>Reset Password</h2>
-          </div>
-          <form onSubmit={submitReset}>
-            <label>New password</label>
-            <input className="alpha-input" type="password" value={newPass1} onChange={(e) => setNewPass1(e.target.value)} required />
-            <label>Confirm new password</label>
-            <input className="alpha-input" type="password" value={newPass2} onChange={(e) => setNewPass2(e.target.value)} required />
-            <button type="submit">Update Password</button>
-            <div style={{ marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => { setShowReset(false); window.location.replace('/signin'); }}
-                style={{ background: 'none', border: 'none', padding: 0, textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}
-              >
-                Back to sign in
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
   }
 
   return (

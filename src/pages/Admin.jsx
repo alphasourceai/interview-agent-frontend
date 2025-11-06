@@ -57,11 +57,6 @@ export default function Admin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // forgot/reset password
-  const [showReset, setShowReset] = useState(false);
-  const [newPass1, setNewPass1] = useState('');
-  const [newPass2, setNewPass2] = useState('');
-
   // clients
   const [clients, setClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState('');
@@ -187,16 +182,6 @@ export default function Admin() {
 
   const shareBase = 'https://interviews.alphasourceai.com/interview-host';
 
-  // Detect Supabase recovery redirect
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const needsReset =
-      url.searchParams.get('pwreset') === '1' ||
-      window.location.hash.includes('type=recovery') ||
-      window.location.hash.includes('recovery');
-    if (needsReset) setShowReset(true);
-  }, []);
-
   useEffect(() => {
     let alive = true;
     let initializing = true;
@@ -299,29 +284,10 @@ export default function Admin() {
     if (!email) return alert('Enter your email above first.');
     const origin = window.location.origin;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/admin?pwreset=1`
+      redirectTo: `${origin}/set-password?mode=recovery`
     });
     if (error) return alert('Could not start reset: ' + error.message);
     alert('Check your email for a password reset link.');
-  };
-
-  const submitReset = async (e) => {
-    e.preventDefault();
-    if (!newPass1 || newPass1 !== newPass2) return alert('Passwords do not match.');
-    const { error } = await supabase.auth.updateUser({ password: newPass1 });
-    if (error) return alert('Could not update password: ' + error.message);
-    alert('Password updated. You can sign in now.');
-    setShowReset(false);
-    setNewPass1(''); setNewPass2('');
-    const url = new URL(window.location.href);
-    url.searchParams.delete('pwreset');
-    window.history.replaceState({}, '', url.toString());
-    await supabase.auth.signOut();
-    // collapse sections for next login
-    localStorage.removeItem('adm_show_clients');
-    localStorage.removeItem('adm_show_roles');
-    localStorage.removeItem('adm_show_members');
-    window.location.replace('/admin');
   };
 
   const handleSignOut = async () => {
@@ -377,7 +343,7 @@ export default function Admin() {
       try {
         const origin = window.location.origin;
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${origin}/admin?pwreset=1`
+          redirectTo: `${origin}/set-password?mode=recovery`
         });
         if (error) throw error;
         alert(`Password reset email requested for ${email}`);
@@ -554,12 +520,37 @@ export default function Admin() {
     }
   };
 
-  const removeMember = async (id) => {
-    if (!confirm('Remove this member?')) return;
-    await apiDelete('/admin/client-members/' + id);
-    setMembers(members.filter(m => m.id !== id));
-    postEmbedSize();
-    setTimeout(postEmbedSize, 300);
+  const removeMember = async (member) => {
+    if (!member || !confirm('Remove this member?')) return;
+    try {
+      const payload = {};
+      const clientId = selectedClientId || member.client_id || '';
+      if (clientId) payload.client_id = clientId;
+      if (member.user_id) payload.user_id = member.user_id;
+      const email = typeof member.email === 'string' ? member.email.trim().toLowerCase() : '';
+      if (email) payload.email = email;
+
+      if (!payload.user_id && !payload.email) {
+        alert('This member is missing identifiers and cannot be removed.');
+        return;
+      }
+
+      const resp = await apiDelete('/admin/client-members', payload);
+      if (!resp?.ok) {
+        throw new Error(resp?.error || 'Remove member failed');
+      }
+
+      setMembers(prev => prev.filter(m => m.id !== member.id));
+      postEmbedSize();
+      setTimeout(postEmbedSize, 300);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.error ||
+        err?.message ||
+        'Could not remove member. Please refresh and try again.';
+      console.error('removeMember failed:', err);
+      alert(msg);
+    }
   };
 
   const selectedClient = useMemo(() => clients.find(c => c.id === selectedClientId) || null, [clients, selectedClientId]);
@@ -569,28 +560,6 @@ export default function Admin() {
   }
 
   // ---------- Reset UI ----------
-  if (showReset) {
-    return (
-      <div className="alpha-container admin-page" style={EMBEDDED ? { overflow: 'visible' } : undefined}>
-        <div className="alpha-card alpha-form">
-          <h2>Reset Password</h2>
-          <form onSubmit={submitReset}>
-            <label>New password</label>
-            <input className="alpha-input" type="password" value={newPass1} onChange={e => setNewPass1(e.target.value)} required />
-            <label>Confirm new password</label>
-            <input className="alpha-input" type="password" value={newPass2} onChange={e => setNewPass2(e.target.value)} required />
-            <button type="submit">Update Password</button>
-            <div style={{ marginTop: 8 }}>
-              <button type="button" onClick={() => { setShowReset(false); window.location.replace('/admin'); }}>
-                Back to sign in
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   // ---------- Auth screens ----------
   if (!loading && !session) {
     return (
@@ -861,7 +830,7 @@ export default function Admin() {
                     </button>
                     <button
                       className="btn-icon"
-                      onClick={() => removeMember(m.id)}
+                      onClick={() => removeMember(m)}
                       title="Remove member"
                       aria-label="Remove member"
                     >

@@ -12,6 +12,7 @@ const SignIn = React.lazy(() => import('./pages/SignIn.jsx'))
 const VerifyOtp = React.lazy(() => import('./pages/VerifyOtp.jsx'))
 const InterviewAccessPage = React.lazy(() => import('./pages/InterviewAccessPage.jsx'))
 const Admin = React.lazy(() => import('./pages/Admin.jsx'))
+const SetPassword = React.lazy(() => import('./pages/SetPassword.jsx'))
 
 const ClientDashboard = React.lazy(() => import('./pages/ClientDashboard.jsx'))
 const RoleCreator = React.lazy(() => import('./pages/RoleCreator.jsx'))
@@ -140,6 +141,7 @@ const router = createBrowserRouter([
 
   // public
   { path: '/signin', element: <SignIn />, errorElement },
+  { path: '/set-password', element: <SetPassword />, errorElement },
   { path: '/verify-otp', element: <VerifyOtp />, errorElement },
   { path: '/interview-access', element: <InterviewAccessPage />, errorElement },
   { path: '/interview-access/:role_token', element: <InterviewAccessPage />, errorElement },
