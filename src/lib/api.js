@@ -16,7 +16,11 @@ async function handleJson(res) {
   try { data = text ? JSON.parse(text) : null; } catch { /* keep raw text */ }
   if (!res.ok) {
     const msg = (data && (data.error || data.message)) || text || `HTTP ${res.status}`;
-    throw new Error(msg);
+    const err = new Error(msg);
+    err.status = res.status;
+    err.body = data;
+    err.response = { data, status: res.status };
+    throw err;
   }
   return data;
 }

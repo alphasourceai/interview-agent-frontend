@@ -30,7 +30,7 @@ function postEmbedSizeBurst() {
 }
 
 export default function SetPassword() {
-  const [status, setStatus] = useState('loading'); // loading | ready | error
+  const [status, setStatus] = useState('loading'); // loading | ready | error | expired
   const [mode, setMode] = useState('recovery');
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
@@ -38,6 +38,10 @@ export default function SetPassword() {
   const [password2, setPassword2] = useState('');
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendError, setResendError] = useState('');
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
 
   useEffect(() => {
     if (typeof document !== 'undefined' && EMBEDDED) {
@@ -65,6 +69,7 @@ export default function SetPassword() {
         url.hash = '';
         url.searchParams.delete('code');
         url.searchParams.delete('token_hash');
+        url.searchParams.delete('password_reset');
         if (keepMode) {
           url.searchParams.set('mode', keepMode);
         } else {
@@ -90,6 +95,11 @@ export default function SetPassword() {
         const url = new URL(window.location.href);
         const modeParam = normalizeMode(url.searchParams.get('mode'));
         const nextParam = url.searchParams.get('next') || '';
+        const emailParam =
+          url.searchParams.get('email') ||
+          url.searchParams.get('user_email') ||
+          url.searchParams.get('email_address') ||
+          '';
         setMode(modeParam);
 
         const hashString = window.location.hash.startsWith('#')
@@ -114,7 +124,16 @@ export default function SetPassword() {
           return;
         }
 
+        const hasResetFlag = url.searchParams.get('password_reset') === '1' || modeParam === 'recovery';
+        const trustedReferrer = typeof document !== 'undefined' && /supabase|sendgrid/i.test((document.referrer || '').toLowerCase());
+
         if (!accessToken) {
+          if (hasResetFlag || trustedReferrer || emailParam) {
+            if (emailParam) setResendEmail(emailParam);
+            setStatus('expired');
+            postEmbedSizeBurst();
+            return;
+          }
           throw new Error('This link is missing a token. Request a new email.');
         }
 
@@ -136,7 +155,9 @@ export default function SetPassword() {
       } catch (err) {
         console.error('[SetPassword] init failed:', err);
         setError(err?.message || 'Unable to validate this password link. Request a new email from the team.');
-        setStatus('error');
+        if (status !== 'expired') {
+          setStatus('error');
+        }
         postEmbedSizeBurst();
       }
     }
@@ -146,7 +167,7 @@ export default function SetPassword() {
 
   useEffect(() => {
     postEmbedSizeBurst();
-  }, [status, success, formError, password1, password2]);
+  }, [status, success, formError, password1, password2, resendError, resendSent, resendEmail]);
 
   const heading = mode === 'signup' ? 'Set Your Password' : 'Reset Your Password';
 
@@ -209,6 +230,82 @@ export default function SetPassword() {
             <button onClick={() => window.location.replace('/signin')}>Client Sign In</button>
             <button onClick={() => window.location.replace('/admin')}>Admin Sign In</button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  async function handleResend(e) {
+    e.preventDefault();
+    if (resendSent) return;
+    setResendError('');
+    const emailNorm = resendEmail.trim().toLowerCase();
+    if (!emailNorm) {
+      setResendError('Enter your email to receive a new reset link.');
+      return;
+    }
+    setResendBusy(true);
+    try {
+      const origin = window.location.origin;
+      const redirect = `${origin}/set-password?mode=recovery&password_reset=1`;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(emailNorm, {
+        redirectTo: redirect
+      });
+      if (resetError) {
+        throw resetError;
+      }
+      setResendSent(true);
+      postEmbedSizeBurst();
+    } catch (err) {
+      console.error('[SetPassword] resend reset link failed:', err);
+      setResendError(err?.message || 'Could not send a new reset link. Please try again.');
+    } finally {
+      setResendBusy(false);
+    }
+  }
+
+  if (status === 'expired') {
+    return (
+      <div className="alpha-theme client-auth" style={containerStyle}>
+        <div className="alpha-card auth-wrap client-card">
+          <div className="auth-head">
+            <h2>Link expired</h2>
+          </div>
+          {resendSent ? (
+            <p style={{ marginBottom: 16 }}>
+              A new reset link is on its way to <strong>{resendEmail}</strong>. Check your inbox (and spam folder).
+            </p>
+          ) : (
+            <p style={{ marginBottom: 16 }}>
+              This password link is no longer valid. Enter your email below and we&apos;ll send you a fresh link.
+            </p>
+          )}
+          <form onSubmit={handleResend} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {!resendSent && (
+              <>
+                <label htmlFor="reset-email" style={{ fontWeight: 600 }}>Email</label>
+                <input
+                  id="reset-email"
+                  className="alpha-input"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={resendEmail}
+                  onChange={(e) => {
+                    setResendEmail(e.target.value);
+                    if (resendError) setResendError('');
+                  }}
+                  required
+                />
+                {resendError && <div style={{ color: '#dc2626', fontSize: 13 }}>{resendError}</div>}
+                <button type="submit" disabled={resendBusy} style={{ marginTop: 8 }}>
+                  {resendBusy ? 'Sending…' : 'Send me a new reset link'}
+                </button>
+              </>
+            )}
+            <button type="button" onClick={() => window.location.replace('/signin')} className="btn-ghost" style={{ textDecoration: 'underline' }}>
+              Back to sign in
+            </button>
+          </form>
         </div>
       </div>
     );

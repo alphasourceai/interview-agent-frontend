@@ -76,6 +76,7 @@ export default function Admin() {
   // members
   const [members, setMembers] = useState([]);
   const [memberEmail, setMemberEmail] = useState('');
+  const [memberEmailError, setMemberEmailError] = useState('');
   const [memberName, setMemberName] = useState('');
   const [memberRole, setMemberRole] = useState('member'); // member | manager | admin
 
@@ -132,7 +133,7 @@ export default function Admin() {
     // also post again after a longer delay to ensure shrinkage is handled
     const t2 = setTimeout(postEmbedSize, 320);
     return () => { clearTimeout(t); clearTimeout(t2); };
-  }, [loading, isAdmin, clients.length, roles.length, members.length, showClients, showRoles, showMembers, selectedClientId]);
+  }, [loading, isAdmin, clients.length, roles.length, members.length, showClients, showRoles, showMembers, selectedClientId, memberEmailError]);
 
   useEffect(() => localStorage.setItem('adm_show_clients', showClients ? '1' : '0'), [showClients]);
   useEffect(() => localStorage.setItem('adm_show_roles', showRoles ? '1' : '0'), [showRoles]);
@@ -508,15 +509,32 @@ export default function Admin() {
     const e = memberEmail.trim();
     const n = memberName.trim();
     if (!e || !n) return;
-    const resp = await apiPost('/admin/client-members', { client_id: selectedClientId, email: e, name: n, role: memberRole });
-    if (resp?.item) {
-      setMembers([resp.item, ...members]);
-      setMemberEmail('');
-      setMemberName('');
-      setMemberRole('member');
-      postEmbedSize();
-      setTimeout(postEmbedSize, 300);
-      alert('Invite sent and member added');
+    setMemberEmailError('');
+    try {
+      const resp = await apiPost('/admin/client-members', { client_id: selectedClientId, email: e, name: n, role: memberRole });
+      if (resp?.item) {
+        setMembers([resp.item, ...members]);
+        setMemberEmail('');
+        setMemberName('');
+        setMemberRole('member');
+        setMemberEmailError('');
+        postEmbedSize();
+        setTimeout(postEmbedSize, 300);
+        alert('Invite sent and member added');
+      }
+    } catch (err) {
+      if (err?.status === 409 && err?.body?.error === 'duplicate_email') {
+        setMemberEmailError('This email is already in use.');
+        postEmbedSize();
+        setTimeout(postEmbedSize, 300);
+        return;
+      }
+      const msg =
+        err?.response?.data?.error ||
+        err?.message ||
+        'Could not add member. Please try again.';
+      console.error('Add member failed:', err);
+      alert(msg);
     }
   };
 
@@ -785,7 +803,22 @@ export default function Admin() {
 
           <div className="row">
             <input className="alpha-input" placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
-            <input className="alpha-input" placeholder="Member email" value={memberEmail} onChange={e => setMemberEmail(e.target.value)} />
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 200 }}>
+              <input
+                className="alpha-input"
+                placeholder="Member email"
+                value={memberEmail}
+                onChange={e => {
+                  setMemberEmail(e.target.value);
+                  if (memberEmailError) setMemberEmailError('');
+                }}
+              />
+              {memberEmailError && (
+                <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>
+                  {memberEmailError}
+                </div>
+              )}
+            </div>
             <select className="alpha-input alpha-select" value={memberRole} onChange={e => setMemberRole(e.target.value)}>
               <option value="member">Member</option>
               <option value="manager">Manager</option>
