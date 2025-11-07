@@ -812,7 +812,13 @@ export default function Admin() {
 
           <div className="row">
             <div className="member-field">
-              <input className="alpha-input" placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
+              <input
+                className="alpha-input"
+                placeholder="Member name"
+                value={memberName}
+                onChange={e => setMemberName(e.target.value)}
+                style={{ height: 40 }}
+              />
             </div>
             <div className="member-field">
               <input
@@ -823,6 +829,7 @@ export default function Admin() {
                   setMemberEmail(e.target.value);
                   if (memberEmailError) setMemberEmailError('');
                 }}
+                style={{ height: 40 }}
               />
               {memberEmailError && (
                 <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>
