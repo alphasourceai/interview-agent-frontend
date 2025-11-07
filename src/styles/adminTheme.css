@@ -431,6 +431,19 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
   align-items: center;
 }
 
+.admin-page .member-field {
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  max-width: 240px;
+  flex: 0 0 240px;
+}
+
+.admin-page .member-field .alpha-input {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
 /* Uniform control sizing for Admin rows */
 .admin-page .row .alpha-input,
 .admin-page .row select.alpha-select,
@@ -664,6 +677,11 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
     flex: 1 1 100% !important;
     max-width: 100% !important;
     width: 100% !important;
+  }
+  .admin-page .member-field {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
   }
 }
 .admin-page tr[style*="background: rgb(249, 250, 251)"],

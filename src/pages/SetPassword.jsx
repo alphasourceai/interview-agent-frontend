@@ -166,29 +166,32 @@ export default function SetPassword() {
         }
 
         const url = new URL(window.location.href);
-        const modeParam = normalizeMode(url.searchParams.get('mode'));
-        const nextParam = url.searchParams.get('next') || '';
-        const typeParam = (url.searchParams.get('type') || '').toLowerCase();
-        const stateParam = url.searchParams.get('state') || '';
+        const hashString = window.location.hash.startsWith('#')
+          ? window.location.hash.slice(1)
+          : window.location.hash;
+        const hashParams = new URLSearchParams(hashString);
+        const modeParam = normalizeMode(url.searchParams.get('mode') || hashParams.get('mode'));
+        const nextParam = url.searchParams.get('next') || hashParams.get('next') || '';
+        const typeParam = (url.searchParams.get('type') || hashParams.get('type') || '').toLowerCase();
+        const stateParam = url.searchParams.get('state') || hashParams.get('state') || '';
         const emailParam =
           url.searchParams.get('email') ||
           url.searchParams.get('user_email') ||
           url.searchParams.get('email_address') ||
+          hashParams.get('email') ||
+          hashParams.get('user_email') ||
+          hashParams.get('email_address') ||
           '';
         const emailFromState = parseEmailFromState(stateParam);
         const emailHint = (emailFromState || emailParam || '').trim().toLowerCase();
         if (emailHint) setResendEmail(emailHint);
         setMode(modeParam);
-
-        const hashString = window.location.hash.startsWith('#')
-          ? window.location.hash.slice(1)
-          : window.location.hash;
-        const hashParams = new URLSearchParams(hashString);
         let accessToken = url.searchParams.get('access_token') || hashParams.get('access_token');
         let refreshToken = url.searchParams.get('refresh_token') || hashParams.get('refresh_token');
-        const code = url.searchParams.get('code');
+        const code = url.searchParams.get('code') || hashParams.get('code');
         const legacyToken =
           url.searchParams.get('token') ||
+          hashParams.get('token') ||
           url.searchParams.get('token_hash') ||
           hashParams.get('token_hash');
 
@@ -320,25 +323,6 @@ export default function SetPassword() {
     );
   }
 
-  if (status === 'error') {
-    return (
-      <div className="alpha-theme client-auth" style={containerStyle}>
-        <div className="alpha-card auth-wrap client-card">
-          <div className="auth-head">
-            <h2>Link issue</h2>
-          </div>
-          <p style={{ marginBottom: 16 }}>
-            {error || 'We could not validate this password link. Request a new email from the alphaSource team.'}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button onClick={() => window.location.replace('/signin')}>Client Sign In</button>
-            <button onClick={() => window.location.replace('/admin')}>Admin Sign In</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   async function handleResend(e) {
     e.preventDefault();
     if (resendSent) return;
@@ -368,48 +352,55 @@ export default function SetPassword() {
     }
   }
 
-  if (status === 'expired') {
+  if (status === 'error' || status === 'expired') {
+    const isExpired = status === 'expired';
+    const headingText = isExpired ? 'Link expired' : 'Link issue';
+    const copy = resendSent
+      ? `A new reset link is on its way to ${resendEmail || 'your inbox'}. Check spam if you don't see it.`
+      : isExpired
+        ? "This password link is no longer valid. Enter your email below and we'll send you a fresh one."
+        : (error || "We could not validate this password link. Enter your email below and we'll send a new reset email.");
     return (
       <div className="alpha-theme client-auth" style={containerStyle}>
         <div className="alpha-card auth-wrap client-card">
           <div className="auth-head">
-            <h2>Link expired</h2>
+            <h2>{headingText}</h2>
           </div>
-          {resendSent ? (
-            <p style={{ marginBottom: 16 }}>
-              A new reset link is on its way to <strong>{resendEmail}</strong>. Check your inbox (and spam folder).
-            </p>
-          ) : (
-            <p style={{ marginBottom: 16 }}>
-              This password link is no longer valid. Enter your email below and we&apos;ll send you a fresh link.
-            </p>
+          <p style={{ marginBottom: 16 }}>
+            {resendSent
+              ? (
+                <>A new reset link is on its way to <strong>{resendEmail || 'your inbox'}</strong>. Check your email (and spam folder).</>
+              ) : copy}
+          </p>
+          {!resendSent && (
+            <form onSubmit={handleResend} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <label htmlFor="reset-email" style={{ fontWeight: 600 }}>Email</label>
+              <input
+                id="reset-email"
+                className="alpha-input"
+                type="email"
+                placeholder="you@example.com"
+                value={resendEmail}
+                onChange={(e) => {
+                  setResendEmail(e.target.value);
+                  if (resendError) setResendError('');
+                }}
+                required
+              />
+              {resendError && <div style={{ color: '#dc2626', fontSize: 13 }}>{resendError}</div>}
+              <button type="submit" disabled={resendBusy} style={{ marginTop: 8 }}>
+                {resendBusy ? 'Sending…' : 'Send me a new reset link'}
+              </button>
+            </form>
           )}
-          <form onSubmit={handleResend} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {!resendSent && (
-              <>
-                <label htmlFor="reset-email" style={{ fontWeight: 600 }}>Email</label>
-                <input
-                  id="reset-email"
-                  className="alpha-input"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={resendEmail}
-                  onChange={(e) => {
-                    setResendEmail(e.target.value);
-                    if (resendError) setResendError('');
-                  }}
-                  required
-                />
-                {resendError && <div style={{ color: '#dc2626', fontSize: 13 }}>{resendError}</div>}
-                <button type="submit" disabled={resendBusy} style={{ marginTop: 8 }}>
-                  {resendBusy ? 'Sending…' : 'Send me a new reset link'}
-                </button>
-              </>
-            )}
-            <button type="button" onClick={() => window.location.replace('/signin')} className="btn-ghost" style={{ textDecoration: 'underline' }}>
-              Back to sign in
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+            <button type="button" onClick={() => window.location.replace('/signin')}>
+              Client Sign In
             </button>
-          </form>
+            <button type="button" onClick={() => window.location.replace('/admin')}>
+              Admin Sign In
+            </button>
+          </div>
         </div>
       </div>
     );

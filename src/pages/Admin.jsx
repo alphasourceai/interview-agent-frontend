@@ -532,7 +532,7 @@ export default function Admin() {
           return;
         }
         if (reason === 'email_in_use' || reason === 'duplicate_email') {
-          setMemberEmailError('That email is already in use. Check Members list or try a different email.');
+          setMemberEmailError("This email is already registered. They've been invited or can reset their password.");
           postEmbedSize();
           setTimeout(postEmbedSize, 300);
           return;
@@ -811,10 +811,10 @@ export default function Admin() {
           </div>
 
           <div className="row">
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="member-field">
               <input className="alpha-input" placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="member-field">
               <input
                 className="alpha-input"
                 placeholder="Member email"
