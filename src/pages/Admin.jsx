@@ -517,10 +517,26 @@ export default function Admin() {
         setMemberEmail('');
         setMemberName('');
         setMemberRole('member');
-        setMemberEmailError('');
+        if (resp.note === 'membership_created_email_failed') {
+          const msg = "Member added, but the email couldn't be sent.";
+          setMemberEmailError(msg);
+          alert(msg);
+        } else {
+          setMemberEmailError('');
+          alert('Invite sent and member added');
+        }
         postEmbedSize();
         setTimeout(postEmbedSize, 300);
-        alert('Invite sent and member added');
+        return;
+      }
+
+      if (resp?.note === 'membership_created_email_failed') {
+        const msg = "Member added, but the email couldn't be sent.";
+        setMemberEmailError(msg);
+        alert(msg);
+        postEmbedSize();
+        setTimeout(postEmbedSize, 300);
+        return;
       }
     } catch (err) {
       if (err?.status === 409) {

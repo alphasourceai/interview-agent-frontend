@@ -84,7 +84,9 @@ function parseEmailFromState(stateParam) {
 function isExpiredLinkError(err) {
   if (!err) return false;
   const code = String(err.code || err.status || err.statusCode || '').toLowerCase();
-  if (code === '410' || code === 'expired_token' || code === 'invalid_grant') return true;
+  const detailCode = String(err.error_code || '').toLowerCase();
+  if (detailCode === 'otp_expired') return true;
+  if (code === '410' || code === 'expired_token' || code === 'invalid_grant' || code === 'otp_expired') return true;
   const msg = String(
     err.message ||
       err.error_description ||
