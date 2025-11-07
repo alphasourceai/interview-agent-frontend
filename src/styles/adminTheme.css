@@ -447,15 +447,17 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 }
 
 /* Uniform control sizing for Admin rows */
+/* Inputs: keep 240px width, but do NOT fix flex-basis so height stays 40px in column layouts */
 .admin-page .row .alpha-input,
-.admin-page .row select.alpha-select,
 .admin-page .row input.alpha-input,
 .admin-page .row input[type="file"].alpha-input {
   width: 240px !important;
   max-width: 240px !important;
-  flex: 0 0 240px !important;
+  flex: 0 0 auto !important; /* was 0 0 240px; caused 240px height in column parents */
   display: inline-block;
 }
+/* Selects: retain fixed basis so the dropdown aligns with inputs in row layout */
+.admin-page .row select.alpha-select,
 .admin-page .row .alpha-select {
   width: 240px !important;
   max-width: 240px !important;
