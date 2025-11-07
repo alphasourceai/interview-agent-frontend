@@ -442,6 +442,8 @@ button.danger:hover { border-color: rgba(255, 80, 80, 0.9); }
 .admin-page .member-field .alpha-input {
   width: 100% !important;
   max-width: 100% !important;
+  flex: 0 0 auto !important;      /* stop 240px height */
+  height: 40px !important;        /* keep standard height */
 }
 
 /* Uniform control sizing for Admin rows */
