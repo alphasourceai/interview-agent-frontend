@@ -523,11 +523,20 @@ export default function Admin() {
         alert('Invite sent and member added');
       }
     } catch (err) {
-      if (err?.status === 409 && err?.body?.error === 'duplicate_email') {
-        setMemberEmailError('This email is already in use.');
-        postEmbedSize();
-        setTimeout(postEmbedSize, 300);
-        return;
+      if (err?.status === 409) {
+        const reason = err?.body?.error;
+        if (reason === 'duplicate_member') {
+          setMemberEmailError('That user is already a member of this client.');
+          postEmbedSize();
+          setTimeout(postEmbedSize, 300);
+          return;
+        }
+        if (reason === 'email_in_use' || reason === 'duplicate_email') {
+          setMemberEmailError('That email is already in use. Check Members list or try a different email.');
+          postEmbedSize();
+          setTimeout(postEmbedSize, 300);
+          return;
+        }
       }
       const msg =
         err?.response?.data?.error ||
@@ -802,8 +811,10 @@ export default function Admin() {
           </div>
 
           <div className="row">
-            <input className="alpha-input" placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 200 }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <input className="alpha-input" placeholder="Member name" value={memberName} onChange={e => setMemberName(e.target.value)} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               <input
                 className="alpha-input"
                 placeholder="Member email"

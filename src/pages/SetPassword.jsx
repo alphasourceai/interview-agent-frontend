@@ -29,6 +29,74 @@ function postEmbedSizeBurst() {
   setTimeout(postEmbedSize, 180);
 }
 
+function decodeBase64Url(value) {
+  if (typeof window === 'undefined' || typeof value !== 'string' || !value) return '';
+  try {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    return window.atob(normalized);
+  } catch {
+    return '';
+  }
+}
+
+function parseEmailFromState(stateParam) {
+  const attempts = [];
+  const push = (val) => {
+    if (typeof val === 'string' && val && !attempts.includes(val)) {
+      attempts.push(val);
+    }
+  };
+  push(stateParam?.trim());
+  try {
+    const decoded = decodeURIComponent(stateParam || '');
+    push(decoded);
+  } catch {}
+  push(decodeBase64Url(stateParam || ''));
+
+  for (const candidate of attempts) {
+    if (!candidate) continue;
+    try {
+      const json = JSON.parse(candidate);
+      const emailFromJson =
+        json?.email ||
+        json?.user?.email ||
+        json?.data?.email ||
+        json?.user_email;
+      if (emailFromJson) {
+        return String(emailFromJson).trim().toLowerCase();
+      }
+    } catch {}
+
+    try {
+      const qs = new URLSearchParams(candidate);
+      const qsEmail =
+        qs.get('email') ||
+        qs.get('user_email') ||
+        qs.get('email_address');
+      if (qsEmail) {
+        return String(qsEmail).trim().toLowerCase();
+      }
+    } catch {}
+  }
+  return '';
+}
+
+function isExpiredLinkError(err) {
+  if (!err) return false;
+  const code = String(err.code || err.status || err.statusCode || '').toLowerCase();
+  if (code === '410' || code === 'expired_token' || code === 'invalid_grant') return true;
+  const msg = String(
+    err.message ||
+      err.error_description ||
+      err.error ||
+      err.toString() ||
+      ''
+  ).toLowerCase();
+  if (!msg) return false;
+  if (msg.includes('expired')) return true;
+  return msg.includes('invalid or expired');
+}
+
 export default function SetPassword() {
   const [status, setStatus] = useState('loading'); // loading | ready | error | expired
   const [mode, setMode] = useState('recovery');
@@ -68,7 +136,12 @@ export default function SetPassword() {
         const url = new URL(window.location.href);
         url.hash = '';
         url.searchParams.delete('code');
+        url.searchParams.delete('token');
         url.searchParams.delete('token_hash');
+        url.searchParams.delete('type');
+        url.searchParams.delete('state');
+        url.searchParams.delete('access_token');
+        url.searchParams.delete('refresh_token');
         url.searchParams.delete('password_reset');
         if (keepMode) {
           url.searchParams.set('mode', keepMode);
@@ -95,23 +168,34 @@ export default function SetPassword() {
         const url = new URL(window.location.href);
         const modeParam = normalizeMode(url.searchParams.get('mode'));
         const nextParam = url.searchParams.get('next') || '';
+        const typeParam = (url.searchParams.get('type') || '').toLowerCase();
+        const stateParam = url.searchParams.get('state') || '';
         const emailParam =
           url.searchParams.get('email') ||
           url.searchParams.get('user_email') ||
           url.searchParams.get('email_address') ||
           '';
+        const emailFromState = parseEmailFromState(stateParam);
+        const emailHint = (emailFromState || emailParam || '').trim().toLowerCase();
+        if (emailHint) setResendEmail(emailHint);
         setMode(modeParam);
 
         const hashString = window.location.hash.startsWith('#')
           ? window.location.hash.slice(1)
           : window.location.hash;
         const hashParams = new URLSearchParams(hashString);
-        let accessToken = hashParams.get('access_token');
-        let refreshToken = hashParams.get('refresh_token');
-
+        let accessToken = url.searchParams.get('access_token') || hashParams.get('access_token');
+        let refreshToken = url.searchParams.get('refresh_token') || hashParams.get('refresh_token');
         const code = url.searchParams.get('code');
-        if (code && !accessToken) {
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const legacyToken =
+          url.searchParams.get('token') ||
+          url.searchParams.get('token_hash') ||
+          hashParams.get('token_hash');
+
+        const exchangeableTypes = new Set(['invite', 'recovery', 'signup']);
+
+        if (code && !accessToken && (exchangeableTypes.has(typeParam) || !typeParam)) {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession({ code });
           if (exchangeError) {
             throw exchangeError;
           }
@@ -124,38 +208,51 @@ export default function SetPassword() {
           return;
         }
 
-        const hasResetFlag = url.searchParams.get('password_reset') === '1' || modeParam === 'recovery';
-        const trustedReferrer = typeof document !== 'undefined' && /supabase|sendgrid/i.test((document.referrer || '').toLowerCase());
-
-        if (!accessToken) {
-          if (hasResetFlag || trustedReferrer || emailParam) {
-            if (emailParam) setResendEmail(emailParam);
-            setStatus('expired');
-            postEmbedSizeBurst();
-            return;
+        if (accessToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || undefined
+          });
+          if (sessionError) {
+            throw sessionError;
           }
-          throw new Error('This link is missing a token. Request a new email.');
+          sanitizeUrl(modeParam, nextParam);
+          setStatus('ready');
+          postEmbedSizeBurst();
+          return;
         }
 
-        if (!refreshToken) {
-          refreshToken = hashParams.get('refresh_token');
+        if (legacyToken && (typeParam === 'recovery' || modeParam === 'recovery')) {
+          let emailForOtp = emailHint;
+          if (!emailForOtp && typeof window !== 'undefined') {
+            const prompted = window.prompt('Enter the email address that received this link so we can verify it:') || '';
+            emailForOtp = prompted.trim().toLowerCase();
+          }
+          if (!emailForOtp) {
+            throw new Error('Email is required to finish verifying this link.');
+          }
+          const { error: otpError } = await supabase.auth.verifyOtp({
+            type: 'recovery',
+            token: legacyToken,
+            email: emailForOtp
+          });
+          if (otpError) {
+            throw otpError;
+          }
+          setResendEmail(emailForOtp);
+          sanitizeUrl(modeParam, nextParam);
+          setStatus('ready');
+          postEmbedSizeBurst();
+          return;
         }
 
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || undefined
-        });
-        if (sessionError) {
-          throw sessionError;
-        }
-
-        sanitizeUrl(modeParam, nextParam);
-        setStatus('ready');
-        postEmbedSizeBurst();
+        throw new Error('This link is missing the information we need. Request a new email from the team.');
       } catch (err) {
         console.error('[SetPassword] init failed:', err);
         setError(err?.message || 'Unable to validate this password link. Request a new email from the team.');
-        if (status !== 'expired') {
+        if (isExpiredLinkError(err)) {
+          setStatus('expired');
+        } else {
           setStatus('error');
         }
         postEmbedSizeBurst();
@@ -193,6 +290,13 @@ export default function SetPassword() {
       }
       setSuccess(true);
       postEmbedSizeBurst();
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          try {
+            window.location.replace('/');
+          } catch {}
+        }
+      }, 400);
     } catch (err) {
       console.error('[SetPassword] update failed:', err);
       setFormError(err?.message || 'Could not update password. Please try again.');
@@ -221,10 +325,10 @@ export default function SetPassword() {
       <div className="alpha-theme client-auth" style={containerStyle}>
         <div className="alpha-card auth-wrap client-card">
           <div className="auth-head">
-            <h2>Link expired</h2>
+            <h2>Link issue</h2>
           </div>
           <p style={{ marginBottom: 16 }}>
-            {error || 'This password link is no longer valid. Request a new email from the alphaSource team.'}
+            {error || 'We could not validate this password link. Request a new email from the alphaSource team.'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <button onClick={() => window.location.replace('/signin')}>Client Sign In</button>
