@@ -191,6 +191,26 @@ function parseAgreementOpenResponse(text: string): { open: true; id: string; sta
   };
 }
 
+function mapPendingAgreement(raw: Record<string, unknown>): PendingAgreement {
+  return {
+    id: String(raw.id || "").trim(),
+    client_id: String(raw.client_id || "").trim(),
+    status: String(raw.status || "").trim(),
+    checkout_status: String(raw.checkout_status || "").trim(),
+    client_legal_name: String(raw.client_legal_name || "").trim(),
+    admin_email: String(raw.admin_email || "").trim(),
+    sent_at: String(raw.sent_at || "").trim(),
+    opened_at: String(raw.opened_at || "").trim(),
+    signed_at: String(raw.signed_at || "").trim(),
+    checkout_created_at: String(raw.checkout_created_at || "").trim(),
+    checkout_session_id: String(raw.checkout_session_id || "").trim(),
+    is_current: Boolean(raw.is_current),
+    voided_at: String(raw.voided_at || "").trim(),
+    voided_by_email: String(raw.voided_by_email || "").trim(),
+    void_reason: String(raw.void_reason || "").trim(),
+  };
+}
+
 function normalizeInvoiceStatus(value: unknown): "open" | "paid" | "void" {
   const status = String(value || "").trim().toLowerCase();
   if (status === "paid") return "paid";
@@ -364,10 +384,13 @@ export default function AdminBillingPage() {
     initialTermStart: isoToAgreementDateInput(defaultAgreementFormValues().initialTermStart),
     initialRenewalDate: isoToAgreementDateInput(defaultAgreementFormValues().initialRenewalDate),
   }));
-  const [pendingAgreement, setPendingAgreement] = useState<PendingAgreement | null>(null);
+  const [pendingAgreements, setPendingAgreements] = useState<PendingAgreement[]>([]);
   const [pendingAgreementLoading, setPendingAgreementLoading] = useState(false);
   const [pendingAgreementError, setPendingAgreementError] = useState("");
   const [voidingAgreement, setVoidingAgreement] = useState(false);
+  const [voidAgreementModalOpen, setVoidAgreementModalOpen] = useState(false);
+  const [voidAgreementTarget, setVoidAgreementTarget] = useState<PendingAgreement | null>(null);
+  const [voidAgreementReason, setVoidAgreementReason] = useState("");
 
   const agreementClientOptions = useMemo(
     () => adminClients.filter((client) => client.id !== "all"),
@@ -520,20 +543,10 @@ export default function AdminBillingPage() {
     });
   }, [agreementClientMode]);
 
-  const loadPendingAgreement = useCallback(async () => {
-    const clientId =
-      agreementClientMode === "attach_existing_client"
-        ? String(scopedAgreementClientId || "").trim()
-        : "";
-
-    if (!clientId) {
-      setPendingAgreement(null);
-      setPendingAgreementError("");
-      setPendingAgreementLoading(false);
-      return;
-    }
+  const loadPendingAgreements = useCallback(async () => {
+    const clientId = String(selectedClientId || "all").trim() || "all";
     if (!backendBase) {
-      setPendingAgreement(null);
+      setPendingAgreements([]);
       setPendingAgreementError("Missing backend base URL configuration.");
       setPendingAgreementLoading(false);
       return;
@@ -560,42 +573,36 @@ export default function AdminBillingPage() {
       if (!response.ok) throw new Error(extractErrorMessage(text));
 
       const payload = parseJsonSafe(text);
-      const raw =
+      const rawItems =
+        payload &&
+        typeof payload === "object" &&
+        Array.isArray((payload as { items?: unknown }).items)
+          ? ((payload as { items: unknown[] }).items || [])
+          : [];
+      const fallbackRaw =
         payload &&
         typeof payload === "object" &&
         (payload as { agreement?: unknown }).agreement &&
         typeof (payload as { agreement?: unknown }).agreement === "object"
-          ? ((payload as { agreement: Record<string, unknown> }).agreement || null)
-          : null;
-
-      setPendingAgreement(raw ? {
-        id: String(raw.id || "").trim(),
-        client_id: String(raw.client_id || "").trim(),
-        status: String(raw.status || "").trim(),
-        checkout_status: String(raw.checkout_status || "").trim(),
-        client_legal_name: String(raw.client_legal_name || "").trim(),
-        admin_email: String(raw.admin_email || "").trim(),
-        sent_at: String(raw.sent_at || "").trim(),
-        opened_at: String(raw.opened_at || "").trim(),
-        signed_at: String(raw.signed_at || "").trim(),
-        checkout_created_at: String(raw.checkout_created_at || "").trim(),
-        checkout_session_id: String(raw.checkout_session_id || "").trim(),
-        is_current: Boolean(raw.is_current),
-        voided_at: String(raw.voided_at || "").trim(),
-        voided_by_email: String(raw.voided_by_email || "").trim(),
-        void_reason: String(raw.void_reason || "").trim(),
-      } : null);
+          ? [(payload as { agreement: Record<string, unknown> }).agreement]
+          : [];
+      const sourceItems = rawItems.length ? rawItems : fallbackRaw;
+      setPendingAgreements(
+        sourceItems
+          .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
+          .map(mapPendingAgreement),
+      );
     } catch (error) {
-      setPendingAgreement(null);
+      setPendingAgreements([]);
       setPendingAgreementError(error instanceof Error ? error.message : "Could not load pending agreement.");
     } finally {
       setPendingAgreementLoading(false);
     }
-  }, [agreementClientMode, scopedAgreementClientId]);
+  }, [selectedClientId]);
 
   useEffect(() => {
-    void loadPendingAgreement();
-  }, [loadPendingAgreement, refreshNonce]);
+    void loadPendingAgreements();
+  }, [loadPendingAgreements, refreshNonce]);
 
   const buildAgreementPayload = (confirmReplaceExisting = false) => ({
     client_mode: agreementClientMode,
@@ -709,22 +716,30 @@ export default function AdminBillingPage() {
     setAgreementError(
       `This client already has an open ${open.status} agreement${open.id ? ` (${open.id})` : ""}. Void the pending agreement before sending a new one.`,
     );
-    await loadPendingAgreement();
+    await loadPendingAgreements();
     return true;
   };
 
-  const handleVoidPendingAgreement = async () => {
-    if (!pendingAgreement || voidingAgreement) return;
+  const openVoidAgreementModal = (agreement: PendingAgreement) => {
+    setVoidAgreementTarget(agreement);
+    setVoidAgreementReason("");
+    setVoidAgreementModalOpen(true);
+  };
+
+  const closeVoidAgreementModal = () => {
+    if (voidingAgreement) return;
+    setVoidAgreementModalOpen(false);
+    setVoidAgreementTarget(null);
+    setVoidAgreementReason("");
+  };
+
+  const handleConfirmVoidAgreement = async () => {
+    if (!voidAgreementTarget || voidingAgreement) return;
     if (!backendBase) {
       setAgreementError("Missing backend base URL configuration.");
       return;
     }
-    const confirmed = window.confirm(
-      `Void this ${pendingAgreement.status || "pending"} agreement? This will not change any Stripe subscription or client billing state.`,
-    );
-    if (!confirmed) return;
 
-    const voidReason = window.prompt("Optional void reason:", "") || "";
     setVoidingAgreement(true);
     setAgreementError("");
     setAgreementSuccess("");
@@ -735,20 +750,23 @@ export default function AdminBillingPage() {
       const token = String(session?.access_token || "").trim();
       if (!token) throw new Error("Missing session token.");
 
-      const response = await fetch(`${backendBase}/admin/billing/agreements/${encodeURIComponent(pendingAgreement.id)}/void`, {
+      const response = await fetch(`${backendBase}/admin/billing/agreements/${encodeURIComponent(voidAgreementTarget.id)}/void`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         credentials: "omit",
-        body: JSON.stringify({ void_reason: voidReason.trim() || null }),
+        body: JSON.stringify({ void_reason: voidAgreementReason.trim() || null }),
       });
       const text = await response.text();
       if (!response.ok) throw new Error(extractErrorMessage(text));
 
       setAgreementSuccess("Pending agreement voided.");
-      await loadPendingAgreement();
+      setVoidAgreementModalOpen(false);
+      setVoidAgreementTarget(null);
+      setVoidAgreementReason("");
+      await loadPendingAgreements();
     } catch (error) {
       setAgreementError(error instanceof Error ? error.message : "Could not void pending agreement.");
     } finally {
@@ -871,7 +889,7 @@ export default function AdminBillingPage() {
           : "Agreement sent successfully.",
       );
       closeAgreementPreview();
-      await loadPendingAgreement();
+      await loadPendingAgreements();
     } catch (error) {
       setAgreementError(error instanceof Error ? error.message : "Could not send agreement.");
     } finally {
@@ -1321,47 +1339,6 @@ export default function AdminBillingPage() {
             </p>
           )}
 
-          {pendingAgreementLoading ? (
-            <p className="text-xs font-semibold text-[#0A1547]/40 px-1">Checking pending agreements...</p>
-          ) : null}
-          {pendingAgreementError ? (
-            <p className="text-xs font-semibold text-red-500 px-1">{pendingAgreementError}</p>
-          ) : null}
-          {pendingAgreement ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-amber-700/70">
-                    Pending Agreement
-                  </p>
-                  <p className="mt-1 text-sm font-black text-[#0A1547]">
-                    {pendingAgreement.status || "pending"}
-                    {pendingAgreement.checkout_status ? ` · checkout ${pendingAgreement.checkout_status}` : ""}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-[#0A1547]/55">
-                    {pendingAgreement.admin_email || "No admin email"}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-[#0A1547]/60 sm:grid-cols-4">
-                  <span>Sent: {formatDateTime(pendingAgreement.sent_at)}</span>
-                  <span>Opened: {formatDateTime(pendingAgreement.opened_at)}</span>
-                  <span>Signed: {formatDateTime(pendingAgreement.signed_at)}</span>
-                  <span>Checkout: {formatDateTime(pendingAgreement.checkout_created_at)}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleVoidPendingAgreement();
-                  }}
-                  disabled={voidingAgreement}
-                  className="self-start rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 lg:self-center"
-                >
-                  {voidingAgreement ? "Voiding..." : "Void Agreement"}
-                </button>
-              </div>
-            </div>
-          ) : null}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <p className={fieldLabelCls}>
@@ -1610,6 +1587,74 @@ export default function AdminBillingPage() {
               {agreementPreviewBusy ? "Generating..." : "Generate Agreement"}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* ── Pending Agreements ───────────────────────────── */}
+      <div className={card} style={cardStyle}>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-black text-[#0A1547]">Pending Agreements</p>
+            <p className="text-[11px] text-[#0A1547]/45 mt-1">
+              {selectedClientId === "all" ? "Showing all clients with pending agreements." : `Showing pending agreements for ${selectedClient.name}.`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void loadPendingAgreements();
+            }}
+            disabled={pendingAgreementLoading}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(10,21,71,0.12)] bg-white px-3 py-1.5 text-xs font-bold text-[#0A1547]/65 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          {pendingAgreementError ? (
+            <p className="text-xs font-semibold text-red-500">{pendingAgreementError}</p>
+          ) : null}
+          {pendingAgreementLoading ? (
+            <p className="text-xs font-semibold text-[#0A1547]/40">Checking pending agreements...</p>
+          ) : pendingAgreements.length === 0 ? (
+            <p className="text-sm font-semibold text-[#0A1547]/35">No pending agreements.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {pendingAgreements.map((agreement) => (
+                <div key={agreement.id} className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-amber-700/70">
+                        {agreement.client_legal_name || "Pending Agreement"}
+                      </p>
+                      <p className="mt-1 text-sm font-black text-[#0A1547]">
+                        {agreement.status || "pending"}
+                        {agreement.checkout_status ? ` · checkout ${agreement.checkout_status}` : ""}
+                      </p>
+                      <p className="mt-1 text-xs font-semibold text-[#0A1547]/55">
+                        {agreement.admin_email || "No admin email"}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-[#0A1547]/60 sm:grid-cols-4">
+                      <span>Sent: {formatDateTime(agreement.sent_at)}</span>
+                      <span>Opened: {formatDateTime(agreement.opened_at)}</span>
+                      <span>Signed: {formatDateTime(agreement.signed_at)}</span>
+                      <span>Checkout: {formatDateTime(agreement.checkout_created_at)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openVoidAgreementModal(agreement)}
+                      disabled={voidingAgreement}
+                      className="self-start rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 lg:self-center"
+                    >
+                      Void Agreement
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1985,6 +2030,71 @@ export default function AdminBillingPage() {
                   {agreementSendBusy ? "Sending..." : "Send Agreement"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {voidAgreementModalOpen && voidAgreementTarget ? (
+        <div className="fixed inset-0 z-[84] flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={closeVoidAgreementModal}
+            className="absolute inset-0 bg-[#0A1547]/45"
+            aria-label="Close void agreement confirmation"
+          />
+          <div
+            className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden"
+            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+          >
+            <div className="px-5 py-4 border-b border-gray-100">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Pending Agreement</p>
+              <h3 className="text-sm font-black text-[#0A1547] leading-snug mt-1">Void agreement?</h3>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-sm text-[#0A1547]/75">
+                This will not change Stripe subscriptions or client billing.
+              </p>
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-3">
+                <p className="text-xs font-black text-[#0A1547]">{voidAgreementTarget.client_legal_name || "Pending agreement"}</p>
+                <p className="mt-1 text-[11px] font-semibold text-[#0A1547]/55">
+                  {voidAgreementTarget.status || "pending"}
+                  {voidAgreementTarget.checkout_status ? ` · checkout ${voidAgreementTarget.checkout_status}` : ""}
+                </p>
+                <p className="mt-1 text-[11px] font-semibold text-[#0A1547]/55">
+                  {voidAgreementTarget.admin_email || "No admin email"}
+                </p>
+              </div>
+              <label className="block space-y-1">
+                <span className={fieldLabelCls}>Void Reason (Optional)</span>
+                <textarea
+                  className={inputCls + " min-h-[88px] resize-none"}
+                  placeholder="Reason for voiding this agreement"
+                  value={voidAgreementReason}
+                  onChange={(e) => setVoidAgreementReason(e.target.value)}
+                />
+              </label>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeVoidAgreementModal}
+                disabled={voidingAgreement}
+                className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleConfirmVoidAgreement();
+                }}
+                disabled={voidingAgreement}
+                className="px-4 py-2 text-xs font-bold text-white rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ backgroundColor: voidingAgreement ? "#8F73D1" : "#A380F6" }}
+              >
+                {voidingAgreement ? "Voiding..." : "Void Agreement"}
+              </button>
             </div>
           </div>
         </div>
