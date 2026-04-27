@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Trash2, Plus, ChevronDown, RefreshCw, X } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import AdminLayout from "@/components/AdminLayout";
@@ -50,6 +50,24 @@ interface ExistingAgreementSummary {
   signed_at: string;
 }
 
+interface PendingAgreement {
+  id: string;
+  client_id: string;
+  status: string;
+  checkout_status: string;
+  client_legal_name: string;
+  admin_email: string;
+  sent_at: string;
+  opened_at: string;
+  signed_at: string;
+  checkout_created_at: string;
+  checkout_session_id: string;
+  is_current: boolean;
+  voided_at: string;
+  voided_by_email: string;
+  void_reason: string;
+}
+
 interface AgreementFormValues {
   clientLegalName: string;
   dbaTradeName: string;
@@ -83,13 +101,6 @@ type AgreementFieldErrorKey =
   | "initialTermStart"
   | "initialRenewalDate";
 type AgreementFieldErrors = Partial<Record<AgreementFieldErrorKey, string>>;
-type DatePartKey = "month" | "day" | "year";
-
-interface DateParts {
-  month: string;
-  day: string;
-  year: string;
-}
 
 interface InvoiceTrendPoint {
   monthKey: string;
@@ -168,6 +179,18 @@ function parseAgreementReplacementResponse(
   };
 }
 
+function parseAgreementOpenResponse(text: string): { open: true; id: string; status: string } | { open: false } {
+  const parsed = parseJsonSafe(text);
+  if (!parsed || typeof parsed !== "object") return { open: false };
+  const code = String((parsed as { code?: unknown }).code || "").trim();
+  if (code !== "agreement_already_open") return { open: false };
+  return {
+    open: true,
+    id: String((parsed as { open_agreement_id?: unknown }).open_agreement_id || "").trim(),
+    status: String((parsed as { open_agreement_status?: unknown }).open_agreement_status || "pending").trim(),
+  };
+}
+
 function normalizeInvoiceStatus(value: unknown): "open" | "paid" | "void" {
   const status = String(value || "").trim().toLowerCase();
   if (status === "paid") return "paid";
@@ -203,15 +226,73 @@ const inputCls =
 const selectCls = inputCls + " appearance-none cursor-pointer pr-8";
 const fieldLabelCls = "px-1 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40";
 const fieldErrorCls = "px-1 text-[11px] font-semibold text-red-500";
-const datePartCls =
-  "px-3 py-2.5 rounded-xl text-sm text-[#0A1547] font-semibold bg-white border border-[rgba(10,21,71,0.10)] " +
-  "placeholder:text-[#0A1547]/25 focus:outline-none focus:border-[#A380F6] transition-colors text-center";
 const REQUIRED_MARK = " *";
 const AGREEMENT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 let _lineId = 10;
 
+function toLocalIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function todayIsoDate(): string {
+  return toLocalIsoDate(new Date());
+}
+
+function addOneYearIsoDate(isoDate: string): string {
+  const match = String(isoDate || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  const parsed = new Date(Number(match[1]) + 1, Number(match[2]) - 1, Number(match[3]));
+  if (Number.isNaN(parsed.getTime())) return "";
+  return toLocalIsoDate(parsed);
+}
+
+function isoToAgreementDateInput(isoDate: string): string {
+  const match = String(isoDate || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  return `${match[2]}/${match[3]}/${match[1]}`;
+}
+
+function formatAgreementDateInput(value: string): string {
+  const raw = String(value || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 8) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+  return raw;
+}
+
+function parseAgreementDateInput(value: string): string {
+  const match = String(value || "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return "";
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  const year = Number(match[3]);
+  if (!Number.isInteger(month) || month < 1 || month > 12) return "";
+  if (!Number.isInteger(day) || day < 1 || day > 31) return "";
+  if (!Number.isInteger(year) || year < 1900 || year > 9999) return "";
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return "";
+  }
+  return toLocalIsoDate(parsed);
+}
+
+function defaultAgreementDates() {
+  const initialTermStart = todayIsoDate();
+  return {
+    initialTermStart,
+    initialRenewalDate: addOneYearIsoDate(initialTermStart),
+  };
+}
+
 function defaultAgreementFormValues(): AgreementFormValues {
+  const agreementDates = defaultAgreementDates();
   return {
     clientLegalName: "",
     dbaTradeName: "",
@@ -223,39 +304,12 @@ function defaultAgreementFormValues(): AgreementFormValues {
     perRoleFee: "",
     additionalInterviewFee: "",
     includedInterviewsPerRole: "",
-    initialTermStart: "",
-    initialRenewalDate: "",
+    initialTermStart: agreementDates.initialTermStart,
+    initialRenewalDate: agreementDates.initialRenewalDate,
     billingOption: "monthly",
     autoRenew: "yes",
     noticeDeadlineDays: "30",
   };
-}
-
-function buildIsoDateFromParts(parts: DateParts): string {
-  const month = String(parts.month || "").trim();
-  const day = String(parts.day || "").trim();
-  const year = String(parts.year || "").trim();
-  if (!month || !day || year.length !== 4) return "";
-
-  const mm = Number(month);
-  const dd = Number(day);
-  const yy = Number(year);
-  if (!Number.isInteger(mm) || mm < 1 || mm > 12) return "";
-  if (!Number.isInteger(dd) || dd < 1 || dd > 31) return "";
-  if (!Number.isInteger(yy) || yy < 1900 || yy > 9999) return "";
-
-  const parsed = new Date(Date.UTC(yy, mm - 1, dd));
-  if (
-    parsed.getUTCFullYear() !== yy ||
-    parsed.getUTCMonth() !== mm - 1 ||
-    parsed.getUTCDate() !== dd
-  ) {
-    return "";
-  }
-
-  const mmText = String(mm).padStart(2, "0");
-  const ddText = String(dd).padStart(2, "0");
-  return `${year}-${mmText}-${ddText}`;
 }
 
 /* ── Component ───────────────────────────────────────────────── */
@@ -306,14 +360,14 @@ export default function AdminBillingPage() {
   const [agreementReplacementModalOpen, setAgreementReplacementModalOpen] = useState(false);
   const [agreementReplacementDetails, setAgreementReplacementDetails] = useState<ExistingAgreementSummary | null>(null);
   const [agreementReplacementPendingAction, setAgreementReplacementPendingAction] = useState<"preview" | "send" | null>(null);
-  const [initialTermStartParts, setInitialTermStartParts] = useState<DateParts>({ month: "", day: "", year: "" });
-  const [initialRenewalDateParts, setInitialRenewalDateParts] = useState<DateParts>({ month: "", day: "", year: "" });
-  const initialTermStartMonthRef = useRef<HTMLInputElement | null>(null);
-  const initialTermStartDayRef = useRef<HTMLInputElement | null>(null);
-  const initialTermStartYearRef = useRef<HTMLInputElement | null>(null);
-  const initialRenewalDateMonthRef = useRef<HTMLInputElement | null>(null);
-  const initialRenewalDateDayRef = useRef<HTMLInputElement | null>(null);
-  const initialRenewalDateYearRef = useRef<HTMLInputElement | null>(null);
+  const [agreementDateInputs, setAgreementDateInputs] = useState(() => ({
+    initialTermStart: isoToAgreementDateInput(defaultAgreementFormValues().initialTermStart),
+    initialRenewalDate: isoToAgreementDateInput(defaultAgreementFormValues().initialRenewalDate),
+  }));
+  const [pendingAgreement, setPendingAgreement] = useState<PendingAgreement | null>(null);
+  const [pendingAgreementLoading, setPendingAgreementLoading] = useState(false);
+  const [pendingAgreementError, setPendingAgreementError] = useState("");
+  const [voidingAgreement, setVoidingAgreement] = useState(false);
 
   const agreementClientOptions = useMemo(
     () => adminClients.filter((client) => client.id !== "all"),
@@ -362,46 +416,45 @@ export default function AdminBillingPage() {
     }
   };
 
-  const updateAgreementDatePart = (
-    field: "initialTermStart" | "initialRenewalDate",
-    part: DatePartKey,
-    rawValue: string,
-  ) => {
-    const sanitized = String(rawValue || "")
-      .replace(/\D/g, "")
-      .slice(0, part === "year" ? 4 : 2);
-    const setParts = field === "initialTermStart" ? setInitialTermStartParts : setInitialRenewalDateParts;
-
-    setParts((previous) => {
-      const next = { ...previous, [part]: sanitized };
-      const iso = buildIsoDateFromParts(next);
-      updateAgreementField(field, iso);
+  const clearAgreementDateErrors = (...keys: AgreementFieldErrorKey[]) => {
+    setAgreementFieldErrors((prev) => {
+      const next = { ...prev };
+      keys.forEach((key) => {
+        delete next[key];
+      });
       return next;
     });
-
-    if (part === "month" && sanitized.length === 2) {
-      if (field === "initialTermStart") initialTermStartDayRef.current?.focus();
-      else initialRenewalDateDayRef.current?.focus();
-    } else if (part === "day" && sanitized.length === 2) {
-      if (field === "initialTermStart") initialTermStartYearRef.current?.focus();
-      else initialRenewalDateYearRef.current?.focus();
-    }
   };
 
-  const handleAgreementDateBackspace = (
+  const updateAgreementDateInput = (
     field: "initialTermStart" | "initialRenewalDate",
-    part: "day" | "year",
-    event: ReactKeyboardEvent<HTMLInputElement>,
+    rawValue: string,
   ) => {
-    if (event.key !== "Backspace" || event.currentTarget.value) return;
-    event.preventDefault();
-    if (part === "day") {
-      if (field === "initialTermStart") initialTermStartMonthRef.current?.focus();
-      else initialRenewalDateMonthRef.current?.focus();
+    const display = formatAgreementDateInput(rawValue);
+    const iso = parseAgreementDateInput(display);
+
+    if (field === "initialTermStart") {
+      if (iso) {
+        const renewalIso = addOneYearIsoDate(iso);
+        setAgreementDateInputs({
+          initialTermStart: display,
+          initialRenewalDate: isoToAgreementDateInput(renewalIso),
+        });
+        setAgreementForm((prev) => ({
+          ...prev,
+          initialTermStart: iso,
+          initialRenewalDate: renewalIso,
+        }));
+        clearAgreementDateErrors("initialTermStart", "initialRenewalDate");
+        return;
+      }
+      setAgreementDateInputs((prev) => ({ ...prev, initialTermStart: display }));
+      updateAgreementField("initialTermStart", "");
       return;
     }
-    if (field === "initialTermStart") initialTermStartDayRef.current?.focus();
-    else initialRenewalDateDayRef.current?.focus();
+
+    setAgreementDateInputs((prev) => ({ ...prev, initialRenewalDate: display }));
+    updateAgreementField("initialRenewalDate", iso);
   };
 
   useEffect(() => {
@@ -467,6 +520,83 @@ export default function AdminBillingPage() {
     });
   }, [agreementClientMode]);
 
+  const loadPendingAgreement = useCallback(async () => {
+    const clientId =
+      agreementClientMode === "attach_existing_client"
+        ? String(scopedAgreementClientId || "").trim()
+        : "";
+
+    if (!clientId) {
+      setPendingAgreement(null);
+      setPendingAgreementError("");
+      setPendingAgreementLoading(false);
+      return;
+    }
+    if (!backendBase) {
+      setPendingAgreement(null);
+      setPendingAgreementError("Missing backend base URL configuration.");
+      setPendingAgreementLoading(false);
+      return;
+    }
+
+    setPendingAgreementLoading(true);
+    setPendingAgreementError("");
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = String(session?.access_token || "").trim();
+      if (!token) throw new Error("Missing session token.");
+
+      const response = await fetch(
+        `${backendBase}/admin/billing/agreements/pending?client_id=${encodeURIComponent(clientId)}`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "omit",
+        },
+      );
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text));
+
+      const payload = parseJsonSafe(text);
+      const raw =
+        payload &&
+        typeof payload === "object" &&
+        (payload as { agreement?: unknown }).agreement &&
+        typeof (payload as { agreement?: unknown }).agreement === "object"
+          ? ((payload as { agreement: Record<string, unknown> }).agreement || null)
+          : null;
+
+      setPendingAgreement(raw ? {
+        id: String(raw.id || "").trim(),
+        client_id: String(raw.client_id || "").trim(),
+        status: String(raw.status || "").trim(),
+        checkout_status: String(raw.checkout_status || "").trim(),
+        client_legal_name: String(raw.client_legal_name || "").trim(),
+        admin_email: String(raw.admin_email || "").trim(),
+        sent_at: String(raw.sent_at || "").trim(),
+        opened_at: String(raw.opened_at || "").trim(),
+        signed_at: String(raw.signed_at || "").trim(),
+        checkout_created_at: String(raw.checkout_created_at || "").trim(),
+        checkout_session_id: String(raw.checkout_session_id || "").trim(),
+        is_current: Boolean(raw.is_current),
+        voided_at: String(raw.voided_at || "").trim(),
+        voided_by_email: String(raw.voided_by_email || "").trim(),
+        void_reason: String(raw.void_reason || "").trim(),
+      } : null);
+    } catch (error) {
+      setPendingAgreement(null);
+      setPendingAgreementError(error instanceof Error ? error.message : "Could not load pending agreement.");
+    } finally {
+      setPendingAgreementLoading(false);
+    }
+  }, [agreementClientMode, scopedAgreementClientId]);
+
+  useEffect(() => {
+    void loadPendingAgreement();
+  }, [loadPendingAgreement, refreshNonce]);
+
   const buildAgreementPayload = (confirmReplaceExisting = false) => ({
     client_mode: agreementClientMode,
     attached_client_id: agreementClientMode === "attach_existing_client" ? scopedAgreementClientId || null : null,
@@ -508,12 +638,8 @@ export default function AdminBillingPage() {
   const validateAgreementForm = (): boolean => {
     const errors: AgreementFieldErrors = {};
     const adminEmail = String(agreementForm.adminEmail || "").trim();
-    const hasInitialTermParts = Boolean(
-      initialTermStartParts.month || initialTermStartParts.day || initialTermStartParts.year,
-    );
-    const hasInitialRenewalParts = Boolean(
-      initialRenewalDateParts.month || initialRenewalDateParts.day || initialRenewalDateParts.year,
-    );
+    const hasInitialTermInput = Boolean(agreementDateInputs.initialTermStart.trim());
+    const hasInitialRenewalInput = Boolean(agreementDateInputs.initialRenewalDate.trim());
 
     if (agreementClientMode === "attach_existing_client" && !String(scopedAgreementClientId || "").trim()) {
       errors.attachedClientId = "Select an existing client.";
@@ -523,12 +649,12 @@ export default function AdminBillingPage() {
     if (!adminEmail) errors.adminEmail = "Admin email is required.";
     else if (!AGREEMENT_EMAIL_RE.test(adminEmail)) errors.adminEmail = "Enter a valid admin email.";
     if (!agreementForm.initialTermStart.trim()) {
-      errors.initialTermStart = hasInitialTermParts
+      errors.initialTermStart = hasInitialTermInput
         ? "Enter a real date in MM / DD / YYYY."
         : "Initial term start is required.";
     }
     if (!agreementForm.initialRenewalDate.trim()) {
-      errors.initialRenewalDate = hasInitialRenewalParts
+      errors.initialRenewalDate = hasInitialRenewalInput
         ? "Enter a real date in MM / DD / YYYY."
         : "Initial renewal date is required.";
     }
@@ -577,6 +703,59 @@ export default function AdminBillingPage() {
     }
   };
 
+  const handleOpenAgreementResponse = async (text: string) => {
+    const open = parseAgreementOpenResponse(text);
+    if (!open.open) return false;
+    setAgreementError(
+      `This client already has an open ${open.status} agreement${open.id ? ` (${open.id})` : ""}. Void the pending agreement before sending a new one.`,
+    );
+    await loadPendingAgreement();
+    return true;
+  };
+
+  const handleVoidPendingAgreement = async () => {
+    if (!pendingAgreement || voidingAgreement) return;
+    if (!backendBase) {
+      setAgreementError("Missing backend base URL configuration.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `Void this ${pendingAgreement.status || "pending"} agreement? This will not change any Stripe subscription or client billing state.`,
+    );
+    if (!confirmed) return;
+
+    const voidReason = window.prompt("Optional void reason:", "") || "";
+    setVoidingAgreement(true);
+    setAgreementError("");
+    setAgreementSuccess("");
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = String(session?.access_token || "").trim();
+      if (!token) throw new Error("Missing session token.");
+
+      const response = await fetch(`${backendBase}/admin/billing/agreements/${encodeURIComponent(pendingAgreement.id)}/void`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        credentials: "omit",
+        body: JSON.stringify({ void_reason: voidReason.trim() || null }),
+      });
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text));
+
+      setAgreementSuccess("Pending agreement voided.");
+      await loadPendingAgreement();
+    } catch (error) {
+      setAgreementError(error instanceof Error ? error.message : "Could not void pending agreement.");
+    } finally {
+      setVoidingAgreement(false);
+    }
+  };
+
   const handleGenerateAgreementPreview = async (confirmReplaceExisting = false) => {
     if (!backendBase) {
       setAgreementSuccess("");
@@ -619,6 +798,7 @@ export default function AdminBillingPage() {
           setAgreementReplacementModalOpen(true);
           return;
         }
+        if (await handleOpenAgreementResponse(text)) return;
         throw new Error(extractErrorMessage(text));
       }
 
@@ -676,6 +856,7 @@ export default function AdminBillingPage() {
           setAgreementReplacementModalOpen(true);
           return;
         }
+        if (await handleOpenAgreementResponse(text)) return;
         throw new Error(extractErrorMessage(text));
       }
 
@@ -690,6 +871,7 @@ export default function AdminBillingPage() {
           : "Agreement sent successfully.",
       );
       closeAgreementPreview();
+      await loadPendingAgreement();
     } catch (error) {
       setAgreementError(error instanceof Error ? error.message : "Could not send agreement.");
     } finally {
@@ -1006,6 +1188,7 @@ export default function AdminBillingPage() {
   const enterpriseFeePeriod = agreementForm.billingOption === "annual" ? "per year" : "per month";
 
   const handleClearAgreementTextFields = () => {
+    const defaults = defaultAgreementFormValues();
     if (agreementClientMode === "attach_existing_client") {
       setAgreementAttachedClientId("");
     }
@@ -1020,12 +1203,14 @@ export default function AdminBillingPage() {
       perRoleFee: "",
       additionalInterviewFee: "",
       includedInterviewsPerRole: "",
-      initialTermStart: "",
-      initialRenewalDate: "",
+      initialTermStart: defaults.initialTermStart,
+      initialRenewalDate: defaults.initialRenewalDate,
       noticeDeadlineDays: "",
     }));
-    setInitialTermStartParts({ month: "", day: "", year: "" });
-    setInitialRenewalDateParts({ month: "", day: "", year: "" });
+    setAgreementDateInputs({
+      initialTermStart: isoToAgreementDateInput(defaults.initialTermStart),
+      initialRenewalDate: isoToAgreementDateInput(defaults.initialRenewalDate),
+    });
     setAgreementError("");
     setAgreementSuccess("");
     setAgreementFieldErrors({});
@@ -1136,6 +1321,47 @@ export default function AdminBillingPage() {
             </p>
           )}
 
+          {pendingAgreementLoading ? (
+            <p className="text-xs font-semibold text-[#0A1547]/40 px-1">Checking pending agreements...</p>
+          ) : null}
+          {pendingAgreementError ? (
+            <p className="text-xs font-semibold text-red-500 px-1">{pendingAgreementError}</p>
+          ) : null}
+          {pendingAgreement ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-amber-700/70">
+                    Pending Agreement
+                  </p>
+                  <p className="mt-1 text-sm font-black text-[#0A1547]">
+                    {pendingAgreement.status || "pending"}
+                    {pendingAgreement.checkout_status ? ` · checkout ${pendingAgreement.checkout_status}` : ""}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-[#0A1547]/55">
+                    {pendingAgreement.admin_email || "No admin email"}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-[#0A1547]/60 sm:grid-cols-4">
+                  <span>Sent: {formatDateTime(pendingAgreement.sent_at)}</span>
+                  <span>Opened: {formatDateTime(pendingAgreement.opened_at)}</span>
+                  <span>Signed: {formatDateTime(pendingAgreement.signed_at)}</span>
+                  <span>Checkout: {formatDateTime(pendingAgreement.checkout_created_at)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleVoidPendingAgreement();
+                  }}
+                  disabled={voidingAgreement}
+                  className="self-start rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 lg:self-center"
+                >
+                  {voidingAgreement ? "Voiding..." : "Void Agreement"}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <p className={fieldLabelCls}>
@@ -1238,37 +1464,14 @@ export default function AdminBillingPage() {
               <p className={fieldLabelCls}>
                 Initial Term Start<span className="text-red-500">{REQUIRED_MARK}</span>
               </p>
-              <div className="flex items-center gap-1.5">
-                <input
-                  ref={initialTermStartMonthRef}
-                  className={datePartCls + " w-[72px]"}
-                  inputMode="numeric"
-                  placeholder="MM"
-                  value={initialTermStartParts.month}
-                  onChange={(e) => updateAgreementDatePart("initialTermStart", "month", e.target.value)}
-                />
-                <span className="text-[#0A1547]/35 font-bold">/</span>
-                <input
-                  ref={initialTermStartDayRef}
-                  className={datePartCls + " w-[72px]"}
-                  inputMode="numeric"
-                  placeholder="DD"
-                  value={initialTermStartParts.day}
-                  onChange={(e) => updateAgreementDatePart("initialTermStart", "day", e.target.value)}
-                  onKeyDown={(e) => handleAgreementDateBackspace("initialTermStart", "day", e)}
-                />
-                <span className="text-[#0A1547]/35 font-bold">/</span>
-                <input
-                  ref={initialTermStartYearRef}
-                  className={datePartCls + " w-[94px]"}
-                  inputMode="numeric"
-                  placeholder="YYYY"
-                  value={initialTermStartParts.year}
-                  onChange={(e) => updateAgreementDatePart("initialTermStart", "year", e.target.value)}
-                  onKeyDown={(e) => handleAgreementDateBackspace("initialTermStart", "year", e)}
-                />
-              </div>
-              <p className="text-[10px] text-[#0A1547]/35 px-1">MM / DD / YYYY</p>
+              <input
+                className={inputCls}
+                inputMode="numeric"
+                placeholder="MM/DD/YYYY"
+                value={agreementDateInputs.initialTermStart}
+                onChange={(e) => updateAgreementDateInput("initialTermStart", e.target.value)}
+              />
+              <p className="text-[10px] text-[#0A1547]/35 px-1">MM/DD/YYYY</p>
               {agreementFieldErrors.initialTermStart ? (
                 <p className={fieldErrorCls}>{agreementFieldErrors.initialTermStart}</p>
               ) : null}
@@ -1277,37 +1480,14 @@ export default function AdminBillingPage() {
               <p className={fieldLabelCls}>
                 Initial Renewal Date<span className="text-red-500">{REQUIRED_MARK}</span>
               </p>
-              <div className="flex items-center gap-1.5">
-                <input
-                  ref={initialRenewalDateMonthRef}
-                  className={datePartCls + " w-[72px]"}
-                  inputMode="numeric"
-                  placeholder="MM"
-                  value={initialRenewalDateParts.month}
-                  onChange={(e) => updateAgreementDatePart("initialRenewalDate", "month", e.target.value)}
-                />
-                <span className="text-[#0A1547]/35 font-bold">/</span>
-                <input
-                  ref={initialRenewalDateDayRef}
-                  className={datePartCls + " w-[72px]"}
-                  inputMode="numeric"
-                  placeholder="DD"
-                  value={initialRenewalDateParts.day}
-                  onChange={(e) => updateAgreementDatePart("initialRenewalDate", "day", e.target.value)}
-                  onKeyDown={(e) => handleAgreementDateBackspace("initialRenewalDate", "day", e)}
-                />
-                <span className="text-[#0A1547]/35 font-bold">/</span>
-                <input
-                  ref={initialRenewalDateYearRef}
-                  className={datePartCls + " w-[94px]"}
-                  inputMode="numeric"
-                  placeholder="YYYY"
-                  value={initialRenewalDateParts.year}
-                  onChange={(e) => updateAgreementDatePart("initialRenewalDate", "year", e.target.value)}
-                  onKeyDown={(e) => handleAgreementDateBackspace("initialRenewalDate", "year", e)}
-                />
-              </div>
-              <p className="text-[10px] text-[#0A1547]/35 px-1">MM / DD / YYYY</p>
+              <input
+                className={inputCls}
+                inputMode="numeric"
+                placeholder="MM/DD/YYYY"
+                value={agreementDateInputs.initialRenewalDate}
+                onChange={(e) => updateAgreementDateInput("initialRenewalDate", e.target.value)}
+              />
+              <p className="text-[10px] text-[#0A1547]/35 px-1">MM/DD/YYYY</p>
               {agreementFieldErrors.initialRenewalDate ? (
                 <p className={fieldErrorCls}>{agreementFieldErrors.initialRenewalDate}</p>
               ) : null}
