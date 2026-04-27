@@ -1623,8 +1623,8 @@ export default function AdminBillingPage() {
             <div className="space-y-2.5">
               {pendingAgreements.map((agreement) => (
                 <div key={agreement.id} className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0">
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(180px,1.15fr)_minmax(420px,2fr)_140px] lg:items-center">
+                    <div className="min-w-0 overflow-hidden">
                       <p className="text-[10px] font-black uppercase tracking-widest text-amber-700/70">
                         {agreement.client_legal_name || "Pending Agreement"}
                       </p>
@@ -1636,17 +1636,29 @@ export default function AdminBillingPage() {
                         {agreement.admin_email || "No admin email"}
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-[#0A1547]/60 sm:grid-cols-4">
-                      <span>Sent: {formatDateTime(agreement.sent_at)}</span>
-                      <span>Opened: {formatDateTime(agreement.opened_at)}</span>
-                      <span>Signed: {formatDateTime(agreement.signed_at)}</span>
-                      <span>Checkout: {formatDateTime(agreement.checkout_created_at)}</span>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px] font-semibold text-[#0A1547]/60 sm:grid-cols-4">
+                      <span className="min-w-0">
+                        <span className="block font-black uppercase tracking-widest text-[#0A1547]/35">Sent</span>
+                        <span className="block truncate">{formatDateTime(agreement.sent_at)}</span>
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-black uppercase tracking-widest text-[#0A1547]/35">Opened</span>
+                        <span className="block truncate">{formatDateTime(agreement.opened_at)}</span>
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-black uppercase tracking-widest text-[#0A1547]/35">Signed</span>
+                        <span className="block truncate">{formatDateTime(agreement.signed_at)}</span>
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-black uppercase tracking-widest text-[#0A1547]/35">Checkout</span>
+                        <span className="block truncate">{formatDateTime(agreement.checkout_created_at)}</span>
+                      </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => openVoidAgreementModal(agreement)}
                       disabled={voidingAgreement}
-                      className="self-start rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 lg:self-center"
+                      className="w-fit whitespace-nowrap rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 lg:justify-self-end"
                     >
                       Void Agreement
                     </button>
