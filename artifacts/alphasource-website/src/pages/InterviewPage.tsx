@@ -170,6 +170,9 @@ export default function InterviewPage() {
   /* ── Step 2 fields ───────────────────────────────────────────── */
   const [otp, setOtp]         = useState("");
   const [otpError, setOtpError] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
+  const [resendError, setResendError] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
@@ -513,6 +516,44 @@ export default function InterviewPage() {
       setErrors((e) => ({ ...e, submit: "Network error. Please try again." }));
     } finally {
       setSubmitLoading(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    const resendEmail = String(interviewAuth.email || email).trim().toLowerCase();
+    if (!resendEmail) {
+      setResendMessage("");
+      setResendError("Could not resend the code. Please try again.");
+      return;
+    }
+    if (!backendBase) {
+      setResendMessage("");
+      setResendError("Could not resend the code. Please try again.");
+      return;
+    }
+
+    setResendLoading(true);
+    setResendMessage("");
+    setResendError("");
+    try {
+      const resp = await fetch(joinUrl(backendBase, "/api/candidate/verify-otp/resend"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: resendEmail,
+          candidate_id: interviewAuth.candidate_id,
+          role_id: interviewAuth.role_id,
+        }),
+      });
+      if (!resp.ok) {
+        setResendError("Could not resend the code. Please try again.");
+        return;
+      }
+      setResendMessage("A new code was sent. Please check your email.");
+    } catch {
+      setResendError("Could not resend the code. Please try again.");
+    } finally {
+      setResendLoading(false);
     }
   }
 
@@ -1150,6 +1191,17 @@ export default function InterviewPage() {
               {verifyLoading ? "Verifying..." : "Verify"}
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
+
+            <button
+              type="button"
+              onClick={handleResendOtp}
+              disabled={resendLoading || verifyLoading || submitLoading}
+              className="mt-3 w-full px-6 py-2.5 rounded-full text-sm font-bold text-[#7C5FCC] bg-[#A380F6]/10 hover:bg-[#A380F6]/15 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              {resendLoading ? "Sending..." : "Resend code"}
+            </button>
+            {resendMessage && <p className="text-[#02D99D] text-[10px] mt-2 font-semibold">{resendMessage}</p>}
+            {resendError && <p className={errorCls}>{resendError}</p>}
           </Card>
         )}
 
