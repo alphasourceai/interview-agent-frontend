@@ -9,6 +9,7 @@ import {
   FileDown,
   Copy,
   X,
+  Video,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
@@ -53,6 +54,8 @@ interface Candidate {
   insufficientInterview?: boolean;
   hasTranscript?: boolean;
   transcriptText?: string;
+  videoUrl?: string | null;
+  hasVideo?: boolean;
   name: string;
   email: string;
   role: string;
@@ -136,6 +139,12 @@ function parseObjectSafe(value: unknown): Record<string, unknown> {
     }
   }
   return {};
+}
+
+function isUsableRecordingUrl(value: unknown): boolean {
+  const url = String(value || "").trim();
+  if (!/^https?:\/\//i.test(url)) return false;
+  return !/(^https?:\/\/)?([a-z0-9-]+\.)?(tavus\.daily\.co|c\.daily\.co)(\/|\?|$)/i.test(url);
 }
 
 async function copyTextToClipboard(text: string): Promise<void> {
@@ -340,6 +349,8 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
   const interviewId = String(item.id || "").trim();
   const hasTranscript = Boolean(item.has_transcript) || Boolean(String(item.transcript_url || "").trim());
   const transcriptText = typeof item.transcript === "string" ? item.transcript.trim() : "";
+  const videoUrl = typeof item.video_url === "string" ? item.video_url.trim() : "";
+  const hasVideo = item.has_video === true;
 
   const resumeSummaryRaw = String(resumeAnalysis.summary || "").trim();
   const interviewSummaryRaw = String(interviewAnalysis.summary || "").trim();
@@ -381,6 +392,8 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
     interviewId,
     hasTranscript,
     transcriptText,
+    videoUrl: videoUrl || null,
+    hasVideo,
     name: String(candidate.name || "").trim() || "Unnamed Candidate",
     email: String(candidate.email || "").trim() || "—",
     role: String(role.title || "").trim() || "—",
@@ -714,6 +727,7 @@ function ExpandedPanel({
   c,
   onRefresh,
   onOpenTranscript,
+  onOpenRecording,
   onOpenResume,
   onDownloadPdf,
   actionLoading,
@@ -722,6 +736,7 @@ function ExpandedPanel({
   c: Candidate;
   onRefresh: (candidate: Candidate) => void;
   onOpenTranscript: (candidate: Candidate) => void;
+  onOpenRecording: (candidate: Candidate) => void;
   onOpenResume: (candidate: Candidate) => void;
   onDownloadPdf: (candidate: Candidate) => void;
   actionLoading: Record<string, boolean>;
@@ -731,9 +746,16 @@ function ExpandedPanel({
   const [advancedExpanded, setAdvancedExpanded] = useState(true);
   const refreshing = Boolean(actionLoading[`${String(c.id)}:refresh`]);
   const openingTranscript = Boolean(actionLoading[`${String(c.id)}:transcript`]);
+  const openingRecording = Boolean(actionLoading[`${String(c.id)}:recording`]);
   const openingResume = Boolean(actionLoading[`${String(c.id)}:resume`]);
   const openingPdf = Boolean(actionLoading[`${String(c.id)}:pdf`]);
   const transcriptDisabled = openingTranscript || !c.transcriptText;
+  const recordingAvailable =
+    c.hasVideo === true &&
+    hasInterview &&
+    c.reliabilityState !== "not_applicable" &&
+    !c.insufficientInterview &&
+    isUsableRecordingUrl(c.videoUrl);
   const resumeDisabled = openingResume || !c.candidateId;
   const pdfDisabled = openingPdf || (!c.candidateId && !c.interviewId);
   const advancedAnalysis = hasInterview ? c.interviewAnalysisV2 : null;
@@ -800,6 +822,17 @@ function ExpandedPanel({
           <FileText className="w-3.5 h-3.5" />
           {openingTranscript ? "Opening…" : "Transcript"}
         </button>
+        {recordingAvailable && (
+          <button
+            onClick={() => onOpenRecording(c)}
+            disabled={openingRecording}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border transition-all hover:shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{ backgroundColor: "white", borderColor: "rgba(10,21,71,0.12)", color: "#0A1547" }}
+          >
+            <Video className="w-3.5 h-3.5" />
+            {openingRecording ? "Opening…" : "Recording"}
+          </button>
+        )}
         <button
           onClick={() => onOpenResume(c)}
           disabled={resumeDisabled}
@@ -1143,7 +1176,7 @@ export default function CandidatesPage() {
 
   const withCandidateAction = useCallback(async (
     candidate: Candidate,
-    action: "refresh" | "transcript" | "resume" | "pdf",
+    action: "refresh" | "transcript" | "recording" | "resume" | "pdf",
     runner: () => Promise<void>,
   ) => {
     const candidateKey = String(candidate.id);
@@ -1200,6 +1233,15 @@ export default function CandidatesPage() {
       const url = typeof data?.url === "string" ? data.url.trim() : "";
       if (!url) throw new Error("Could not open resume.");
       window.open(url, "_blank", "noopener,noreferrer");
+    });
+  }, [withCandidateAction]);
+
+  const openRecordingForCandidate = useCallback((candidate: Candidate) => {
+    void withCandidateAction(candidate, "recording", async () => {
+      if (!isUsableRecordingUrl(candidate.videoUrl)) {
+        throw new Error("Recording is not available yet.");
+      }
+      window.open(String(candidate.videoUrl || "").trim(), "_blank", "noopener,noreferrer");
     });
   }, [withCandidateAction]);
 
@@ -1669,6 +1711,7 @@ export default function CandidatesPage() {
                               c={c}
                               onRefresh={refreshCandidatesFromRow}
                               onOpenTranscript={openTranscriptForCandidate}
+                              onOpenRecording={openRecordingForCandidate}
                               onOpenResume={openResumeForCandidate}
                               onDownloadPdf={downloadPdfForCandidate}
                               actionLoading={actionLoading}
