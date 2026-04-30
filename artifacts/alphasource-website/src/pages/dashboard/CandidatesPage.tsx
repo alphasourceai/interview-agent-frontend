@@ -634,6 +634,13 @@ function v2BadgeColor(label: string, value: unknown): string {
   return "#0A1547";
 }
 
+function v2BadgeBg(color: string): string {
+  if (color === "#02D99D") return "rgba(2,217,157,0.10)";
+  if (color === "#F0A500") return "rgba(240,165,0,0.12)";
+  if (color === "#FF6B6B") return "rgba(255,107,107,0.10)";
+  return "rgba(10,21,71,0.05)";
+}
+
 /* ── Score number color: dynamic by value ───────────── */
 function subScoreNumColor(score: number | null): string {
   if (score === null) return "rgba(10,21,71,0.25)";
@@ -649,7 +656,11 @@ const LABEL_TOOLTIPS: Record<string, string> = {
   Education:   "Credential match against stated educational requirements",
   Clarity:     "How clearly the candidate expressed their thoughts",
   Confidence:  "Composure and assurance demonstrated throughout the interview",
-  Engagement:  "Engagement and non-verbal cues such as posture and eye contact",
+  Engagement:  "Responsiveness and participation during the interview, supported by observable interview behavior such as attention to the conversation, relevant answers, and professional presence.",
+  "Response Specificity": "How concrete, detailed, and example-backed the candidate's answers were",
+  "Answer Directness": "Whether answers directly addressed the question asked instead of drifting or avoiding",
+  "Answer Consistency": "Whether answers stayed logically consistent across the interview",
+  "Communication Structure": "Organization, clarity of flow, and whether answers were easy to follow",
 };
 
 /* ── Sub-components ─────────────────────────────────── */
@@ -739,11 +750,31 @@ function ExpandedPanel({
     { label: "Communication Structure", score: advancedScores.communication_structure ?? null, color: "#F0A500" },
   ];
   const advancedBadges = [
-    { label: "Evaluation Conditions", value: advancedConditions.evaluation_conditions },
-    { label: "Signal Confidence", value: advancedConditions.signal_confidence },
-    { label: "Audio Quality Issues", value: advancedConditions.audio_quality_issues },
-    { label: "Distraction Risk", value: advancedConditions.distraction_risk },
-    { label: "Integrity Risk", value: advancedRisk.integrity_risk },
+    {
+      label: "Evaluation Conditions",
+      value: advancedConditions.evaluation_conditions,
+      tooltip: "Whether the interview conditions provided enough usable signal for evaluation",
+    },
+    {
+      label: "Signal Confidence",
+      value: advancedConditions.signal_confidence,
+      tooltip: "Confidence in this analysis based on available transcript and perception evidence",
+    },
+    {
+      label: "Audio Quality Issues",
+      value: advancedConditions.audio_quality_issues,
+      tooltip: "Whether audio or transcript quality may have reduced scoring reliability",
+    },
+    {
+      label: "Distraction Risk",
+      value: advancedConditions.distraction_risk,
+      tooltip: "Transcript/perception-based signs that focus may have been interrupted, without visual-trait assumptions",
+    },
+    {
+      label: "Integrity Risk",
+      value: advancedRisk.integrity_risk,
+      tooltip: "Content/process-based concerns such as generic, evasive, inconsistent, or scripted-style responses",
+    },
   ];
 
   return (
@@ -923,18 +954,25 @@ function ExpandedPanel({
               <p className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Advanced Interview Analysis</p>
               <InfoTooltip content="Evidence-backed analysis of interview response quality and evaluation conditions" side="bottom" />
             </div>
-            <div className="grid md:grid-cols-2 gap-5">
-              <div>
+            <div className="grid md:grid-cols-2 gap-5 items-stretch">
+              <div className="h-full space-y-3">
                 {advancedScoreRows.map((s) => <ScoreBar key={s.label} {...s} barColor={s.color} />)}
               </div>
-              <div className="space-y-2">
+              <div className="h-full grid content-between gap-2">
                 {advancedBadges.map((badge) => {
                   const color = v2BadgeColor(badge.label, badge.value);
                   return (
-                    <div key={badge.label} className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-[#0A1547]/60">{badge.label}</span>
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-xs font-bold" style={{ color }}>{formatV2BadgeValue(badge.value)}</span>
+                    <div
+                      key={badge.label}
+                      className="flex items-center justify-between gap-3 rounded-full border px-3 py-2"
+                      style={{ backgroundColor: v2BadgeBg(color), borderColor: "rgba(10,21,71,0.08)" }}
+                    >
+                      <span className="flex items-center gap-1.5 min-w-0 text-xs font-semibold text-[#0A1547]/65">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                        <span className="truncate">{badge.label}</span>
+                        <InfoTooltip content={badge.tooltip} side="top" iconClassName="w-2.5 h-2.5 text-[#0A1547]/25" />
+                      </span>
+                      <span className="text-xs font-black whitespace-nowrap" style={{ color }}>{formatV2BadgeValue(badge.value)}</span>
                     </div>
                   );
                 })}
@@ -946,20 +984,24 @@ function ExpandedPanel({
                 {advancedEvidenceSummary}
               </p>
             )}
-            {advancedEvidence.length > 0 && (
-              <div className="mt-4">
-                <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Evidence</p>
-                <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
-                  {advancedEvidence.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
-                </ul>
-              </div>
-            )}
-            {advancedLimitations.length > 0 && (
-              <div className="mt-4">
-                <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Limitations</p>
-                <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
-                  {advancedLimitations.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
-                </ul>
+            {(advancedEvidence.length > 0 || advancedLimitations.length > 0) && (
+              <div className="grid md:grid-cols-2 gap-4 mt-4">
+                {advancedEvidence.length > 0 && (
+                  <div className={advancedLimitations.length > 0 ? "" : "md:col-span-2"}>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Evidence</p>
+                    <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
+                      {advancedEvidence.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {advancedLimitations.length > 0 && (
+                  <div className={advancedEvidence.length > 0 ? "" : "md:col-span-2"}>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Limitations</p>
+                    <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
+                      {advancedLimitations.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </div>
