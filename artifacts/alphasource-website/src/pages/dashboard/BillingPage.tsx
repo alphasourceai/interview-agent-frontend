@@ -854,53 +854,53 @@ export default function BillingPage() {
               label="Plan Tier"
               value={billing.planTier}
               accent="#A380F6"
-              tooltip="Your current subscription plan level"
+              tooltip="The membership tier that controls included interviews, role limits, and platform access."
             />
             <InfoCard
               label="Billing Status"
               value={billing.billingStatus}
               accent="#02D99D"
               badge
-              tooltip="Whether your account is in good standing"
+              tooltip="Shows whether this client currently has active platform access, a pending checkout, a cancellation state, or an inactive billing status."
             />
             <InfoCard
               label="Billing Cycle"
               value={billing.billingCycle}
               accent="#02ABE0"
               badge
-              tooltip="How frequently your subscription renews"
+              tooltip="The billing period cadence used for renewals and membership timing."
             />
             <InfoCard
               label="Auto-Renew"
               value={billing.autoRenew}
               accent="#A380F6"
               badge
-              tooltip="Whether your subscription renews automatically at term end"
+              tooltip="Shows whether the current subscription is set to renew at the end of the billing period or cancel at term end."
             />
             <InfoCard
               label="Current Term End"
               value={billing.currentTermEnd}
               accent="#02ABE0"
-              tooltip="The date your current billing term expires"
+              tooltip="The date the current billing period or membership term is scheduled to end or renew."
             />
             <InfoCard
               label="Contract End Date"
               value={billing.contractEndDate}
               accent="#02D99D"
-              tooltip="The final date of your signed contract period"
+              tooltip="The final date of the signed membership agreement terms associated with this client."
             />
             <InfoCard
               label="Membership Status"
               value={billing.membershipStatus}
               accent="#A380F6"
               badge
-              tooltip="Overall membership standing for this account"
+              tooltip="Overall membership standing tied to this client's access and billing setup."
             />
             <InfoCard
               label="Access Status"
               value={billing.accessStatus}
               accent="#02ABE0"
-              tooltip="How dashboard access is granted — Inherited means access flows from the parent account"
+              tooltip="How dashboard access is granted; inherited access flows from the parent account."
             />
           </div>
         )}
@@ -961,7 +961,7 @@ export default function BillingPage() {
         >
           <div className="flex items-center gap-1.5 mb-5">
             <h2 className="text-base font-black text-[#0A1547]">Purchase Additional Interviews</h2>
-            <InfoTooltip content="Select a role and quantity, then click Purchase to add interview credits. Processed via Stripe." side="bottom" />
+            <InfoTooltip content="Extra interview capacity can be purchased for a selected role outside the base membership. Checkout is processed via Stripe." side="bottom" />
           </div>
           {actionNotice && (
             <div
@@ -1043,7 +1043,7 @@ export default function BillingPage() {
       >
         <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-center gap-1.5">
           <h2 className="text-base font-black text-[#0A1547]">Additional Interviews Purchased</h2>
-          <InfoTooltip content="Interview credits purchased beyond your base plan quota, broken down by role" side="bottom" />
+          <InfoTooltip content="Extra interview capacity purchased outside the base membership, broken down by role." side="bottom" />
         </div>
 
         <div className="overflow-x-auto">
