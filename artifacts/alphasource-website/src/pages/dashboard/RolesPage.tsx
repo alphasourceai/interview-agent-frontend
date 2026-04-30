@@ -929,8 +929,12 @@ export default function RolesPage() {
             <div className="flex flex-wrap gap-3 items-end">
               {/* Role Title */}
               <div className="flex-1 min-w-[200px]">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 block mb-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 flex items-center gap-1 mb-1.5">
                   Role Title
+                  <InfoTooltip
+                    content="Role title is used in candidate-facing interview context, rubric generation, and dashboard reporting."
+                    side="bottom"
+                  />
                 </label>
                 <input
                   type="text"
@@ -946,7 +950,7 @@ export default function RolesPage() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 flex items-center gap-1 mb-1.5">
                   Interview Type
                   <InfoTooltip
-                    content="Basic: quick screening questions. Detailed: in-depth competency questions. Technical: role-specific skills and domain knowledge."
+                    content="Basic: shorter screening focused on core fit and relevant experience. Detailed: deeper behavioral and situational interview. Technical: skill-heavy interview focused on role-specific reasoning and execution."
                     side="bottom"
                   />
                 </label>
@@ -966,8 +970,12 @@ export default function RolesPage() {
 
               {/* JD File Drop zone */}
               <div className="flex-1 min-w-[200px]">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 block mb-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 flex items-center gap-1 mb-1.5">
                   Job Description
+                  <InfoTooltip
+                    content="The job description helps generate the role rubric, interview questions, and candidate evaluation context. Use the clearest current version available."
+                    side="bottom"
+                  />
                 </label>
                 <div className="flex items-center gap-2">
                   <div
