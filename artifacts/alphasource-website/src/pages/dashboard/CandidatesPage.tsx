@@ -23,6 +23,28 @@ interface SubScore {
   state?: "available" | "unavailable" | "not_applicable";
 }
 
+interface InterviewAnalysisV2 {
+  scores?: {
+    response_specificity?: number | null;
+    answer_directness?: number | null;
+    answer_consistency?: number | null;
+    communication_structure?: number | null;
+  };
+  conditions?: {
+    evaluation_conditions?: string;
+    signal_confidence?: string;
+    audio_quality_issues?: string;
+    distraction_risk?: string;
+  };
+  risk?: {
+    integrity_risk?: string;
+    reason?: string;
+  };
+  evidence_summary?: string;
+  evidence?: string[];
+  limitations?: string[];
+}
+
 interface Candidate {
   id: string | number;
   candidateId?: string;
@@ -42,6 +64,7 @@ interface Candidate {
   resumeSummary: string;
   interviewSubs: SubScore[];
   interviewSummary: string;
+  interviewAnalysisV2?: InterviewAnalysisV2 | null;
   unanswered: string;
   reliability: number | null;
   reliabilityState?: "available" | "unavailable" | "not_applicable";
@@ -100,6 +123,19 @@ function parseJsonSafe(text: string): unknown {
   } catch {
     return null;
   }
+}
+
+function parseObjectSafe(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value === "string") {
+    const parsed = parseJsonSafe(value);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  }
+  return {};
 }
 
 async function copyTextToClipboard(text: string): Promise<void> {
@@ -177,6 +213,71 @@ function normalizeQuestionList(value: unknown): string[] {
   return [];
 }
 
+const V2_FORBIDDEN_TEXT_RE =
+  /\b(honesty|truthfulness|deception|appearance|gaze|attractiveness|race|ethnicity|gender|age|disability|trustworthiness|likability|personality|motivation)\b/i;
+
+function safeV2Text(value: unknown): string {
+  const text = String(value || "").trim();
+  if (!text || V2_FORBIDDEN_TEXT_RE.test(text)) return "";
+  return text;
+}
+
+function safeV2List(value: unknown): string[] {
+  return normalizeQuestionList(value).filter((item) => Boolean(safeV2Text(item)));
+}
+
+function safeMeaningfulV2List(value: unknown): string[] {
+  const emptyValues = new Set(["none", "n/a", "na", "not applicable", "unavailable"]);
+  return safeV2List(value).filter((item) => !emptyValues.has(item.toLowerCase()));
+}
+
+function normalizeInterviewAnalysisV2(value: unknown): InterviewAnalysisV2 | null {
+  const raw = parseObjectSafe(value);
+  if (!Object.keys(raw).length) return null;
+
+  const scores = parseObjectSafe(raw.scores);
+  const conditions = parseObjectSafe(raw.conditions);
+  const risk = parseObjectSafe(raw.risk);
+
+  return {
+    scores: {
+      response_specificity: toScoreOrNull(scores.response_specificity),
+      answer_directness: toScoreOrNull(scores.answer_directness),
+      answer_consistency: toScoreOrNull(scores.answer_consistency),
+      communication_structure: toScoreOrNull(scores.communication_structure),
+    },
+    conditions: {
+      evaluation_conditions: String(conditions.evaluation_conditions || "").trim(),
+      signal_confidence: String(conditions.signal_confidence || "").trim(),
+      audio_quality_issues: String(conditions.audio_quality_issues || "").trim(),
+      distraction_risk: String(conditions.distraction_risk || "").trim(),
+    },
+    risk: {
+      integrity_risk: String(risk.integrity_risk || "").trim(),
+      reason: String(risk.reason || "").trim(),
+    },
+    evidence_summary: String(raw.evidence_summary || "").trim(),
+    evidence: normalizeQuestionList(raw.evidence),
+    limitations: normalizeQuestionList(raw.limitations),
+  };
+}
+
+function hasUsableInterviewAnalysisV2(value: InterviewAnalysisV2 | null | undefined): boolean {
+  if (!value) return false;
+  const scores = value.scores || {};
+  const hasNumericScore = [
+    scores.response_specificity,
+    scores.answer_directness,
+    scores.answer_consistency,
+    scores.communication_structure,
+  ].some((score) => typeof score === "number");
+
+  return hasNumericScore
+    || Boolean(safeV2Text(value.evidence_summary))
+    || safeV2List(value.evidence).length > 0
+    || safeMeaningfulV2List(value.limitations).length > 0;
+}
+
 function formatCreated(value: unknown): string {
   const raw = String(value || "").trim();
   if (!raw) return "—";
@@ -224,6 +325,7 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
   const transcriptScores = item.transcript_scores && typeof item.transcript_scores === "object"
     ? (item.transcript_scores as Record<string, unknown>)
     : {};
+  const interviewAnalysisV2 = normalizeInterviewAnalysisV2(item.interview_analysis_v2);
 
   const resumeScore = toScoreOrNull(item.resume_score);
   const interviewScore = toScoreOrNull(item.interview_score);
@@ -307,6 +409,7 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
     interviewSummary: hasInterview
       ? (interviewSummaryRaw || "No interview summary available yet.")
       : "Interview not yet completed.",
+    interviewAnalysisV2: hasInterview && hasUsableInterviewAnalysisV2(interviewAnalysisV2) ? interviewAnalysisV2 : null,
     unanswered: hasInterview
       ? (unansweredQuestions.length ? unansweredQuestions.join("\n") : "No unanswered questions captured.")
       : "Interview not yet completed.",
@@ -508,6 +611,29 @@ function riskColor(risk: Candidate["risk"]): string {
   return risk === "Low" ? "#02D99D" : risk === "Medium" ? "#F0A500" : risk === "High" ? "#FF6B6B" : "rgba(10,21,71,0.35)";
 }
 
+function formatV2BadgeValue(value: unknown): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "Unavailable";
+  return raw
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function v2BadgeColor(label: string, value: unknown): string {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized || normalized === "unavailable" || normalized === "unknown") return "rgba(10,21,71,0.35)";
+  if (label === "Signal Confidence") {
+    if (normalized === "high" || normalized === "good") return "#02D99D";
+    if (normalized === "medium" || normalized === "mixed" || normalized === "limited") return "#F0A500";
+    return "#FF6B6B";
+  }
+  if (normalized === "none" || normalized === "low" || normalized === "good") return "#02D99D";
+  if (normalized === "medium" || normalized === "mixed" || normalized === "limited") return "#F0A500";
+  if (normalized === "high" || normalized === "poor") return "#FF6B6B";
+  return "#0A1547";
+}
+
 /* ── Score number color: dynamic by value ───────────── */
 function subScoreNumColor(score: number | null): string {
   if (score === null) return "rgba(10,21,71,0.25)";
@@ -598,6 +724,27 @@ function ExpandedPanel({
   const transcriptDisabled = openingTranscript || !c.transcriptText;
   const resumeDisabled = openingResume || !c.candidateId;
   const pdfDisabled = openingPdf || (!c.candidateId && !c.interviewId);
+  const advancedAnalysis = hasInterview ? c.interviewAnalysisV2 : null;
+  const showAdvancedAnalysis = hasUsableInterviewAnalysisV2(advancedAnalysis);
+  const advancedScores: NonNullable<InterviewAnalysisV2["scores"]> = advancedAnalysis?.scores || {};
+  const advancedConditions: NonNullable<InterviewAnalysisV2["conditions"]> = advancedAnalysis?.conditions || {};
+  const advancedRisk: NonNullable<InterviewAnalysisV2["risk"]> = advancedAnalysis?.risk || {};
+  const advancedEvidenceSummary = safeV2Text(advancedAnalysis?.evidence_summary);
+  const advancedEvidence = safeV2List(advancedAnalysis?.evidence);
+  const advancedLimitations = safeMeaningfulV2List(advancedAnalysis?.limitations);
+  const advancedScoreRows: SubScore[] = [
+    { label: "Response Specificity", score: advancedScores.response_specificity ?? null, color: "#02ABE0" },
+    { label: "Answer Directness", score: advancedScores.answer_directness ?? null, color: "#A380F6" },
+    { label: "Answer Consistency", score: advancedScores.answer_consistency ?? null, color: "#02D99D" },
+    { label: "Communication Structure", score: advancedScores.communication_structure ?? null, color: "#F0A500" },
+  ];
+  const advancedBadges = [
+    { label: "Evaluation Conditions", value: advancedConditions.evaluation_conditions },
+    { label: "Signal Confidence", value: advancedConditions.signal_confidence },
+    { label: "Audio Quality Issues", value: advancedConditions.audio_quality_issues },
+    { label: "Distraction Risk", value: advancedConditions.distraction_risk },
+    { label: "Integrity Risk", value: advancedRisk.integrity_risk },
+  ];
 
   return (
     <div className="border-t border-gray-100 bg-[#F8F9FD] px-6 py-5">
@@ -766,6 +913,57 @@ function ExpandedPanel({
             <p className="text-xs text-[#0A1547]/40 italic">Signals will appear after the interview is completed.</p>
           )}
         </div>
+
+        {showAdvancedAnalysis && (
+          <div
+            className="bg-white rounded-2xl p-5 md:col-span-2"
+            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 10px rgba(10,21,71,0.04)" }}
+          >
+            <div className="flex items-center gap-1.5 mb-4">
+              <p className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Advanced Interview Analysis</p>
+              <InfoTooltip content="Evidence-backed analysis of interview response quality and evaluation conditions" side="bottom" />
+            </div>
+            <div className="grid md:grid-cols-2 gap-5">
+              <div>
+                {advancedScoreRows.map((s) => <ScoreBar key={s.label} {...s} barColor={s.color} />)}
+              </div>
+              <div className="space-y-2">
+                {advancedBadges.map((badge) => {
+                  const color = v2BadgeColor(badge.label, badge.value);
+                  return (
+                    <div key={badge.label} className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-[#0A1547]/60">{badge.label}</span>
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <span className="text-xs font-bold" style={{ color }}>{formatV2BadgeValue(badge.value)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {advancedEvidenceSummary && (
+              <p className="text-xs leading-relaxed text-[#0A1547]/60 mt-4">
+                <span className="font-black text-[#0A1547]/80">Evidence Summary: </span>
+                {advancedEvidenceSummary}
+              </p>
+            )}
+            {advancedEvidence.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Evidence</p>
+                <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
+                  {advancedEvidence.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+                </ul>
+              </div>
+            )}
+            {advancedLimitations.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Limitations</p>
+                <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
+                  {advancedLimitations.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
