@@ -832,7 +832,7 @@ function ExpandedPanel({
         >
           <div className="flex items-center gap-1.5 mb-4">
             <p className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Resume Analysis</p>
-            <InfoTooltip content="AI analysis of the candidate's submitted resume across key evaluation dimensions" side="bottom" />
+            <InfoTooltip content="Resume fit analysis based on the submitted resume and role context, including experience, skills, education, and overall match." side="bottom" />
           </div>
           <div className="mb-4">
             {c.resumeSubs.map((s) => <ScoreBar key={s.label} {...s} barColor="#02ABE0" />)}
@@ -874,7 +874,7 @@ function ExpandedPanel({
         >
           <div className="flex items-center gap-1.5 mb-3">
             <p className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Unanswered Questions</p>
-            <InfoTooltip content="Interview questions the candidate did not answer or skipped during the AI session" side="bottom" />
+            <InfoTooltip content="Candidate questions the interviewer could not answer from the available role or company context." side="bottom" />
           </div>
           <p className="text-xs leading-relaxed text-[#0A1547]/60 whitespace-pre-line">{c.unanswered}</p>
         </div>
@@ -895,7 +895,7 @@ function ExpandedPanel({
                 <div className="flex items-center justify-between mb-1">
                   <span className="flex items-center gap-1 text-xs font-semibold text-[#0A1547]/60">
                     Evaluation Reliability
-                    <InfoTooltip content="Strength of transcript evidence supporting the interview score, not a verdict by itself" side="top" />
+                    <InfoTooltip content="Strength of evidence behind the interview score. 75-100: strong transcript support. 50-74: moderate support; validate key claims. Below 50: limited support; use follow-up." side="top" />
                   </span>
                   <span className="text-xs font-black text-[#0A1547]">
                     {typeof c.reliability === "number" ? `${c.reliability}%` : "—"}
@@ -1555,9 +1555,9 @@ export default function CandidatesPage() {
                 <Th col="name"      label="Name" />
                 <Th col="email"     label="Email"     className="hidden md:table-cell" />
                 <Th col="role"      label="Role"      className="hidden lg:table-cell" />
-                <Th col="resume"    label="Resume"    tooltip="AI-analyzed resume score out of 100" />
-                <Th col="interview" label="Interview" tooltip="AI-scored interview performance out of 100" />
-                <Th col="overall"   label="Overall"   tooltip="Combined weighted score from resume and interview" />
+                <Th col="resume"    label="Resume"    tooltip="Resume score based on role/JD alignment across experience, skills, education, and overall resume fit." />
+                <Th col="interview" label="Interview" tooltip="Interview score based on recorded interview responses and available supporting analysis. Dash means unavailable or insufficient evidence." />
+                <Th col="overall"   label="Overall"   tooltip="Combined candidate score from resume and interview signals when both are available." />
                 <Th col="created"   label="Created"   className="hidden sm:table-cell pr-6" />
               </tr>
             </thead>
