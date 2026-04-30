@@ -728,7 +728,7 @@ function ExpandedPanel({
   actionError?: string;
 }) {
   const hasInterview = c.interview !== null || c.risk !== null || c.reliabilityState === "not_applicable" || c.insufficientInterview === true;
-  const [advancedExpanded, setAdvancedExpanded] = useState(false);
+  const [advancedExpanded, setAdvancedExpanded] = useState(true);
   const refreshing = Boolean(actionLoading[`${String(c.id)}:refresh`]);
   const openingTranscript = Boolean(actionLoading[`${String(c.id)}:transcript`]);
   const openingResume = Boolean(actionLoading[`${String(c.id)}:resume`]);
@@ -963,11 +963,9 @@ function ExpandedPanel({
                 <span className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Advanced Interview Analysis</span>
                 <InfoTooltip content="Evidence-backed analysis of interview response quality and evaluation conditions" side="bottom" />
               </span>
-              {advancedExpanded ? (
-                <ChevronUp className="w-4 h-4 text-[#0A1547]/45 flex-shrink-0" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-[#0A1547]/45 flex-shrink-0" />
-              )}
+              <span className="text-[11px] font-black text-[#0A1547]/45 hover:text-[#0A1547]/70">
+                {advancedExpanded ? "Collapse" : "Expand"}
+              </span>
             </button>
             {advancedExpanded && (
               <div className="mt-4">
@@ -979,13 +977,13 @@ function ExpandedPanel({
                     {advancedBadges.map((badge) => {
                       const color = v2BadgeColor(badge.label, badge.value);
                       return (
-                        <div key={badge.label} className="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-3">
+                        <div key={badge.label} className="grid grid-cols-[minmax(0,12rem)_8.5rem] items-center gap-3">
                           <span className="flex items-center gap-1.5 min-w-0 text-xs font-semibold text-[#0A1547]/65">
                             <span className="truncate">{badge.label}</span>
                             <InfoTooltip content={badge.tooltip} side="top" iconClassName="w-2.5 h-2.5 text-[#0A1547]/25" />
                           </span>
                           <span
-                            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-black whitespace-nowrap"
+                            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-xs font-black whitespace-nowrap"
                             style={{ color, backgroundColor: v2BadgeBg(color), borderColor: "rgba(10,21,71,0.08)" }}
                           >
                             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
