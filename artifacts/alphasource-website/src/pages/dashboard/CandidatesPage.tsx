@@ -728,6 +728,7 @@ function ExpandedPanel({
   actionError?: string;
 }) {
   const hasInterview = c.interview !== null || c.risk !== null || c.reliabilityState === "not_applicable" || c.insufficientInterview === true;
+  const [advancedExpanded, setAdvancedExpanded] = useState(false);
   const refreshing = Boolean(actionLoading[`${String(c.id)}:refresh`]);
   const openingTranscript = Boolean(actionLoading[`${String(c.id)}:transcript`]);
   const openingResume = Boolean(actionLoading[`${String(c.id)}:resume`]);
@@ -950,56 +951,80 @@ function ExpandedPanel({
             className="bg-white rounded-2xl p-5 md:col-span-2"
             style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 10px rgba(10,21,71,0.04)" }}
           >
-            <div className="flex items-center gap-1.5 mb-4">
-              <p className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Advanced Interview Analysis</p>
-              <InfoTooltip content="Evidence-backed analysis of interview response quality and evaluation conditions" side="bottom" />
-            </div>
-            <div className="grid md:grid-cols-2 gap-5 items-stretch">
-              <div className="h-full space-y-3">
-                {advancedScoreRows.map((s) => <ScoreBar key={s.label} {...s} barColor={s.color} />)}
-              </div>
-              <div className="h-full grid content-between gap-2">
-                {advancedBadges.map((badge) => {
-                  const color = v2BadgeColor(badge.label, badge.value);
-                  return (
-                    <div
-                      key={badge.label}
-                      className="flex items-center justify-between gap-3 rounded-full border px-3 py-2"
-                      style={{ backgroundColor: v2BadgeBg(color), borderColor: "rgba(10,21,71,0.08)" }}
-                    >
-                      <span className="flex items-center gap-1.5 min-w-0 text-xs font-semibold text-[#0A1547]/65">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="truncate">{badge.label}</span>
-                        <InfoTooltip content={badge.tooltip} side="top" iconClassName="w-2.5 h-2.5 text-[#0A1547]/25" />
-                      </span>
-                      <span className="text-xs font-black whitespace-nowrap" style={{ color }}>{formatV2BadgeValue(badge.value)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {advancedEvidenceSummary && (
-              <p className="text-xs leading-relaxed text-[#0A1547]/60 mt-4">
-                <span className="font-black text-[#0A1547]/80">Evidence Summary: </span>
-                {advancedEvidenceSummary}
-              </p>
-            )}
-            {(advancedEvidence.length > 0 || advancedLimitations.length > 0) && (
-              <div className="grid md:grid-cols-2 gap-4 mt-4">
-                {advancedEvidence.length > 0 && (
-                  <div className={advancedLimitations.length > 0 ? "" : "md:col-span-2"}>
-                    <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Evidence</p>
-                    <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
-                      {advancedEvidence.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
-                    </ul>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setAdvancedExpanded((expanded) => !expanded);
+              }}
+              className="w-full flex items-center justify-between gap-3 text-left"
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Advanced Interview Analysis</span>
+                <InfoTooltip content="Evidence-backed analysis of interview response quality and evaluation conditions" side="bottom" />
+              </span>
+              {advancedExpanded ? (
+                <ChevronUp className="w-4 h-4 text-[#0A1547]/45 flex-shrink-0" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-[#0A1547]/45 flex-shrink-0" />
+              )}
+            </button>
+            {advancedExpanded && (
+              <div className="mt-4">
+                <div className="grid md:grid-cols-2 gap-5 items-stretch">
+                  <div className="h-full">
+                    {advancedScoreRows.map((s) => <ScoreBar key={s.label} {...s} barColor={s.color} />)}
+                  </div>
+                  <div className="h-full flex flex-col justify-between gap-2">
+                    {advancedBadges.map((badge) => {
+                      const color = v2BadgeColor(badge.label, badge.value);
+                      return (
+                        <div key={badge.label} className="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-3">
+                          <span className="flex items-center gap-1.5 min-w-0 text-xs font-semibold text-[#0A1547]/65">
+                            <span className="truncate">{badge.label}</span>
+                            <InfoTooltip content={badge.tooltip} side="top" iconClassName="w-2.5 h-2.5 text-[#0A1547]/25" />
+                          </span>
+                          <span
+                            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-black whitespace-nowrap"
+                            style={{ color, backgroundColor: v2BadgeBg(color), borderColor: "rgba(10,21,71,0.08)" }}
+                          >
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                            {formatV2BadgeValue(badge.value)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                {advancedEvidenceSummary && (
+                  <div
+                    className="mt-4 rounded-xl border p-4"
+                    style={{ backgroundColor: "rgba(10,21,71,0.02)", borderColor: "rgba(10,21,71,0.07)" }}
+                  >
+                    <p className="text-xs leading-relaxed text-[#0A1547]/60">
+                      <span className="font-black text-[#0A1547]/80">Evidence Summary: </span>
+                      {advancedEvidenceSummary}
+                    </p>
                   </div>
                 )}
-                {advancedLimitations.length > 0 && (
-                  <div className={advancedEvidence.length > 0 ? "" : "md:col-span-2"}>
-                    <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Limitations</p>
-                    <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
-                      {advancedLimitations.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
-                    </ul>
+                {(advancedEvidence.length > 0 || advancedLimitations.length > 0) && (
+                  <div className="grid md:grid-cols-2 gap-4 mt-4">
+                    {advancedEvidence.length > 0 && (
+                      <div className={advancedLimitations.length > 0 ? "" : "md:col-span-2"}>
+                        <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Evidence</p>
+                        <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
+                          {advancedEvidence.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {advancedLimitations.length > 0 && (
+                      <div className={advancedEvidence.length > 0 ? "" : "md:col-span-2"}>
+                        <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Limitations</p>
+                        <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
+                          {advancedLimitations.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
