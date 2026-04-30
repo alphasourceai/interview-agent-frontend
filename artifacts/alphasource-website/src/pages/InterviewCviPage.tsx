@@ -48,6 +48,7 @@ type DailyCallObject = {
   off?: (event: string, handler: (event?: DailyEvent) => void) => void;
   participants?: () => Record<string, DailyParticipant>;
   sendAppMessage?: (message: unknown, recipients?: string | string[]) => void;
+  startRecording?: () => Promise<unknown>;
   setInputDevicesAsync?: (devices: { videoDeviceId?: string; audioDeviceId?: string }) => Promise<unknown>;
   setInputDevices?: (devices: { videoDeviceId?: string; audioDeviceId?: string }) => Promise<unknown> | unknown;
 };
@@ -211,6 +212,7 @@ export default function InterviewCviPage() {
   const startupRecoveryAttemptedRef = useRef(false);
   const startupTimerRef = useRef<number | null>(null);
   const startMsRef = useRef<number>(Date.now());
+  const recordingStartRequestedRef = useRef(false);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
@@ -355,6 +357,25 @@ export default function InterviewCviPage() {
       call?.on(event, handler);
       handlers.push([event, handler]);
     };
+    const requestRecordingStart = async () => {
+      if (!alive || recordingStartRequestedRef.current) return;
+      recordingStartRequestedRef.current = true;
+      const logContext = {
+        conversation_id: session.conversation_id || null,
+        interview_id: session.interview_id || null,
+      };
+      if (!call || typeof call.startRecording !== "function") {
+        console.warn("[daily-recording] start_unavailable", logContext);
+        return;
+      }
+      console.log("[daily-recording] start_requested", logContext);
+      try {
+        await call.startRecording();
+        console.log("[daily-recording] start_success", logContext);
+      } catch (error) {
+        console.warn("[daily-recording] start_failed", { ...logContext, error });
+      }
+    };
     const applySelectedDevices = async () => {
       if (!call) return;
       const devices: { videoDeviceId?: string; audioDeviceId?: string } = {};
@@ -409,6 +430,7 @@ export default function InterviewCviPage() {
         setError("");
         startupRemoteSeenRef.current = false;
         startupRecoveryAttemptedRef.current = false;
+        recordingStartRequestedRef.current = false;
 
         const daily = await loadDailySdk();
         if (!alive) return;
@@ -420,6 +442,7 @@ export default function InterviewCviPage() {
           if (!alive) return;
           setLoading(false);
           syncParticipants();
+          void requestRecordingStart();
         });
         register("participant-joined", (event) => syncParticipants(event?.participants));
         register("participant-updated", (event) => syncParticipants(event?.participants));
