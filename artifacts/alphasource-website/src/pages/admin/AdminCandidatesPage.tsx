@@ -24,9 +24,12 @@ interface Candidate {
   latestInterviewId?: string | null;
   recordingStatus?: string | null;
   recordingReadyAt?: string | null;
+  insufficientInterview?: boolean;
+  hasSubstantiveInterview?: boolean;
 }
 
 interface RecordingModalState {
+  interviewId: string;
   candidateName: string;
   url: string;
   expiresIn?: number | null;
@@ -382,6 +385,7 @@ export default function AdminCandidatesPage() {
           ? payload.recording_ready_at.trim()
           : candidate.recordingReadyAt || null;
       setRecordingModal({
+        interviewId,
         candidateName: String(candidate.name || "").trim() || "Candidate",
         url,
         expiresIn: Number.isFinite(expiresIn) ? expiresIn : null,
@@ -395,6 +399,43 @@ export default function AdminCandidatesPage() {
       });
     } finally {
       setRecordingBusy((prev) => ({ ...prev, [candidateId]: false }));
+    }
+  };
+
+  const downloadRecordingFromModal = async () => {
+    if (!recordingModal?.interviewId) return;
+    try {
+      if (!backendBase) throw new Error("Missing backend base URL configuration.");
+      const token = await getSessionToken();
+      const response = await fetch(
+        `${backendBase}/dashboard/interviews/${encodeURIComponent(recordingModal.interviewId)}/recording-url?download=1`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "omit",
+        },
+      );
+      const text = await response.text();
+      if (!response.ok) {
+        if (response.status === 404 || response.status === 409) {
+          throw new Error("Recording is not available yet.");
+        }
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("You do not have access to this recording.");
+        }
+        throw new Error(extractErrorMessage(text) || "Could not download recording.");
+      }
+      const payload = parseJsonSafe(text) as { url?: unknown } | null;
+      const url = String(payload?.url || "").trim();
+      if (!isUsableRecordingUrl(url)) throw new Error("Recording is not available yet.");
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) window.location.href = url;
+    } catch (error) {
+      setRecordingModal(null);
+      setActionNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not download recording.",
+      });
     }
   };
 
@@ -545,6 +586,9 @@ export default function AdminCandidatesPage() {
             const normalizedStatus =
               statusRaw ||
               (interviewScore !== null ? "Interview Complete" : "Resume Uploaded");
+            const hasSubstantiveInterview =
+              !insufficientInterview &&
+              (interviewScore !== null || normalizedStatus.toLowerCase().includes("interview complete"));
             return {
               id: String(item.id || "").trim(),
               name: String(item.name || "").trim() || "—",
@@ -564,6 +608,8 @@ export default function AdminCandidatesPage() {
               latestInterviewId: String(item.latest_interview_id || "").trim() || null,
               recordingStatus: String(item.recording_status || "").trim() || null,
               recordingReadyAt: String(item.recording_ready_at || "").trim() || null,
+              insufficientInterview,
+              hasSubstantiveInterview,
             };
           })
           .filter((item) => Boolean(item.id));
@@ -831,7 +877,10 @@ export default function AdminCandidatesPage() {
                       >
                         {reportBusy[c.id] === true ? "Opening..." : "Report"}
                       </button>
-                      {c.latestInterviewId && String(c.recordingStatus || "").toLowerCase() === "ready" && (
+                      {c.latestInterviewId &&
+                        String(c.recordingStatus || "").toLowerCase() === "ready" &&
+                        !c.insufficientInterview &&
+                        (c.interview !== null || c.hasSubstantiveInterview) && (
                         <button
                           disabled={recordingBusy[c.id] === true}
                           className="px-3 py-1 rounded-full text-[11px] font-bold text-white transition-opacity hover:opacity-90"
@@ -939,26 +988,19 @@ export default function AdminCandidatesPage() {
               <div className="mt-4 flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setRecordingModal(null)}
-                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
                   onClick={() => window.open(recordingModal.url, "_blank", "noopener,noreferrer")}
                   className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
                 >
                   Open in new tab
                 </button>
-                <a
-                  href={recordingModal.url}
-                  download
+                <button
+                  type="button"
+                  onClick={() => { void downloadRecordingFromModal(); }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-full transition-all hover:opacity-90"
                   style={{ backgroundColor: "#A380F6" }}
                 >
                   Download
-                </a>
+                </button>
               </div>
             </div>
           </div>

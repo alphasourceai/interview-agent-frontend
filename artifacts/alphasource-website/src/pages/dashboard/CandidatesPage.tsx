@@ -56,6 +56,8 @@ interface Candidate {
   transcriptText?: string;
   videoUrl?: string | null;
   hasVideo?: boolean;
+  recordingStatus?: string | null;
+  recordingReadyAt?: string | null;
   name: string;
   email: string;
   role: string;
@@ -77,6 +79,7 @@ interface Candidate {
 }
 
 interface RecordingModalState {
+  interviewId: string;
   candidateName: string;
   url: string;
   expiresIn?: number | null;
@@ -418,6 +421,8 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
     transcriptText,
     videoUrl: videoUrl || null,
     hasVideo,
+    recordingStatus: String(item.recording_status || "").trim() || null,
+    recordingReadyAt: String(item.recording_ready_at || "").trim() || null,
     name: String(candidate.name || "").trim() || "Unnamed Candidate",
     email: String(candidate.email || "").trim() || "—",
     role: String(role.title || "").trim() || "—",
@@ -775,8 +780,8 @@ function ExpandedPanel({
   const openingPdf = Boolean(actionLoading[`${String(c.id)}:pdf`]);
   const transcriptDisabled = openingTranscript || !c.transcriptText;
   const recordingAvailable =
-    hasInterview &&
     Boolean(c.interviewId) &&
+    String(c.recordingStatus || "").toLowerCase() === "ready" &&
     c.reliabilityState !== "not_applicable" &&
     !c.insufficientInterview;
   const resumeDisabled = openingResume || !c.candidateId;
@@ -1317,14 +1322,57 @@ export default function CandidatesPage() {
           : null;
 
       setRecordingModal({
+        interviewId,
         candidateName: String(candidate.name || "").trim() || "Candidate",
         url,
         expiresIn: Number.isFinite(expiresIn) ? expiresIn : null,
-        recordingReadyAt,
+        recordingReadyAt: recordingReadyAt || candidate.recordingReadyAt || null,
         duration: Number.isFinite(duration) ? duration : null,
       });
     });
   }, [withCandidateAction]);
+
+  const downloadRecordingFromModal = useCallback(async () => {
+    if (!recordingModal?.interviewId) return;
+    try {
+      if (!backendBase) throw new Error("Missing backend base URL configuration.");
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = String(session?.access_token || "").trim();
+      if (!token) throw new Error("Missing session token.");
+
+      const response = await fetch(
+        `${backendBase}/dashboard/interviews/${encodeURIComponent(recordingModal.interviewId)}/recording-url?download=1`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "omit",
+        },
+      );
+      const text = await response.text();
+      if (!response.ok) {
+        if (response.status === 404 || response.status === 409) {
+          throw new Error("Recording is not available yet.");
+        }
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("You do not have access to this recording.");
+        }
+        throw new Error(extractErrorMessage(text) || "Could not download recording.");
+      }
+      const data = parseJsonSafe(text) as { url?: unknown } | null;
+      const url = typeof data?.url === "string" ? data.url.trim() : "";
+      if (!isUsableRecordingUrl(url)) throw new Error("Recording is not available yet.");
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) window.location.href = url;
+    } catch (error) {
+      setRecordingModal(null);
+      setActionNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not download recording.",
+      });
+    }
+  }, [recordingModal]);
 
   const downloadPdfForCandidate = useCallback((candidate: Candidate) => {
     void withCandidateAction(candidate, "pdf", async () => {
@@ -1960,27 +2008,20 @@ export default function CandidatesPage() {
               <div className="mt-4 flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setRecordingModal(null)}
-                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
                   onClick={() => window.open(recordingModal.url, "_blank", "noopener,noreferrer")}
                   className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
                 >
                   Open in new tab
                 </button>
-                <a
-                  href={recordingModal.url}
-                  download
+                <button
+                  type="button"
+                  onClick={() => { void downloadRecordingFromModal(); }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-full transition-all hover:opacity-90"
                   style={{ backgroundColor: "#A380F6" }}
                 >
                   <Download className="w-3.5 h-3.5" />
                   Download
-                </a>
+                </button>
               </div>
             </div>
           </div>
