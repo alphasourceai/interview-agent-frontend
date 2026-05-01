@@ -21,6 +21,17 @@ interface Candidate {
   status: string;
   reportDate: string;
   latestReportUrl: string | null;
+  latestInterviewId?: string | null;
+  recordingStatus?: string | null;
+  recordingReadyAt?: string | null;
+}
+
+interface RecordingModalState {
+  candidateName: string;
+  url: string;
+  expiresIn?: number | null;
+  recordingReadyAt?: string | null;
+  duration?: number | null;
 }
 
 type SortKey = "name" | "client" | "role" | "created" | "resume" | "interview" | "overall";
@@ -69,6 +80,12 @@ function extractErrorMessage(text: string): string {
       : null;
   if (typeof detail === "string" && detail.trim()) return detail;
   return text;
+}
+
+function isUsableRecordingUrl(value: unknown): boolean {
+  const url = String(value || "").trim();
+  if (!/^https?:\/\//i.test(url)) return false;
+  return !/(^https?:\/\/)?([a-z0-9-]+\.)?(tavus\.daily\.co|c\.daily\.co)(\/|\?|$)/i.test(url);
 }
 
 function toScore(value: unknown): number | null {
@@ -131,6 +148,19 @@ function formatDateTime(value: unknown): { text: string; ts: number } {
   return { text: parsed.toLocaleString(), ts: parsed.getTime() };
 }
 
+function formatRecordingDuration(value?: number | null): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "";
+  const totalSeconds = Math.max(0, Math.round(value));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes > 0 ? `${minutes}m ${String(seconds).padStart(2, "0")}s` : `${seconds}s`;
+}
+
+function formatRecordingReadyAt(value?: string | null): string {
+  const formatted = formatDateTime(value);
+  return formatted.ts ? formatted.text : "";
+}
+
 /* ── Score helpers ───────────────────────────────────────────── */
 function scoreColor(s: number | null) {
   if (s === null) return "rgba(10,21,71,0.25)";
@@ -169,7 +199,9 @@ export default function AdminCandidatesPage() {
   const [actionNotice, setActionNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [resumeBusy, setResumeBusy] = useState<Record<string, boolean>>({});
   const [reportBusy, setReportBusy] = useState<Record<string, boolean>>({});
+  const [recordingBusy, setRecordingBusy] = useState<Record<string, boolean>>({});
   const [deleteBusy, setDeleteBusy] = useState<Record<string, boolean>>({});
+  const [recordingModal, setRecordingModal] = useState<RecordingModalState | null>(null);
 
   const toggle = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
 
@@ -298,6 +330,71 @@ export default function AdminCandidatesPage() {
       });
     } finally {
       setReportBusy((prev) => ({ ...prev, [candidateId]: false }));
+    }
+  };
+
+  const openCandidateRecording = async (candidate: Candidate) => {
+    const candidateId = candidate.id;
+    const interviewId = String(candidate.latestInterviewId || "").trim();
+    if (!candidateId || recordingBusy[candidateId]) return;
+    if (!interviewId) {
+      setActionNotice({ tone: "error", text: "Recording is not available yet." });
+      return;
+    }
+    if (!backendBase) {
+      setActionNotice({ tone: "error", text: "Missing backend base URL configuration." });
+      return;
+    }
+    setActionNotice(null);
+    setRecordingBusy((prev) => ({ ...prev, [candidateId]: true }));
+    try {
+      const token = await getSessionToken();
+      const response = await fetch(
+        `${backendBase}/dashboard/interviews/${encodeURIComponent(interviewId)}/recording-url`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "omit",
+        },
+      );
+      const text = await response.text();
+      if (!response.ok) {
+        if (response.status === 404 || response.status === 409) {
+          throw new Error("Recording is not available yet.");
+        }
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("You do not have access to this recording.");
+        }
+        throw new Error(extractErrorMessage(text) || "Could not open recording.");
+      }
+      const payload = parseJsonSafe(text) as {
+        url?: unknown;
+        expires_in?: unknown;
+        recording_ready_at?: unknown;
+        duration?: unknown;
+      } | null;
+      const url = String(payload?.url || "").trim();
+      if (!isUsableRecordingUrl(url)) throw new Error("Recording is not available yet.");
+      const expiresIn = Number(payload?.expires_in);
+      const duration = Number(payload?.duration);
+      const recordingReadyAt =
+        typeof payload?.recording_ready_at === "string" && payload.recording_ready_at.trim()
+          ? payload.recording_ready_at.trim()
+          : candidate.recordingReadyAt || null;
+      setRecordingModal({
+        candidateName: String(candidate.name || "").trim() || "Candidate",
+        url,
+        expiresIn: Number.isFinite(expiresIn) ? expiresIn : null,
+        recordingReadyAt,
+        duration: Number.isFinite(duration) ? duration : null,
+      });
+    } catch (error) {
+      setActionNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not open recording.",
+      });
+    } finally {
+      setRecordingBusy((prev) => ({ ...prev, [candidateId]: false }));
     }
   };
 
@@ -464,6 +561,9 @@ export default function AdminCandidatesPage() {
               status: normalizedStatus,
               reportDate: reportGenerated.text,
               latestReportUrl: String(item.latest_report_url || "").trim() || null,
+              latestInterviewId: String(item.latest_interview_id || "").trim() || null,
+              recordingStatus: String(item.recording_status || "").trim() || null,
+              recordingReadyAt: String(item.recording_ready_at || "").trim() || null,
             };
           })
           .filter((item) => Boolean(item.id));
@@ -531,6 +631,18 @@ export default function AdminCandidatesPage() {
     if (av > bv) return sortDir === "asc" ? 1  : -1;
     return 0;
   });
+
+  const recordingDurationText = recordingModal ? formatRecordingDuration(recordingModal.duration) : "";
+  const recordingReadyAtText = recordingModal ? formatRecordingReadyAt(recordingModal.recordingReadyAt) : "";
+  const recordingMeta = recordingModal
+    ? [
+        recordingDurationText ? `Duration ${recordingDurationText}` : "",
+        recordingReadyAtText ? `Ready ${recordingReadyAtText}` : "",
+        typeof recordingModal.expiresIn === "number" && Number.isFinite(recordingModal.expiresIn)
+          ? `Link expires in ${Math.round(recordingModal.expiresIn)}s`
+          : "",
+      ].filter(Boolean).join(" · ")
+    : "";
 
   function SortIcon({ col }: { col: SortKey }) {
     if (sortKey !== col) return <ChevronDown className="w-3 h-3 text-[#0A1547]/20 ml-0.5 flex-shrink-0" />;
@@ -719,6 +831,18 @@ export default function AdminCandidatesPage() {
                       >
                         {reportBusy[c.id] === true ? "Opening..." : "Report"}
                       </button>
+                      {c.latestInterviewId && String(c.recordingStatus || "").toLowerCase() === "ready" && (
+                        <button
+                          disabled={recordingBusy[c.id] === true}
+                          className="px-3 py-1 rounded-full text-[11px] font-bold text-white transition-opacity hover:opacity-90"
+                          style={{ backgroundColor: "#A380F6" }}
+                          onClick={() => {
+                            void openCandidateRecording(c);
+                          }}
+                        >
+                          {recordingBusy[c.id] === true ? "Opening..." : "Recording"}
+                        </button>
+                      )}
                     </div>
 
                     {/* Delete */}
@@ -776,6 +900,70 @@ export default function AdminCandidatesPage() {
           )}
         </div>
       </div>
+      {recordingModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setRecordingModal(null)}
+            className="absolute inset-0 bg-[#0A1547]/45"
+            aria-label="Close recording"
+          />
+          <div
+            className="relative w-full max-w-3xl max-h-[85vh] bg-white rounded-2xl overflow-hidden"
+            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Interview Recording</p>
+                <h3 className="text-sm font-black text-[#0A1547] leading-snug">{recordingModal.candidateName}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecordingModal(null)}
+                className="px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/60 hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+            <div className="px-5 py-4 overflow-y-auto max-h-[calc(85vh-72px)]">
+              <video
+                controls
+                src={recordingModal.url}
+                className="w-full max-h-[58vh] rounded-xl bg-black"
+              >
+                Your browser does not support the video tag.
+              </video>
+              {recordingMeta && (
+                <p className="mt-3 text-[11px] font-semibold text-[#0A1547]/45">{recordingMeta}</p>
+              )}
+              <div className="mt-4 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRecordingModal(null)}
+                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(recordingModal.url, "_blank", "noopener,noreferrer")}
+                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                >
+                  Open in new tab
+                </button>
+                <a
+                  href={recordingModal.url}
+                  download
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-full transition-all hover:opacity-90"
+                  style={{ backgroundColor: "#A380F6" }}
+                >
+                  Download
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
