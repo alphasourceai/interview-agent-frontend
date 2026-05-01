@@ -988,7 +988,10 @@ export default function AdminCandidatesPage() {
               <div className="mt-4 flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => window.open(recordingModal.url, "_blank", "noopener,noreferrer")}
+                  onClick={() => {
+                    window.open(recordingModal.url, "_blank", "noopener,noreferrer");
+                    setRecordingModal(null);
+                  }}
                   className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
                 >
                   Open in new tab
