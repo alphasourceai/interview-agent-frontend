@@ -1105,6 +1105,7 @@ export default function CandidatesPage() {
   const [candidatesError, setCandidatesError] = useState("");
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
+  const [actionNotice, setActionNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [transcriptModal, setTranscriptModal] = useState<{ candidateName: string; transcript: string } | null>(null);
   const [transcriptModalNotice, setTranscriptModalNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [recordingModal, setRecordingModal] = useState<RecordingModalState | null>(null);
@@ -1211,11 +1212,16 @@ export default function CandidatesPage() {
       delete next[candidateKey];
       return next;
     });
+    if (action === "recording") setActionNotice(null);
     try {
       await runner();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Action failed.";
-      setActionErrors((prev) => ({ ...prev, [candidateKey]: message }));
+      if (action === "recording") {
+        setActionNotice({ tone: "error", text: message });
+      } else {
+        setActionErrors((prev) => ({ ...prev, [candidateKey]: message }));
+      }
     } finally {
       setActionLoading((prev) => ({ ...prev, [loadingKey]: false }));
     }
@@ -1502,6 +1508,12 @@ export default function CandidatesPage() {
     setTranscriptModalNotice(null);
   }, [transcriptModal]);
 
+  useEffect(() => {
+    if (!actionNotice) return;
+    const timer = setTimeout(() => setActionNotice(null), 3200);
+    return () => clearTimeout(timer);
+  }, [actionNotice]);
+
   /* Filter */
   const filteredByControls = candidates.filter((c) => {
     if (selectedRoleId !== "all" && c.roleId !== selectedRoleId) {
@@ -1668,6 +1680,20 @@ export default function CandidatesPage() {
           </button>
         </div>
       </div>
+
+      {actionNotice && (
+        <div
+          className={`mb-5 rounded-xl px-3.5 py-2 text-xs font-semibold ${
+            actionNotice.tone === "success"
+              ? "text-[#009E73] bg-[#02D99D]/10 border border-[#02D99D]/25"
+              : "text-red-500 bg-red-50 border border-red-200"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {actionNotice.text}
+        </div>
+      )}
 
       {/* ── Table ─────────────────────────────────── */}
       <div
