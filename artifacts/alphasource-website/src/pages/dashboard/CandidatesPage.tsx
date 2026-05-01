@@ -76,6 +76,14 @@ interface Candidate {
   createdSort?: number;
 }
 
+interface RecordingModalState {
+  candidateName: string;
+  url: string;
+  expiresIn?: number | null;
+  recordingReadyAt?: string | null;
+  duration?: number | null;
+}
+
 interface ClientRoleOption {
   id: string;
   title: string;
@@ -186,6 +194,22 @@ function downloadTranscriptText(candidateName: string, transcript: string): void
   link.click();
   link.remove();
   window.URL.revokeObjectURL(objectUrl);
+}
+
+function formatRecordingDuration(value?: number | null): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "";
+  const totalSeconds = Math.max(0, Math.round(value));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes > 0 ? `${minutes}m ${String(seconds).padStart(2, "0")}s` : `${seconds}s`;
+}
+
+function formatRecordingReadyAt(value?: string | null): string {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const timestamp = Date.parse(text);
+  if (!Number.isFinite(timestamp)) return "";
+  return new Date(timestamp).toLocaleString();
 }
 
 function toScoreOrNull(value: unknown): number | null {
@@ -346,7 +370,7 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
     : `candidate-${index + 1}`;
   const candidateId = String(candidate.id || "").trim();
   const roleId = String(role.id || "").trim();
-  const interviewId = String(item.id || "").trim();
+  const interviewId = String(item.latest_interview_id || item.interview_id || "").trim();
   const hasTranscript = Boolean(item.has_transcript) || Boolean(String(item.transcript_url || "").trim());
   const transcriptText = typeof item.transcript === "string" ? item.transcript.trim() : "";
   const videoUrl = typeof item.video_url === "string" ? item.video_url.trim() : "";
@@ -751,11 +775,10 @@ function ExpandedPanel({
   const openingPdf = Boolean(actionLoading[`${String(c.id)}:pdf`]);
   const transcriptDisabled = openingTranscript || !c.transcriptText;
   const recordingAvailable =
-    c.hasVideo === true &&
     hasInterview &&
+    Boolean(c.interviewId) &&
     c.reliabilityState !== "not_applicable" &&
-    !c.insufficientInterview &&
-    isUsableRecordingUrl(c.videoUrl);
+    !c.insufficientInterview;
   const resumeDisabled = openingResume || !c.candidateId;
   const pdfDisabled = openingPdf || (!c.candidateId && !c.interviewId);
   const advancedAnalysis = hasInterview ? c.interviewAnalysisV2 : null;
@@ -1084,6 +1107,7 @@ export default function CandidatesPage() {
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
   const [transcriptModal, setTranscriptModal] = useState<{ candidateName: string; transcript: string } | null>(null);
   const [transcriptModalNotice, setTranscriptModalNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [recordingModal, setRecordingModal] = useState<RecordingModalState | null>(null);
   const minScoreInputRef                = useRef<HTMLInputElement>(null);
 
   const minScoreNum = minScore === "" ? null : parseInt(minScore, 10);
@@ -1238,10 +1262,61 @@ export default function CandidatesPage() {
 
   const openRecordingForCandidate = useCallback((candidate: Candidate) => {
     void withCandidateAction(candidate, "recording", async () => {
-      if (!isUsableRecordingUrl(candidate.videoUrl)) {
+      const interviewId = String(candidate.interviewId || "").trim();
+      if (!interviewId) {
         throw new Error("Recording is not available yet.");
       }
-      window.open(String(candidate.videoUrl || "").trim(), "_blank", "noopener,noreferrer");
+      if (!backendBase) throw new Error("Missing backend base URL configuration.");
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = String(session?.access_token || "").trim();
+      if (!token) throw new Error("Missing session token.");
+
+      const response = await fetch(
+        `${backendBase}/dashboard/interviews/${encodeURIComponent(interviewId)}/recording-url`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "omit",
+        },
+      );
+      const text = await response.text();
+      if (!response.ok) {
+        if (response.status === 404 || response.status === 409) {
+          throw new Error("Recording is not available yet.");
+        }
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("You do not have access to this recording.");
+        }
+        throw new Error(extractErrorMessage(text) || "Could not open recording.");
+      }
+
+      const data = parseJsonSafe(text) as {
+        url?: unknown;
+        expires_in?: unknown;
+        recording_ready_at?: unknown;
+        duration?: unknown;
+      } | null;
+      const url = typeof data?.url === "string" ? data.url.trim() : "";
+      if (!isUsableRecordingUrl(url)) {
+        throw new Error("Recording is not available yet.");
+      }
+      const expiresIn = Number(data?.expires_in);
+      const duration = Number(data?.duration);
+      const recordingReadyAt =
+        typeof data?.recording_ready_at === "string" && data.recording_ready_at.trim()
+          ? data.recording_ready_at.trim()
+          : null;
+
+      setRecordingModal({
+        candidateName: String(candidate.name || "").trim() || "Candidate",
+        url,
+        expiresIn: Number.isFinite(expiresIn) ? expiresIn : null,
+        recordingReadyAt,
+        duration: Number.isFinite(duration) ? duration : null,
+      });
     });
   }, [withCandidateAction]);
 
@@ -1469,6 +1544,18 @@ export default function CandidatesPage() {
         return sortDir === "asc" ? cmp : -cmp;
       })
     : filtered;
+
+  const recordingDurationText = recordingModal ? formatRecordingDuration(recordingModal.duration) : "";
+  const recordingReadyAtText = recordingModal ? formatRecordingReadyAt(recordingModal.recordingReadyAt) : "";
+  const recordingMeta = recordingModal
+    ? [
+        recordingDurationText ? `Duration ${recordingDurationText}` : "",
+        recordingReadyAtText ? `Ready ${recordingReadyAtText}` : "",
+        typeof recordingModal.expiresIn === "number" && Number.isFinite(recordingModal.expiresIn)
+          ? `Link expires in ${Math.round(recordingModal.expiresIn)}s`
+          : "",
+      ].filter(Boolean).join(" · ")
+    : "";
 
   /* Column header button helper */
   const Th = ({
@@ -1799,6 +1886,75 @@ export default function CandidatesPage() {
                   <FileDown className="w-3.5 h-3.5" />
                   Download Transcript
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {recordingModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setRecordingModal(null)}
+            className="absolute inset-0 bg-[#0A1547]/45"
+            aria-label="Close recording"
+          />
+          <div
+            className="relative w-full max-w-3xl max-h-[85vh] bg-white rounded-2xl overflow-hidden"
+            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Interview Recording</p>
+                <h3 className="text-sm font-black text-[#0A1547] leading-snug">{recordingModal.candidateName}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecordingModal(null)}
+                className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-[#0A1547]/40 hover:text-[#0A1547] hover:bg-gray-100 transition-colors"
+                aria-label="Close recording"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-5 py-4 overflow-y-auto max-h-[calc(85vh-72px)]">
+              <video
+                controls
+                src={recordingModal.url}
+                className="w-full max-h-[58vh] rounded-xl bg-black"
+              >
+                Your browser does not support the video tag.
+              </video>
+              {recordingMeta && (
+                <p className="mt-3 text-[11px] font-semibold text-[#0A1547]/45">{recordingMeta}</p>
+              )}
+              <p className="mt-2 text-[11px] font-semibold text-[#0A1547]/45">
+                If the link expires, close this window and click Recording again.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRecordingModal(null)}
+                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(recordingModal.url, "_blank", "noopener,noreferrer")}
+                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                >
+                  Open in new tab
+                </button>
+                <a
+                  href={recordingModal.url}
+                  download
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white rounded-full transition-all hover:opacity-90"
+                  style={{ backgroundColor: "#A380F6" }}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download
+                </a>
               </div>
             </div>
           </div>
