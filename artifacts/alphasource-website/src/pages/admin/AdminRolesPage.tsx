@@ -1056,11 +1056,18 @@ export default function AdminRolesPage() {
               </h3>
             </div>
             <div className="px-6 py-5">
-              <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
-                {roleStatusConfirm.nextStatus === "inactive"
-                  ? `Close "${roleStatusConfirm.role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, and interviews will remain viewable. Recordings associated with this role will remain available for 14 days after closure, then will be permanently deleted if the role remains inactive.`
-                  : `Reopen "${roleStatusConfirm.role.name}" and allow new candidates/interviews?`}
-              </p>
+              {roleStatusConfirm.nextStatus === "inactive" ? (
+                <div className="space-y-3 text-sm leading-6 text-[#0A1547]/70 font-medium">
+                  <p>{`Close "${roleStatusConfirm.role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, and interviews will remain viewable.`}</p>
+                  <p>
+                    Recordings associated with this role will remain available for <span className="font-bold">14 days</span> after closure, then will be <span className="font-bold">permanently deleted</span> if the role remains inactive.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
+                  {`Reopen "${roleStatusConfirm.role.name}" and allow new candidates/interviews?`}
+                </p>
+              )}
             </div>
             <div className="px-6 py-4 bg-gray-50/70 border-t border-gray-100 flex items-center justify-end gap-2">
               <button
