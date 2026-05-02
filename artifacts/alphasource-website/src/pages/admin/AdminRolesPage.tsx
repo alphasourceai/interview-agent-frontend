@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 type RoleType = "Basic" | "Detailed" | "Technical";
 type SortKey  = "name" | "created" | "type";
 type SortDir  = "asc" | "desc";
+type RoleStatusFilter = "active" | "inactive" | "all";
 
 interface Role {
   id: string;
@@ -25,6 +26,11 @@ interface Role {
   purchasedInterviews: number | null;
   usedInterviews: number | null;
   remainingInterviews: number | null;
+  status?: string | null;
+  closedAt?: string | null;
+  closedBy?: string | null;
+  inactiveReason?: string | null;
+  isInactive?: boolean;
 }
 
 const env =
@@ -176,13 +182,16 @@ export default function AdminRolesPage() {
   const [rolesLoading, setRolesLoading] = useState<boolean>(false);
   const [rolesError, setRolesError] = useState<string>("");
   const [roleSearch, setRoleSearch] = useState("");
+  const [roleStatusFilter, setRoleStatusFilter] = useState<RoleStatusFilter>("active");
   const [actionNotice, setActionNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [openingJd, setOpeningJd] = useState<Record<string, boolean>>({});
   const [loadingRubric, setLoadingRubric] = useState<Record<string, boolean>>({});
   const [deletingRoles, setDeletingRoles] = useState<Record<string, boolean>>({});
+  const [updatingRoleStatus, setUpdatingRoleStatus] = useState<Record<string, boolean>>({});
   const [creatingRole, setCreatingRole] = useState<boolean>(false);
   const [jdFile, setJdFile] = useState<File | null>(null);
   const [rubricModal, setRubricModal] = useState<{ roleName: string; questions: string[] } | null>(null);
+  const [roleStatusConfirm, setRoleStatusConfirm] = useState<{ role: Role; nextStatus: "active" | "inactive" } | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [form, setForm] = useState({ title: "", type: "Basic", jdFileName: "" });
 
@@ -204,6 +213,7 @@ export default function AdminRolesPage() {
 
   useEffect(() => {
     setRoleSearch("");
+    setRoleStatusConfirm(null);
   }, [selectedClientId]);
 
   const getSessionToken = async (): Promise<string> => {
@@ -247,9 +257,10 @@ export default function AdminRolesPage() {
         if (!token) throw new Error("Missing session token.");
 
         const isAllClients = selectedClientId === "all";
+        const statusParam = `status=${encodeURIComponent(roleStatusFilter)}`;
         const url = isAllClients
-          ? `${backendBase}/admin/roles`
-          : `${backendBase}/admin/roles?client_id=${encodeURIComponent(selectedClientId)}`;
+          ? `${backendBase}/admin/roles?${statusParam}`
+          : `${backendBase}/admin/roles?client_id=${encodeURIComponent(selectedClientId)}&${statusParam}`;
 
         const response = await fetch(url, {
           method: "GET",
@@ -272,6 +283,7 @@ export default function AdminRolesPage() {
             const roleClientId = String(item.client_id || "").trim();
             const created = formatRoleCreated(item.created_at);
             const rubricQuestions = extractRubricQuestions(item.rubric);
+            const status = String(item.status || "active").trim().toLowerCase() || "active";
             return {
               id: roleId,
               clientId: roleClientId,
@@ -288,6 +300,11 @@ export default function AdminRolesPage() {
               purchasedInterviews: toWholeNonNegative(item.purchased_interviews),
               usedInterviews: toWholeNonNegative(item.used_interviews),
               remainingInterviews: toWholeNonNegative(item.remaining_interviews),
+              status,
+              closedAt: String(item.closed_at || "").trim() || null,
+              closedBy: String(item.closed_by || "").trim() || null,
+              inactiveReason: String(item.inactive_reason || "").trim() || null,
+              isInactive: status === "inactive",
             };
           })
           .filter((item) => Boolean(item.id));
@@ -307,7 +324,7 @@ export default function AdminRolesPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, adminClientsLoading, adminClientsError, clientNameById, refreshNonce]);
+  }, [selectedClientId, adminClientsLoading, adminClientsError, clientNameById, roleStatusFilter, refreshNonce]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -375,6 +392,10 @@ export default function AdminRolesPage() {
   };
 
   const handleCopy = async (role: Role) => {
+    if (role.isInactive) {
+      setActionNotice({ tone: "error", text: "Inactive roles cannot accept new candidates." });
+      return;
+    }
     const token = String(role.token || "").trim();
     if (!token) {
       setActionNotice({ tone: "error", text: "Missing role token." });
@@ -625,6 +646,53 @@ export default function AdminRolesPage() {
     }
   };
 
+  const updateRoleStatus = async (role: Role, nextStatus: "active" | "inactive") => {
+    if (!role.id || updatingRoleStatus[role.id]) return;
+    if (!backendBase) {
+      setActionNotice({ tone: "error", text: "Missing backend base URL configuration." });
+      return;
+    }
+
+    const clientId = String(role.clientId || "").trim() || String(selectedClientId || "").trim();
+    if (!clientId || clientId === "all") {
+      setActionNotice({ tone: "error", text: "Select a client to perform this action." });
+      return;
+    }
+
+    setActionNotice(null);
+    setUpdatingRoleStatus((prev) => ({ ...prev, [role.id]: true }));
+    try {
+      const token = await getSessionToken();
+      const response = await fetch(`${backendBase}/admin/roles/${encodeURIComponent(role.id)}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "omit",
+        body: JSON.stringify(
+          nextStatus === "inactive"
+            ? { status: "inactive", client_id: clientId, inactive_reason: "Closed by admin" }
+            : { status: "active", client_id: clientId },
+        ),
+      });
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text) || "Could not update role.");
+      setActionNotice({
+        tone: "success",
+        text: nextStatus === "inactive" ? "Role closed." : "Role reopened.",
+      });
+      setRefreshNonce((value) => value + 1);
+    } catch (error) {
+      setActionNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not update role.",
+      });
+    } finally {
+      setUpdatingRoleStatus((prev) => ({ ...prev, [role.id]: false }));
+    }
+  };
+
   function SortIcon({ col }: { col: SortKey }) {
     if (sortKey !== col) return <ChevronDown className="w-3 h-3 text-[#0A1547]/20 ml-0.5 flex-shrink-0" />;
     return sortDir === "asc"
@@ -725,6 +793,25 @@ export default function AdminRolesPage() {
           value={roleSearch}
           onChange={(e) => setRoleSearch(e.target.value)}
         />
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Status</span>
+          <div className="inline-flex items-center rounded-full bg-[#0A1547]/5 p-1">
+            {(["active", "inactive", "all"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setRoleStatusFilter(value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                  roleStatusFilter === value
+                    ? "bg-white text-[#0A1547] shadow-sm"
+                    : "text-[#0A1547]/45 hover:text-[#0A1547]/70"
+                }`}
+              >
+                {value === "active" ? "Active" : value === "inactive" ? "Inactive" : "All"}
+              </button>
+            ))}
+          </div>
+        </div>
         {roleSearch && (
           <button
             type="button"
@@ -748,8 +835,8 @@ export default function AdminRolesPage() {
         <div
           className={`grid items-center px-5 py-3 border-b border-gray-100 ${
             showClient
-              ? "grid-cols-[minmax(160px,1fr)_110px_120px_90px_110px_120px_56px_56px_110px_48px]"
-              : "grid-cols-[minmax(180px,1fr)_120px_90px_110px_120px_56px_56px_110px_48px]"
+              ? "grid-cols-[minmax(160px,1fr)_110px_120px_90px_110px_120px_56px_56px_110px_112px]"
+              : "grid-cols-[minmax(180px,1fr)_120px_90px_110px_120px_56px_56px_110px_112px]"
           }`}
         >
           <button
@@ -778,7 +865,7 @@ export default function AdminRolesPage() {
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Rubric</p>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">JD</p>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Link</p>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Delete</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Actions</p>
         </div>
 
         {/* Rows */}
@@ -800,15 +887,23 @@ export default function AdminRolesPage() {
                   key={role.id}
                   className={`grid items-center px-5 py-3.5 hover:bg-gray-50/60 transition-colors ${
                     showClient
-                      ? "grid-cols-[minmax(160px,1fr)_110px_120px_90px_110px_120px_56px_56px_110px_48px]"
-                      : "grid-cols-[minmax(180px,1fr)_120px_90px_110px_120px_56px_56px_110px_48px]"
+                      ? "grid-cols-[minmax(160px,1fr)_110px_120px_90px_110px_120px_56px_56px_110px_112px]"
+                      : "grid-cols-[minmax(180px,1fr)_120px_90px_110px_120px_56px_56px_110px_112px]"
                   }`}
                 >
                   {/* Name + token */}
                   <div className="min-w-0 pr-3">
-                    <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">{role.name}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">{role.name}</p>
+                      {role.isInactive && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-[#0A1547]/7 text-[#0A1547]/45">
+                          Inactive
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-[#0A1547]/30 mt-0.5 font-mono truncate">
                       Token: {role.token}
+                      {role.isInactive && role.inactiveReason ? ` • ${role.inactiveReason}` : ""}
                     </p>
                   </div>
 
@@ -876,18 +971,35 @@ export default function AdminRolesPage() {
 
                   {/* Copy link */}
                   <button
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white transition-all hover:opacity-90 active:scale-95 w-fit"
-                    style={{ backgroundColor: isCopied ? "#02D99D" : "#A380F6" }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 w-fit"
+                    style={{
+                      backgroundColor: role.isInactive ? "rgba(10,21,71,0.06)" : isCopied ? "#02D99D" : "#A380F6",
+                      color: role.isInactive ? "rgba(10,21,71,0.38)" : "#FFFFFF",
+                    }}
                     onClick={() => {
                       void handleCopy(role);
                     }}
+                    disabled={role.isInactive}
+                    title={role.isInactive ? "Inactive roles cannot accept new candidates." : undefined}
                   >
                     <Copy className="w-3 h-3" />
                     {isCopied ? "Copied!" : "Copy link"}
                   </button>
 
-                  {/* Delete */}
-                  <div className="flex justify-center">
+                  {/* Actions */}
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRoleStatusConfirm({ role, nextStatus: role.isInactive ? "active" : "inactive" })}
+                      disabled={updatingRoleStatus[role.id] === true}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                        role.isInactive
+                          ? "text-[#009E73] bg-[#02D99D]/10 hover:bg-[#02D99D]/15"
+                          : "text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10"
+                      }`}
+                    >
+                      {role.isInactive ? "Reopen" : "Close"}
+                    </button>
                     <button
                       onClick={() => {
                         void deleteRole(role);
@@ -907,12 +1019,68 @@ export default function AdminRolesPage() {
           {!rolesLoading && !rolesError && sorted.length === 0 && (
             <div className="py-12 text-center">
               <p className="text-sm text-[#0A1547]/35 font-semibold">
-                {roleSearchTerm && filteredByClient.length > 0 ? "No roles match your search." : "No roles found for this client."}
+                {roleSearchTerm && filteredByClient.length > 0
+                  ? "No roles match your search."
+                  : roleStatusFilter === "inactive"
+                    ? "No inactive roles."
+                    : roleStatusFilter === "active"
+                      ? "No active roles."
+                      : "No roles found for this client."}
               </p>
             </div>
           )}
         </div>
       </div>
+      {roleStatusConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setRoleStatusConfirm(null)}
+            className="absolute inset-0 bg-[#0A1547]/45"
+            aria-label="Cancel role status change"
+          />
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white border border-[rgba(10,21,71,0.10)] shadow-[0_24px_70px_rgba(10,21,71,0.24)] overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-role-status-confirm-title"
+          >
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h3 id="admin-role-status-confirm-title" className="text-base font-black text-[#0A1547]">
+                {roleStatusConfirm.nextStatus === "inactive" ? "Close role" : "Reopen role"}
+              </h3>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
+                {roleStatusConfirm.nextStatus === "inactive"
+                  ? `Close "${roleStatusConfirm.role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, interviews, and recordings will remain viewable.`
+                  : `Reopen "${roleStatusConfirm.role.name}" and allow new candidates/interviews?`}
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50/70 border-t border-gray-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRoleStatusConfirm(null)}
+                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-white border border-[rgba(10,21,71,0.10)] hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void updateRoleStatus(roleStatusConfirm.role, roleStatusConfirm.nextStatus);
+                  setRoleStatusConfirm(null);
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90 ${
+                  roleStatusConfirm.nextStatus === "inactive" ? "bg-[#0A1547]" : "bg-[#A380F6]"
+                }`}
+              >
+                {roleStatusConfirm.nextStatus === "inactive" ? "Close Role" : "Reopen Role"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {rubricModal && (
         <div className="fixed inset-0 z-40 bg-black/35 backdrop-blur-[1px] flex items-center justify-center p-4">
           <div className="w-full max-w-2xl bg-white rounded-2xl border border-[rgba(10,21,71,0.10)] shadow-[0_20px_60px_rgba(10,21,71,0.22)] overflow-hidden">
