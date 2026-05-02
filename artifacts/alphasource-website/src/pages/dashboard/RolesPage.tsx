@@ -1272,6 +1272,11 @@ export default function RolesPage() {
                       {role.date}
                       {role.isInactive && role.inactiveReason ? ` • ${role.inactiveReason}` : ""}
                     </p>
+                    {role.isInactive && (
+                      <p className="text-[11px] text-[#0A1547]/35 mt-0.5">
+                        Recordings expire 14 days after role closure.
+                      </p>
+                    )}
                   </td>
 
                   {/* Type */}
@@ -1378,7 +1383,7 @@ export default function RolesPage() {
             <div className="px-6 py-5">
               <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
                 {roleStatusConfirm.nextStatus === "inactive"
-                  ? `Close "${roleStatusConfirm.role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, interviews, and recordings will remain viewable.`
+                  ? `Close "${roleStatusConfirm.role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, and interviews will remain viewable. Recordings associated with this role will remain available for 14 days after closure, then will be permanently deleted if the role remains inactive.`
                   : `Reopen "${roleStatusConfirm.role.name}" and allow new candidates/interviews?`}
               </p>
             </div>

@@ -905,6 +905,11 @@ export default function AdminRolesPage() {
                       Token: {role.token}
                       {role.isInactive && role.inactiveReason ? ` • ${role.inactiveReason}` : ""}
                     </p>
+                    {role.isInactive && (
+                      <p className="text-[10px] text-[#0A1547]/35 mt-0.5 truncate">
+                        Recordings expire 14 days after role closure.
+                      </p>
+                    )}
                   </div>
 
                   {/* Client (all-clients view only) */}
@@ -1053,7 +1058,7 @@ export default function AdminRolesPage() {
             <div className="px-6 py-5">
               <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
                 {roleStatusConfirm.nextStatus === "inactive"
-                  ? `Close "${roleStatusConfirm.role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, interviews, and recordings will remain viewable.`
+                  ? `Close "${roleStatusConfirm.role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, and interviews will remain viewable. Recordings associated with this role will remain available for 14 days after closure, then will be permanently deleted if the role remains inactive.`
                   : `Reopen "${roleStatusConfirm.role.name}" and allow new candidates/interviews?`}
               </p>
             </div>
