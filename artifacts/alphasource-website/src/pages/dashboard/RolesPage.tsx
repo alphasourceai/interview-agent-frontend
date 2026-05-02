@@ -1111,21 +1111,24 @@ export default function RolesPage() {
           value={roleSearch}
           onChange={(e) => setRoleSearch(e.target.value)}
         />
-        <div className="inline-flex items-center rounded-full bg-[#0A1547]/5 p-1">
-          {(["active", "inactive", "all"] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setRoleStatusFilter(value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                roleStatusFilter === value
-                  ? "bg-white text-[#0A1547] shadow-sm"
-                  : "text-[#0A1547]/45 hover:text-[#0A1547]/70"
-              }`}
-            >
-              {value === "active" ? "Active" : value === "inactive" ? "Inactive" : "All"}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Status</span>
+          <div className="inline-flex items-center rounded-full bg-[#0A1547]/5 p-1">
+            {(["active", "inactive", "all"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setRoleStatusFilter(value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                  roleStatusFilter === value
+                    ? "bg-white text-[#0A1547] shadow-sm"
+                    : "text-[#0A1547]/45 hover:text-[#0A1547]/70"
+                }`}
+              >
+                {value === "active" ? "Active" : value === "inactive" ? "Inactive" : "All"}
+              </button>
+            ))}
+          </div>
         </div>
         {roleSearch && (
           <button
