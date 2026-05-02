@@ -340,6 +340,7 @@ export default function RolesPage() {
   const [openingJd, setOpeningJd] = useState<Record<string, boolean>>({});
   const [deletingRoles, setDeletingRoles] = useState<Record<string, boolean>>({});
   const [updatingRoleStatus, setUpdatingRoleStatus] = useState<Record<string, boolean>>({});
+  const [roleStatusConfirm, setRoleStatusConfirm] = useState<{ role: Role; nextStatus: "active" | "inactive" } | null>(null);
   const [rubricModalRole, setRubricModalRole] = useState<Role | null>(null);
   const [rubricQuestions, setRubricQuestions] = useState<string[]>([]);
   const [rubricNotes, setRubricNotes] = useState("");
@@ -359,6 +360,7 @@ export default function RolesPage() {
     setOpeningJd({});
     setDeletingRoles({});
     setUpdatingRoleStatus({});
+    setRoleStatusConfirm(null);
     setRubricModalRole(null);
     setRubricQuestions([]);
     setRubricNotes("");
@@ -939,12 +941,6 @@ export default function RolesPage() {
       });
       return;
     }
-    const confirmed = window.confirm(
-      nextStatus === "inactive"
-        ? `Close "${role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, interviews, and recordings will remain viewable.`
-        : `Reopen "${role.name}" and allow new candidates/interviews?`,
-    );
-    if (!confirmed) return;
     setActionNotice(null);
     setUpdatingRoleStatus((prev) => ({ ...prev, [role.id]: true }));
     try {
@@ -1328,7 +1324,7 @@ export default function RolesPage() {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           type="button"
-                          onClick={() => { void updateRoleStatus(role, role.isInactive ? "active" : "inactive"); }}
+                          onClick={() => setRoleStatusConfirm({ role, nextStatus: role.isInactive ? "active" : "inactive" })}
                           disabled={Boolean(updatingRoleStatus[role.id])}
                           className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                             role.isInactive
@@ -1357,6 +1353,56 @@ export default function RolesPage() {
           </table>
         </div>
       </div>
+      {roleStatusConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setRoleStatusConfirm(null)}
+            className="absolute inset-0 bg-[#0A1547]/45"
+            aria-label="Cancel role status change"
+          />
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white border border-[rgba(10,21,71,0.10)] shadow-[0_24px_70px_rgba(10,21,71,0.24)] overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="role-status-confirm-title"
+          >
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h3 id="role-status-confirm-title" className="text-base font-black text-[#0A1547]">
+                {roleStatusConfirm.nextStatus === "inactive" ? "Close role" : "Reopen role"}
+              </h3>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
+                {roleStatusConfirm.nextStatus === "inactive"
+                  ? `Close "${roleStatusConfirm.role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, interviews, and recordings will remain viewable.`
+                  : `Reopen "${roleStatusConfirm.role.name}" and allow new candidates/interviews?`}
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50/70 border-t border-gray-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRoleStatusConfirm(null)}
+                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-white border border-[rgba(10,21,71,0.10)] hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void updateRoleStatus(roleStatusConfirm.role, roleStatusConfirm.nextStatus);
+                  setRoleStatusConfirm(null);
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-bold text-white transition-opacity hover:opacity-90 ${
+                  roleStatusConfirm.nextStatus === "inactive" ? "bg-[#0A1547]" : "bg-[#A380F6]"
+                }`}
+              >
+                {roleStatusConfirm.nextStatus === "inactive" ? "Close Role" : "Reopen Role"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {rubricModalRole && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
           <button
