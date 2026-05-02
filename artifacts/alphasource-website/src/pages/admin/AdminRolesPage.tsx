@@ -192,6 +192,7 @@ export default function AdminRolesPage() {
   const [jdFile, setJdFile] = useState<File | null>(null);
   const [rubricModal, setRubricModal] = useState<{ roleName: string; questions: string[] } | null>(null);
   const [roleStatusConfirm, setRoleStatusConfirm] = useState<{ role: Role; nextStatus: "active" | "inactive" } | null>(null);
+  const [roleDeleteConfirm, setRoleDeleteConfirm] = useState<{ role: Role } | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [form, setForm] = useState({ title: "", type: "Basic", jdFileName: "" });
 
@@ -214,6 +215,7 @@ export default function AdminRolesPage() {
   useEffect(() => {
     setRoleSearch("");
     setRoleStatusConfirm(null);
+    setRoleDeleteConfirm(null);
   }, [selectedClientId]);
 
   const getSessionToken = async (): Promise<string> => {
@@ -602,8 +604,6 @@ export default function AdminRolesPage() {
       setActionNotice({ tone: "error", text: "Select a client to perform this action." });
       return;
     }
-    if (!window.confirm(`Delete role "${role.name}"? This cannot be undone.`)) return;
-
     setActionNotice(null);
     setDeletingRoles((prev) => ({ ...prev, [role.id]: true }));
     try {
@@ -1002,7 +1002,7 @@ export default function AdminRolesPage() {
                     </button>
                     <button
                       onClick={() => {
-                        void deleteRole(role);
+                        setRoleDeleteConfirm({ role });
                       }}
                       disabled={deletingRoles[role.id] === true}
                       className="p-1.5 rounded-lg text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-all"
@@ -1076,6 +1076,52 @@ export default function AdminRolesPage() {
                 }`}
               >
                 {roleStatusConfirm.nextStatus === "inactive" ? "Close Role" : "Reopen Role"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {roleDeleteConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setRoleDeleteConfirm(null)}
+            className="absolute inset-0 bg-[#0A1547]/45"
+            aria-label="Cancel role delete"
+          />
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white border border-[rgba(10,21,71,0.10)] shadow-[0_24px_70px_rgba(10,21,71,0.24)] overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-role-delete-confirm-title"
+          >
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h3 id="admin-role-delete-confirm-title" className="text-base font-black text-[#0A1547]">
+                Delete role
+              </h3>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
+                {`Delete "${roleDeleteConfirm.role.name}"? This permanently removes the role. Existing related records may no longer be connected to this role in the same way. Use Close instead if you only want to stop accepting new candidates.`}
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50/70 border-t border-gray-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRoleDeleteConfirm(null)}
+                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-white border border-[rgba(10,21,71,0.10)] hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void deleteRole(roleDeleteConfirm.role);
+                  setRoleDeleteConfirm(null);
+                }}
+                className="px-4 py-2 rounded-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+              >
+                Delete Role
               </button>
             </div>
           </div>

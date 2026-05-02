@@ -341,6 +341,7 @@ export default function RolesPage() {
   const [deletingRoles, setDeletingRoles] = useState<Record<string, boolean>>({});
   const [updatingRoleStatus, setUpdatingRoleStatus] = useState<Record<string, boolean>>({});
   const [roleStatusConfirm, setRoleStatusConfirm] = useState<{ role: Role; nextStatus: "active" | "inactive" } | null>(null);
+  const [roleDeleteConfirm, setRoleDeleteConfirm] = useState<{ role: Role } | null>(null);
   const [rubricModalRole, setRubricModalRole] = useState<Role | null>(null);
   const [rubricQuestions, setRubricQuestions] = useState<string[]>([]);
   const [rubricNotes, setRubricNotes] = useState("");
@@ -361,6 +362,7 @@ export default function RolesPage() {
     setDeletingRoles({});
     setUpdatingRoleStatus({});
     setRoleStatusConfirm(null);
+    setRoleDeleteConfirm(null);
     setRubricModalRole(null);
     setRubricQuestions([]);
     setRubricNotes("");
@@ -884,8 +886,6 @@ export default function RolesPage() {
       });
       return;
     }
-    const confirmed = window.confirm(`Delete role "${role.name}"?`);
-    if (!confirmed) return;
     setActionNotice(null);
     setDeletingRoles((prev) => ({ ...prev, [role.id]: true }));
     try {
@@ -1340,7 +1340,7 @@ export default function RolesPage() {
 
                       <button
                         type="button"
-                        onClick={() => { void deleteRole(role); }}
+                        onClick={() => setRoleDeleteConfirm({ role })}
                         disabled={Boolean(deletingRoles[role.id])}
                         className="p-2 rounded-lg text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         aria-label="Delete role"
@@ -1401,6 +1401,52 @@ export default function RolesPage() {
                 }`}
               >
                 {roleStatusConfirm.nextStatus === "inactive" ? "Close Role" : "Reopen Role"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {roleDeleteConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setRoleDeleteConfirm(null)}
+            className="absolute inset-0 bg-[#0A1547]/45"
+            aria-label="Cancel role delete"
+          />
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white border border-[rgba(10,21,71,0.10)] shadow-[0_24px_70px_rgba(10,21,71,0.24)] overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="role-delete-confirm-title"
+          >
+            <div className="px-6 py-5 border-b border-gray-100">
+              <h3 id="role-delete-confirm-title" className="text-base font-black text-[#0A1547]">
+                Delete role
+              </h3>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
+                {`Delete "${roleDeleteConfirm.role.name}"? This permanently removes the role. Existing related records may no longer be connected to this role in the same way. Use Close instead if you only want to stop accepting new candidates.`}
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50/70 border-t border-gray-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRoleDeleteConfirm(null)}
+                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-white border border-[rgba(10,21,71,0.10)] hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void deleteRole(roleDeleteConfirm.role);
+                  setRoleDeleteConfirm(null);
+                }}
+                className="px-4 py-2 rounded-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+              >
+                Delete Role
               </button>
             </div>
           </div>
