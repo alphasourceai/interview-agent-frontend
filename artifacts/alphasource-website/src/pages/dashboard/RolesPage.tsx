@@ -17,6 +17,7 @@ import { supabase } from "@/lib/supabaseClient";
 type InterviewType = "Basic" | "Detailed" | "Technical";
 type RoleSortKey = "name" | "type" | "left" | "used" | "date";
 type SortDir = "asc" | "desc";
+type RoleStatusFilter = "active" | "inactive" | "all";
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return <ChevronsUpDown className="w-3 h-3 text-[#0A1547]/20 flex-shrink-0" />;
@@ -38,6 +39,11 @@ interface Role {
   slugOrToken: string;
   rubric: unknown;
   jobDescriptionUrl: string;
+  status?: string | null;
+  closedAt?: string | null;
+  closedBy?: string | null;
+  inactiveReason?: string | null;
+  isInactive?: boolean;
 }
 
 interface RoleCheckoutResponse {
@@ -324,6 +330,7 @@ export default function RolesPage() {
   const [sortKey, setSortKey] = useState<RoleSortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [roleSearch, setRoleSearch] = useState("");
+  const [roleStatusFilter, setRoleStatusFilter] = useState<RoleStatusFilter>("active");
   const [roles, setRoles] = useState<Role[]>([]);
   const [rolesLoading, setRolesLoading] = useState(false);
   const [rolesError, setRolesError] = useState("");
@@ -332,6 +339,7 @@ export default function RolesPage() {
   const [createBusy, setCreateBusy] = useState(false);
   const [openingJd, setOpeningJd] = useState<Record<string, boolean>>({});
   const [deletingRoles, setDeletingRoles] = useState<Record<string, boolean>>({});
+  const [updatingRoleStatus, setUpdatingRoleStatus] = useState<Record<string, boolean>>({});
   const [rubricModalRole, setRubricModalRole] = useState<Role | null>(null);
   const [rubricQuestions, setRubricQuestions] = useState<string[]>([]);
   const [rubricNotes, setRubricNotes] = useState("");
@@ -350,6 +358,7 @@ export default function RolesPage() {
     setCreateBusy(false);
     setOpeningJd({});
     setDeletingRoles({});
+    setUpdatingRoleStatus({});
     setRubricModalRole(null);
     setRubricQuestions([]);
     setRubricNotes("");
@@ -684,7 +693,7 @@ export default function RolesPage() {
         if (!token) throw new Error("Missing session token.");
 
         const response = await fetch(
-          `${backendBase}/roles?client_id=${encodeURIComponent(selectedClientId)}`,
+          `${backendBase}/roles?client_id=${encodeURIComponent(selectedClientId)}&status=${encodeURIComponent(roleStatusFilter)}`,
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -715,6 +724,7 @@ export default function RolesPage() {
             const rubric = item.rubric ?? null;
             const questions = extractRubricQuestions(rubric);
             const jobDescriptionUrl = String(item.job_description_url || "").trim();
+            const status = String(item.status || "active").trim().toLowerCase() || "active";
             return {
               id: String(item.id || ""),
               name: String(item.title || "").trim() || "Untitled Role",
@@ -728,6 +738,11 @@ export default function RolesPage() {
               slugOrToken: String(item.slug_or_token || "").trim(),
               rubric,
               jobDescriptionUrl,
+              status,
+              closedAt: String(item.closed_at || "").trim() || null,
+              closedBy: String(item.closed_by || "").trim() || null,
+              inactiveReason: String(item.inactive_reason || "").trim() || null,
+              isInactive: status === "inactive",
             };
           })
           .filter((item) => Boolean(item.id));
@@ -747,7 +762,7 @@ export default function RolesPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError, rolesReloadNonce]);
+  }, [selectedClientId, clientLoading, clientError, roleStatusFilter, rolesReloadNonce]);
 
   const getSessionToken = async (): Promise<string> => {
     const {
@@ -808,6 +823,7 @@ export default function RolesPage() {
   const copyInterviewLink = async (role: Role) => {
     setActionNotice(null);
     try {
+      if (role.isInactive) throw new Error("Inactive roles cannot accept new candidates.");
       const url = buildInterviewShareUrl(role.slugOrToken);
       if (!url) throw new Error("Interview link unavailable for this role.");
       await copyTextToClipboard(url);
@@ -911,6 +927,59 @@ export default function RolesPage() {
       });
     } finally {
       setDeletingRoles((prev) => ({ ...prev, [role.id]: false }));
+    }
+  };
+
+  const updateRoleStatus = async (role: Role, nextStatus: "active" | "inactive") => {
+    if (!role.id || !selectedClientId || updatingRoleStatus[role.id]) return;
+    if (!canManageRoles) {
+      setActionNotice({
+        tone: "error",
+        text: "Role updates are not available in this dashboard.",
+      });
+      return;
+    }
+    const confirmed = window.confirm(
+      nextStatus === "inactive"
+        ? `Close "${role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, interviews, and recordings will remain viewable.`
+        : `Reopen "${role.name}" and allow new candidates/interviews?`,
+    );
+    if (!confirmed) return;
+    setActionNotice(null);
+    setUpdatingRoleStatus((prev) => ({ ...prev, [role.id]: true }));
+    try {
+      if (!backendBase) throw new Error("Missing backend base URL configuration.");
+      const token = await getSessionToken();
+      const response = await fetch(
+        `${backendBase}/roles/${encodeURIComponent(role.id)}/status?client_id=${encodeURIComponent(selectedClientId)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: "omit",
+          body: JSON.stringify(
+            nextStatus === "inactive"
+              ? { status: "inactive", inactive_reason: "Closed by client" }
+              : { status: "active" },
+          ),
+        },
+      );
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text) || "Could not update role.");
+      setRolesReloadNonce((value) => value + 1);
+      setActionNotice({
+        tone: "success",
+        text: nextStatus === "inactive" ? "Role closed." : "Role reopened.",
+      });
+    } catch (error) {
+      setActionNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not update role.",
+      });
+    } finally {
+      setUpdatingRoleStatus((prev) => ({ ...prev, [role.id]: false }));
     }
   };
 
@@ -1046,6 +1115,22 @@ export default function RolesPage() {
           value={roleSearch}
           onChange={(e) => setRoleSearch(e.target.value)}
         />
+        <div className="inline-flex items-center rounded-full bg-[#0A1547]/5 p-1">
+          {(["active", "inactive", "all"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setRoleStatusFilter(value)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                roleStatusFilter === value
+                  ? "bg-white text-[#0A1547] shadow-sm"
+                  : "text-[#0A1547]/45 hover:text-[#0A1547]/70"
+              }`}
+            >
+              {value === "active" ? "Active" : value === "inactive" ? "Inactive" : "All"}
+            </button>
+          ))}
+        </div>
         {roleSearch && (
           <button
             type="button"
@@ -1139,7 +1224,7 @@ export default function RolesPage() {
                 {/* Delete */}
                 {canManageRoles && (
                   <th className="text-center px-4 py-3.5 pr-6 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 whitespace-nowrap">
-                    Delete
+                    Actions
                   </th>
                 )}
               </tr>
@@ -1162,7 +1247,9 @@ export default function RolesPage() {
               {!rolesLoading && !rolesError && sortedRoles.length === 0 && (
                 <tr>
                   <td colSpan={roleTableColumnCount} className="px-6 py-12 text-center text-sm text-[#0A1547]/35 font-semibold">
-                    {roles.length === 0 ? "No roles yet." : "No roles match your search."}
+                    {roles.length === 0
+                      ? roleStatusFilter === "inactive" ? "No inactive roles." : roleStatusFilter === "active" ? "No active roles." : "No roles yet."
+                      : "No roles match your search."}
                   </td>
                 </tr>
               )}
@@ -1174,8 +1261,18 @@ export default function RolesPage() {
                 >
                   {/* Role name + date */}
                   <td className="px-6 py-4">
-                    <p className="font-bold text-[#0A1547] text-sm leading-snug">{role.name}</p>
-                    <p className="text-[11px] text-[#0A1547]/35 mt-0.5">{role.date}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-bold text-[#0A1547] text-sm leading-snug">{role.name}</p>
+                      {role.isInactive && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-[#0A1547]/7 text-[#0A1547]/45">
+                          Inactive
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#0A1547]/35 mt-0.5">
+                      {role.date}
+                      {role.isInactive && role.inactiveReason ? ` • ${role.inactiveReason}` : ""}
+                    </p>
                   </td>
 
                   {/* Type */}
@@ -1212,9 +1309,13 @@ export default function RolesPage() {
                     <button
                       type="button"
                       onClick={() => { void copyInterviewLink(role); }}
-                      disabled={!role.slugOrToken}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-85 active:scale-[0.97]"
-                      style={{ backgroundColor: "rgba(163,128,246,0.12)", color: "#7C5FCC" }}
+                      disabled={!role.slugOrToken || role.isInactive}
+                      title={role.isInactive ? "Inactive roles cannot accept new candidates." : undefined}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-85 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                      style={{
+                        backgroundColor: role.isInactive ? "rgba(10,21,71,0.06)" : "rgba(163,128,246,0.12)",
+                        color: role.isInactive ? "rgba(10,21,71,0.38)" : "#7C5FCC"
+                      }}
                     >
                       <Copy className="w-3 h-3" />
                       Copy link
@@ -1223,7 +1324,21 @@ export default function RolesPage() {
 
                   {/* Delete */}
                   {canManageRoles && (
-                    <td className="px-4 py-4 pr-6 text-center">
+                    <td className="px-4 py-4 pr-6">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { void updateRoleStatus(role, role.isInactive ? "active" : "inactive"); }}
+                          disabled={Boolean(updatingRoleStatus[role.id])}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                            role.isInactive
+                              ? "text-[#009E73] bg-[#02D99D]/10 hover:bg-[#02D99D]/15"
+                              : "text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10"
+                          }`}
+                        >
+                          {role.isInactive ? "Reopen" : "Close"}
+                        </button>
+
                       <button
                         type="button"
                         onClick={() => { void deleteRole(role); }}
@@ -1233,6 +1348,7 @@ export default function RolesPage() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
+                      </div>
                     </td>
                   )}
                 </tr>
