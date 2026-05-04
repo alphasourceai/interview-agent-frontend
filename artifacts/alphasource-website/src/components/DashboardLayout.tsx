@@ -7,6 +7,7 @@ import {
   Users,
   UserCheck,
   CreditCard,
+  HelpCircle,
   LogOut,
   Menu,
   X,
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { label: "Candidates", href: "/dashboard/candidates", icon: Users           },
   { label: "Members",    href: "/dashboard/members",    icon: UserCheck       },
   { label: "Billing",    href: "/dashboard/billing",    icon: CreditCard      },
+  { label: "FAQ",        href: "/dashboard/faq",        icon: HelpCircle      },
 ];
 
 /* ── Tour steps ──────────────────────────────────────────────── */

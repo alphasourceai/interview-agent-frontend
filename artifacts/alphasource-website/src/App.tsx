@@ -13,6 +13,7 @@ import Footer from "@/components/Footer";
 import HomePage from "@/pages/HomePage";
 import AlphaScreenPage from "@/pages/AlphaScreenPage";
 import AboutPage from "@/pages/AboutPage";
+import PublicFaqPage from "@/pages/FaqPage";
 import TermsPage from "@/pages/TermsPage";
 import CandidateTermsPage from "@/pages/CandidateTermsPage";
 import InterviewPage from "@/pages/InterviewPage";
@@ -28,6 +29,7 @@ import RolesPage from "@/pages/dashboard/RolesPage";
 import CandidatesPage from "@/pages/dashboard/CandidatesPage";
 import MembersPage from "@/pages/dashboard/MembersPage";
 import BillingPage from "@/pages/dashboard/BillingPage";
+import DashboardFaqPage from "@/pages/dashboard/FaqPage";
 
 /* Admin dashboard */
 import AdminOverviewPage from "@/pages/admin/AdminOverviewPage";
@@ -297,6 +299,7 @@ function DashboardGuard() {
           <Route path="/dashboard/candidates" component={CandidatesPage} />
           <Route path="/dashboard/members"    component={MembersPage} />
           <Route path="/dashboard/billing"    component={BillingPage} />
+          <Route path="/dashboard/faq"        component={DashboardFaqPage} />
           <Route component={NotFound} />
         </Switch>
       </ClientProvider>
@@ -417,6 +420,7 @@ function Router() {
           <Route path="/"            component={HomePage} />
           <Route path="/alphascreen" component={AlphaScreenPage} />
           <Route path="/about"       component={AboutPage} />
+          <Route path="/faq"         component={PublicFaqPage} />
           <Route path="/terms"       component={TermsPage} />
           <Route component={NotFound} />
         </Switch>

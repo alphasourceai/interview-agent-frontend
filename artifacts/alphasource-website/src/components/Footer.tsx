@@ -124,6 +124,7 @@ export default function Footer() {
                 { label: "Home",         href: "/" },
                 { label: "About Us",     href: "/about" },
                 { label: "alphaScreen",  href: "/alphascreen" },
+                { label: "FAQ",          href: "/faq" },
                 { label: "How It Works", href: "/#how-it-works" },
               ].map((link) => (
                 <li key={link.label}>
