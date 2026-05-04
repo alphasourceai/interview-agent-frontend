@@ -71,7 +71,7 @@ function HeroSection() {
               variants={fadeUp}
               className="text-lg text-[#0A1547]/60 leading-relaxed mb-3 max-w-lg"
             >
-              AI-powered solutions that amplify human talent.
+              Custom AI tools that give your team hours back.
             </motion.p>
 
             <motion.p
@@ -81,7 +81,7 @@ function HeroSection() {
               variants={fadeUp}
               className="text-base text-[#0A1547]/50 leading-relaxed mb-8 max-w-lg"
             >
-              We don't replace judgment. We enhance it. Give your team hours back to focus on what matters most.
+              AI-powered solutions that amplify human talent. We don't replace judgment. We enhance it.
             </motion.p>
 
             <motion.div
@@ -118,9 +118,9 @@ function HeroSection() {
               className="flex flex-col gap-3 border-t border-[#0A1547]/8 pt-8"
             >
               {[
-                { Icon: Clock, label: "Reclaim Your Time", sub: "Hours back per week", color: "#A380F6" },
-                { Icon: Scale, label: "Unbiased, Every Time", sub: "Consistent structured evaluation", color: "#02ABE0" },
-                { Icon: Target, label: "Precision Candidate Fit", sub: "Role-specific criteria, every role", color: "#02D99D" },
+                { Icon: Clock, label: "Reclaim Your Time", sub: "Hours back for higher-value work", color: "#A380F6" },
+                { Icon: Scale, label: "Consistent Support", sub: "Repeatable workflows and clearer handoffs", color: "#02ABE0" },
+                { Icon: Target, label: "Clearer Insight", sub: "Organized signal for better decisions", color: "#02D99D" },
               ].map(({ Icon, label, sub, color }) => (
                 <div key={label} className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${color}14` }}>
@@ -161,7 +161,7 @@ function HeroSection() {
                     <div className="w-3 h-3 rounded-full bg-[#28C840]" />
                   </div>
                   <div className="flex-1 text-center">
-                    <span className="text-xs font-semibold text-gray-400">alphaScreen Agent Panel</span>
+                    <span className="text-xs font-semibold text-gray-400">alphaSource AI Workflow Panel</span>
                   </div>
                 </div>
 
@@ -173,23 +173,23 @@ function HeroSection() {
                       <img src="/alpha-symbol.png" alt="alpha" className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-[#0A1547]">AI Interview Agent</div>
-                      <div className="text-xs text-gray-400 mt-0.5">Evaluating candidates now.</div>
+                      <div className="text-sm font-bold text-[#0A1547]">Custom AI Agent</div>
+                      <div className="text-xs text-gray-400 mt-0.5">Organizing work into insight.</div>
                     </div>
                   </div>
 
                   {/* Active evaluations */}
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Active Evaluations</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#02D99D18", color: "#02D99D" }}>Optimal</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Active Workflows</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#02D99D18", color: "#02D99D" }}>Insight Ready</span>
                   </div>
 
                   <div className="space-y-2">
                     {[
-                      { label: "Candidate Screening", pct: 78, from: "#A380F6", to: "#c8a8f8", icon: (
+                      { label: "Workflow Analysis", pct: 78, from: "#A380F6", to: "#c8a8f8", icon: (
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A380F6" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                       )},
-                      { label: "Fit Analysis", pct: 91, from: "#02ABE0", to: "#02D99D", icon: (
+                      { label: "Operational Signal", pct: 91, from: "#02ABE0", to: "#02D99D", icon: (
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#02ABE0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                       )},
                     ].map((row, i) => (
@@ -226,9 +226,9 @@ function HeroSection() {
                       <span className="text-[10px] font-bold font-mono tracking-wide" style={{ color: "#02D99D" }}>System Logs</span>
                     </div>
                     {[
-                      { text: "> Analyzing resume content...", color: "rgba(255,255,255,0.5)", delay: 1.0 },
-                      { text: "> 94% match confidence detected.", color: "#02D99D", delay: 1.2 },
-                      { text: "> Initiating recommendation report.", color: "rgba(255,255,255,0.5)", delay: 1.4 },
+                      { text: "> Mapping workflow context...", color: "rgba(255,255,255,0.5)", delay: 1.0 },
+                      { text: "> Decision support ready.", color: "#02D99D", delay: 1.2 },
+                      { text: "> Organizing next-step insight.", color: "rgba(255,255,255,0.5)", delay: 1.4 },
                     ].map((line) => (
                       <motion.div
                         key={line.text}
@@ -262,8 +262,8 @@ function HeroSection() {
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#A380F6" }} />
                 </div>
                 <div>
-                  <div className="text-[9px] uppercase tracking-widest font-bold text-gray-400">Match Score</div>
-                  <div className="text-sm font-black text-[#0A1547]">94.3% Fit</div>
+                  <div className="text-[9px] uppercase tracking-widest font-bold text-gray-400">Insight Status</div>
+                  <div className="text-sm font-black text-[#0A1547]">Ready to Review</div>
                 </div>
               </motion.div>
             </motion.div>
@@ -281,7 +281,7 @@ function HeroSection() {
                 className="bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-2 border border-gray-100"
               >
                 <div className="w-2 h-2 rounded-full bg-[#02D99D] animate-pulse flex-shrink-0" />
-                <span className="text-sm font-bold text-[#0A1547]">Interviews Active</span>
+                <span className="text-sm font-bold text-[#0A1547]">Workflows Active</span>
               </motion.div>
             </motion.div>
           </motion.div>
@@ -312,10 +312,10 @@ function PeopleDrivenSection() {
               We're obsessed with people. Their grit, their gifts, what they're capable of when nobody's wasting their time.
             </p>
             <p className="text-base text-[#0A1547]/60 leading-relaxed mb-4">
-              AI takes on the repetitive work so recruiters, coaches, and leaders can do what actually matters. Find the right fit. Develop raw talent. Give overlooked candidates a real shot.
+              Every company has work that eats time, hides insight, or slows good people down. From automated candidate screening to operational analysis and custom AI workflows, alphaSource creates technology that fits your team, your process, and your goals.
             </p>
             <p className="text-base font-semibold text-[#0A1547] leading-relaxed">
-              Fair shots and lasting impact aren't features. They're the point.
+              We're here to make work feel human again.
             </p>
           </motion.div>
 
@@ -330,26 +330,26 @@ function PeopleDrivenSection() {
               {[
                 {
                   Icon: Target,
-                  title: "Find the Right Fit",
-                  description: "Surface candidates who align with your role and culture — not just keywords on a page.",
+                  title: "Custom AI Solutions",
+                  description: "Practical tools built around the workflows your team already runs.",
                   color: "#A380F6",
                 },
                 {
                   Icon: Sprout,
-                  title: "Develop Raw Talent",
-                  description: "Give overlooked candidates the chance to show what they're truly capable of.",
+                  title: "alphaScreen",
+                  description: "Structured AI interview support for teams that need clearer candidate signal.",
                   color: "#02D99D",
                 },
                 {
                   Icon: Clock,
-                  title: "Reclaim Your Time",
-                  description: "AI handles the screening grind so your team can focus on relationships and decisions.",
+                  title: "AI-Powered Analysis",
+                  description: "Turn documents, conversations, and operating data into usable insight.",
                   color: "#02ABE0",
                 },
                 {
                   Icon: Scale,
-                  title: "Fair for Everyone",
-                  description: "Every candidate gets the same interview. Consistent, unbiased, and respectful.",
+                  title: "Consulting + Implementation",
+                  description: "Hands-on help connecting AI to the way your business actually works.",
                   color: "#A380F6",
                 },
               ].map((card, i) => (
@@ -486,7 +486,7 @@ function AlphaScreenFeatureSection() {
               Meet alphaScreen
             </h2>
             <p className="text-lg text-[#0A1547]/60 leading-relaxed mb-6">
-              A subscription-based AI interview agent that lets you create job roles and conduct automated screening interviews with AI avatars.
+              alphaScreen is our AI-powered interview and candidate evaluation product for teams that need a clearer, more consistent screening process.
             </p>
 
             <div className="space-y-3 mb-7">
@@ -530,26 +530,26 @@ function HowItWorksSection() {
   const steps = [
     {
       number: "01",
-      title: "Create Your Role",
-      description: "Set up the job role in alphaScreen — configure criteria so the AI knows exactly what to look for.",
+      title: "Map the Workflow",
+      description: "Identify the repeated work, decision points, and context your team relies on.",
       color: "#A380F6",
     },
     {
       number: "02",
-      title: "Candidates Self-Interview",
-      description: "Applicants complete an AI avatar interview on their own schedule, day or night, from any device.",
+      title: "Build the AI Tool",
+      description: "Create a practical workflow, agent, or analysis layer around your actual process.",
       color: "#02ABE0",
     },
     {
       number: "03",
-      title: "AI Evaluates Comprehensively",
-      description: "alphaScreen analyzes resumes, interview content, and non-verbal cues to give you a complete picture of every applicant.",
+      title: "Organize the Signal",
+      description: "Turn scattered information into clear summaries, patterns, and next-step support.",
       color: "#02D99D",
     },
     {
       number: "04",
-      title: "You Focus on People",
-      description: "Review clear candidate summaries and spend your energy on the conversations that actually lead to great hires.",
+      title: "Your Team Decides",
+      description: "Keep people in control while AI handles the repetitive lift.",
       color: "#A380F6",
     },
   ];
@@ -568,7 +568,7 @@ function HowItWorksSection() {
             How It Works
           </div>
           <h2 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight">
-            From Application to Insight,
+            From Manual Work to Usable Insight,
             <br />
             <span style={{ color: "#A380F6" }}>Without the Grind</span>
           </h2>
@@ -621,10 +621,10 @@ function AboutSnippetSection() {
               Born from a Shared Frustration with Wasted Time
             </h2>
             <p className="text-white/70 leading-relaxed mb-4">
-              Founded by hands-on leaders with decades in dental operations, alphaSource was born from a shared frustration with wasted time.
+              Founded by hands-on leaders with decades in operations, alphaSource was born from a shared frustration with wasted time.
             </p>
             <p className="text-white/70 leading-relaxed mb-4">
-              We build AI tools and deliver consulting that give leaders their hours back. Spot talent. Develop people. Sharpen strategy.
+              We build AI tools and deliver consulting that give leaders their hours back. Uncover insight. Improve decisions. Sharpen strategy.
             </p>
             <p className="text-white font-semibold leading-relaxed mb-8">
               Create lasting impact. We're here to make work feel human again.
@@ -656,10 +656,10 @@ function AboutSnippetSection() {
                 ))}
               </div>
               <blockquote className="text-xl text-white font-medium leading-relaxed mb-6 italic">
-                "alphaSource cut our screening time in half and uncovered candidates we'd have missed — people with real spark. They overdeliver every time."
+                Your talent. Our tech. Practical AI built around the real work your team does and the decisions people still need to make.
               </blockquote>
               <div className="border-t border-white/10 pt-5">
-                <div className="text-sm font-semibold text-white/80">alphaSource Client</div>
+                <div className="text-sm font-semibold text-white/80">AlphaSource AI</div>
               </div>
             </div>
           </motion.div>
@@ -700,17 +700,17 @@ function CTASection() {
           >
             <div>
               <h2 className="text-3xl font-black text-white leading-tight mb-4">
-                Want to See It in Action?
+                Want to See What AI Could Take Off Your Plate?
               </h2>
               <p className="text-white/60 text-sm leading-relaxed mb-8">
-                Drop your details and we'll be in touch to schedule a personalized demo.
+                Tell us where work is slowing your team down. We'll help identify the practical AI workflow or product that fits.
               </p>
               <div className="space-y-3">
                 {[
-                  "Personalized demo at your convenience",
-                  "See alphaScreen evaluate real candidates",
+                  "Talk through your current workflow",
+                  "Explore custom AI tools and implementation support",
+                  "See alphaScreen if hiring is your priority",
                   "No commitment required",
-                  "Backed by real-world experience",
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-3">
                     <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: "#02D99D" }} />
