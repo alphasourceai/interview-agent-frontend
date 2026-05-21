@@ -25,6 +25,35 @@ const faqSections = [
     ],
   },
   {
+    title: "Parent clients and entities",
+    items: [
+      {
+        question: "What is a parent client?",
+        answer: "The parent client is the main account for your organization. Billing, membership agreements, subscriptions, legal billing details, and plan settings are managed at the parent client level.",
+      },
+      {
+        question: "What are child entities?",
+        answer: "Child entities are operational scopes under the parent client, such as offices, locations, branches, companies, employers, or contractors. They help your team organize roles, candidates, interviews, and reports by the part of the organization doing the hiring.",
+      },
+      {
+        question: "Who can see or manage entities?",
+        answer: "Super Admins can see the parent client and its child entities. Managers and Members see only the scopes assigned to them. Super Admins can add child entities and edit child entity names and labels from the Entities page.",
+      },
+      {
+        question: "Where do roles, candidates, interviews, and reports belong?",
+        answer: "Roles, candidates, interviews, and reports belong to the selected client or entity scope. Use the client selector to choose the parent client or child entity before managing roles or reviewing candidates.",
+      },
+      {
+        question: "Can I delete or archive an entity?",
+        answer: "No. Entity delete and archive actions are not available yet. If an entity was created by mistake or needs to be removed, contact alphaSource support.",
+      },
+      {
+        question: "How do team members get access to entities?",
+        answer: "Use the Members page to assign Managers or Members to the parent client or specific child entities. Entity management is handled on the Entities page, but member assignment is handled separately on the Members page.",
+      },
+    ],
+  },
+  {
     title: "Roles",
     items: [
       {
