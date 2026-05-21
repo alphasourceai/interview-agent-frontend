@@ -14,6 +14,16 @@ interface ClientEntity {
   is_child_client?: boolean;
 }
 
+const STANDARD_ENTITY_LABELS = [
+  { label: "Office", value: "office" },
+  { label: "Location", value: "location" },
+  { label: "Branch", value: "branch" },
+  { label: "Company", value: "company" },
+  { label: "Employer", value: "employer" },
+  { label: "Contractor", value: "contractor" },
+] as const;
+const CUSTOM_ENTITY_LABEL = "custom";
+
 const env =
   typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
 
@@ -89,6 +99,30 @@ function sortEntities(items: ClientEntity[]): ClientEntity[] {
   return [...items].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function normalizeEntityLabel(value: unknown): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isStandardEntityLabel(value: unknown): boolean {
+  const normalized = normalizeEntityLabel(value);
+  return STANDARD_ENTITY_LABELS.some((option) => option.value === normalized);
+}
+
+function entityLabelChoice(value: unknown): string {
+  const normalized = normalizeEntityLabel(value);
+  if (!normalized) return "office";
+  return isStandardEntityLabel(normalized) ? normalized : CUSTOM_ENTITY_LABEL;
+}
+
+function entityCustomLabel(value: unknown): string {
+  const normalized = String(value || "").trim();
+  return normalized && !isStandardEntityLabel(normalized) ? normalized : "";
+}
+
+function resolvedEntityLabel(choice: string, customValue: string): string {
+  return choice === CUSTOM_ENTITY_LABEL ? customValue.trim() : choice;
+}
+
 export default function EntitiesPage() {
   const {
     selectedClient,
@@ -106,11 +140,13 @@ export default function EntitiesPage() {
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [editingId, setEditingId] = useState("");
   const [editName, setEditName] = useState("");
-  const [editEntityLabel, setEditEntityLabel] = useState("");
+  const [editEntityLabelChoice, setEditEntityLabelChoice] = useState("office");
+  const [editCustomEntityLabel, setEditCustomEntityLabel] = useState("");
   const [savingId, setSavingId] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
-  const [createEntityLabel, setCreateEntityLabel] = useState("");
+  const [createEntityLabelChoice, setCreateEntityLabelChoice] = useState("office");
+  const [createCustomEntityLabel, setCreateCustomEntityLabel] = useState("");
   const [createNotice, setCreateNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [creatingEntity, setCreatingEntity] = useState(false);
 
@@ -205,20 +241,23 @@ export default function EntitiesPage() {
     setNotice(null);
     setEditingId(entity.id);
     setEditName(entity.name);
-    setEditEntityLabel(entity.entity_label || "");
+    setEditEntityLabelChoice(entityLabelChoice(entity.entity_label));
+    setEditCustomEntityLabel(entityCustomLabel(entity.entity_label));
   };
 
   const cancelEdit = () => {
     setEditingId("");
     setEditName("");
-    setEditEntityLabel("");
+    setEditEntityLabelChoice("office");
+    setEditCustomEntityLabel("");
   };
 
   const openCreate = () => {
     setNotice(null);
     setCreateNotice(null);
     setCreateName("");
-    setCreateEntityLabel("");
+    setCreateEntityLabelChoice("office");
+    setCreateCustomEntityLabel("");
     setCreateOpen(true);
   };
 
@@ -227,13 +266,19 @@ export default function EntitiesPage() {
     setCreateOpen(false);
     setCreateNotice(null);
     setCreateName("");
-    setCreateEntityLabel("");
+    setCreateEntityLabelChoice("office");
+    setCreateCustomEntityLabel("");
   };
 
   const createEntity = async () => {
     const name = createName.trim();
     if (!name) {
       setCreateNotice({ tone: "error", text: "Entity name is required." });
+      return;
+    }
+    const entityLabel = resolvedEntityLabel(createEntityLabelChoice, createCustomEntityLabel);
+    if (createEntityLabelChoice === CUSTOM_ENTITY_LABEL && !entityLabel) {
+      setCreateNotice({ tone: "error", text: "Custom entity label is required." });
       return;
     }
     if (!selectedClientId) {
@@ -265,7 +310,7 @@ export default function EntitiesPage() {
         body: JSON.stringify({
           client_id: selectedClientId,
           name,
-          entity_label: createEntityLabel.trim() || null,
+          entity_label: entityLabel,
         }),
       });
 
@@ -295,6 +340,11 @@ export default function EntitiesPage() {
       setNotice({ tone: "error", text: "Entity name is required." });
       return;
     }
+    const entityLabel = resolvedEntityLabel(editEntityLabelChoice, editCustomEntityLabel);
+    if (editEntityLabelChoice === CUSTOM_ENTITY_LABEL && !entityLabel) {
+      setNotice({ tone: "error", text: "Custom entity label is required." });
+      return;
+    }
     if (!backendBase) {
       setNotice({ tone: "error", text: "Missing backend base URL configuration." });
       return;
@@ -319,7 +369,7 @@ export default function EntitiesPage() {
         credentials: "omit",
         body: JSON.stringify({
           name,
-          entity_label: editEntityLabel.trim() || null,
+          entity_label: entityLabel,
         }),
       });
 
@@ -465,13 +515,32 @@ export default function EntitiesPage() {
                                   <label className="block text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 mb-1.5">
                                     Entity label
                                   </label>
-                                  <input
-                                    value={editEntityLabel}
-                                    onChange={(event) => setEditEntityLabel(event.target.value)}
+                                  <select
+                                    value={editEntityLabelChoice}
+                                    onChange={(event) => {
+                                      setNotice(null);
+                                      setEditEntityLabelChoice(event.target.value);
+                                    }}
                                     disabled={saving}
-                                    placeholder="office, location, entity"
-                                    className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] placeholder:text-[#0A1547]/30 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
-                                  />
+                                    className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                  >
+                                    {STANDARD_ENTITY_LABELS.map((option) => (
+                                      <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                    <option value={CUSTOM_ENTITY_LABEL}>Custom</option>
+                                  </select>
+                                  {editEntityLabelChoice === CUSTOM_ENTITY_LABEL && (
+                                    <input
+                                      value={editCustomEntityLabel}
+                                      onChange={(event) => {
+                                        setNotice(null);
+                                        setEditCustomEntityLabel(event.target.value);
+                                      }}
+                                      disabled={saving}
+                                      placeholder="Custom label"
+                                      className="mt-2 w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] placeholder:text-[#0A1547]/30 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                    />
+                                  )}
                                 </div>
                               </div>
                               <div className="flex justify-end gap-2">
@@ -592,16 +661,32 @@ export default function EntitiesPage() {
                 <label className="block text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 mb-1.5">
                   Entity label
                 </label>
-                <input
-                  value={createEntityLabel}
+                <select
+                  value={createEntityLabelChoice}
                   onChange={(event) => {
                     setCreateNotice(null);
-                    setCreateEntityLabel(event.target.value);
+                    setCreateEntityLabelChoice(event.target.value);
                   }}
                   disabled={creatingEntity}
-                  placeholder="office, location, department"
-                  className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] placeholder:text-[#0A1547]/30 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
-                />
+                  className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                >
+                  {STANDARD_ENTITY_LABELS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                  <option value={CUSTOM_ENTITY_LABEL}>Custom</option>
+                </select>
+                {createEntityLabelChoice === CUSTOM_ENTITY_LABEL && (
+                  <input
+                    value={createCustomEntityLabel}
+                    onChange={(event) => {
+                      setCreateNotice(null);
+                      setCreateCustomEntityLabel(event.target.value);
+                    }}
+                    disabled={creatingEntity}
+                    placeholder="Custom label"
+                    className="mt-2 w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] placeholder:text-[#0A1547]/30 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                  />
+                )}
               </div>
             </div>
 
