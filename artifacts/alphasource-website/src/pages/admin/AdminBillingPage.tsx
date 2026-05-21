@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Trash2, Plus, ChevronDown, RefreshCw, X } from "lucide-react";
+import { Trash2, Plus, ChevronDown, RefreshCw, Search, X } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import AdminLayout from "@/components/AdminLayout";
-import { useAdminClient } from "@/context/AdminClientContext";
+import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -237,6 +237,28 @@ function formatAmountFromCents(cents: unknown, currency: unknown): string {
   }
 }
 
+function isChildClient(client: Pick<AdminClient, "is_child_client" | "parent_client_id"> | null | undefined): boolean {
+  return Boolean(client?.is_child_client === true || String(client?.parent_client_id || "").trim());
+}
+
+function isParentClient(client: AdminClient): boolean {
+  return client.id !== "all" && !isChildClient(client);
+}
+
+function billingClientLabel(client: AdminClient): string {
+  const childCount = typeof client.child_count === "number" && client.child_count > 0 ? client.child_count : 0;
+  return childCount ? `Parent client · ${childCount} ${childCount === 1 ? "entity" : "entities"}` : "Parent client";
+}
+
+function billingClientSearchText(client: AdminClient): string {
+  return [
+    client.name,
+    billingClientLabel(client),
+    "parent client",
+    typeof client.child_count === "number" && client.child_count > 0 ? `${client.child_count} entities` : "",
+  ].join(" ").toLowerCase();
+}
+
 /* ── Helpers ─────────────────────────────────────────────────── */
 const inputCls =
   "w-full px-3 py-2.5 rounded-xl text-sm text-[#0A1547] font-medium bg-white " +
@@ -248,8 +270,85 @@ const fieldLabelCls = "px-1 text-[10px] font-black uppercase tracking-widest tex
 const fieldErrorCls = "px-1 text-[11px] font-semibold text-red-500";
 const REQUIRED_MARK = " *";
 const AGREEMENT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PARENT_ONLY_BILLING_NOTICE =
+  "Legal billing workflows are available on parent clients only. Select the parent client to continue.";
 
 let _lineId = 10;
+
+function BillingClientSelector({
+  options,
+  value,
+  onChange,
+  placeholder,
+  emptyText,
+}: {
+  options: AdminClient[];
+  value: string;
+  onChange: (clientId: string) => void;
+  placeholder: string;
+  emptyText: string;
+}) {
+  const [searchText, setSearchText] = useState("");
+  const selected = options.find((client) => client.id === value) || null;
+  const searchTerm = searchText.trim().toLowerCase();
+  const filteredOptions = searchTerm
+    ? options.filter((client) => billingClientSearchText(client).includes(searchTerm))
+    : options;
+
+  return (
+    <div className="space-y-2">
+      {selected ? (
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-[rgba(10,21,71,0.08)] bg-[#F8F9FD] px-3 py-2">
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-[#0A1547]">{selected.name}</span>
+            <span className="block truncate text-[10px] font-semibold text-[#0A1547]/40">{billingClientLabel(selected)}</span>
+          </span>
+          <button
+            type="button"
+            className="flex-shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold text-[#0A1547]/45 hover:bg-white hover:text-[#0A1547]/70"
+            onClick={() => onChange("")}
+          >
+            Clear
+          </button>
+        </div>
+      ) : null}
+      <div className="flex items-center gap-2 rounded-xl border border-[rgba(10,21,71,0.10)] bg-white px-3 py-2.5">
+        <Search className="h-3.5 w-3.5 flex-shrink-0 text-[#0A1547]/30" />
+        <input
+          className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#0A1547] outline-none placeholder:text-[#0A1547]/25"
+          placeholder={placeholder}
+          value={searchText}
+          onChange={(event) => setSearchText(event.target.value)}
+        />
+      </div>
+      <div className="max-h-52 overflow-y-auto rounded-xl border border-[rgba(10,21,71,0.08)] bg-white">
+        {filteredOptions.length === 0 ? (
+          <p className="px-3 py-2.5 text-xs font-semibold text-[#0A1547]/40">{emptyText}</p>
+        ) : (
+          filteredOptions.map((client) => (
+            <button
+              key={client.id}
+              type="button"
+              className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50"
+              onClick={() => {
+                onChange(client.id);
+                setSearchText("");
+              }}
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-[#0A1547]">{client.name}</span>
+                <span className="block truncate text-[10px] font-semibold text-[#0A1547]/40">{billingClientLabel(client)}</span>
+              </span>
+              {value === client.id ? (
+                <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[#A380F6]" />
+              ) : null}
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 function toLocalIsoDate(date: Date): string {
   const year = date.getFullYear();
@@ -392,12 +491,14 @@ export default function AdminBillingPage() {
   const [voidAgreementTarget, setVoidAgreementTarget] = useState<PendingAgreement | null>(null);
   const [voidAgreementReason, setVoidAgreementReason] = useState("");
 
-  const agreementClientOptions = useMemo(
-    () => adminClients.filter((client) => client.id !== "all"),
+  const selectedClientIsChild = selectedClientId !== "all" && isChildClient(selectedClient);
+  const parentClientOptions = useMemo(
+    () => adminClients.filter(isParentClient),
     [adminClients],
   );
+  const agreementClientOptions = parentClientOptions;
   const scopedAgreementClientId =
-    selectedClientId === "all" ? agreementAttachedClientId : selectedClientId;
+    selectedClientId === "all" ? agreementAttachedClientId : selectedClientIsChild ? "" : selectedClientId;
 
   const addLineItem = () =>
     setLineItems((prev) => [...prev, { id: _lineId++, description: "", qty: 1, unit: "" }]);
@@ -409,7 +510,7 @@ export default function AdminBillingPage() {
     setLineItems((prev) => prev.map((li) => (li.id === id ? { ...li, [field]: value } : li)));
 
   const filledItems   = lineItems.filter((li) => li.description.trim() && li.unit.trim());
-  const canSendInvoice = invCustomer && invTitle.trim() && filledItems.length > 0;
+  const canSendInvoice = !selectedClientIsChild && invCustomer && invTitle.trim() && filledItems.length > 0;
 
   const updateAgreementField = <K extends keyof AgreementFormValues>(
     key: K,
@@ -482,7 +583,7 @@ export default function AdminBillingPage() {
 
   useEffect(() => {
     if (selectedClientId !== "all") {
-      setAgreementAttachedClientId(selectedClientId);
+      setAgreementAttachedClientId(selectedClientIsChild ? "" : selectedClientId);
       return;
     }
     setAgreementAttachedClientId((previous) => {
@@ -490,7 +591,7 @@ export default function AdminBillingPage() {
       if (agreementClientOptions.some((client) => client.id === previous)) return previous;
       return "";
     });
-  }, [selectedClientId, agreementClientOptions]);
+  }, [selectedClientId, selectedClientIsChild, agreementClientOptions]);
 
   useEffect(() => {
     if (agreementClientMode !== "attach_existing_client") return;
@@ -544,6 +645,13 @@ export default function AdminBillingPage() {
   }, [agreementClientMode]);
 
   const loadPendingAgreements = useCallback(async () => {
+    if (selectedClientIsChild) {
+      setPendingAgreements([]);
+      setPendingAgreementError("");
+      setPendingAgreementLoading(false);
+      return;
+    }
+
     const clientId = String(selectedClientId || "all").trim() || "all";
     if (!backendBase) {
       setPendingAgreements([]);
@@ -598,7 +706,7 @@ export default function AdminBillingPage() {
     } finally {
       setPendingAgreementLoading(false);
     }
-  }, [selectedClientId]);
+  }, [selectedClientId, selectedClientIsChild]);
 
   useEffect(() => {
     void loadPendingAgreements();
@@ -643,6 +751,12 @@ export default function AdminBillingPage() {
   });
 
   const validateAgreementForm = (): boolean => {
+    if (agreementClientMode === "attach_existing_client" && selectedClientIsChild) {
+      setAgreementFieldErrors({});
+      setAgreementError(PARENT_ONLY_BILLING_NOTICE);
+      return false;
+    }
+
     const errors: AgreementFieldErrors = {};
     const adminEmail = String(agreementForm.adminEmail || "").trim();
     const hasInitialTermInput = Boolean(agreementDateInputs.initialTermStart.trim());
@@ -919,6 +1033,11 @@ export default function AdminBillingPage() {
       setInvoiceSendError("Select a client, add an invoice title, and include at least one valid line item.");
       return;
     }
+    if (selectedClientIsChild || !parentClientOptions.some((client) => client.id === selectedClientId)) {
+      setInvoiceSendSuccess("");
+      setInvoiceSendError(PARENT_ONLY_BILLING_NOTICE);
+      return;
+    }
 
     setInvoiceSendBusy(true);
     setInvoiceSendError("");
@@ -1176,18 +1295,20 @@ export default function AdminBillingPage() {
   }, [filteredInvoices]);
   const invoiceClientOptions =
     selectedClientId === "all"
-      ? adminClients.filter((client) => client.id !== "all")
-      : adminClients.filter((client) => client.id === selectedClientId);
+      ? parentClientOptions
+      : selectedClientIsChild
+        ? []
+        : parentClientOptions.filter((client) => client.id === selectedClientId);
 
   useEffect(() => {
     if (selectedClientId !== "all") {
-      setInvCustomer(selectedClientId);
+      setInvCustomer(selectedClientIsChild ? "" : selectedClientId);
       return;
     }
     if (!invCustomer) return;
     if (invoiceClientOptions.some((client) => client.id === invCustomer)) return;
     setInvCustomer("");
-  }, [selectedClientId, invCustomer, invoiceClientOptions]);
+  }, [selectedClientId, selectedClientIsChild, invCustomer, invoiceClientOptions]);
 
   useEffect(() => {
     return () => {
@@ -1242,6 +1363,11 @@ export default function AdminBillingPage() {
           {selectedClientId === "all" ? "Global — not scoped to selected client" : `Scoped to ${selectedClient.name}`}
         </span>
       </div>
+      {selectedClientIsChild ? (
+        <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+          {PARENT_ONLY_BILLING_NOTICE}
+        </div>
+      ) : null}
 
       {/* ── Agreement Generator ───────────────────────────── */}
       <div className={card} style={cardStyle}>
@@ -1301,33 +1427,29 @@ export default function AdminBillingPage() {
                 <p className={fieldLabelCls}>
                   Attached Client<span className="text-red-500">{REQUIRED_MARK}</span>
                 </p>
-                <div className="relative">
-                  <select
-                    className={selectCls}
-                    value={agreementAttachedClientId}
-                    onChange={(e) => {
-                      setAgreementAttachedClientId(e.target.value);
-                      setAgreementFieldErrors((prev) => {
-                        if (!prev.attachedClientId) return prev;
-                        const next = { ...prev };
-                        delete next.attachedClientId;
-                        return next;
-                      });
-                    }}
-                  >
-                    <option value="">Select existing client…</option>
-                    {agreementClientOptions.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
-                </div>
+                <BillingClientSelector
+                  options={agreementClientOptions}
+                  value={agreementAttachedClientId}
+                  onChange={(clientId) => {
+                    setAgreementAttachedClientId(clientId);
+                    setAgreementFieldErrors((prev) => {
+                      if (!prev.attachedClientId) return prev;
+                      const next = { ...prev };
+                      delete next.attachedClientId;
+                      return next;
+                    });
+                  }}
+                  placeholder="Search parent clients..."
+                  emptyText="No parent clients match your search."
+                />
                 {agreementFieldErrors.attachedClientId ? (
                   <p className={fieldErrorCls}>{agreementFieldErrors.attachedClientId}</p>
                 ) : null}
               </div>
+            ) : selectedClientIsChild ? (
+              <p className="max-w-xl rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                {PARENT_ONLY_BILLING_NOTICE}
+              </p>
             ) : (
               <p className="text-xs font-semibold text-[#0A1547]/55">
                 Attached client: <span className="font-black text-[#0A1547]">{selectedClient.name}</span>
@@ -1338,7 +1460,6 @@ export default function AdminBillingPage() {
               A new client will be created from this form before the agreement is sent.
             </p>
           )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <p className={fieldLabelCls}>
@@ -1615,7 +1736,11 @@ export default function AdminBillingPage() {
           {pendingAgreementError ? (
             <p className="text-xs font-semibold text-red-500">{pendingAgreementError}</p>
           ) : null}
-          {pendingAgreementLoading ? (
+          {selectedClientIsChild ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+              {PARENT_ONLY_BILLING_NOTICE}
+            </p>
+          ) : pendingAgreementLoading ? (
             <p className="text-xs font-semibold text-[#0A1547]/40">Checking pending agreements...</p>
           ) : pendingAgreements.length === 0 ? (
             <p className="text-sm font-semibold text-[#0A1547]/35">No pending agreements.</p>
@@ -1684,20 +1809,23 @@ export default function AdminBillingPage() {
           ) : null}
           {/* Row 1 */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="relative">
-              <select
-                className={selectCls}
+            {selectedClientId === "all" ? (
+              <BillingClientSelector
+                options={invoiceClientOptions}
                 value={invCustomer}
-                onChange={(e) => setInvCustomer(e.target.value)}
-                disabled={selectedClientId !== "all"}
-              >
-                <option value="">{selectedClientId === "all" ? "Select client…" : "Selected client"}</option>
-                {invoiceClientOptions.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
-            </div>
+                onChange={setInvCustomer}
+                placeholder="Search parent clients..."
+                emptyText="No parent clients match your search."
+              />
+            ) : selectedClientIsChild ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-800">
+                {PARENT_ONLY_BILLING_NOTICE}
+              </p>
+            ) : (
+              <p className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-white px-3 py-2.5 text-sm font-semibold text-[#0A1547]/55">
+                Invoice client: <span className="font-black text-[#0A1547]">{selectedClient.name}</span>
+              </p>
+            )}
             <input
               className={inputCls}
               placeholder="Invoice title"
