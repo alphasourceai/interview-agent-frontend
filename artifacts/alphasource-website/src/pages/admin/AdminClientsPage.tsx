@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  ChevronRight, Trash2, RefreshCw, ChevronUp, ChevronDown,
+  ChevronRight, Trash2, RefreshCw, ChevronUp, ChevronDown, Plus,
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/lib/supabaseClient";
@@ -34,6 +34,13 @@ interface Client {
   planSettingsPerRoleFee: string | null;
   planSettingsIncludedInterviewsPerRole: string | null;
   planSettingsAdditionalInterviewFee: string | null;
+  parent_client_id?: string | null;
+  entity_label?: string | null;
+  billing_client_id?: string | null;
+  is_parent_client?: boolean;
+  is_child_client?: boolean;
+  parent_client_name?: string | null;
+  child_count?: number | null;
 }
 
 const env =
@@ -78,6 +85,24 @@ function parseJsonSafe(text: string): unknown {
   } catch {
     return null;
   }
+}
+
+function optionalText(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  const normalized = String(value || "").trim();
+  return normalized || null;
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function optionalNumber(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  if (value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function formatDateTime(value: unknown): string {
@@ -189,6 +214,31 @@ function pickClientColor(seed: string): string {
   return palette[Math.abs(hash) % palette.length];
 }
 
+function isChildEntity(client: Pick<Client, "is_child_client" | "parent_client_id">): boolean {
+  return client.is_child_client === true || Boolean(String(client.parent_client_id || "").trim());
+}
+
+function clientHierarchyLabel(client: Client): string {
+  const entityLabel = String(client.entity_label || "").trim();
+  const parentName = String(client.parent_client_name || "").trim();
+  if (isChildEntity(client)) {
+    if (entityLabel && parentName) return `${entityLabel} under ${parentName}`;
+    return "Child entity";
+  }
+  const childCount = typeof client.child_count === "number" && client.child_count > 0 ? client.child_count : 0;
+  return childCount ? `Parent client · ${childCount} ${childCount === 1 ? "entity" : "entities"}` : "Parent client";
+}
+
+function clientSearchText(client: Client): string {
+  return [
+    client.name,
+    client.entity_label,
+    client.parent_client_name,
+    clientHierarchyLabel(client),
+    isChildEntity(client) ? "child entity" : "parent client",
+  ].join(" ").toLowerCase();
+}
+
 /* ── Helpers ─────────────────────────────────────────────────── */
 const planColors: Record<string, { bg: string; text: string }> = {
   basic:      { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
@@ -265,6 +315,9 @@ export default function AdminClientsPage() {
   const [enterpriseIncludedInterviews, setEnterpriseIncludedInterviews] = useState<Record<string, string>>({});
   const [enterpriseAdditionalFees, setEnterpriseAdditionalFees] = useState<Record<string, string>>({});
   const [legacyCheckoutConfirmClientId, setLegacyCheckoutConfirmClientId] = useState<string | null>(null);
+  const [entityModalParent, setEntityModalParent] = useState<Client | null>(null);
+  const [entityCreateBusy, setEntityCreateBusy] = useState(false);
+  const [entityForm, setEntityForm] = useState({ name: "", entityLabel: "" });
 
   /* form state */
   const [form, setForm] = useState({
@@ -359,6 +412,70 @@ export default function AdminClientsPage() {
       });
     } finally {
       setCreateBusy(false);
+    }
+  };
+
+  const openEntityModal = (parent: Client) => {
+    setEntityModalParent(parent);
+    setEntityForm({ name: "", entityLabel: "" });
+  };
+
+  const closeEntityModal = () => {
+    if (entityCreateBusy) return;
+    setEntityModalParent(null);
+    setEntityForm({ name: "", entityLabel: "" });
+  };
+
+  const createChildEntity = async () => {
+    const parent = entityModalParent;
+    const name = entityForm.name.trim();
+    const entity_label = entityForm.entityLabel.trim();
+
+    if (!parent?.id) {
+      setActionNotice({ tone: "error", text: "Parent client is required." });
+      return;
+    }
+    if (isChildEntity(parent)) {
+      setActionNotice({ tone: "error", text: "Child entities can only be created under parent clients." });
+      return;
+    }
+    if (!name) {
+      setActionNotice({ tone: "error", text: "Entity name is required." });
+      return;
+    }
+
+    setEntityCreateBusy(true);
+    setActionNotice(null);
+    try {
+      if (!backendBase) throw new Error("Missing backend base URL configuration.");
+      const token = await getSessionToken();
+      const response = await fetch(`${backendBase}/admin/clients/${encodeURIComponent(parent.id)}/entities`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "omit",
+        body: JSON.stringify({
+          name,
+          entity_label: entity_label || null,
+        }),
+      });
+
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text, "Could not create entity."));
+
+      setEntityModalParent(null);
+      setEntityForm({ name: "", entityLabel: "" });
+      requestReload();
+      setActionNotice({ tone: "success", text: "Entity created." });
+    } catch (error) {
+      setActionNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not create entity.",
+      });
+    } finally {
+      setEntityCreateBusy(false);
     }
   };
 
@@ -617,7 +734,7 @@ export default function AdminClientsPage() {
   const clientSearchTerm = clientSearch.trim().toLowerCase();
   const filteredClients = clientSearchTerm
     ? clients.filter((client) =>
-        client.name.toLowerCase().includes(clientSearchTerm),
+        clientSearchText(client).includes(clientSearchTerm),
       )
     : clients;
 
@@ -702,6 +819,13 @@ export default function AdminClientsPage() {
               planSettingsPerRoleFee: String(item.plan_settings_per_role_fee ?? "").trim() || null,
               planSettingsIncludedInterviewsPerRole: String(item.plan_settings_included_interviews_per_role ?? "").trim() || null,
               planSettingsAdditionalInterviewFee: String(item.plan_settings_additional_interview_fee ?? "").trim() || null,
+              parent_client_id: optionalText(item.parent_client_id),
+              entity_label: optionalText(item.entity_label),
+              billing_client_id: optionalText(item.billing_client_id),
+              is_parent_client: optionalBoolean(item.is_parent_client),
+              is_child_client: optionalBoolean(item.is_child_client),
+              parent_client_name: optionalText(item.parent_client_name),
+              child_count: optionalNumber(item.child_count),
             };
           })
           .filter((item) => Boolean(item.id));
@@ -840,7 +964,7 @@ export default function AdminClientsPage() {
       >
         <input
           className={inputCls + " max-w-sm"}
-          placeholder="Search client name..."
+          placeholder="Search clients or entities..."
           value={clientSearch}
           onChange={(e) => setClientSearch(e.target.value)}
         />
@@ -916,15 +1040,16 @@ export default function AdminClientsPage() {
             const override = overrides[client.id] ?? "Inherit";
             const cpPlan   = checkoutPlan[client.id]  ?? "basic";
             const cpCycle  = checkoutCycle[client.id] ?? "Monthly";
+            const rowIsChildEntity = isChildEntity(client);
             const baselineStatus = getBaselineAccessStatus(client);
             const effectiveStatus = getEffectiveAccessStatus(override, baselineStatus);
             const hasLiveSubscription =
               client.rawSubscriptionStatus === "active" || client.rawSubscriptionStatus === "trialing";
             const canCancelContract =
-              client.rawBillingStatus === "active" && client.rawHasStripeSubscription && hasLiveSubscription;
-            const showCheckout = !hasLiveSubscription;
+              !rowIsChildEntity && client.rawBillingStatus === "active" && client.rawHasStripeSubscription && hasLiveSubscription;
+            const showCheckout = !rowIsChildEntity && !hasLiveSubscription;
             const autoRenew  = autoRenewStates[client.id] ?? client.autoRenew;
-            const isEnterpriseClient = (client.planTier || client.planSettingsPlanTier) === "enterprise";
+            const isEnterpriseClient = !rowIsChildEntity && (client.planTier || client.planSettingsPlanTier) === "enterprise";
             const membershipFeeLabel = formatMoney(client.planSettingsPlatformFee);
             const perRoleFeeLabel = formatMoney(client.planSettingsPerRoleFee);
             const includedInterviewsLabel = formatWholeNumber(client.planSettingsIncludedInterviewsPerRole);
@@ -954,44 +1079,55 @@ export default function AdminClientsPage() {
                         {client.name}
                       </p>
                       <p className="text-[10px] text-[#0A1547]/35 mt-0.5">
-                        Created {client.createdDate}
+                        {clientHierarchyLabel(client)} · Created {client.createdDate}
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <PlanBadge tier={client.planTier} />
+                    {rowIsChildEntity ? <span className="text-sm text-[#0A1547]/25">—</span> : <PlanBadge tier={client.planTier} />}
                   </div>
 
                   <div>
-                    <StatusBadge status={effectiveStatus} subtext={getOverrideSubtext(override)} />
+                    {rowIsChildEntity ? (
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5 text-[#0A1547]/35">entity</p>
+                        <p className="text-xs font-semibold text-[#0A1547]/40">Billed to parent</p>
+                      </div>
+                    ) : (
+                      <StatusBadge status={effectiveStatus} subtext={getOverrideSubtext(override)} />
+                    )}
                   </div>
 
                   <p className="text-sm text-[#0A1547]/50 font-semibold">
-                    {client.billingCycle ?? "—"}
+                    {rowIsChildEntity ? "—" : (client.billingCycle ?? "—")}
                   </p>
 
                   {/* Auto-renew checkbox */}
                   <div className="flex items-center">
-                    <button
-                      disabled={autoRenewBusy[client.id] === true}
-                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all cursor-pointer hover:scale-105 ${
-                        autoRenew
-                          ? "border-[#A380F6] bg-[#A380F6]"
-                          : "border-[rgba(10,21,71,0.15)] bg-transparent hover:border-[#A380F6]/50"
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void updateAutoRenew(client, !autoRenew);
-                      }}
-                      title={autoRenew ? "Disable auto-renew" : "Enable auto-renew"}
-                    >
-                      {autoRenew && (
-                        <svg viewBox="0 0 10 8" className="w-2.5 h-2">
-                          <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                    {rowIsChildEntity ? (
+                      <span className="text-sm text-[#0A1547]/25">—</span>
+                    ) : (
+                      <button
+                        disabled={autoRenewBusy[client.id] === true}
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all cursor-pointer hover:scale-105 ${
+                          autoRenew
+                            ? "border-[#A380F6] bg-[#A380F6]"
+                            : "border-[rgba(10,21,71,0.15)] bg-transparent hover:border-[#A380F6]/50"
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void updateAutoRenew(client, !autoRenew);
+                        }}
+                        title={autoRenew ? "Disable auto-renew" : "Enable auto-renew"}
+                      >
+                        {autoRenew && (
+                          <svg viewBox="0 0 10 8" className="w-2.5 h-2">
+                            <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </button>
                       )}
-                    </button>
                   </div>
 
                   {/* Remove */}
@@ -1018,35 +1154,17 @@ export default function AdminClientsPage() {
                   >
                     <div className="flex flex-col lg:flex-row gap-6">
 
-                      {/* Left: Membership details */}
+                      {/* Left: details */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-black text-[#0A1547] mb-2">Membership details</p>
-                        <div className="space-y-1.5">
-                          {[
-                            ["Membership tier",     client.planTier ?? "—"],
-                            ["Billing status", <span className="font-bold" style={{ color: baselineStatus === "active" ? "#02D99D" : "#FF6B6B" }}>{baselineStatus}</span>],
-                            ["Stripe membership", client.stripeMembership ?? "—"],
-                            ["Billing cycle",      client.billingCycle ?? "—"],
-                            ["Contract",           client.contract ?? "—"],
-                            ["Current billing period ends", client.periodEnds ?? "—"],
-                            ["Renewal",            autoRenew ? "Auto-renew on" : "Auto-renew off"],
-                          ].map(([label, value]) => (
-                            <div key={String(label)} className="flex items-baseline gap-1.5 text-xs">
-                              <span className="text-[#0A1547]/40 font-semibold flex-shrink-0">{String(label)}:</span>
-                              <span className="text-[#0A1547]/70 font-semibold">{value as React.ReactNode}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {isEnterpriseClient && (
-                          <div className="mt-4 rounded-xl px-3.5 py-3 border border-[rgba(10,21,71,0.08)] bg-white/80">
-                            <p className="text-[11px] font-black uppercase tracking-wider text-[#0A1547]/55 mb-2.5">Enterprise Membership</p>
+                        {rowIsChildEntity ? (
+                          <>
+                            <p className="text-xs font-black text-[#0A1547] mb-2">Entity details</p>
                             <div className="space-y-1.5">
                               {[
-                                ["Membership fee", membershipFeeLabel],
-                                ["Billing interval", enterpriseBillingIntervalLabel],
-                                ["Per-role fee", perRoleFeeLabel],
-                                ["Included interviews (per role)", includedInterviewsLabel],
-                                ["Additional interview fee", additionalInterviewFeeLabel],
+                                ["Entity type", client.entity_label || "Child entity"],
+                                ["Parent client", client.parent_client_name || "—"],
+                                ["Billing owner", client.parent_client_name || client.billing_client_id || "Parent client"],
+                                ["Created", client.createdDate],
                               ].map(([label, value]) => (
                                 <div key={String(label)} className="flex items-baseline gap-1.5 text-xs">
                                   <span className="text-[#0A1547]/40 font-semibold flex-shrink-0">{String(label)}:</span>
@@ -1054,12 +1172,65 @@ export default function AdminClientsPage() {
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs font-black text-[#0A1547] mb-2">Membership details</p>
+                            <div className="space-y-1.5">
+                              {[
+                                ["Membership tier",     client.planTier ?? "—"],
+                                ["Billing status", <span className="font-bold" style={{ color: baselineStatus === "active" ? "#02D99D" : "#FF6B6B" }}>{baselineStatus}</span>],
+                                ["Stripe membership", client.stripeMembership ?? "—"],
+                                ["Billing cycle",      client.billingCycle ?? "—"],
+                                ["Contract",           client.contract ?? "—"],
+                                ["Current billing period ends", client.periodEnds ?? "—"],
+                                ["Renewal",            autoRenew ? "Auto-renew on" : "Auto-renew off"],
+                              ].map(([label, value]) => (
+                                <div key={String(label)} className="flex items-baseline gap-1.5 text-xs">
+                                  <span className="text-[#0A1547]/40 font-semibold flex-shrink-0">{String(label)}:</span>
+                                  <span className="text-[#0A1547]/70 font-semibold">{value as React.ReactNode}</span>
+                                </div>
+                              ))}
+                            </div>
+                            {isEnterpriseClient && (
+                              <div className="mt-4 rounded-xl px-3.5 py-3 border border-[rgba(10,21,71,0.08)] bg-white/80">
+                                <p className="text-[11px] font-black uppercase tracking-wider text-[#0A1547]/55 mb-2.5">Enterprise Membership</p>
+                                <div className="space-y-1.5">
+                                  {[
+                                    ["Membership fee", membershipFeeLabel],
+                                    ["Billing interval", enterpriseBillingIntervalLabel],
+                                    ["Per-role fee", perRoleFeeLabel],
+                                    ["Included interviews (per role)", includedInterviewsLabel],
+                                    ["Additional interview fee", additionalInterviewFeeLabel],
+                                  ].map(([label, value]) => (
+                                    <div key={String(label)} className="flex items-baseline gap-1.5 text-xs">
+                                      <span className="text-[#0A1547]/40 font-semibold flex-shrink-0">{String(label)}:</span>
+                                      <span className="text-[#0A1547]/70 font-semibold">{String(value || "—")}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
 
                       {/* Right: actions */}
                       <div className="flex flex-col gap-4 lg:w-80">
+
+                        {!rowIsChildEntity && (
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-[#0A1547] bg-white border border-[rgba(10,21,71,0.08)] hover:bg-gray-50 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEntityModal(client);
+                            }}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Add entity
+                          </button>
+                        )}
 
                         {/* Active client actions */}
                         {canCancelContract && (
@@ -1205,6 +1376,60 @@ export default function AdminClientsPage() {
           })}
         </div>
       </div>
+      {entityModalParent && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center px-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#0A1547]/35"
+            aria-label="Close entity creation"
+            onClick={closeEntityModal}
+          />
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white p-5"
+            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 12px 30px rgba(10,21,71,0.18)" }}
+          >
+            <h3 className="text-base font-black text-[#0A1547]">Add entity</h3>
+            <p className="mt-1 text-sm text-[#0A1547]/55 font-semibold">
+              Under {entityModalParent.name}
+            </p>
+            <div className="mt-4 space-y-3">
+              <input
+                className={inputCls}
+                placeholder="Entity name"
+                value={entityForm.name}
+                onChange={(e) => setEntityForm((prev) => ({ ...prev, name: e.target.value }))}
+              />
+              <input
+                className={inputCls}
+                placeholder="Entity label (office, location, entity)"
+                value={entityForm.entityLabel}
+                onChange={(e) => setEntityForm((prev) => ({ ...prev, entityLabel: e.target.value }))}
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={entityCreateBusy}
+                className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/70 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors disabled:opacity-50"
+                onClick={closeEntityModal}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={entityCreateBusy}
+                className="px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: "#A380F6" }}
+                onClick={() => {
+                  void createChildEntity();
+                }}
+              >
+                {entityCreateBusy ? "Creating..." : "Create entity"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {legacyCheckoutConfirmClientId && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center px-4">
           <button
