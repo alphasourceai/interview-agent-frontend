@@ -338,6 +338,13 @@ function hasBillingNavAccess(client: Client): boolean {
   return ["manager", "admin", "owner", "super_admin"].includes(normalizeClientRole(client.role));
 }
 
+function hasMembersNavAccess(client: Client): boolean {
+  const permission = client.permissions?.can_manage_members;
+  if (permission === true) return true;
+  if (permission === false) return false;
+  return ["manager", "admin", "owner", "super_admin"].includes(normalizeClientRole(client.role));
+}
+
 /* ── Main layout ─────────────────────────────────────────────── */
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -570,6 +577,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
         <nav className={`flex-1 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden
           ${collapsed ? "px-0 flex flex-col items-center" : "px-3"}`}>
           {navItems.map((item, idx) => {
+            if (item.label === "Members" && !hasMembersNavAccess(selectedClient)) return null;
             if (item.label === "Billing" && !hasBillingNavAccess(selectedClient)) return null;
             const active = isActive(item.href);
 

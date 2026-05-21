@@ -98,6 +98,10 @@ function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 }
 
+function isMemberManagerFallbackRole(role: string): boolean {
+  return ["manager", "admin", "owner", "super_admin"].includes(role);
+}
+
 export default function MembersPage() {
   const {
     selectedClient,
@@ -115,7 +119,11 @@ export default function MembersPage() {
   )
     .trim()
     .toLowerCase();
-  const canManageMembers = isGlobalAdmin || selectedMembershipRole === "manager" || selectedMembershipRole === "admin";
+  const memberManagementPermission = selectedClient.permissions?.can_manage_members;
+  const canManageMembers =
+    isGlobalAdmin ||
+    memberManagementPermission === true ||
+    (memberManagementPermission !== false && isMemberManagerFallbackRole(selectedMembershipRole));
   const canResetPassword = canManageMembers;
 
   const [members, setMembers]   = useState<Member[]>([]);
@@ -142,6 +150,13 @@ export default function MembersPage() {
 
     const loadMembers = async () => {
       if (clientLoading) return;
+      if (!canManageMembers) {
+        if (!alive) return;
+        setMembers([]);
+        setMembersError("");
+        setMembersLoading(false);
+        return;
+      }
       if (clientError) {
         if (!alive) return;
         setMembers([]);
@@ -240,14 +255,14 @@ export default function MembersPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError]);
+  }, [selectedClientId, clientLoading, clientError, canManageMembers]);
 
   useEffect(() => {
     setActionNotice(null);
     setRemovingMembers({});
     setResettingPasswords({});
     setAddingMember(false);
-  }, [selectedClientId, clientLoading, clientError]);
+  }, [selectedClientId, clientLoading, clientError, canManageMembers]);
 
   useEffect(() => {
     if (!actionNotice) return;
@@ -486,6 +501,35 @@ export default function MembersPage() {
   );
 
   const columnCount = canManageMembers ? 5 : 3;
+
+  if (clientLoading) {
+    return (
+      <DashboardLayout title="Members">
+        <div
+          className="bg-white rounded-2xl p-6"
+          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+        >
+          <p className="text-sm text-[#0A1547]/45 font-semibold">Loading member access...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!canManageMembers) {
+    return (
+      <DashboardLayout title="Members">
+        <div
+          className="bg-white rounded-2xl p-6"
+          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+        >
+          <h2 className="text-base font-black text-[#0A1547] mb-2">Members unavailable</h2>
+          <p className="text-sm text-[#0A1547]/45 font-semibold">
+            You do not have permission to manage members for this client.
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Members">
