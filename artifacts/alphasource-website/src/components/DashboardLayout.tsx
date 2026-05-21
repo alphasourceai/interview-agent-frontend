@@ -309,6 +309,21 @@ function clientSearchText(client: Client): string {
   ].join(" ").toLowerCase();
 }
 
+function pluralizeEntityLabel(label: string): string {
+  const normalized = String(label || "").trim().toLowerCase();
+  if (!normalized) return "";
+  if (normalized.endsWith("s")) return normalized;
+  if (normalized.endsWith("y") && !/[aeiou]y$/.test(normalized)) return `${normalized.slice(0, -1)}ies`;
+  if (/(x|z|ch|sh)$/.test(normalized)) return `${normalized}es`;
+  return `${normalized}s`;
+}
+
+function getClientSearchPlaceholder(clients: Client[]): string {
+  const entityLabel = clients.map((client) => String(client.entity_label || "").trim()).find(Boolean);
+  const pluralized = pluralizeEntityLabel(entityLabel || "");
+  return pluralized ? `Search ${pluralized}...` : "Search clients...";
+}
+
 /* ── Main layout ─────────────────────────────────────────────── */
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -398,6 +413,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
   const filteredClients = clientSearchTerm
     ? clients.filter((client) => clientSearchText(client).includes(clientSearchTerm))
     : clients;
+  const clientSearchPlaceholder = getClientSearchPlaceholder(clients);
 
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex" style={{ fontFamily: "'Raleway', sans-serif" }}>
@@ -494,7 +510,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                     <input
                       value={clientSearch}
                       onChange={(event) => setClientSearch(event.target.value)}
-                      placeholder="Search scopes..."
+                      placeholder={clientSearchPlaceholder}
                       className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-[#0A1547] placeholder:text-[#0A1547]/35 outline-none"
                     />
                   </div>
