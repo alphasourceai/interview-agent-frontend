@@ -29,6 +29,7 @@ import RolesPage from "@/pages/dashboard/RolesPage";
 import CandidatesPage from "@/pages/dashboard/CandidatesPage";
 import MembersPage from "@/pages/dashboard/MembersPage";
 import BillingPage from "@/pages/dashboard/BillingPage";
+import EntitiesPage from "@/pages/dashboard/EntitiesPage";
 import DashboardFaqPage from "@/pages/dashboard/FaqPage";
 
 /* Admin dashboard */
@@ -299,6 +300,7 @@ function DashboardGuard() {
           <Route path="/dashboard/candidates" component={CandidatesPage} />
           <Route path="/dashboard/members"    component={MembersPage} />
           <Route path="/dashboard/billing"    component={BillingPage} />
+          <Route path="/dashboard/entities"   component={EntitiesPage} />
           <Route path="/dashboard/faq"        component={DashboardFaqPage} />
           <Route component={NotFound} />
         </Switch>

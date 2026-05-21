@@ -20,6 +20,7 @@ import {
   Map,
   CheckCircle2,
   Search,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useClient, type Client } from "@/context/ClientContext";
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { label: "Candidates", href: "/dashboard/candidates", icon: Users           },
   { label: "Members",    href: "/dashboard/members",    icon: UserCheck       },
   { label: "Billing",    href: "/dashboard/billing",    icon: CreditCard      },
+  { label: "Entities",   href: "/dashboard/entities",   icon: Building2       },
   { label: "FAQ",        href: "/dashboard/faq",        icon: HelpCircle      },
 ];
 
@@ -325,7 +327,8 @@ function getClientSearchPlaceholder(clients: Client[]): string {
 }
 
 function normalizeClientRole(role: unknown): string {
-  return String(role || "").trim().toLowerCase();
+  const normalized = String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return normalized === "superadmin" ? "super_admin" : normalized;
 }
 
 function hasBillingNavAccess(client: Client): boolean {
@@ -345,6 +348,11 @@ function hasMembersNavAccess(client: Client): boolean {
   return ["manager", "admin", "owner", "super_admin"].includes(normalizeClientRole(client.role));
 }
 
+function hasEntitiesNavAccess(client: Client, isGlobalAdmin: boolean): boolean {
+  if (isGlobalAdmin) return true;
+  return normalizeClientRole(client.role) === "super_admin";
+}
+
 /* ── Main layout ─────────────────────────────────────────────── */
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -362,7 +370,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
 
   const [location, setLocation] = useLocation();
   const { logout }              = useAuth();
-  const { selectedClient, setSelectedClient, clients, loading: clientsLoading, error: clientsError } = useClient();
+  const { selectedClient, setSelectedClient, clients, loading: clientsLoading, error: clientsError, isGlobalAdmin } = useClient();
   const dropdownRef  = useRef<HTMLDivElement>(null);
   const activeTourStep = TOUR_STEPS[tourStep] || null;
 
@@ -579,6 +587,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
           {navItems.map((item, idx) => {
             if (item.label === "Members" && !hasMembersNavAccess(selectedClient)) return null;
             if (item.label === "Billing" && !hasBillingNavAccess(selectedClient)) return null;
+            if (item.label === "Entities" && !hasEntitiesNavAccess(selectedClient, isGlobalAdmin)) return null;
             const active = isActive(item.href);
 
             if (collapsed) {
