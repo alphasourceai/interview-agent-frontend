@@ -7,6 +7,19 @@ export interface Client {
   letter: string;
   color: string;
   role?: string;
+  parent_client_id?: string | null;
+  entity_label?: string | null;
+  billing_client_id?: string | null;
+  is_parent_client?: boolean;
+  is_child_client?: boolean;
+  inherited?: boolean;
+  inherited_from_client_id?: string | null;
+  permissions?: {
+    can_create_roles?: boolean;
+    can_purchase_interviews?: boolean;
+    can_view_legal_billing?: boolean;
+    can_manage_members?: boolean;
+  };
 }
 
 export interface ClientMembership {
@@ -91,6 +104,28 @@ function letterForClient(name: string): string {
 function colorForClient(id: string, index: number): string {
   const seed = String(id || index || "client");
   return CLIENT_COLORS[hashText(seed) % CLIENT_COLORS.length];
+}
+
+function optionalText(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  const normalized = String(value || "").trim();
+  return normalized || null;
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function normalizePermissions(value: unknown): Client["permissions"] | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const source = value as Record<string, unknown>;
+  return {
+    can_create_roles: optionalBoolean(source.can_create_roles),
+    can_purchase_interviews: optionalBoolean(source.can_purchase_interviews),
+    can_view_legal_billing: optionalBoolean(source.can_view_legal_billing),
+    can_manage_members: optionalBoolean(source.can_manage_members),
+  };
 }
 
 function parseJsonSafe(text: string): unknown {
@@ -278,6 +313,14 @@ export function ClientProvider({ children }: { children: ReactNode }) {
             letter: letterForClient(name),
             color: colorForClient(id, index),
             role,
+            parent_client_id: optionalText(item.parent_client_id),
+            entity_label: optionalText(item.entity_label),
+            billing_client_id: optionalText(item.billing_client_id),
+            is_parent_client: optionalBoolean(item.is_parent_client),
+            is_child_client: optionalBoolean(item.is_child_client),
+            inherited: optionalBoolean(item.inherited),
+            inherited_from_client_id: optionalText(item.inherited_from_client_id),
+            permissions: normalizePermissions(item.permissions),
           };
         })
         .filter((item) => Boolean(item.id));

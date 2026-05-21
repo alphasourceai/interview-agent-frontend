@@ -19,9 +19,14 @@ import {
   ChevronLeft,
   Map,
   CheckCircle2,
+  Search,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useClient } from "@/context/ClientContext";
+import { useClient, type Client } from "@/context/ClientContext";
+import TawkWidget from "@/components/TawkWidget";
+
+const env =
+  typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
 
 /* ── Nav items ───────────────────────────────────────────────── */
 interface NavItem {
@@ -281,6 +286,29 @@ function TourSpotlight({
   );
 }
 
+function clientScopeLabel(client: Client): string {
+  const entityLabel = String(client.entity_label || "").trim();
+  if (client.is_child_client === true || client.parent_client_id) return entityLabel || "Child entity";
+  return "Parent scope";
+}
+
+function clientScopeSubtitle(client: Client): string {
+  const parts = [clientScopeLabel(client)];
+  if (client.inherited === true) parts.push("Inherited access");
+  return parts.join(" · ");
+}
+
+function clientSearchText(client: Client): string {
+  return [
+    client.name,
+    client.role,
+    client.entity_label,
+    clientScopeLabel(client),
+    client.inherited === true ? "inherited inherited access" : "",
+    client.is_child_client === true || client.parent_client_id ? "child entity" : "parent scope",
+  ].join(" ").toLowerCase();
+}
+
 /* ── Main layout ─────────────────────────────────────────────── */
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -291,6 +319,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
   const [mobileOpen,         setMobileOpen]         = useState(false);
   const [collapsed,          setCollapsed]           = useState(false);
   const [clientDropdownOpen, setClientDropdownOpen]  = useState(false);
+  const [clientSearch,       setClientSearch]        = useState("");
   const [tourActive,         setTourActive]          = useState(false);
   const [tourStep,           setTourStep]            = useState(0);
   const [spotRect,           setSpotRect]            = useState<SpotRect | null>(null);
@@ -335,6 +364,10 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
     return () => document.removeEventListener("mousedown", handleClick);
   }, [clientDropdownOpen]);
 
+  useEffect(() => {
+    if (!clientDropdownOpen) setClientSearch("");
+  }, [clientDropdownOpen]);
+
   /* Close tour on Escape */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") endTour(); };
@@ -361,6 +394,10 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
   const sidebarW  = collapsed ? "w-16" : "w-60";
   const contentML = collapsed ? "lg:ml-16" : "lg:ml-60";
   const sidebarRight = collapsed ? 64 : 240;
+  const clientSearchTerm = clientSearch.trim().toLowerCase();
+  const filteredClients = clientSearchTerm
+    ? clients.filter((client) => clientSearchText(client).includes(clientSearchTerm))
+    : clients;
 
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex" style={{ fontFamily: "'Raleway', sans-serif" }}>
@@ -437,7 +474,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
               </div>
               <div className="min-w-0 flex-1 text-left">
                 <p className="text-xs font-black text-[#0A1547] truncate leading-tight">{selectedClient.name}</p>
-                <p className="text-[10px] text-[#0A1547]/40">Client account</p>
+                <p className="text-[10px] text-[#0A1547]/40 truncate">{clientScopeSubtitle(selectedClient)}</p>
               </div>
               <ChevronDown
                 className={`w-3.5 h-3.5 text-[#0A1547]/30 flex-shrink-0 transition-transform duration-200 ${clientDropdownOpen ? "rotate-180" : ""}`}
@@ -447,9 +484,22 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
 
           {clientDropdownOpen && !collapsed && (
             <div
-              className="absolute left-3 right-3 z-50 bg-white rounded-xl shadow-lg border border-gray-100 py-1 mt-1"
+              className="absolute left-3 right-3 z-50 bg-white rounded-xl shadow-lg border border-gray-100 py-1 mt-1 max-h-72 overflow-y-auto"
               style={{ top: "100%" }}
             >
+              {!clientsLoading && clients.length > 1 && (
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5">
+                    <Search className="w-3.5 h-3.5 text-[#0A1547]/30 flex-shrink-0" />
+                    <input
+                      value={clientSearch}
+                      onChange={(event) => setClientSearch(event.target.value)}
+                      placeholder="Search scopes..."
+                      className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-[#0A1547] placeholder:text-[#0A1547]/35 outline-none"
+                    />
+                  </div>
+                </div>
+              )}
               {clientsLoading && (
                 <div className="px-3 py-2 text-xs font-semibold text-[#0A1547]/45">Loading clients...</div>
               )}
@@ -458,10 +508,13 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                   {clientsError ? "Could not load clients." : "No client access."}
                 </div>
               )}
-              {!clientsLoading && clients.map((client) => (
+              {!clientsLoading && clients.length > 0 && filteredClients.length === 0 && (
+                <div className="px-3 py-2 text-xs font-semibold text-[#0A1547]/45">No scopes match your search.</div>
+              )}
+              {!clientsLoading && filteredClients.map((client) => (
                 <button
                   key={client.id}
-                  onClick={() => { setSelectedClient(client); setClientDropdownOpen(false); }}
+                  onClick={() => { setSelectedClient(client); setClientSearch(""); setClientDropdownOpen(false); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 transition-colors text-left"
                 >
                   <div
@@ -470,7 +523,10 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                   >
                     {client.letter}
                   </div>
-                  <span className="flex-1 text-xs font-semibold text-[#0A1547] truncate">{client.name}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-semibold text-[#0A1547] truncate">{client.name}</span>
+                    <span className="block text-[10px] text-[#0A1547]/40 truncate">{clientScopeSubtitle(client)}</span>
+                  </span>
                   {selectedClient.id === client.id && (
                     <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#A380F6" }} />
                   )}
