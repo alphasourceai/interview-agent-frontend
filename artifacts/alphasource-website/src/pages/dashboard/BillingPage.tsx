@@ -145,6 +145,14 @@ function toWholeNonNegative(value: unknown): number {
   return Math.max(0, Math.floor(n));
 }
 
+function isLegalBillingFallbackRole(role: string): boolean {
+  return ["super_admin", "admin", "owner"].includes(role);
+}
+
+function isPurchaseFallbackRole(role: string): boolean {
+  return ["manager", "admin", "owner", "super_admin"].includes(role);
+}
+
 /* ── Status badge colors ── */
 function statusStyle(value: string): { bg: string; text: string } {
   const v = value.toLowerCase();
@@ -219,7 +227,20 @@ export default function BillingPage() {
   )
     .trim()
     .toLowerCase();
-  const canManageBilling = isGlobalAdmin || selectedMembershipRole === "manager" || selectedMembershipRole === "admin";
+  const billingPermissions = selectedClient.permissions;
+  const hasExplicitBillingPermissions =
+    typeof billingPermissions?.can_view_legal_billing === "boolean" ||
+    typeof billingPermissions?.can_purchase_interviews === "boolean";
+  const selectedClientIsChild = selectedClient.is_child_client === true || Boolean(selectedClient.parent_client_id);
+  const canViewLegalBilling =
+    isGlobalAdmin ||
+    billingPermissions?.can_view_legal_billing === true ||
+    (!selectedClientIsChild && !hasExplicitBillingPermissions && isLegalBillingFallbackRole(selectedMembershipRole));
+  const canPurchaseInterviews =
+    isGlobalAdmin ||
+    billingPermissions?.can_purchase_interviews === true ||
+    (!hasExplicitBillingPermissions && isPurchaseFallbackRole(selectedMembershipRole));
+  const hasBillingPageAccess = canViewLegalBilling || canPurchaseInterviews;
   const clientName = selectedClient.id === "all" ? "All Clients" : selectedClient.name;
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
@@ -243,13 +264,20 @@ export default function BillingPage() {
   const [selectedRole, setSelectedRole] = useState("");
   const [quantity, setQuantity]         = useState(1);
 
-  const canPurchase = canManageBilling && selectedRole !== "" && Number.isInteger(quantity) && quantity >= 1 && !rolesLoading && !purchaseBusy;
+  const canPurchase = canPurchaseInterviews && selectedRole !== "" && Number.isInteger(quantity) && quantity >= 1 && !rolesLoading && !purchaseBusy;
 
   useEffect(() => {
     let alive = true;
 
     const loadBillingSummary = async () => {
       if (clientLoading) return;
+      if (!canViewLegalBilling) {
+        if (!alive) return;
+        setBillingSummary(null);
+        setBillingError("");
+        setBillingLoading(false);
+        return;
+      }
       if (clientError) {
         if (!alive) return;
         setBillingSummary(null);
@@ -339,13 +367,20 @@ export default function BillingPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError, billingReloadNonce]);
+  }, [selectedClientId, clientLoading, clientError, billingReloadNonce, canViewLegalBilling]);
 
   useEffect(() => {
     let alive = true;
 
     const loadLatestSignedAgreement = async () => {
       if (clientLoading) return;
+      if (!canViewLegalBilling) {
+        if (!alive) return;
+        setLatestAgreement(null);
+        setLatestAgreementError("");
+        setLatestAgreementLoading(false);
+        return;
+      }
       if (clientError) {
         if (!alive) return;
         setLatestAgreement(null);
@@ -429,13 +464,20 @@ export default function BillingPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError, billingReloadNonce]);
+  }, [selectedClientId, clientLoading, clientError, billingReloadNonce, canViewLegalBilling]);
 
   useEffect(() => {
     let alive = true;
 
     const loadRoles = async () => {
       if (clientLoading) return;
+      if (!canPurchaseInterviews) {
+        if (!alive) return;
+        setRoles([]);
+        setSelectedRole("");
+        setRolesLoading(false);
+        return;
+      }
       if (clientError) {
         if (!alive) return;
         setRoles([]);
@@ -508,7 +550,7 @@ export default function BillingPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError, billingReloadNonce]);
+  }, [selectedClientId, clientLoading, clientError, billingReloadNonce, canPurchaseInterviews]);
 
   useEffect(() => {
     setActionNotice(null);
@@ -685,7 +727,7 @@ export default function BillingPage() {
   };
 
   const openBillingPortal = async () => {
-    if (!canManageBilling || !selectedClientId || portalBusy) return;
+    if (!canViewLegalBilling || !selectedClientId || portalBusy) return;
     setActionNotice(null);
     setPortalBusy(true);
     try {
@@ -733,7 +775,7 @@ export default function BillingPage() {
   };
 
   const startAdditionalInterviewsCheckout = async () => {
-    if (!canManageBilling || !selectedClientId || !selectedRole || !Number.isInteger(quantity) || quantity <= 0 || purchaseBusy) return;
+    if (!canPurchaseInterviews || !selectedClientId || !selectedRole || !Number.isInteger(quantity) || quantity <= 0 || purchaseBusy) return;
     setActionNotice(null);
     setPurchaseBusy(true);
     try {
@@ -782,7 +824,7 @@ export default function BillingPage() {
   };
 
   const openLatestSignedAgreement = async () => {
-    if (!selectedClientId || selectedClientId === "all") return;
+    if (!canViewLegalBilling || !selectedClientId || selectedClientId === "all") return;
     try {
       if (!backendBase) throw new Error("Missing backend base URL configuration.");
       setLatestAgreementError("");
@@ -827,134 +869,167 @@ export default function BillingPage() {
   const purchasedInterviewRows = roles.filter((role) => role.purchased_interviews > 0);
   const purchasedInterviewsTotal = purchasedInterviewRows.reduce((sum, role) => sum + role.purchased_interviews, 0);
 
+  if (clientLoading) {
+    return (
+      <DashboardLayout title="Billing">
+        <div
+          className="bg-white rounded-2xl p-6"
+          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+        >
+          <p className="text-sm text-[#0A1547]/45 font-semibold">Loading billing access...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!hasBillingPageAccess) {
+    return (
+      <DashboardLayout title="Billing">
+        <div
+          className="bg-white rounded-2xl p-6"
+          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+        >
+          <h2 className="text-base font-black text-[#0A1547] mb-2">Billing Unavailable</h2>
+          <p className="text-sm text-[#0A1547]/45 font-semibold">
+            {clientError || "Billing is not available for your current access level."}
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout title="Billing">
 
-      {/* ── Section 1: Billing Info ───────────────────── */}
-      <div
-        className="bg-white rounded-2xl p-6 mb-6"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
-      >
-        <h2 className="text-base font-black text-[#0A1547] mb-5">
-          Billing Info
-          {selectedClient.id !== "all" && (
-            <span className="ml-2 text-base font-semibold text-[#0A1547]/40">for {clientName}</span>
-          )}
-        </h2>
+      {canViewLegalBilling && (
+        <>
+          {/* ── Section 1: Billing Info ───────────────────── */}
+          <div
+            className="bg-white rounded-2xl p-6 mb-6"
+            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          >
+            <h2 className="text-base font-black text-[#0A1547] mb-5">
+              Billing Info
+              {selectedClient.id !== "all" && (
+                <span className="ml-2 text-base font-semibold text-[#0A1547]/40">for {clientName}</span>
+              )}
+            </h2>
 
-        {clientLoading || billingLoading ? (
-          <p className="text-sm text-[#0A1547]/45 font-semibold">Loading billing summary...</p>
-        ) : clientError || billingError ? (
-          <p className="text-sm text-red-500 font-semibold">{clientError || billingError}</p>
-        ) : !billingSummary ? (
-          <p className="text-sm text-[#0A1547]/35 font-semibold">No billing summary available for this client.</p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <InfoCard
-              label="Plan Tier"
-              value={billing.planTier}
-              accent="#A380F6"
-              tooltip="The membership tier that controls included interviews, role limits, and platform access."
-            />
-            <InfoCard
-              label="Billing Status"
-              value={billing.billingStatus}
-              accent="#02D99D"
-              badge
-              tooltip="Shows whether this client currently has active platform access, a pending checkout, a cancellation state, or an inactive billing status."
-            />
-            <InfoCard
-              label="Billing Cycle"
-              value={billing.billingCycle}
-              accent="#02ABE0"
-              badge
-              tooltip="The billing period cadence used for renewals and membership timing."
-            />
-            <InfoCard
-              label="Auto-Renew"
-              value={billing.autoRenew}
-              accent="#A380F6"
-              badge
-              tooltip="Shows whether the current subscription is set to renew at the end of the billing period or cancel at term end."
-            />
-            <InfoCard
-              label="Current Term End"
-              value={billing.currentTermEnd}
-              accent="#02ABE0"
-              tooltip="The date the current billing period or membership term is scheduled to end or renew."
-            />
-            <InfoCard
-              label="Contract End Date"
-              value={billing.contractEndDate}
-              accent="#02D99D"
-              tooltip="The final date of the signed membership agreement terms associated with this client."
-            />
-            <InfoCard
-              label="Membership Status"
-              value={billing.membershipStatus}
-              accent="#A380F6"
-              badge
-              tooltip="Overall membership standing tied to this client's access and billing setup."
-            />
-            <InfoCard
-              label="Access Status"
-              value={billing.accessStatus}
-              accent="#02ABE0"
-              tooltip="How dashboard access is granted; inherited access flows from the parent account."
-            />
+            {billingLoading ? (
+              <p className="text-sm text-[#0A1547]/45 font-semibold">Loading billing summary...</p>
+            ) : clientError || billingError ? (
+              <p className="text-sm text-red-500 font-semibold">{clientError || billingError}</p>
+            ) : !billingSummary ? (
+              <p className="text-sm text-[#0A1547]/35 font-semibold">No billing summary available for this client.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <InfoCard
+                  label="Plan Tier"
+                  value={billing.planTier}
+                  accent="#A380F6"
+                  tooltip="The membership tier that controls included interviews, role limits, and platform access."
+                />
+                <InfoCard
+                  label="Billing Status"
+                  value={billing.billingStatus}
+                  accent="#02D99D"
+                  badge
+                  tooltip="Shows whether this client currently has active platform access, a pending checkout, a cancellation state, or an inactive billing status."
+                />
+                <InfoCard
+                  label="Billing Cycle"
+                  value={billing.billingCycle}
+                  accent="#02ABE0"
+                  badge
+                  tooltip="The billing period cadence used for renewals and membership timing."
+                />
+                <InfoCard
+                  label="Auto-Renew"
+                  value={billing.autoRenew}
+                  accent="#A380F6"
+                  badge
+                  tooltip="Shows whether the current subscription is set to renew at the end of the billing period or cancel at term end."
+                />
+                <InfoCard
+                  label="Current Term End"
+                  value={billing.currentTermEnd}
+                  accent="#02ABE0"
+                  tooltip="The date the current billing period or membership term is scheduled to end or renew."
+                />
+                <InfoCard
+                  label="Contract End Date"
+                  value={billing.contractEndDate}
+                  accent="#02D99D"
+                  tooltip="The final date of the signed membership agreement terms associated with this client."
+                />
+                <InfoCard
+                  label="Membership Status"
+                  value={billing.membershipStatus}
+                  accent="#A380F6"
+                  badge
+                  tooltip="Overall membership standing tied to this client's access and billing setup."
+                />
+                <InfoCard
+                  label="Access Status"
+                  value={billing.accessStatus}
+                  accent="#02ABE0"
+                  tooltip="How dashboard access is granted; inherited access flows from the parent account."
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* ── Section 2: Latest Signed Agreement ───────── */}
-      <div
-        className="bg-white rounded-2xl p-6 mb-6"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
-      >
-        <h2 className="text-base font-black text-[#0A1547] mb-4">Latest Signed Agreement</h2>
-        {clientLoading || latestAgreementLoading ? (
-          <p className="text-sm text-[#0A1547]/45 font-semibold">Loading latest agreement...</p>
-        ) : latestAgreementError ? (
-          <p className="text-sm text-red-500 font-semibold">{latestAgreementError}</p>
-        ) : !latestAgreement ? (
-          <p className="text-sm text-[#0A1547]/35 font-semibold">No signed agreement is available for this client yet.</p>
-        ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
-              <InfoCard
-                label="Status"
-                value={toDisplayText(latestAgreement.status)}
-                accent="#02D99D"
-                badge
-              />
-              <InfoCard
-                label="Signed Date"
-                value={formatDate(latestAgreement.signed_at)}
-                accent="#A380F6"
-              />
-              <InfoCard
-                label="Signer"
-                value={latestAgreement.signer_typed_name || "—"}
-                accent="#02ABE0"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                void openLatestSignedAgreement();
-              }}
-              disabled={!latestAgreement.executed_pdf_url}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-full transition-all hover:opacity-90 active:scale-[0.97] flex-shrink-0"
-              style={{ backgroundColor: "#A380F6" }}
-            >
-              <ExternalLink className="w-4 h-4" />
-              View / Export Agreement
-            </button>
+          {/* ── Section 2: Latest Signed Agreement ───────── */}
+          <div
+            className="bg-white rounded-2xl p-6 mb-6"
+            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          >
+            <h2 className="text-base font-black text-[#0A1547] mb-4">Latest Signed Agreement</h2>
+            {latestAgreementLoading ? (
+              <p className="text-sm text-[#0A1547]/45 font-semibold">Loading latest agreement...</p>
+            ) : latestAgreementError ? (
+              <p className="text-sm text-red-500 font-semibold">{latestAgreementError}</p>
+            ) : !latestAgreement ? (
+              <p className="text-sm text-[#0A1547]/35 font-semibold">No signed agreement is available for this client yet.</p>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+                  <InfoCard
+                    label="Status"
+                    value={toDisplayText(latestAgreement.status)}
+                    accent="#02D99D"
+                    badge
+                  />
+                  <InfoCard
+                    label="Signed Date"
+                    value={formatDate(latestAgreement.signed_at)}
+                    accent="#A380F6"
+                  />
+                  <InfoCard
+                    label="Signer"
+                    value={latestAgreement.signer_typed_name || "—"}
+                    accent="#02ABE0"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void openLatestSignedAgreement();
+                  }}
+                  disabled={!latestAgreement.executed_pdf_url}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-full transition-all hover:opacity-90 active:scale-[0.97] flex-shrink-0"
+                  style={{ backgroundColor: "#A380F6" }}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View / Export Agreement
+                </button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
-      {canManageBilling && (
+      {canPurchaseInterviews && (
         <div
           className="bg-white rounded-2xl p-6 mb-6"
           style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
@@ -1036,85 +1111,88 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* ── Section 4: Purchased Interviews Table ────── */}
-      <div
-        className="bg-white rounded-2xl overflow-hidden mb-6"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
-      >
-        <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-center gap-1.5">
-          <h2 className="text-base font-black text-[#0A1547]">Additional Interviews Purchased</h2>
-          <InfoTooltip content="Extra interview capacity purchased outside the base membership, broken down by role." side="bottom" />
-        </div>
+      {canPurchaseInterviews && (
+        <>
+          {/* ── Section 4: Purchased Interviews Table ────── */}
+          <div
+            className="bg-white rounded-2xl overflow-hidden mb-6"
+            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          >
+            <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-center gap-1.5">
+              <h2 className="text-base font-black text-[#0A1547]">Additional Interviews Purchased</h2>
+              <InfoTooltip content="Extra interview capacity purchased outside the base membership, broken down by role." side="bottom" />
+            </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 whitespace-nowrap">
-                  Role
-                </th>
-                <th className="text-right px-6 py-3.5 pr-8 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 whitespace-nowrap">
-                  Interviews Purchased
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rolesLoading ? (
-                <tr>
-                  <td colSpan={2} className="px-6 py-4 text-sm text-[#0A1547]/45 font-semibold">
-                    Loading roles...
-                  </td>
-                </tr>
-              ) : purchasedInterviewRows.length === 0 ? (
-                <tr>
-                  <td colSpan={2} className="px-6 py-4 text-sm text-[#0A1547]/35 font-semibold">
-                    No additional interview purchases yet.
-                  </td>
-                </tr>
-              ) : (
-                purchasedInterviewRows.map((row, idx) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors"
-                    style={idx === purchasedInterviewRows.length - 1 ? { borderBottom: "none" } : {}}
-                  >
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-[#0A1547]">{row.title}</span>
-                    </td>
-                    <td className="px-6 py-4 pr-8 text-right">
-                      <span
-                        className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-black"
-                        style={{ backgroundColor: "rgba(163,128,246,0.10)", color: "#7C5FCC" }}
-                      >
-                        {row.purchased_interviews}
-                      </span>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 whitespace-nowrap">
+                      Role
+                    </th>
+                    <th className="text-right px-6 py-3.5 pr-8 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 whitespace-nowrap">
+                      Interviews Purchased
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {rolesLoading ? (
+                    <tr>
+                      <td colSpan={2} className="px-6 py-4 text-sm text-[#0A1547]/45 font-semibold">
+                        Loading roles...
+                      </td>
+                    </tr>
+                  ) : purchasedInterviewRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={2} className="px-6 py-4 text-sm text-[#0A1547]/35 font-semibold">
+                        No additional interview purchases yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    purchasedInterviewRows.map((row, idx) => (
+                      <tr
+                        key={row.id}
+                        className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors"
+                        style={idx === purchasedInterviewRows.length - 1 ? { borderBottom: "none" } : {}}
+                      >
+                        <td className="px-6 py-4">
+                          <span className="font-bold text-[#0A1547]">{row.title}</span>
+                        </td>
+                        <td className="px-6 py-4 pr-8 text-right">
+                          <span
+                            className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-black"
+                            style={{ backgroundColor: "rgba(163,128,246,0.10)", color: "#7C5FCC" }}
+                          >
+                            {row.purchased_interviews}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-        <div className="px-6 py-3 border-t border-gray-100">
-          <p className="text-[11px] text-[#0A1547]/35 font-semibold">
-            {purchasedInterviewsTotal} additional interviews total
-          </p>
-        </div>
-      </div>
+            <div className="px-6 py-3 border-t border-gray-100">
+              <p className="text-[11px] text-[#0A1547]/35 font-semibold">
+                {purchasedInterviewsTotal} additional interviews total
+              </p>
+            </div>
+          </div>
+        </>
+      )}
 
-      {/* ── Section 5: Manage Billing ─────────────────── */}
-      <div
-        className="bg-white rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
-      >
-        <div>
-          <h2 className="text-base font-black text-[#0A1547] mb-1">Manage Billing</h2>
-          <p className="text-xs text-[#0A1547]/45 leading-relaxed max-w-sm">
-            Access your full billing dashboard to update payment methods, view invoices, and manage your subscription.
-          </p>
-        </div>
-        {canManageBilling && (
+      {canViewLegalBilling && (
+        <div
+          className="bg-white rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+        >
+          <div>
+            <h2 className="text-base font-black text-[#0A1547] mb-1">Manage Billing</h2>
+            <p className="text-xs text-[#0A1547]/45 leading-relaxed max-w-sm">
+              Access your full billing dashboard to update payment methods, view invoices, and manage your subscription.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => { void openBillingPortal(); }}
@@ -1125,8 +1203,8 @@ export default function BillingPage() {
             <CreditCard className="w-4 h-4" />
             {portalBusy ? "Opening..." : "Manage Billing"}
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {embeddedCheckout && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6">
           <button

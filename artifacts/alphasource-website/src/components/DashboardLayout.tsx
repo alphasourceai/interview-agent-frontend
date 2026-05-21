@@ -324,6 +324,20 @@ function getClientSearchPlaceholder(clients: Client[]): string {
   return pluralized ? `Search ${pluralized}...` : "Search clients...";
 }
 
+function normalizeClientRole(role: unknown): string {
+  return String(role || "").trim().toLowerCase();
+}
+
+function hasBillingNavAccess(client: Client): boolean {
+  const permissions = client.permissions;
+  if (permissions?.can_view_legal_billing === true || permissions?.can_purchase_interviews === true) return true;
+  const hasExplicitBillingPermissions =
+    typeof permissions?.can_view_legal_billing === "boolean" ||
+    typeof permissions?.can_purchase_interviews === "boolean";
+  if (hasExplicitBillingPermissions) return false;
+  return ["manager", "admin", "owner", "super_admin"].includes(normalizeClientRole(client.role));
+}
+
 /* ── Main layout ─────────────────────────────────────────────── */
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -556,6 +570,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
         <nav className={`flex-1 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden
           ${collapsed ? "px-0 flex flex-col items-center" : "px-3"}`}>
           {navItems.map((item, idx) => {
+            if (item.label === "Billing" && !hasBillingNavAccess(selectedClient)) return null;
             const active = isActive(item.href);
 
             if (collapsed) {
