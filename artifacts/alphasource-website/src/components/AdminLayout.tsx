@@ -17,9 +17,10 @@ import {
   ChevronsRight,
   ChevronDown,
   Check,
+  Search,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useAdminClient } from "@/context/AdminClientContext";
+import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 
 interface NavItem {
   label: string;
@@ -44,10 +45,35 @@ interface AdminLayoutProps {
   title: string;
 }
 
+function adminClientScopeLabel(client: AdminClient): string {
+  if (client.id === "all") return "Platform view";
+  const entityLabel = String(client.entity_label || "").trim();
+  const parentName = String(client.parent_client_name || "").trim();
+  if (client.is_child_client === true || client.parent_client_id) {
+    if (entityLabel && parentName) return `${entityLabel} under ${parentName}`;
+    if (entityLabel) return entityLabel;
+    return "Child entity";
+  }
+  const childCount = typeof client.child_count === "number" && client.child_count > 0 ? client.child_count : 0;
+  return childCount ? `Parent client · ${childCount} ${childCount === 1 ? "entity" : "entities"}` : "Parent client";
+}
+
+function adminClientSearchText(client: AdminClient): string {
+  return [
+    client.name,
+    client.entity_label,
+    client.parent_client_name,
+    adminClientScopeLabel(client),
+    client.id === "all" ? "all clients platform view" : "",
+    client.is_child_client === true || client.parent_client_id ? "child entity" : "parent client",
+  ].join(" ").toLowerCase();
+}
+
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const [mobileOpen, setMobileOpen]           = useState(false);
   const [collapsed, setCollapsed]             = useState(false);
   const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
+  const [clientSearch, setClientSearch]       = useState("");
   const [location, setLocation]               = useLocation();
   const { logout }                            = useAuth();
   const { selectedClient, setSelectedClient, clients, loading: clientsLoading, error: clientsError } = useAdminClient();
@@ -74,8 +100,16 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [clientDropdownOpen]);
 
+  useEffect(() => {
+    if (!clientDropdownOpen) setClientSearch("");
+  }, [clientDropdownOpen]);
+
   const sidebarW  = collapsed ? "w-16" : "w-64";
   const contentML = collapsed ? "lg:ml-16" : "lg:ml-64";
+  const clientSearchTerm = clientSearch.trim().toLowerCase();
+  const filteredClients = clientSearchTerm
+    ? availableClients.filter((client) => adminClientSearchText(client).includes(clientSearchTerm))
+    : availableClients;
 
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex" style={{ fontFamily: "'Raleway', sans-serif" }}>
@@ -176,15 +210,30 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
               className="absolute left-3 right-3 z-50 bg-white rounded-xl shadow-lg border border-gray-100 py-1 mt-1 max-h-64 overflow-y-auto"
               style={{ top: "100%" }}
             >
+              {!clientsLoading && !clientsError && availableClients.length > 1 && (
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5">
+                    <Search className="w-3.5 h-3.5 text-[#0A1547]/30 flex-shrink-0" />
+                    <input
+                      value={clientSearch}
+                      onChange={(event) => setClientSearch(event.target.value)}
+                      placeholder="Search clients..."
+                      className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-[#0A1547] placeholder:text-[#0A1547]/35 outline-none"
+                    />
+                  </div>
+                </div>
+              )}
               {clientsLoading ? (
                 <p className="px-3 py-2 text-xs font-semibold text-[#0A1547]/45">Loading clients...</p>
               ) : clientsError ? (
                 <p className="px-3 py-2 text-xs font-semibold text-red-500">{clientsError}</p>
+              ) : filteredClients.length === 0 ? (
+                <p className="px-3 py-2 text-xs font-semibold text-[#0A1547]/45">No clients match your search.</p>
               ) : (
-                availableClients.map((client) => (
+                filteredClients.map((client) => (
                   <button
                     key={client.id}
-                    onClick={() => { setSelectedClient(client); setClientDropdownOpen(false); }}
+                    onClick={() => { setSelectedClient(client); setClientSearch(""); setClientDropdownOpen(false); }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 transition-colors text-left"
                   >
                     <div
@@ -193,7 +242,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                     >
                       {client.letter === "∗" ? "✦" : client.letter}
                     </div>
-                    <span className="flex-1 text-xs font-semibold text-[#0A1547] truncate">{client.name}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-semibold text-[#0A1547] truncate">{client.name}</span>
+                      <span className="block text-[10px] text-[#0A1547]/40 truncate">{adminClientScopeLabel(client)}</span>
+                    </span>
                     {selectedClient.id === client.id && (
                       <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#A380F6" }} />
                     )}

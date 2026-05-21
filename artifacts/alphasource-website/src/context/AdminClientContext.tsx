@@ -6,6 +6,13 @@ export interface AdminClient {
   name: string;
   letter: string;
   color: string;
+  parent_client_id?: string | null;
+  entity_label?: string | null;
+  billing_client_id?: string | null;
+  is_parent_client?: boolean;
+  is_child_client?: boolean;
+  parent_client_name?: string | null;
+  child_count?: number | null;
 }
 
 export const ADMIN_CLIENTS: AdminClient[] = [
@@ -107,6 +114,24 @@ function letterForClient(name: string): string {
 function colorForClient(id: string, index: number): string {
   const seed = String(id || index || "admin-client");
   return CLIENT_COLORS[hashText(seed) % CLIENT_COLORS.length];
+}
+
+function optionalText(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  const normalized = String(value || "").trim();
+  return normalized || null;
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function optionalNumber(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  if (value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function readStoredClientId(): string {
@@ -218,6 +243,13 @@ export function AdminClientProvider({ children }: { children: ReactNode }) {
             name,
             letter: letterForClient(name),
             color: colorForClient(id, index),
+            parent_client_id: optionalText(item.parent_client_id),
+            entity_label: optionalText(item.entity_label),
+            billing_client_id: optionalText(item.billing_client_id),
+            is_parent_client: optionalBoolean(item.is_parent_client),
+            is_child_client: optionalBoolean(item.is_child_client),
+            parent_client_name: optionalText(item.parent_client_name),
+            child_count: optionalNumber(item.child_count),
           };
         })
         .filter((item) => Boolean(item.id));
