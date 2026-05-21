@@ -508,7 +508,7 @@ export default function EntitiesPage() {
                                     value={editName}
                                     onChange={(event) => setEditName(event.target.value)}
                                     disabled={saving}
-                                    className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                    className="w-full h-[42px] px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
                                   />
                                 </div>
                                 <div>
@@ -522,7 +522,7 @@ export default function EntitiesPage() {
                                       setEditEntityLabelChoice(event.target.value);
                                     }}
                                     disabled={saving}
-                                    className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                    className="w-full h-[42px] px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
                                   >
                                     {STANDARD_ENTITY_LABELS.map((option) => (
                                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -668,7 +668,7 @@ export default function EntitiesPage() {
                     setCreateEntityLabelChoice(event.target.value);
                   }}
                   disabled={creatingEntity}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                  className="w-full h-[42px] px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
                 >
                   {STANDARD_ENTITY_LABELS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
