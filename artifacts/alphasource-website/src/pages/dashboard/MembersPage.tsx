@@ -216,6 +216,7 @@ export default function MembersPage() {
   const [role, setRole]         = useState<MemberRole>("Member");
   const [submitted, setSubmitted] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
+  const [modalNotice, setModalNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [scopeSearch, setScopeSearch] = useState("");
   const [selectedScopeIds, setSelectedScopeIds] = useState<string[]>([]);
   const [sortKey, setSortKey]   = useState<SortKey | null>(null);
@@ -228,8 +229,10 @@ export default function MembersPage() {
 
   const nameErr  = submitted && name.trim() === "";
   const emailErr = submitted && !isValidEmail(email);
-  const scopeErr = submitted && selectedScopeIds.length === 0;
   const assignableScopes = clients.filter((client) => canManageClientScope(client, memberships, isGlobalAdmin));
+  const assignableScopeIdSet = new Set(assignableScopes.map((client) => client.id));
+  const selectedAssignableScopeIds = selectedScopeIds.filter((clientId) => assignableScopeIdSet.has(clientId));
+  const scopeErr = submitted && selectedAssignableScopeIds.length === 0;
   const normalizedScopeSearch = scopeSearch.trim().toLowerCase();
   const filteredAssignableScopes = normalizedScopeSearch
     ? assignableScopes.filter((client) => scopeSearchText(client).includes(normalizedScopeSearch))
@@ -355,6 +358,7 @@ export default function MembersPage() {
     setMemberModalOpen(false);
     setScopeSearch("");
     setSubmitted(false);
+    setModalNotice(null);
   }, [selectedClientId, clientLoading, clientError, canManageMembers]);
 
   useEffect(() => {
@@ -379,10 +383,12 @@ export default function MembersPage() {
     setSubmitted(false);
     setScopeSearch("");
     setSelectedScopeIds([]);
+    setModalNotice(null);
   };
 
   const openAddMemberModal = () => {
     setActionNotice(null);
+    setModalNotice(null);
     setSubmitted(false);
     setScopeSearch("");
     const defaultScopeId = assignableScopes.some((client) => client.id === selectedClientId)
@@ -399,6 +405,7 @@ export default function MembersPage() {
   };
 
   const toggleScope = (clientId: string) => {
+    setModalNotice(null);
     setSelectedScopeIds((prev) => (
       prev.includes(clientId)
         ? prev.filter((id) => id !== clientId)
@@ -410,15 +417,26 @@ export default function MembersPage() {
     if (!canManageMembers) return;
     setSubmitted(true);
     if (!name.trim() || !isValidEmail(email)) return;
-    if (selectedScopeIds.length === 0) return;
+    const submitScopeIds = Array.from(
+      new Set(
+        selectedScopeIds
+          .map((clientId) => String(clientId || "").trim())
+          .filter((clientId) => clientId && assignableScopeIdSet.has(clientId)),
+      ),
+    );
+    if (submitScopeIds.length === 0) {
+      setModalNotice({ tone: "error", text: "Select at least one manageable scope." });
+      return;
+    }
     if (!backendBase) {
-      setActionNotice({ tone: "error", text: "Missing backend base URL configuration." });
+      setModalNotice({ tone: "error", text: "Missing backend base URL configuration." });
       return;
     }
 
     const memberName = name.trim();
     const memberEmail = email.trim();
     setActionNotice(null);
+    setModalNotice(null);
     setAddingMember(true);
 
     try {
@@ -431,7 +449,7 @@ export default function MembersPage() {
         },
         credentials: "omit",
         body: JSON.stringify({
-          client_ids: selectedScopeIds,
+          client_ids: submitScopeIds,
           email: memberEmail,
           name: memberName,
           role: role.toLowerCase(),
@@ -463,10 +481,10 @@ export default function MembersPage() {
         resetAddMemberForm();
         setActionNotice({ tone: "success", text: `Member assignment complete: ${summary}.` });
       } else {
-        setActionNotice({ tone: "error", text: `No memberships created: ${summary}.` });
+        setModalNotice({ tone: "error", text: `No memberships created: ${summary}.` });
       }
     } catch (error) {
-      setActionNotice({
+      setModalNotice({
         tone: "error",
         text: error instanceof Error ? error.message : "Could not add member.",
       });
@@ -821,6 +839,20 @@ export default function MembersPage() {
             </div>
 
             <div className="max-h-[72vh] overflow-y-auto px-6 py-5 space-y-4">
+              {modalNotice && (
+                <div
+                  className={`rounded-xl px-3.5 py-2 text-xs font-semibold ${
+                    modalNotice.tone === "success"
+                      ? "text-[#009E73] bg-[#02D99D]/10 border border-[#02D99D]/25"
+                      : "text-red-500 bg-red-50 border border-red-200"
+                  }`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {modalNotice.text}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 mb-1.5">
@@ -830,7 +862,10 @@ export default function MembersPage() {
                     type="text"
                     placeholder="Member name"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => {
+                      setModalNotice(null);
+                      setName(e.target.value);
+                    }}
                     disabled={addingMember}
                     className={`w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border placeholder-gray-400 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all ${
                       nameErr ? "border-red-300 bg-red-50/40" : "border-gray-200"
@@ -849,7 +884,10 @@ export default function MembersPage() {
                     type="email"
                     placeholder="Member email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setModalNotice(null);
+                      setEmail(e.target.value);
+                    }}
                     disabled={addingMember}
                     className={`w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border placeholder-gray-400 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all ${
                       emailErr ? "border-red-300 bg-red-50/40" : "border-gray-200"
@@ -868,7 +906,10 @@ export default function MembersPage() {
                 <div className="w-full md:w-48 relative">
                   <select
                     value={role}
-                    onChange={(e) => setRole(e.target.value as MemberRole)}
+                    onChange={(e) => {
+                      setModalNotice(null);
+                      setRole(e.target.value as MemberRole);
+                    }}
                     disabled={addingMember}
                     className="w-full appearance-none px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
                   >
@@ -885,14 +926,17 @@ export default function MembersPage() {
                     Assign scopes
                   </label>
                   <span className="text-[10px] font-bold text-[#0A1547]/35">
-                    {selectedScopeIds.length} selected
+                    {selectedAssignableScopeIds.length} selected
                   </span>
                 </div>
                 <input
                   type="search"
                   placeholder="Search clients..."
                   value={scopeSearch}
-                  onChange={(e) => setScopeSearch(e.target.value)}
+                  onChange={(e) => {
+                    setModalNotice(null);
+                    setScopeSearch(e.target.value);
+                  }}
                   disabled={addingMember}
                   className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 placeholder-gray-400 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all mb-2"
                 />
