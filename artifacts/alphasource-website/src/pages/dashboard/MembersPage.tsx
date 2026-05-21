@@ -461,19 +461,31 @@ export default function MembersPage() {
       const code = typeof data?.code === "string"
         ? data.code
         : (typeof data?.error === "string" ? data.error : "");
-
-      if (!response.ok) {
-        if (response.status === 409 || code === "email_in_use" || code === "client_admin_email_in_use") {
-          throw new Error("Email address already exists");
-        }
-        throw new Error(extractErrorMessage(text) || "Could not add member.");
-      }
-
       const items = Array.isArray(data?.items)
         ? data.items.filter((item): item is BatchMemberResult => Boolean(item && typeof item === "object"))
         : [];
       const counts = countBatchStatuses(items);
       const summary = buildBatchSummary(items);
+
+      if (!response.ok) {
+        if (items.length > 0) {
+          setMembersReloadKey((value) => value + 1);
+          if (counts.created > 0) {
+            setMemberModalOpen(false);
+            resetAddMemberForm();
+            setActionNotice({ tone: "success", text: `Member assignment complete: ${summary}.` });
+          } else {
+            setModalNotice({ tone: "error", text: `No memberships created: ${summary}.` });
+          }
+          return;
+        }
+        if (response.status === 409 || code === "email_in_use" || code === "client_admin_email_in_use") {
+          setModalNotice({ tone: "error", text: "Email address already exists" });
+          return;
+        }
+        setModalNotice({ tone: "error", text: extractErrorMessage(text) || "Could not add member." });
+        return;
+      }
 
       setMembersReloadKey((value) => value + 1);
       if (counts.created > 0) {
