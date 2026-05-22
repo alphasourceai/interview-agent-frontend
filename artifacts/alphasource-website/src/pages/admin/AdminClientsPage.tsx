@@ -239,6 +239,12 @@ function clientSearchText(client: Client): string {
   ].join(" ").toLowerCase();
 }
 
+function displayEntityLabel(client: Pick<Client, "entity_label">): string {
+  const label = String(client.entity_label || "").trim();
+  if (!label) return "Child entity";
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 /* ── Helpers ─────────────────────────────────────────────────── */
 const planColors: Record<string, { bg: string; text: string }> = {
   basic:      { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
@@ -731,11 +737,43 @@ export default function AdminClientsPage() {
   };
 
   const clientSearchTerm = clientSearch.trim().toLowerCase();
+  const parentClients = clients.filter((client) => !isChildEntity(client));
+  const childClients = clients.filter((client) => isChildEntity(client));
+  const parentClientIds = new Set(parentClients.map((client) => client.id));
+  const childrenByParentId = new Map<string, Client[]>();
+  const childMatchesByParentId = new Map<string, Client[]>();
+  const matchedParentIds = new Set<string>();
+
+  childClients.forEach((child) => {
+    const parentId = String(child.parent_client_id || "").trim();
+    if (!parentId || !parentClientIds.has(parentId)) return;
+    const children = childrenByParentId.get(parentId) || [];
+    children.push(child);
+    childrenByParentId.set(parentId, children);
+    if (clientSearchTerm && clientSearchText(child).includes(clientSearchTerm)) {
+      const matches = childMatchesByParentId.get(parentId) || [];
+      matches.push(child);
+      childMatchesByParentId.set(parentId, matches);
+      matchedParentIds.add(parentId);
+    }
+  });
+
+  childrenByParentId.forEach((children) => {
+    children.sort((a, b) => a.name.localeCompare(b.name));
+  });
+  childMatchesByParentId.forEach((children) => {
+    children.sort((a, b) => a.name.localeCompare(b.name));
+  });
+
   const filteredClients = clientSearchTerm
     ? clients.filter((client) =>
-        clientSearchText(client).includes(clientSearchTerm),
+        isChildEntity(client)
+          ? (!parentClientIds.has(String(client.parent_client_id || "").trim()) && clientSearchText(client).includes(clientSearchTerm))
+          : (clientSearchText(client).includes(clientSearchTerm) || matchedParentIds.has(client.id)),
       )
-    : clients;
+    : clients.filter((client) =>
+        !isChildEntity(client) || !parentClientIds.has(String(client.parent_client_id || "").trim()),
+      );
 
   const sorted = [...filteredClients].sort((a, b) => {
     let av = a[sortKey] ?? "";
@@ -1043,6 +1081,11 @@ export default function AdminClientsPage() {
             const includedInterviewsLabel = formatWholeNumber(client.planSettingsIncludedInterviewsPerRole);
             const additionalInterviewFeeLabel = formatMoney(client.planSettingsAdditionalInterviewFee);
             const enterpriseBillingIntervalLabel = client.planSettingsBillingCycle || client.billingCycle || "—";
+            const nestedChildren = rowIsChildEntity
+              ? []
+              : expanded
+                ? (childrenByParentId.get(client.id) || [])
+                : (childMatchesByParentId.get(client.id) || []);
 
             return (
               <div key={client.id}>
@@ -1355,6 +1398,84 @@ export default function AdminClientsPage() {
                             </button>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {nestedChildren.length > 0 && (
+                  <div
+                    className="px-8 py-4 border-t border-[rgba(163,128,246,0.10)]"
+                    style={{ backgroundColor: "rgba(248,249,253,0.72)", borderLeft: "3px solid #A380F6" }}
+                  >
+                    <div className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-white/95 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-[rgba(10,21,71,0.06)]">
+                        <p className="text-xs font-black text-[#0A1547]">Child entities</p>
+                        <p className="text-[11px] text-[#0A1547]/45 font-semibold">
+                          Operational scopes under {client.name}
+                        </p>
+                      </div>
+                      <div className="hidden lg:grid grid-cols-[1fr_120px_140px_220px_44px] gap-3 px-4 py-2 bg-[#0A1547]/[0.015] text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35">
+                        <span>Name</span>
+                        <span>Label</span>
+                        <span>Billing</span>
+                        <span>Access override</span>
+                        <span>Remove</span>
+                      </div>
+                      <div className="divide-y divide-[rgba(10,21,71,0.06)]">
+                        {nestedChildren.map((child) => {
+                          const childOverride = overrides[child.id] ?? "Inherit";
+                          return (
+                            <div key={child.id} className="grid grid-cols-1 lg:grid-cols-[1fr_120px_140px_220px_44px] gap-3 items-center px-4 py-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-[#0A1547] truncate">{child.name}</p>
+                                <p className="text-[11px] text-[#0A1547]/40 font-semibold">
+                                  Under {child.parent_client_name || client.name}
+                                </p>
+                              </div>
+                              <p className="text-xs font-bold text-[#0A1547]/60">
+                                {displayEntityLabel(child)}
+                              </p>
+                              <p className="text-xs font-bold text-[#0A1547]/45">
+                                Billed to parent
+                              </p>
+                              <div className="relative">
+                                <select
+                                  className={selectCls}
+                                  value={childOverride}
+                                  disabled={accessOverrideBusy[child.id] === true}
+                                  onChange={(e) => {
+                                    const nextValue = e.target.value as AccessOverride;
+                                    const previousValue = overrides[child.id] ?? normalizeAccessOverride(child.accessOverrideMode);
+                                    setOverrides((prev) => ({
+                                      ...prev,
+                                      [child.id]: nextValue,
+                                    }));
+                                    void updateAccessOverride(child.id, nextValue, previousValue);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <option>Inherit</option>
+                                  <option>Force Active</option>
+                                  <option>Force Inactive</option>
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+                              </div>
+                              <div className="flex items-center lg:justify-center">
+                                <button
+                                  disabled={deleteBusy[child.id] === true}
+                                  className="p-1.5 rounded-lg text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={`Remove ${child.name}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void deleteClient(child);
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
