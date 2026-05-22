@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useClient, type Client } from "@/context/ClientContext";
-import TawkWidget from "@/components/TawkWidget";
 
 const env =
   typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
