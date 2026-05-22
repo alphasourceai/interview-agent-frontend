@@ -55,12 +55,8 @@ const faqSections = [
         answer: "No. alphaScreen supports the hiring process with structured information and consistent screening. Final hiring decisions remain with the employer.",
       },
       {
-        question: "What is the Dental Operations Analyzer?",
-        answer: "The Dental Operations Analyzer is an AI-powered analysis tool designed to help leaders identify trends, performance issues, and opportunities from operational and financial data.",
-      },
-      {
         question: "Do you offer consulting?",
-        answer: "Yes. alphaSource Consulting combines AI-powered insight with hands-on operational experience. We help leaders understand what is happening, why it matters, and what to do next.",
+        answer: "Yes. Our sister company, alphaSource Consulting, provides consulting specifically for dental companies. Visit www.alphasourceconsulting.com to learn more.",
       },
     ],
   },
