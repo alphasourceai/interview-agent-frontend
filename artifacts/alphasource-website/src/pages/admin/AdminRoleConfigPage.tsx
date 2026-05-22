@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, Trash2, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Trash2, Plus, ChevronDown, ChevronUp, Search } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
-import { useAdminClient } from "@/context/AdminClientContext";
+import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
 type RoleType = "Basic" | "Detailed" | "Technical";
+type SortKey = "name" | "entity" | "type";
 
 interface RubricQuestion {
   id: number;
@@ -16,6 +17,9 @@ interface RoleConfig {
   id: string;
   clientId: string;
   clientName: string;
+  entityName: string;
+  parentClientName: string;
+  entityLabel: string;
   name: string;
   token: string;
   type: RoleType;
@@ -285,8 +289,9 @@ export default function AdminRoleConfigPage() {
     error: adminClientsError,
   } = useAdminClient();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [sortKey, setSortKey]     = useState<"name" | "type">("name");
+  const [sortKey, setSortKey]     = useState<SortKey>("name");
   const [sortDir, setSortDir]     = useState<"asc" | "desc">("asc");
+  const [searchTerm, setSearchTerm] = useState("");
   const [roles, setRoles] = useState<RoleConfig[]>([]);
   const [rolesLoading, setRolesLoading] = useState(false);
   const [rolesError, setRolesError] = useState("");
@@ -294,13 +299,13 @@ export default function AdminRoleConfigPage() {
   const [loadingConfig, setLoadingConfig] = useState<Record<string, boolean>>({});
   const [savingConfig, setSavingConfig] = useState<Record<string, boolean>>({});
 
-  const clientNameById = useMemo(
+  const clientById = useMemo<Record<string, AdminClient>>(
     () =>
       Object.fromEntries(
         clients
           .filter((client) => client.id !== "all")
-          .map((client) => [client.id, client.name]),
-      ),
+          .map((client) => [client.id, client]),
+      ) as Record<string, AdminClient>,
     [clients],
   );
 
@@ -369,15 +374,28 @@ export default function AdminRoleConfigPage() {
           .map((item) => {
             const roleId = String(item.id || "").trim();
             const roleClientId = String(item.client_id || "").trim();
+            const owningClient = clientById[roleClientId];
+            const parentClientId = String(owningClient?.parent_client_id || "").trim();
+            const parentClient = parentClientId ? clientById[parentClientId] : null;
+            const entityName = String(owningClient?.name || "").trim() || "—";
+            const parentClientName = String(
+              parentClientId
+                ? owningClient?.parent_client_name || parentClient?.name || ""
+                : owningClient?.name || "",
+            ).trim() || "—";
+            const questions = toRubricQuestions(extractRubricQuestions(item.rubric));
             return {
               id: roleId,
               clientId: roleClientId,
-              clientName: String(clientNameById[roleClientId] || "").trim(),
+              clientName: entityName === "—" ? "" : entityName,
+              entityName,
+              parentClientName,
+              entityLabel: String(owningClient?.entity_label || "").trim(),
               name: String(item.title || "").trim() || "Untitled role",
               token: String(item.slug_or_token || roleId).trim(),
               type: normalizeRoleType(item.interview_type),
               tavusPrompt: "",
-              questions: toRubricQuestions(extractRubricQuestions(item.rubric)),
+              questions,
             };
           })
           .filter((role) => Boolean(role.id));
@@ -397,20 +415,43 @@ export default function AdminRoleConfigPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, adminClientsLoading, adminClientsError, clientNameById]);
+  }, [selectedClientId, adminClientsLoading, adminClientsError, clientById]);
 
-  const handleSort = (key: "name" | "type") => {
+  const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const filtered = selectedClientId === "all"
+  const scopedRoles = selectedClientId === "all"
     ? roles
     : roles.filter((role) => role.clientId === selectedClientId);
 
+  const searchQuery = searchTerm.trim().toLowerCase();
+  const filtered = scopedRoles.filter((role) => {
+    if (!searchQuery) return true;
+    return [
+      role.name,
+      role.token,
+      role.type,
+      role.clientName,
+      role.entityName,
+      role.parentClientName,
+      role.entityLabel,
+      ...role.questions.map((question) => question.text),
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(searchQuery);
+  });
+
   const sorted = [...filtered].sort((a, b) => {
-    const av = sortKey === "name" ? a.name.toLowerCase() : a.type.toLowerCase();
-    const bv = sortKey === "name" ? b.name.toLowerCase() : b.type.toLowerCase();
+    const getSortValue = (role: RoleConfig) => {
+      if (sortKey === "entity") return role.entityName.toLowerCase();
+      if (sortKey === "type") return role.type.toLowerCase();
+      return role.name.toLowerCase();
+    };
+    const av = getSortValue(a);
+    const bv = getSortValue(b);
     if (av < bv) return sortDir === "asc" ? -1 : 1;
     if (av > bv) return sortDir === "asc" ? 1 : -1;
     return 0;
@@ -532,7 +573,7 @@ export default function AdminRoleConfigPage() {
     }
   };
 
-  function SortIcon({ col }: { col: "name" | "type" }) {
+  function SortIcon({ col }: { col: SortKey }) {
     if (sortKey !== col) return <ChevronDown className="w-3 h-3 text-[#0A1547]/20 ml-0.5 flex-shrink-0" />;
     return sortDir === "asc"
       ? <ChevronUp   className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />
@@ -570,13 +611,31 @@ export default function AdminRoleConfigPage() {
         className="bg-white rounded-2xl overflow-hidden"
         style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
       >
+        <div className="px-5 py-4 border-b border-gray-100">
+          <div className="relative max-w-xl">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0A1547]/25" />
+            <input
+              className="w-full rounded-xl border border-[rgba(10,21,71,0.10)] bg-white py-2.5 pl-9 pr-3 text-sm font-semibold text-[#0A1547] placeholder:text-[#0A1547]/30 focus:border-[#A380F6] focus:outline-none"
+              placeholder="Search roles, entities, clients, tokens, or rubric text..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+          </div>
+        </div>
+
         {/* Column headers */}
-        <div className="grid grid-cols-[1fr_160px_96px] items-center px-5 py-3 border-b border-gray-100">
+        <div className="grid grid-cols-[minmax(0,1fr)_220px_140px_96px] items-center px-5 py-3 border-b border-gray-100">
           <button
             className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors text-left"
             onClick={() => handleSort("name")}
           >
             Role <SortIcon col="name" />
+          </button>
+          <button
+            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors text-left"
+            onClick={() => handleSort("entity")}
+          >
+            Entity <SortIcon col="entity" />
           </button>
           <button
             className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
@@ -599,18 +658,19 @@ export default function AdminRoleConfigPage() {
             </div>
           ) : sorted.map((role) => {
             const tc = typeColors[role.type];
-            const showClientContext = selectedClientId === "all";
             return (
               <div
                 key={role.id}
-                className="grid grid-cols-[1fr_160px_96px] items-center px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
+                className="grid grid-cols-[minmax(0,1fr)_220px_140px_96px] items-center px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
               >
                 <div className="min-w-0 pr-4">
                   <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">{role.name}</p>
                   <p className="text-[10px] font-mono text-[#0A1547]/30 mt-0.5 truncate">{role.token}</p>
-                  {showClientContext && (
-                    <p className="text-[10px] text-[#0A1547]/40 mt-0.5 truncate">{role.clientName || "Unknown client"}</p>
-                  )}
+                </div>
+
+                <div className="min-w-0 pr-4">
+                  <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">{role.entityName}</p>
+                  <p className="text-[10px] text-[#0A1547]/40 mt-0.5 truncate">Parent: {role.parentClientName}</p>
                 </div>
 
                 <span
@@ -636,7 +696,9 @@ export default function AdminRoleConfigPage() {
 
           {!rolesLoading && !rolesError && sorted.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-sm text-[#0A1547]/35 font-semibold">No roles configured for this client.</p>
+              <p className="text-sm text-[#0A1547]/35 font-semibold">
+                {searchQuery ? "No role configs match your search." : "No roles configured for this client."}
+              </p>
             </div>
           )}
         </div>
