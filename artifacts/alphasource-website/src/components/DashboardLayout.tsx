@@ -29,6 +29,27 @@ import TawkWidget from "@/components/TawkWidget";
 const env =
   typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
 
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "alphasource:dashboard_sidebar_collapsed";
+
+function readStoredSidebarCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (!window.matchMedia("(min-width: 1024px)").matches) return false;
+    return window.sessionStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeStoredSidebarCollapsed(collapsed: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, collapsed ? "true" : "false");
+  } catch {
+    // Sidebar state still works in memory if session storage is unavailable.
+  }
+}
+
 /* ── Nav items ───────────────────────────────────────────────── */
 interface NavItem {
   label: string;
@@ -364,7 +385,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen,         setMobileOpen]         = useState(false);
-  const [collapsed,          setCollapsed]           = useState(false);
+  const [collapsed,          setCollapsed]           = useState(() => readStoredSidebarCollapsed());
   const [clientDropdownOpen, setClientDropdownOpen]  = useState(false);
   const [clientSearch,       setClientSearch]        = useState("");
   const [tourActive,         setTourActive]          = useState(false);
@@ -414,6 +435,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     if (!clientDropdownOpen) setClientSearch("");
   }, [clientDropdownOpen]);
+
+  useEffect(() => {
+    writeStoredSidebarCollapsed(collapsed);
+  }, [collapsed]);
 
   /* Close tour on Escape */
   useEffect(() => {
