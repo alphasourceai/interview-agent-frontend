@@ -1,18 +1,12 @@
 import type { Client } from "@/context/ClientContext";
 
-function displayEntityLabel(value: unknown): string {
-  const text = String(value || "").trim();
-  if (!text) return "";
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 function scopeMetadata(client: Client): string {
   const parts: string[] = [];
   const isChild = client.is_child_client === true || Boolean(client.parent_client_id);
 
   if (isChild) {
-    const label = displayEntityLabel(client.entity_label);
-    parts.push(label ? `${label} · Child entity` : "Child entity");
+    const parentName = String(client.parent_client_name || "").trim();
+    parts.push(parentName ? `Child entity of ${parentName}` : "Child entity");
   } else {
     parts.push("Parent client");
   }

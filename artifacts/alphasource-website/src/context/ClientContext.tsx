@@ -8,6 +8,7 @@ export interface Client {
   color: string;
   role?: string;
   parent_client_id?: string | null;
+  parent_client_name?: string | null;
   entity_label?: string | null;
   billing_client_id?: string | null;
   is_parent_client?: boolean;
@@ -314,6 +315,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
             color: colorForClient(id, index),
             role,
             parent_client_id: optionalText(item.parent_client_id),
+            parent_client_name: optionalText(item.parent_client_name),
             entity_label: optionalText(item.entity_label),
             billing_client_id: optionalText(item.billing_client_id),
             is_parent_client: optionalBoolean(item.is_parent_client),
@@ -327,15 +329,21 @@ export function ClientProvider({ children }: { children: ReactNode }) {
       const dedupedClients = normalizedClients.filter(
         (client, index, list) => list.findIndex((entry) => entry.id === client.id) === index,
       );
+      const clientNameById = new Map(dedupedClients.map((client) => [client.id, client.name]));
+      const enrichedClients = dedupedClients.map((client) => {
+        if (client.parent_client_name || !client.parent_client_id) return client;
+        const parentName = clientNameById.get(client.parent_client_id);
+        return parentName ? { ...client, parent_client_name: parentName } : client;
+      });
 
       const scopedDefaultClientId = String(scope.default_client_id || "").trim();
-      const validIds = new Set(dedupedClients.map((client) => client.id));
+      const validIds = new Set(enrichedClients.map((client) => client.id));
       const membershipClientId =
         normalizedMemberships.find((membership) => validIds.has(membership.client_id))?.client_id || "";
       const storedClientId = readStoredClientId();
       const queryClientId = !queryClientIdConsumedRef.current ? queryClientIdRef.current : "";
 
-      setClients(dedupedClients);
+      setClients(enrichedClients);
       setMemberships(normalizedMemberships);
       setDefaultClientId(scopedDefaultClientId);
       setIsGlobalAdmin(me.isGlobalAdmin === true);
@@ -348,11 +356,11 @@ export function ClientProvider({ children }: { children: ReactNode }) {
           (storedClientId && validIds.has(storedClientId) ? storedClientId : "") ||
           (scopedDefaultClientId && validIds.has(scopedDefaultClientId) ? scopedDefaultClientId : "") ||
           (membershipClientId && validIds.has(membershipClientId) ? membershipClientId : "") ||
-          (dedupedClients[0]?.id || "");
+          (enrichedClients[0]?.id || "");
         writeStoredClientId(resolvedClientId);
         return resolvedClientId;
       });
-      if (dedupedClients.length > 0) {
+      if (enrichedClients.length > 0) {
         queryClientIdConsumedRef.current = true;
       }
     } catch (bootstrapError) {

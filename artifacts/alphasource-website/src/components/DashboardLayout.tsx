@@ -289,9 +289,11 @@ function TourSpotlight({
 }
 
 function clientScopeLabel(client: Client): string {
-  const entityLabel = String(client.entity_label || "").trim();
-  if (client.is_child_client === true || client.parent_client_id) return entityLabel || "Child entity";
-  return "Parent scope";
+  if (client.is_child_client === true || client.parent_client_id) {
+    const parentName = String(client.parent_client_name || "").trim();
+    return parentName ? `Child entity of ${parentName}` : "Child entity";
+  }
+  return "Parent client";
 }
 
 function clientScopeSubtitle(client: Client): string {
@@ -305,6 +307,7 @@ function clientSearchText(client: Client): string {
     client.name,
     client.role,
     client.entity_label,
+    client.parent_client_name,
     clientScopeLabel(client),
     client.inherited === true ? "inherited inherited access" : "",
     client.is_child_client === true || client.parent_client_id ? "child entity" : "parent scope",
@@ -359,7 +362,7 @@ interface DashboardLayoutProps {
   title:    string;
 }
 
-export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen,         setMobileOpen]         = useState(false);
   const [collapsed,          setCollapsed]           = useState(false);
   const [clientDropdownOpen, setClientDropdownOpen]  = useState(false);
@@ -667,9 +670,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex-1">
-            <span className="text-sm font-bold text-[#0A1547]">{title}</span>
-          </div>
+          <div className="flex-1" />
 
           {/* Take a Tour pill */}
           <button

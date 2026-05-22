@@ -415,9 +415,6 @@ export default function OverviewPage() {
       {/* ── Header ───────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-7">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1">
-            {selectedClient.id === "all" ? "All Clients" : "Client"}
-          </p>
           <h2 className="text-2xl font-black text-[#0A1547] leading-tight">{selectedClient.name}</h2>
         </div>
 
