@@ -322,7 +322,7 @@ export default function AdminClientsPage() {
   /* form state */
   const [form, setForm] = useState({
     clientName: "", adminName: "", adminEmail: "",
-    candidateContact: "", managerRole: "standard",
+    candidateContact: "",
   });
 
   useEffect(() => {
@@ -349,7 +349,7 @@ export default function AdminClientsPage() {
     const admin_name = form.adminName.trim();
     const admin_email = form.adminEmail.trim();
     const candidate_assistance_contact = form.candidateContact.trim();
-    const admin_role = form.managerRole === "tester" ? "tester" : "manager";
+    const admin_role = "super_admin";
 
     if (!name) {
       setActionNotice({ tone: "error", text: "Client name is required." });
@@ -401,7 +401,6 @@ export default function AdminClientsPage() {
         adminName: "",
         adminEmail: "",
         candidateContact: "",
-        managerRole: "standard",
       });
       requestReload();
       setActionNotice({ tone: "success", text: "Client created." });
@@ -913,13 +912,13 @@ export default function AdminClientsPage() {
           />
           <input
             className={inputCls}
-            placeholder="Client admin name"
+            placeholder="Super Admin name"
             value={form.adminName}
             onChange={(e) => setForm({ ...form, adminName: e.target.value })}
           />
           <input
             className={inputCls}
-            placeholder="Admin email"
+            placeholder="Super Admin email"
             type="email"
             value={form.adminEmail}
             onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
@@ -933,17 +932,6 @@ export default function AdminClientsPage() {
             value={form.candidateContact}
             onChange={(e) => setForm({ ...form, candidateContact: e.target.value })}
           />
-          <div className="relative flex-shrink-0 w-48">
-            <select
-              className={selectCls}
-              value={form.managerRole}
-              onChange={(e) => setForm({ ...form, managerRole: e.target.value })}
-            >
-              <option value="standard">Manager (standard)</option>
-              <option value="tester">Manager (tester)</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
-          </div>
           <button
             disabled={createBusy}
             className="flex-shrink-0 px-5 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90"
