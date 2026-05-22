@@ -11,6 +11,7 @@ import {
   X,
   Video,
 } from "lucide-react";
+import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useClient } from "@/context/ClientContext";
@@ -1097,7 +1098,7 @@ function ExpandedPanel({
 
 /* ── Main page ──────────────────────────────────────── */
 export default function CandidatesPage() {
-  const { selectedClientId, loading: clientLoading, error: clientError } = useClient();
+  const { selectedClient, selectedClientId, loading: clientLoading, error: clientError } = useClient();
   const [expandedId, setExpandedId] = useState<string | number | null>(null);
   const [minScore, setMinScore]         = useState("");
   const [sortKey, setSortKey]           = useState<SortKey | null>(null);
@@ -1645,6 +1646,8 @@ export default function CandidatesPage() {
 
   return (
     <DashboardLayout title="Candidates">
+      <CurrentScopeBanner client={selectedClient} />
+
       {/* ── Filter bar ────────────────────────────── */}
       <div
         className="bg-white rounded-2xl px-5 py-4 mb-5 flex flex-wrap items-center gap-3"

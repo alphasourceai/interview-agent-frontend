@@ -9,6 +9,7 @@ import {
   ChevronUp,
   ChevronsUpDown,
 } from "lucide-react";
+import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useClient } from "@/context/ClientContext";
@@ -983,6 +984,8 @@ export default function RolesPage() {
 
   return (
     <DashboardLayout title="Roles">
+      <CurrentScopeBanner client={selectedClient} />
+
       {canManageRoles && (
         <div
           className="bg-white rounded-2xl p-6 mb-6"
