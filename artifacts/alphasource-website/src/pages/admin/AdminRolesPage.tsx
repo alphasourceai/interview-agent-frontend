@@ -178,7 +178,6 @@ const selectCls =
 
 export default function AdminRolesPage() {
   const {
-    selectedClient,
     selectedClientId,
     clients: adminClients,
     loading: adminClientsLoading,
@@ -723,9 +722,6 @@ export default function AdminRolesPage() {
       : <ChevronDown className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />;
   }
 
-  /* Determine if we're showing a client column */
-  const showClient = selectedClient.id === "all";
-
   return (
     <AdminLayout title="Roles">
 
@@ -856,11 +852,7 @@ export default function AdminRolesPage() {
       >
         {/* Header */}
         <div
-          className={`grid items-center px-5 py-3 border-b border-gray-100 ${
-            showClient
-              ? "grid-cols-[minmax(160px,1fr)_110px_120px_90px_110px_120px_56px_56px_110px_112px]"
-              : "grid-cols-[minmax(180px,1fr)_120px_90px_110px_120px_56px_56px_110px_112px]"
-          }`}
+          className="grid grid-cols-[minmax(150px,1fr)_120px_110px_78px_105px_76px_50px_50px_96px_104px] items-center px-5 py-3 border-b border-gray-100"
         >
           <button
             className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors text-left"
@@ -868,14 +860,12 @@ export default function AdminRolesPage() {
           >
             Role <SortIcon col="name" />
           </button>
-          {showClient && (
-            <button
-              className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
-              onClick={() => handleSort("entity")}
-            >
-              Entity <SortIcon col="entity" />
-            </button>
-          )}
+          <button
+            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+            onClick={() => handleSort("entity")}
+          >
+            Entity <SortIcon col="entity" />
+          </button>
           <button
             className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
             onClick={() => handleSort("created")}
@@ -889,7 +879,7 @@ export default function AdminRolesPage() {
             Type <SortIcon col="type" />
           </button>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Usage</p>
-          <p className="text-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Add’l Interviews</p>
+          <p className="text-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Add’l Int.</p>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Rubric</p>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">JD</p>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Link</p>
@@ -913,11 +903,7 @@ export default function AdminRolesPage() {
               return (
                 <div
                   key={role.id}
-                  className={`grid items-center px-5 py-3.5 hover:bg-gray-50/60 transition-colors ${
-                    showClient
-                      ? "grid-cols-[minmax(160px,1fr)_110px_120px_90px_110px_120px_56px_56px_110px_112px]"
-                      : "grid-cols-[minmax(180px,1fr)_120px_90px_110px_120px_56px_56px_110px_112px]"
-                  }`}
+                  className="grid grid-cols-[minmax(150px,1fr)_120px_110px_78px_105px_76px_50px_50px_96px_104px] items-center px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
                 >
                   {/* Name + parent */}
                   <div className="min-w-0 pr-3">
@@ -939,12 +925,10 @@ export default function AdminRolesPage() {
                     )}
                   </div>
 
-                  {/* Entity (all-clients view only) */}
-                  {showClient && (
-                    <p className="text-xs font-semibold text-[#0A1547]/50 truncate pr-2">
-                      {role.entityName || "—"}
-                    </p>
-                  )}
+                  {/* Entity */}
+                  <p className="text-xs font-semibold text-[#0A1547]/50 truncate pr-2">
+                    {role.entityName || "—"}
+                  </p>
 
                   {/* Created */}
                   <div className="pr-2">
