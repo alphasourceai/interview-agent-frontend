@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, FileText, Copy, Trash2, Upload } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
-import { useAdminClient } from "@/context/AdminClientContext";
+import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
 type RoleType = "Basic" | "Detailed" | "Technical";
-type SortKey  = "name" | "created" | "type";
+type SortKey  = "name" | "entity" | "created" | "type";
 type SortDir  = "asc" | "desc";
 type RoleStatusFilter = "active" | "inactive" | "all";
 
@@ -14,9 +14,13 @@ interface Role {
   id: string;
   clientId: string;
   clientName: string;
+  entityName: string;
+  parentClientName: string;
   name: string;
   token: string;
   created: string;
+  createdDate: string;
+  createdTime: string;
   createdTs: number;
   type: RoleType;
   hasJD: boolean;
@@ -85,12 +89,17 @@ function normalizeRoleType(value: unknown): RoleType {
   return "Basic";
 }
 
-function formatRoleCreated(value: unknown): { text: string; ts: number } {
+function formatRoleCreated(value: unknown): { text: string; date: string; time: string; ts: number } {
   const raw = String(value || "").trim();
-  if (!raw) return { text: "—", ts: 0 };
+  if (!raw) return { text: "—", date: "—", time: "—", ts: 0 };
   const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return { text: "—", ts: 0 };
-  return { text: parsed.toLocaleString(), ts: parsed.getTime() };
+  if (Number.isNaN(parsed.getTime())) return { text: "—", date: "—", time: "—", ts: 0 };
+  return {
+    text: parsed.toLocaleString(),
+    date: parsed.toLocaleDateString(),
+    time: parsed.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+    ts: parsed.getTime(),
+  };
 }
 
 function toWholeNonNegative(value: unknown): number | null {
@@ -196,13 +205,13 @@ export default function AdminRolesPage() {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [form, setForm] = useState({ title: "", type: "Basic", jdFileName: "" });
 
-  const clientNameById = useMemo(
+  const clientById = useMemo<Record<string, AdminClient>>(
     () =>
       Object.fromEntries(
         adminClients
           .filter((client) => client.id !== "all")
-          .map((client) => [client.id, client.name]),
-      ),
+          .map((client) => [client.id, client]),
+      ) as Record<string, AdminClient>,
     [adminClients],
   );
 
@@ -283,16 +292,29 @@ export default function AdminRolesPage() {
           .map((item) => {
             const roleId = String(item.id || "").trim();
             const roleClientId = String(item.client_id || "").trim();
+            const owningClient = clientById[roleClientId];
+            const parentClientId = String(owningClient?.parent_client_id || "").trim();
+            const isChildClient = owningClient?.is_child_client === true || Boolean(parentClientId);
+            const entityName = String(owningClient?.name || "").trim() || "—";
+            const parentClientName = String(
+              isChildClient
+                ? (owningClient?.parent_client_name || clientById[parentClientId]?.name || "")
+                : (owningClient?.name || ""),
+            ).trim() || "—";
             const created = formatRoleCreated(item.created_at);
             const rubricQuestions = extractRubricQuestions(item.rubric);
             const status = String(item.status || "active").trim().toLowerCase() || "active";
             return {
               id: roleId,
               clientId: roleClientId,
-              clientName: String(clientNameById[roleClientId] || "").trim(),
+              clientName: entityName === "—" ? "" : entityName,
+              entityName,
+              parentClientName,
               name: String(item.title || "").trim() || "Untitled role",
               token: String(item.slug_or_token || roleId).trim(),
               created: created.text,
+              createdDate: created.date,
+              createdTime: created.time,
               createdTs: created.ts,
               type: normalizeRoleType(item.interview_type),
               hasJD: Boolean(String(item.job_description_url || "").trim()),
@@ -326,7 +348,7 @@ export default function AdminRolesPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, adminClientsLoading, adminClientsError, clientNameById, roleStatusFilter, refreshNonce]);
+  }, [selectedClientId, adminClientsLoading, adminClientsError, clientById, roleStatusFilter, refreshNonce]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -350,6 +372,7 @@ export default function AdminRolesPage() {
     let av: string | number = "";
     let bv: string | number = "";
     if (sortKey === "name")    { av = a.name.toLowerCase(); bv = b.name.toLowerCase(); }
+    if (sortKey === "entity")  { av = a.entityName.toLowerCase(); bv = b.entityName.toLowerCase(); }
     if (sortKey === "created") { av = a.createdTs; bv = b.createdTs; }
     if (sortKey === "type")    { av = a.type.toLowerCase(); bv = b.type.toLowerCase(); }
     if (av < bv) return sortDir === "asc" ? -1 : 1;
@@ -846,7 +869,12 @@ export default function AdminRolesPage() {
             Role <SortIcon col="name" />
           </button>
           {showClient && (
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Client</p>
+            <button
+              className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+              onClick={() => handleSort("entity")}
+            >
+              Entity <SortIcon col="entity" />
+            </button>
           )}
           <button
             className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
@@ -861,7 +889,7 @@ export default function AdminRolesPage() {
             Type <SortIcon col="type" />
           </button>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Usage</p>
-          <p className="text-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Purchased Add’l Interviews</p>
+          <p className="text-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Add’l Interviews</p>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Rubric</p>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">JD</p>
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Link</p>
@@ -891,7 +919,7 @@ export default function AdminRolesPage() {
                       : "grid-cols-[minmax(180px,1fr)_120px_90px_110px_120px_56px_56px_110px_112px]"
                   }`}
                 >
-                  {/* Name + token */}
+                  {/* Name + parent */}
                   <div className="min-w-0 pr-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">{role.name}</p>
@@ -901,9 +929,8 @@ export default function AdminRolesPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-[#0A1547]/30 mt-0.5 font-mono truncate">
-                      Token: {role.token}
-                      {role.isInactive && role.inactiveReason ? ` • ${role.inactiveReason}` : ""}
+                    <p className="text-[10px] text-[#0A1547]/35 mt-0.5 font-semibold truncate">
+                      Parent: {role.parentClientName}
                     </p>
                     {role.isInactive && (
                       <p className="text-[10px] text-[#0A1547]/35 mt-0.5 truncate">
@@ -912,15 +939,18 @@ export default function AdminRolesPage() {
                     )}
                   </div>
 
-                  {/* Client (all-clients view only) */}
+                  {/* Entity (all-clients view only) */}
                   {showClient && (
                     <p className="text-xs font-semibold text-[#0A1547]/50 truncate pr-2">
-                      {role.clientName || "—"}
+                      {role.entityName || "—"}
                     </p>
                   )}
 
                   {/* Created */}
-                  <p className="text-xs text-[#0A1547]/50 font-semibold pr-2">{role.created}</p>
+                  <div className="pr-2">
+                    <p className="text-xs text-[#0A1547]/55 font-bold leading-snug">{role.createdDate}</p>
+                    <p className="text-[10px] text-[#0A1547]/35 font-semibold mt-0.5">{role.createdTime}</p>
+                  </div>
 
                   {/* Type badge */}
                   <span
@@ -937,7 +967,7 @@ export default function AdminRolesPage() {
                       : `${role.remainingInterviews} left / ${role.usedInterviews} used`}
                   </p>
 
-                  {/* Purchased add'l interviews */}
+                  {/* Add'l interviews */}
                   <p className="text-center text-xs text-[#0A1547]/55 font-bold">
                     {role.purchasedInterviews == null ? "—" : role.purchasedInterviews}
                   </p>
