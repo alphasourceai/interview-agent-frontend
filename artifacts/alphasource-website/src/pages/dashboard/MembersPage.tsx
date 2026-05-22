@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Trash2, UserPlus, ChevronDown, ChevronUp, ChevronsUpDown, Key } from "lucide-react";
+import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient, type Client, type ClientMembership } from "@/context/ClientContext";
 import { supabase } from "@/lib/supabaseClient";
@@ -191,7 +192,6 @@ export default function MembersPage() {
     memberships,
     isGlobalAdmin,
   } = useClient();
-  const clientName = selectedClient.id === "all" ? "All Clients" : selectedClient.name;
   const selectedMembershipRole = String(
     memberships.find((membership) => membership.client_id === selectedClientId)?.role ||
       selectedClient.role ||
@@ -669,6 +669,8 @@ export default function MembersPage() {
 
   return (
     <DashboardLayout title="Members">
+      <CurrentScopeBanner client={selectedClient} />
+
       <div
         className="bg-white rounded-2xl overflow-hidden"
         style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
@@ -677,11 +679,6 @@ export default function MembersPage() {
         <div className="px-6 pt-6 pb-5 border-b border-gray-100">
           <h2 className="text-base font-black text-[#0A1547] mb-4">
             Client Members
-            {selectedClient.id !== "all" && (
-              <span className="ml-2 text-base font-semibold text-[#0A1547]/40">
-                for {clientName}
-              </span>
-            )}
           </h2>
           {actionNotice && (
             <div

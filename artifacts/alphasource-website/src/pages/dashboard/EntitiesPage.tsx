@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Building2, Check, Edit2, Plus, Save, X } from "lucide-react";
+import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient } from "@/context/ClientContext";
 import { supabase } from "@/lib/supabaseClient";
@@ -424,6 +425,8 @@ export default function EntitiesPage() {
 
   return (
     <DashboardLayout title="Entities">
+      <CurrentScopeBanner client={selectedClient} />
+
       <div className="space-y-5">
         <div
           className="bg-white rounded-2xl overflow-hidden"

@@ -1650,85 +1650,89 @@ export default function CandidatesPage() {
 
       {/* ── Filter bar ────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl px-5 py-4 mb-5 flex flex-wrap items-center gap-3"
+        className="bg-white rounded-2xl p-6 mb-5"
         style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
       >
-        <span className="text-xs font-black uppercase tracking-widest text-[#0A1547]/40">Filters</span>
+        <h2 className="text-base font-black text-[#0A1547] mb-4">Candidates</h2>
 
-        {/* Role filter */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-[#0A1547]/50">Role</label>
-          <div className="relative">
-            <select
-              className="appearance-none w-36 px-4 py-2 rounded-full bg-gray-50 border border-gray-200 text-[#0A1547] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
-              value={selectedRoleId}
-              onChange={(event) => setSelectedRoleId(event.target.value)}
-            >
-              <option value="all">All Roles</option>
-              {clientRoles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.title}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/40 pointer-events-none" />
-          </div>
-        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-black uppercase tracking-widest text-[#0A1547]/40">Filters</span>
 
-        {/* Min Overall Score */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-[#0A1547]/50 whitespace-nowrap">Min Overall Score</label>
-          <div className="relative flex items-center">
-            <input
-              ref={minScoreInputRef}
-              type="number"
-              min="0"
-              max="100"
-              value={minScore}
-              onChange={(e) => setMinScore(e.target.value)}
-              placeholder="e.g. 70"
-              className="text-xs font-semibold text-[#0A1547] bg-gray-50 border border-gray-200 rounded-full pl-3 pr-7 py-1.5 w-24 h-[30px] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] placeholder-gray-400"
-            />
-            {minScore !== "" && (
-              <button
-                onClick={() => { setMinScore(""); minScoreInputRef.current?.focus(); }}
-                className="absolute right-2 text-[#0A1547]/30 hover:text-[#0A1547]/60 transition-colors"
-                aria-label="Clear score filter"
+          {/* Role filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-[#0A1547]/50">Role</label>
+            <div className="relative">
+              <select
+                className="appearance-none w-36 px-4 py-2 rounded-full bg-gray-50 border border-gray-200 text-[#0A1547] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                value={selectedRoleId}
+                onChange={(event) => setSelectedRoleId(event.target.value)}
               >
-                <X className="w-3 h-3" />
-              </button>
-            )}
+                <option value="all">All Roles</option>
+                {clientRoles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.title}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/40 pointer-events-none" />
+            </div>
           </div>
-        </div>
 
-        {/* Candidate search */}
-        <input
-          type="text"
-          value={candidateSearch}
-          onChange={(e) => setCandidateSearch(e.target.value)}
-          placeholder="Search candidate name or email..."
-          className="text-xs font-semibold text-[#0A1547] bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 h-[30px] min-w-56 max-w-sm flex-1 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] placeholder-gray-400"
-        />
-        {candidateSearch && (
-          <button
-            type="button"
-            className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors"
-            onClick={() => setCandidateSearch("")}
-          >
-            Clear
-          </button>
-        )}
+          {/* Min Overall Score */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-[#0A1547]/50 whitespace-nowrap">Min Overall Score</label>
+            <div className="relative flex items-center">
+              <input
+                ref={minScoreInputRef}
+                type="number"
+                min="0"
+                max="100"
+                value={minScore}
+                onChange={(e) => setMinScore(e.target.value)}
+                placeholder="e.g. 70"
+                className="text-xs font-semibold text-[#0A1547] bg-gray-50 border border-gray-200 rounded-full pl-3 pr-7 py-1.5 w-24 h-[30px] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] placeholder-gray-400"
+              />
+              {minScore !== "" && (
+                <button
+                  onClick={() => { setMinScore(""); minScoreInputRef.current?.focus(); }}
+                  className="absolute right-2 text-[#0A1547]/30 hover:text-[#0A1547]/60 transition-colors"
+                  aria-label="Clear score filter"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
 
-        {/* Export */}
-        <div className="ml-auto">
-          <button
-            onClick={() => {}}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-full transition-all hover:opacity-90 active:scale-[0.98]"
-            style={{ backgroundColor: "#A380F6", color: "white" }}
-          >
-            <FileDown className="w-3.5 h-3.5" />
-            Export CSV
-          </button>
+          {/* Candidate search */}
+          <input
+            type="text"
+            value={candidateSearch}
+            onChange={(e) => setCandidateSearch(e.target.value)}
+            placeholder="Search candidate name or email..."
+            className="text-xs font-semibold text-[#0A1547] bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 h-[30px] min-w-56 max-w-sm flex-1 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] placeholder-gray-400"
+          />
+          {candidateSearch && (
+            <button
+              type="button"
+              className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors"
+              onClick={() => setCandidateSearch("")}
+            >
+              Clear
+            </button>
+          )}
+
+          {/* Export */}
+          <div className="ml-auto">
+            <button
+              onClick={() => {}}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-full transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{ backgroundColor: "#A380F6", color: "white" }}
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              Export CSV
+            </button>
+          </div>
         </div>
       </div>
 

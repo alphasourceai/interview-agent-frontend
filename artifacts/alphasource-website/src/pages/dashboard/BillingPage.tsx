@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ShoppingCart, CreditCard, ExternalLink, X } from "lucide-react";
+import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient } from "@/context/ClientContext";
 import InfoTooltip from "@/components/InfoTooltip";
@@ -241,7 +242,6 @@ export default function BillingPage() {
     billingPermissions?.can_purchase_interviews === true ||
     (!hasExplicitBillingPermissions && isPurchaseFallbackRole(selectedMembershipRole));
   const hasBillingPageAccess = canViewLegalBilling || canPurchaseInterviews;
-  const clientName = selectedClient.id === "all" ? "All Clients" : selectedClient.name;
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingError, setBillingError] = useState("");
@@ -900,6 +900,7 @@ export default function BillingPage() {
 
   return (
     <DashboardLayout title="Billing">
+      <CurrentScopeBanner client={selectedClient} />
 
       {canViewLegalBilling && (
         <>
@@ -910,9 +911,6 @@ export default function BillingPage() {
           >
             <h2 className="text-base font-black text-[#0A1547] mb-5">
               Billing Info
-              {selectedClient.id !== "all" && (
-                <span className="ml-2 text-base font-semibold text-[#0A1547]/40">for {clientName}</span>
-              )}
             </h2>
 
             {billingLoading ? (
