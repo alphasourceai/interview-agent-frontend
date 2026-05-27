@@ -25,6 +25,35 @@ const STANDARD_ENTITY_LABELS = [
 ] as const;
 const CUSTOM_ENTITY_LABEL = "custom";
 
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const compactSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 1px 8px rgba(10,21,71,0.04)",
+};
+const modalSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 20px 60px rgba(10,21,71,0.22)",
+};
+const fieldSurfaceStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+  color: "var(--as-text)",
+};
+const mutedPanelStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+
 const env =
   typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
 
@@ -398,10 +427,10 @@ export default function EntitiesPage() {
     return (
       <DashboardLayout title="Entities">
         <div
-          className="bg-white rounded-2xl p-6"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          className="rounded-2xl p-6"
+          style={surfaceCardStyle}
         >
-          <p className="text-sm text-[#0A1547]/45 font-semibold">Loading entity access...</p>
+          <p className="text-sm font-semibold" style={mutedTextStyle}>Loading entity access...</p>
         </div>
       </DashboardLayout>
     );
@@ -411,11 +440,11 @@ export default function EntitiesPage() {
     return (
       <DashboardLayout title="Entities">
         <div
-          className="bg-white rounded-2xl p-6"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          className="rounded-2xl p-6"
+          style={surfaceCardStyle}
         >
-          <h2 className="text-base font-black text-[#0A1547] mb-2">Entities unavailable</h2>
-          <p className="text-sm text-[#0A1547]/45 font-semibold">
+          <h2 className="text-base font-black mb-2" style={primaryTextStyle}>Entities unavailable</h2>
+          <p className="text-sm font-semibold" style={mutedTextStyle}>
             You do not have permission to manage entities for this client.
           </p>
         </div>
@@ -429,14 +458,14 @@ export default function EntitiesPage() {
 
       <div className="space-y-5">
         <div
-          className="bg-white rounded-2xl overflow-hidden"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          className="rounded-2xl overflow-hidden"
+          style={surfaceCardStyle}
         >
-          <div className="px-6 pt-6 pb-5 border-b border-gray-100">
+          <div className="px-6 pt-6 pb-5 border-b" style={dividerStyle}>
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
               <div>
-                <h2 className="text-base font-black text-[#0A1547]">Client Entities</h2>
-                <p className="text-xs text-[#0A1547]/45 font-semibold mt-1">
+                <h2 className="text-base font-black" style={primaryTextStyle}>Client Entities</h2>
+                <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>
                   View your parent client and manage child entity names and labels.
                 </p>
               </div>
@@ -458,7 +487,7 @@ export default function EntitiesPage() {
                 className={`rounded-xl px-3.5 py-2 text-xs font-semibold ${
                   notice.tone === "success"
                     ? "text-[#009E73] bg-[#02D99D]/10 border border-[#02D99D]/25"
-                    : "text-red-500 bg-red-50 border border-red-200"
+                    : "text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
                 }`}
                 role="status"
                 aria-live="polite"
@@ -468,26 +497,26 @@ export default function EntitiesPage() {
             )}
 
             {loading ? (
-              <div className="py-12 text-center text-sm text-[#0A1547]/35 font-semibold">Loading entities...</div>
+              <div className="py-12 text-center text-sm font-semibold" style={subtleTextStyle}>Loading entities...</div>
             ) : error ? (
               <div className="py-12 text-center text-sm text-red-500 font-semibold">{error}</div>
             ) : (
               <>
-                <div className="rounded-2xl border border-[#A380F6]/20 bg-[#A380F6]/5 p-4">
+                <div className="rounded-2xl border p-4" style={{ backgroundColor: "var(--as-accent-soft)", borderColor: "rgba(163,128,246,0.20)" }}>
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#A380F6]/15 text-[#A380F6] flex-shrink-0">
                       <Building2 className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-black text-[#0A1547] truncate">{parent?.name || selectedClient.name}</p>
-                      <p className="text-xs font-semibold text-[#0A1547]/45 mt-1">Parent client</p>
+                      <p className="text-sm font-black truncate" style={primaryTextStyle}>{parent?.name || selectedClient.name}</p>
+                      <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>Parent client</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="pl-4 md:pl-8 border-l-2 border-dashed border-[#A380F6]/20 space-y-3">
                   {entities.length === 0 ? (
-                    <div className="rounded-2xl border border-gray-100 bg-gray-50/60 p-5 text-sm text-[#0A1547]/40 font-semibold">
+                    <div className="rounded-2xl border p-5 text-sm font-semibold" style={{ ...mutedPanelStyle, ...mutedTextStyle }}>
                       No child entities have been added yet.
                     </div>
                   ) : (
@@ -497,25 +526,26 @@ export default function EntitiesPage() {
                       return (
                         <div
                           key={entity.id}
-                          className="rounded-2xl bg-white border border-gray-100 p-4"
-                          style={{ boxShadow: "0 1px 8px rgba(10,21,71,0.04)" }}
+                          className="rounded-2xl p-4"
+                          style={compactSurfaceStyle}
                         >
                           {editing ? (
                             <div className="space-y-3">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="block text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 mb-1.5">
+                                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
                                     Entity name
                                   </label>
                                   <input
                                     value={editName}
                                     onChange={(event) => setEditName(event.target.value)}
                                     disabled={saving}
-                                    className="w-full h-[42px] px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                    className="w-full h-[42px] px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                    style={fieldSurfaceStyle}
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 mb-1.5">
+                                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
                                     Entity label
                                   </label>
                                   <select
@@ -525,7 +555,8 @@ export default function EntitiesPage() {
                                       setEditEntityLabelChoice(event.target.value);
                                     }}
                                     disabled={saving}
-                                    className="w-full h-[42px] px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                    className="w-full h-[42px] px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                    style={fieldSurfaceStyle}
                                   >
                                     {STANDARD_ENTITY_LABELS.map((option) => (
                                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -541,7 +572,8 @@ export default function EntitiesPage() {
                                       }}
                                       disabled={saving}
                                       placeholder="Custom label"
-                                      className="mt-2 w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] placeholder:text-[#0A1547]/30 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                      className="mt-2 w-full px-4 py-2.5 rounded-xl text-sm border placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                                      style={fieldSurfaceStyle}
                                     />
                                   )}
                                 </div>
@@ -551,7 +583,7 @@ export default function EntitiesPage() {
                                   type="button"
                                   onClick={cancelEdit}
                                   disabled={saving}
-                                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 hover:text-[#0A1547] hover:bg-gray-50 disabled:opacity-50"
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 dark:text-slate-300/70 hover:text-[#0A1547] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-50"
                                 >
                                   <X className="w-3.5 h-3.5" />
                                   Cancel
@@ -573,9 +605,9 @@ export default function EntitiesPage() {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                   <Check className="w-4 h-4 text-[#02D99D] flex-shrink-0" />
-                                  <p className="text-sm font-black text-[#0A1547] truncate">{entity.name}</p>
+                                  <p className="text-sm font-black truncate" style={primaryTextStyle}>{entity.name}</p>
                                 </div>
-                                <p className="text-xs font-semibold text-[#0A1547]/45 mt-1">
+                                <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>
                                   {displayEntityLabel(entity.entity_label)} under {parent?.name || "parent client"}
                                 </p>
                               </div>
@@ -608,13 +640,13 @@ export default function EntitiesPage() {
           aria-label="Add entity"
         >
           <div
-            className="w-full max-w-lg rounded-2xl bg-white overflow-hidden"
-            style={{ boxShadow: "0 20px 60px rgba(10,21,71,0.22)" }}
+            className="w-full max-w-lg rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
           >
-            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b" style={dividerStyle}>
               <div>
-                <h3 className="text-base font-black text-[#0A1547]">Add entity</h3>
-                <p className="text-xs font-semibold text-[#0A1547]/45 mt-0.5">
+                <h3 className="text-base font-black" style={primaryTextStyle}>Add entity</h3>
+                <p className="text-xs font-semibold mt-0.5" style={mutedTextStyle}>
                   Create a child entity under the parent client.
                 </p>
               </div>
@@ -622,7 +654,7 @@ export default function EntitiesPage() {
                 type="button"
                 onClick={closeCreate}
                 disabled={creatingEntity}
-                className="p-2 rounded-lg text-[#0A1547]/35 hover:text-[#0A1547] hover:bg-gray-50 disabled:opacity-50"
+                className="p-2 rounded-lg text-[#0A1547]/35 dark:text-slate-300/65 hover:text-[#0A1547] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-50"
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />
@@ -635,7 +667,7 @@ export default function EntitiesPage() {
                   className={`rounded-xl px-3.5 py-2 text-xs font-semibold ${
                     createNotice.tone === "success"
                       ? "text-[#009E73] bg-[#02D99D]/10 border border-[#02D99D]/25"
-                      : "text-red-500 bg-red-50 border border-red-200"
+                      : "text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
                   }`}
                   role="status"
                   aria-live="polite"
@@ -645,7 +677,7 @@ export default function EntitiesPage() {
               )}
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 mb-1.5">
+                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
                   Entity name
                 </label>
                 <input
@@ -656,12 +688,13 @@ export default function EntitiesPage() {
                   }}
                   disabled={creatingEntity}
                   placeholder="Denver Office"
-                  className="w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] placeholder:text-[#0A1547]/30 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                  className="w-full px-4 py-2.5 rounded-xl text-sm border placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                  style={fieldSurfaceStyle}
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 mb-1.5">
+                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
                   Entity label
                 </label>
                 <select
@@ -671,7 +704,8 @@ export default function EntitiesPage() {
                     setCreateEntityLabelChoice(event.target.value);
                   }}
                   disabled={creatingEntity}
-                  className="w-full h-[42px] px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                  className="w-full h-[42px] px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                  style={fieldSurfaceStyle}
                 >
                   {STANDARD_ENTITY_LABELS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -687,18 +721,19 @@ export default function EntitiesPage() {
                     }}
                     disabled={creatingEntity}
                     placeholder="Custom label"
-                    className="mt-2 w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 border border-gray-200 text-[#0A1547] placeholder:text-[#0A1547]/30 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                    className="mt-2 w-full px-4 py-2.5 rounded-xl text-sm border placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                    style={fieldSurfaceStyle}
                   />
                 )}
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/60">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t" style={{ ...dividerStyle, backgroundColor: "var(--as-surface-muted)" }}>
               <button
                 type="button"
                 onClick={closeCreate}
                 disabled={creatingEntity}
-                className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/55 hover:text-[#0A1547] hover:bg-white disabled:opacity-50"
+                className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/55 dark:text-slate-300/70 hover:text-[#0A1547] dark:hover:text-white hover:bg-white dark:hover:bg-white/5 disabled:opacity-50"
               >
                 Cancel
               </button>
