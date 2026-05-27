@@ -80,6 +80,34 @@ const stripePublishableKey = firstText(
   (env as Record<string, unknown>).STRIPE_PUBLISHABLE_KEY,
 );
 
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const compactSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 2px 12px rgba(10,21,71,0.04)",
+};
+const modalSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 20px 44px rgba(10,21,71,0.24)",
+};
+const mutedPanelStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+};
+const fieldSurfaceStyle = {
+  ...mutedPanelStyle,
+  color: "var(--as-text)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+
 function openCheckoutUrl(checkoutUrl: string): void {
   const url = String(checkoutUrl || "").trim();
   if (!url) return;
@@ -163,7 +191,7 @@ function statusStyle(value: string): { bg: string; text: string } {
   if (v === "monthly")  return { bg: "rgba(2,171,224,0.12)",   text: "#0285B0" };
   if (v === "yes")      return { bg: "rgba(2,217,157,0.12)",   text: "#009E73" };
   if (v === "no")       return { bg: "rgba(255,107,107,0.12)", text: "#CC3B3B" };
-  return { bg: "rgba(10,21,71,0.06)", text: "#0A1547" };
+  return { bg: "var(--as-surface-muted)", text: "var(--as-text)" };
 }
 
 function ValueBadge({ value }: { value: string }) {
@@ -194,8 +222,8 @@ function InfoCard({
 }) {
   return (
     <div
-      className="bg-white rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between min-h-[90px]"
-      style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+      className="rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between min-h-[90px]"
+      style={compactSurfaceStyle}
     >
       {/* Top accent bar */}
       <div
@@ -203,7 +231,7 @@ function InfoCard({
         style={{ backgroundColor: accent }}
       />
       <div className="flex items-start justify-between gap-2 mt-1">
-        <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 flex items-center gap-1">
+        <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1" style={mutedTextStyle}>
           {label}
           {tooltip && <InfoTooltip content={tooltip} side="bottom" />}
         </p>
@@ -212,7 +240,7 @@ function InfoCard({
         {badge ? (
           <ValueBadge value={value} />
         ) : (
-          <p className="text-[15px] font-black text-[#0A1547] leading-snug">{value}</p>
+          <p className="text-[15px] font-black leading-snug" style={primaryTextStyle}>{value}</p>
         )}
       </div>
     </div>
@@ -873,10 +901,10 @@ export default function BillingPage() {
     return (
       <DashboardLayout title="Billing">
         <div
-          className="bg-white rounded-2xl p-6"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          className="rounded-2xl p-6"
+          style={surfaceCardStyle}
         >
-          <p className="text-sm text-[#0A1547]/45 font-semibold">Loading billing access...</p>
+          <p className="text-sm font-semibold" style={mutedTextStyle}>Loading billing access...</p>
         </div>
       </DashboardLayout>
     );
@@ -886,11 +914,11 @@ export default function BillingPage() {
     return (
       <DashboardLayout title="Billing">
         <div
-          className="bg-white rounded-2xl p-6"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          className="rounded-2xl p-6"
+          style={surfaceCardStyle}
         >
-          <h2 className="text-base font-black text-[#0A1547] mb-2">Billing Unavailable</h2>
-          <p className="text-sm text-[#0A1547]/45 font-semibold">
+          <h2 className="text-base font-black mb-2" style={primaryTextStyle}>Billing Unavailable</h2>
+          <p className="text-sm font-semibold" style={mutedTextStyle}>
             {clientError || "Billing is not available for your current access level."}
           </p>
         </div>
@@ -906,19 +934,19 @@ export default function BillingPage() {
         <>
           {/* ── Section 1: Billing Info ───────────────────── */}
           <div
-            className="bg-white rounded-2xl p-6 mb-6"
-            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+            className="rounded-2xl p-6 mb-6"
+            style={surfaceCardStyle}
           >
-            <h2 className="text-base font-black text-[#0A1547] mb-5">
+            <h2 className="text-base font-black mb-5" style={primaryTextStyle}>
               Billing Info
             </h2>
 
             {billingLoading ? (
-              <p className="text-sm text-[#0A1547]/45 font-semibold">Loading billing summary...</p>
+              <p className="text-sm font-semibold" style={mutedTextStyle}>Loading billing summary...</p>
             ) : clientError || billingError ? (
               <p className="text-sm text-red-500 font-semibold">{clientError || billingError}</p>
             ) : !billingSummary ? (
-              <p className="text-sm text-[#0A1547]/35 font-semibold">No billing summary available for this client.</p>
+              <p className="text-sm font-semibold" style={subtleTextStyle}>No billing summary available for this client.</p>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <InfoCard
@@ -979,16 +1007,16 @@ export default function BillingPage() {
 
           {/* ── Section 2: Latest Signed Agreement ───────── */}
           <div
-            className="bg-white rounded-2xl p-6 mb-6"
-            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+            className="rounded-2xl p-6 mb-6"
+            style={surfaceCardStyle}
           >
-            <h2 className="text-base font-black text-[#0A1547] mb-4">Latest Signed Agreement</h2>
+            <h2 className="text-base font-black mb-4" style={primaryTextStyle}>Latest Signed Agreement</h2>
             {latestAgreementLoading ? (
-              <p className="text-sm text-[#0A1547]/45 font-semibold">Loading latest agreement...</p>
+              <p className="text-sm font-semibold" style={mutedTextStyle}>Loading latest agreement...</p>
             ) : latestAgreementError ? (
               <p className="text-sm text-red-500 font-semibold">{latestAgreementError}</p>
             ) : !latestAgreement ? (
-              <p className="text-sm text-[#0A1547]/35 font-semibold">No signed agreement is available for this client yet.</p>
+              <p className="text-sm font-semibold" style={subtleTextStyle}>No signed agreement is available for this client yet.</p>
             ) : (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
@@ -1029,11 +1057,11 @@ export default function BillingPage() {
 
       {canPurchaseInterviews && (
         <div
-          className="bg-white rounded-2xl p-6 mb-6"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          className="rounded-2xl p-6 mb-6"
+          style={surfaceCardStyle}
         >
           <div className="flex items-center gap-1.5 mb-5">
-            <h2 className="text-base font-black text-[#0A1547]">Purchase Additional Interviews</h2>
+            <h2 className="text-base font-black" style={primaryTextStyle}>Purchase Additional Interviews</h2>
             <InfoTooltip content="Extra interview capacity can be purchased for a selected role outside the base membership. Checkout is processed via Stripe." side="bottom" />
           </div>
           {actionNotice && (
@@ -1041,7 +1069,7 @@ export default function BillingPage() {
               className={`mb-4 rounded-xl px-3.5 py-2 text-xs font-semibold ${
                 actionNotice.tone === "success"
                   ? "text-[#009E73] bg-[#02D99D]/10 border border-[#02D99D]/25"
-                  : "text-red-500 bg-red-50 border border-red-200"
+                  : "text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
               }`}
               role="status"
               aria-live="polite"
@@ -1053,14 +1081,15 @@ export default function BillingPage() {
           <div className="flex flex-wrap gap-3 items-end">
             {/* Role select */}
             <div className="flex-1 min-w-[220px]">
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 block mb-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={mutedTextStyle}>
                 Role
               </label>
               <div className="relative">
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full appearance-none px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                  className="w-full appearance-none px-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                  style={fieldSurfaceStyle}
                   disabled={rolesLoading}
                 >
                   <option value="">
@@ -1072,13 +1101,13 @@ export default function BillingPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/40 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
               </div>
             </div>
 
             {/* Quantity */}
             <div className="w-32">
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 block mb-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={mutedTextStyle}>
                 Quantity
               </label>
               <input
@@ -1087,7 +1116,8 @@ export default function BillingPage() {
                 max={500}
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all text-center"
+                className="w-full px-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all text-center"
+                style={fieldSurfaceStyle}
               />
             </div>
 
@@ -1113,22 +1143,22 @@ export default function BillingPage() {
         <>
           {/* ── Section 4: Purchased Interviews Table ────── */}
           <div
-            className="bg-white rounded-2xl overflow-hidden mb-6"
-            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+            className="rounded-2xl overflow-hidden mb-6"
+            style={surfaceCardStyle}
           >
-            <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-center gap-1.5">
-              <h2 className="text-base font-black text-[#0A1547]">Additional Interviews Purchased</h2>
+            <div className="px-6 pt-5 pb-4 border-b flex items-center gap-1.5" style={dividerStyle}>
+              <h2 className="text-base font-black" style={primaryTextStyle}>Additional Interviews Purchased</h2>
               <InfoTooltip content="Extra interview capacity purchased outside the base membership, broken down by role." side="bottom" />
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left px-6 py-3.5 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 whitespace-nowrap">
+                  <tr className="border-b" style={dividerStyle}>
+                    <th className="text-left px-6 py-3.5 text-[10px] font-black uppercase tracking-widest whitespace-nowrap" style={mutedTextStyle}>
                       Role
                     </th>
-                    <th className="text-right px-6 py-3.5 pr-8 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 whitespace-nowrap">
+                    <th className="text-right px-6 py-3.5 pr-8 text-[10px] font-black uppercase tracking-widest whitespace-nowrap" style={mutedTextStyle}>
                       Interviews Purchased
                     </th>
                   </tr>
@@ -1136,13 +1166,13 @@ export default function BillingPage() {
                 <tbody>
                   {rolesLoading ? (
                     <tr>
-                      <td colSpan={2} className="px-6 py-4 text-sm text-[#0A1547]/45 font-semibold">
+                      <td colSpan={2} className="px-6 py-4 text-sm font-semibold" style={mutedTextStyle}>
                         Loading roles...
                       </td>
                     </tr>
                   ) : purchasedInterviewRows.length === 0 ? (
                     <tr>
-                      <td colSpan={2} className="px-6 py-4 text-sm text-[#0A1547]/35 font-semibold">
+                      <td colSpan={2} className="px-6 py-4 text-sm font-semibold" style={subtleTextStyle}>
                         No additional interview purchases yet.
                       </td>
                     </tr>
@@ -1150,11 +1180,11 @@ export default function BillingPage() {
                     purchasedInterviewRows.map((row, idx) => (
                       <tr
                         key={row.id}
-                        className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors"
-                        style={idx === purchasedInterviewRows.length - 1 ? { borderBottom: "none" } : {}}
+                        className="border-b as-shell-dropdown-item transition-colors"
+                        style={idx === purchasedInterviewRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
                       >
                         <td className="px-6 py-4">
-                          <span className="font-bold text-[#0A1547]">{row.title}</span>
+                          <span className="font-bold" style={primaryTextStyle}>{row.title}</span>
                         </td>
                         <td className="px-6 py-4 pr-8 text-right">
                           <span
@@ -1171,8 +1201,8 @@ export default function BillingPage() {
               </table>
             </div>
 
-            <div className="px-6 py-3 border-t border-gray-100">
-              <p className="text-[11px] text-[#0A1547]/35 font-semibold">
+            <div className="px-6 py-3 border-t" style={dividerStyle}>
+              <p className="text-[11px] font-semibold" style={subtleTextStyle}>
                 {purchasedInterviewsTotal} additional interviews total
               </p>
             </div>
@@ -1182,12 +1212,12 @@ export default function BillingPage() {
 
       {canViewLegalBilling && (
         <div
-          className="bg-white rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+          className="rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          style={surfaceCardStyle}
         >
           <div>
-            <h2 className="text-base font-black text-[#0A1547] mb-1">Manage Billing</h2>
-            <p className="text-xs text-[#0A1547]/45 leading-relaxed max-w-sm">
+            <h2 className="text-base font-black mb-1" style={primaryTextStyle}>Manage Billing</h2>
+            <p className="text-xs leading-relaxed max-w-sm" style={mutedTextStyle}>
               Access your full billing dashboard to update payment methods, view invoices, and manage your subscription.
             </p>
           </div>
@@ -1212,18 +1242,18 @@ export default function BillingPage() {
             aria-label="Close checkout"
           />
           <div
-            className="relative w-full max-w-5xl max-h-[92vh] bg-white rounded-2xl overflow-hidden"
-            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+            className="relative w-full max-w-5xl max-h-[92vh] rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={dividerStyle}>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Checkout</p>
-                <h3 className="text-sm font-black text-[#0A1547] leading-snug">Purchase additional interviews</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Checkout</p>
+                <h3 className="text-sm font-black leading-snug" style={primaryTextStyle}>Purchase additional interviews</h3>
               </div>
               <button
                 type="button"
                 onClick={closeEmbeddedCheckout}
-                className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-[#0A1547]/40 hover:text-[#0A1547] hover:bg-gray-100 transition-colors"
+                className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-[#0A1547]/40 dark:text-slate-300/65 hover:text-[#0A1547] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
                 aria-label="Close checkout"
               >
                 <X className="w-4 h-4" />
@@ -1231,7 +1261,7 @@ export default function BillingPage() {
             </div>
             <div className="px-5 py-4 overflow-y-auto max-h-[calc(92vh-72px)]">
               {embeddedCheckoutLoading && (
-                <p className="mb-3 text-xs font-semibold text-[#0A1547]/45">Loading checkout…</p>
+                <p className="mb-3 text-xs font-semibold" style={mutedTextStyle}>Loading checkout…</p>
               )}
               {embeddedCheckoutError && (
                 <p className="mb-3 text-xs font-semibold text-red-500">{embeddedCheckoutError}</p>
@@ -1241,7 +1271,8 @@ export default function BillingPage() {
                 <button
                   type="button"
                   onClick={closeEmbeddedCheckout}
-                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-xs font-bold rounded-full border text-[#0A1547]/70 dark:text-slate-300/75 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                  style={dividerStyle}
                 >
                   Close
                 </button>
