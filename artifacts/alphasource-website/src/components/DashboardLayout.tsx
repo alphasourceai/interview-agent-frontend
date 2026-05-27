@@ -351,6 +351,11 @@ function getClientSearchPlaceholder(clients: Client[]): string {
   return pluralized ? `Search ${pluralized}...` : "Search clients...";
 }
 
+function sidebarAvatarColor(color: string, resolvedMode: string): string {
+  if (resolvedMode !== "dark") return color;
+  return color.trim().toLowerCase() === "#0a1547" ? "#A380F6" : color;
+}
+
 function normalizeClientRole(role: unknown): string {
   const normalized = String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   return normalized === "superadmin" ? "super_admin" : normalized;
@@ -473,7 +478,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ? clients.filter((client) => clientSearchText(client).includes(clientSearchTerm))
     : clients;
   const clientSearchPlaceholder = getClientSearchPlaceholder(clients);
-  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-color-no-bg.png" : "/logo-dark-text.png";
+  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-white-text-clear.png" : "/logo-dark-text.png";
 
   return (
     <div
@@ -544,7 +549,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               onClick={() => setCollapsed(false)}
               title={selectedClient.name}
               className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0 transition-transform hover:scale-105"
-              style={{ backgroundColor: selectedClient.color }}
+              style={{ backgroundColor: sidebarAvatarColor(selectedClient.color, resolvedMode) }}
             >
               {selectedClient.letter}
             </button>
@@ -556,7 +561,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             >
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-black text-white"
-                style={{ backgroundColor: selectedClient.color }}
+                style={{ backgroundColor: sidebarAvatarColor(selectedClient.color, resolvedMode) }}
               >
                 {selectedClient.letter}
               </div>
@@ -612,7 +617,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   <div
                     className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 text-[10px] font-black text-white"
-                    style={{ backgroundColor: client.color }}
+                    style={{ backgroundColor: sidebarAvatarColor(client.color, resolvedMode) }}
                   >
                     {client.letter}
                   </div>
