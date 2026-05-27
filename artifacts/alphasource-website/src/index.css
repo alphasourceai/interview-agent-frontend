@@ -235,6 +235,66 @@
   --teal: #02ABE0;
   --green: #02D99D;
   --white: #FFFFFF;
+
+  --as-page: #F8F9FD;
+  --as-surface: #FFFFFF;
+  --as-surface-muted: #F8F9FD;
+  --as-border: #F3F4F6;
+  --as-text: #0A1547;
+  --as-text-muted: rgba(10,21,71,0.45);
+  --as-text-subtle: rgba(10,21,71,0.30);
+  --as-accent: #A380F6;
+  --as-accent-soft: rgba(163,128,246,0.07);
+  --as-accent-soft-strong: rgba(163,128,246,0.12);
+  --as-hover: rgba(10,21,71,0.04);
+  --as-shadow: 0 2px 12px rgba(10,21,71,0.05);
+}
+
+.dark {
+  --as-page: #070E2A;
+  --as-surface: #0E1740;
+  --as-surface-muted: #121D4A;
+  --as-border: rgba(226,232,240,0.12);
+  --as-text: #F8FAFC;
+  --as-text-muted: rgba(226,232,240,0.65);
+  --as-text-subtle: rgba(226,232,240,0.40);
+  --as-accent: #A380F6;
+  --as-accent-soft: rgba(163,128,246,0.14);
+  --as-accent-soft-strong: rgba(163,128,246,0.22);
+  --as-hover: rgba(255,255,255,0.06);
+  --as-shadow: 0 18px 42px rgba(0,0,0,0.28);
+}
+
+.as-app-shell {
+  background: var(--as-page);
+  color: var(--as-text);
+}
+
+.as-app-shell[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+.as-app-shell option {
+  background: var(--as-surface);
+  color: var(--as-text);
+}
+
+.as-shell-link {
+  color: var(--as-text-muted);
+}
+
+.as-shell-link:hover {
+  background: var(--as-hover);
+  color: var(--as-text);
+}
+
+.as-shell-link-active {
+  background: var(--as-accent-soft-strong);
+  color: var(--as-accent);
+}
+
+.as-shell-dropdown-item:hover {
+  background: var(--as-hover);
 }
 
 /* Gradient utilities */

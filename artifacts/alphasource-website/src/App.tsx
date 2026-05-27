@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { AppearanceProvider } from "@/context/AppearanceContext";
 import { ClientProvider } from "@/context/ClientContext";
 import { AdminClientProvider } from "@/context/AdminClientContext";
 import Navbar from "@/components/Navbar";
@@ -291,7 +292,7 @@ function DashboardGuard() {
   }
 
   return (
-    <>
+    <AppearanceProvider>
       <DashboardInactivityController enabled={clientAuthReady && isLoggedIn} />
       <ClientProvider>
         <Switch>
@@ -305,7 +306,7 @@ function DashboardGuard() {
           <Route component={NotFound} />
         </Switch>
       </ClientProvider>
-    </>
+    </AppearanceProvider>
   );
 }
 
@@ -322,7 +323,7 @@ function AdminGuard() {
   if (!isAdminLoggedIn) return null;
 
   return (
-    <>
+    <AppearanceProvider>
       <DashboardInactivityController enabled={adminAuthReady && isAdminLoggedIn} />
       <AdminClientProvider>
         <Switch>
@@ -338,7 +339,7 @@ function AdminGuard() {
           <Route component={NotFound} />
         </Switch>
       </AdminClientProvider>
-    </>
+    </AppearanceProvider>
   );
 }
 

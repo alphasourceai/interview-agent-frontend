@@ -21,23 +21,28 @@ export default function CurrentScopeBanner({ client }: { client?: Client | null 
 
   return (
     <div
-      className="bg-white rounded-2xl px-4 py-3 mb-5 flex items-center gap-3"
-      style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+      className="rounded-2xl px-4 py-3 mb-5 flex items-center gap-3"
+      style={{
+        backgroundColor: "var(--as-surface)",
+        border: "1px solid var(--as-border)",
+        boxShadow: "var(--as-shadow)",
+      }}
     >
       <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-[#A380F6] bg-[#A380F6]/10 flex-shrink-0"
+        className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0"
+        style={{ backgroundColor: "var(--as-accent-soft)", color: "var(--as-accent)" }}
         aria-hidden="true"
       >
         {initial}
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1">
+        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: "var(--as-text-subtle)" }}>
           Current client/entity
         </p>
-        <p className="text-sm font-black text-[#0A1547] leading-tight truncate">
+        <p className="text-sm font-black leading-tight truncate" style={{ color: "var(--as-text)" }}>
           {client.name}
         </p>
-        <p className="text-xs font-semibold text-[#0A1547]/45 mt-0.5 truncate">
+        <p className="text-xs font-semibold mt-0.5 truncate" style={{ color: "var(--as-text-muted)" }}>
           {scopeMetadata(client)}
         </p>
       </div>
