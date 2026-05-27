@@ -478,7 +478,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ? clients.filter((client) => clientSearchText(client).includes(clientSearchTerm))
     : clients;
   const clientSearchPlaceholder = getClientSearchPlaceholder(clients);
-  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-white-text-clear.png" : "/logo-dark-text.png";
+  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-dark-mode.png" : "/logo-dark-text.png";
 
   return (
     <div

@@ -113,7 +113,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const filteredClients = clientSearchTerm
     ? availableClients.filter((client) => adminClientSearchText(client).includes(clientSearchTerm))
     : availableClients;
-  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-white-text-clear.png" : "/logo-dark-text.png";
+  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-dark-mode.png" : "/logo-dark-text.png";
 
   return (
     <div
