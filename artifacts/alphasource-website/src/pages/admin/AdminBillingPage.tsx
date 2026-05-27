@@ -1386,8 +1386,8 @@ export default function AdminBillingPage() {
   return (
     <AdminLayout title="Billing">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]">Billing</h2>
-        <span className="text-xs text-[#0A1547]/35 font-medium italic">
+        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Billing</h2>
+        <span className="text-xs text-[#0A1547]/35 font-medium italic" style={{ color: "var(--as-text)", opacity: 0.35 }}>
           {selectedClientId === "all" ? "Global — not scoped to selected client" : `Scoped to ${selectedClient.name}`}
         </span>
       </div>

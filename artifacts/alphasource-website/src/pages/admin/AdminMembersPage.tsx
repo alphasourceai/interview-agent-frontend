@@ -698,7 +698,7 @@ export default function AdminMembersPage() {
       )}
 
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]">Members</h2>
+        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Members</h2>
       </div>
       {actionNotice && (
         <div

@@ -212,13 +212,13 @@ export default function DashboardFaqPage() {
     <DashboardLayout title="FAQ">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-7">
         <div className="max-w-3xl">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1" style={{ color: "var(--as-text)", opacity: 0.35 }}>
             Help Center
           </p>
-          <h2 className="text-2xl font-black text-[#0A1547] leading-tight mb-3">
+          <h2 className="text-2xl font-black text-[#0A1547] leading-tight mb-3" style={{ color: "var(--as-text)" }}>
             alphaScreen Support
           </h2>
-          <p className="text-sm text-[#0A1547]/60 leading-relaxed">
+          <p className="text-sm text-[#0A1547]/60 leading-relaxed" style={{ color: "var(--as-text)", opacity: 0.6 }}>
             This help center is for alphaScreen clients. It explains how to use the dashboard, manage roles and candidates, understand reports, and get support when something does not work as expected.
           </p>
         </div>
@@ -228,7 +228,7 @@ export default function DashboardFaqPage() {
         className="rounded-2xl p-4 mb-6"
         style={{ backgroundColor: "rgba(163,128,246,0.10)", border: "1px solid rgba(163,128,246,0.20)" }}
       >
-        <p className="text-sm font-semibold text-[#0A1547]/70 leading-relaxed">
+        <p className="text-sm font-semibold text-[#0A1547]/70 leading-relaxed" style={{ color: "var(--as-text)", opacity: 0.7 }}>
           alphaScreen supports your hiring process with structured screening and interview insight. It does not replace your hiring judgment or make final employment decisions.
         </p>
       </div>

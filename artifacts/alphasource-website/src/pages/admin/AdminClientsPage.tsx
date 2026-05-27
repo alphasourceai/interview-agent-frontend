@@ -910,7 +910,7 @@ export default function AdminClientsPage() {
 
       {/* ── Page header ──────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]">Clients</h2>
+        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Clients</h2>
         <button
           disabled={processRenewalsBusy}
           className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90"

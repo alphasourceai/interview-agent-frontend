@@ -415,7 +415,7 @@ export default function OverviewPage() {
       {/* ── Header ───────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-7">
         <div>
-          <h2 className="text-2xl font-black text-[#0A1547] leading-tight">{selectedClient.name}</h2>
+          <h2 className="text-2xl font-black text-[#0A1547] leading-tight" style={{ color: "var(--as-text)" }}>{selectedClient.name}</h2>
         </div>
 
         {/* Timeframe pill selector */}
@@ -448,7 +448,7 @@ export default function OverviewPage() {
       )}
 
       {!overviewError && overviewLoading && (
-        <div className="mb-5 text-sm font-semibold text-[#0A1547]/45">
+        <div className="mb-5 text-sm font-semibold text-[#0A1547]/45" style={{ color: "var(--as-text)", opacity: 0.45 }}>
           Loading overview...
         </div>
       )}

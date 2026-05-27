@@ -519,8 +519,8 @@ export default function AdminAuditLogsPage() {
   return (
     <AdminLayout title="Audit Logs">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]">Audit Logs</h2>
-        <span className="text-xs text-[#0A1547]/35 font-medium italic">Global — not client specific</span>
+        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Audit Logs</h2>
+        <span className="text-xs text-[#0A1547]/35 font-medium italic" style={{ color: "var(--as-text)", opacity: 0.35 }}>Global — not client specific</span>
       </div>
 
       {/* ── Section 1: Contract Renewal Processing Runs ──────────────────────────── */}

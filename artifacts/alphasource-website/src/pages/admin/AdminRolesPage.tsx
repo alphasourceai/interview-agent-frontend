@@ -727,7 +727,7 @@ export default function AdminRolesPage() {
 
       {/* ── Page header ──────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]">Roles</h2>
+        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Roles</h2>
       </div>
       {actionNotice && (
         <div

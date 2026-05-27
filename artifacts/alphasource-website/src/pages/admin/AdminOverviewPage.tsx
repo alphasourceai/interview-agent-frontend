@@ -566,10 +566,10 @@ export default function AdminOverviewPage() {
       {/* ── Header ───────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-7">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1" style={{ color: "var(--as-text)", opacity: 0.35 }}>
             {selectedClient.id === "all" ? "Platform" : "Client"}
           </p>
-          <h2 className="text-2xl font-black text-[#0A1547] leading-tight">
+          <h2 className="text-2xl font-black text-[#0A1547] leading-tight" style={{ color: "var(--as-text)" }}>
             {selectedClient.id === "all" ? "All Clients" : selectedClient.name}
           </h2>
         </div>
@@ -604,7 +604,7 @@ export default function AdminOverviewPage() {
       )}
 
       {!overviewError && overviewLoading && (
-        <div className="mb-5 text-sm font-semibold text-[#0A1547]/45">
+        <div className="mb-5 text-sm font-semibold text-[#0A1547]/45" style={{ color: "var(--as-text)", opacity: 0.45 }}>
           Loading overview...
         </div>
       )}

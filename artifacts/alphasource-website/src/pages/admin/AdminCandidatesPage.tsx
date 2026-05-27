@@ -705,7 +705,7 @@ export default function AdminCandidatesPage() {
 
       {/* ── Page header ──────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]">Candidates</h2>
+        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Candidates</h2>
       </div>
       {actionNotice && (
         <div
