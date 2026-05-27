@@ -119,6 +119,36 @@ const backendBase = firstBase(
   (env as Record<string, unknown>).BACKEND_URL,
 );
 
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const compactSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 1px 6px rgba(10,21,71,0.05)",
+};
+const modalSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 20px 44px rgba(10,21,71,0.24)",
+};
+const fieldSurfaceStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+  color: "var(--as-text)",
+};
+const mutedPanelStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+const progressTrackStyle = { backgroundColor: "var(--as-surface-muted)" };
+
 function extractErrorMessage(text: string): string {
   if (!text) return "Failed to load candidates.";
   try {
@@ -637,21 +667,21 @@ const CANDIDATES: Candidate[] = [
 
 /* ── Utilities ──────────────────────────────────────── */
 function scoreColor(score: number | null): string {
-  if (score === null) return "#0A1547";
+  if (score === null) return "var(--as-text-subtle)";
   if (score >= 75) return "#02D99D";
   if (score >= 60) return "#F0A500";
   return "#FF6B6B";
 }
 
 function scoreBg(score: number | null): string {
-  if (score === null) return "rgba(10,21,71,0.05)";
+  if (score === null) return "var(--as-surface-muted)";
   if (score >= 75) return "rgba(2,217,157,0.10)";
   if (score >= 60) return "rgba(240,165,0,0.10)";
   return "rgba(255,107,107,0.10)";
 }
 
 function riskColor(risk: Candidate["risk"]): string {
-  return risk === "Low" ? "#02D99D" : risk === "Medium" ? "#F0A500" : risk === "High" ? "#FF6B6B" : "rgba(10,21,71,0.35)";
+  return risk === "Low" ? "#02D99D" : risk === "Medium" ? "#F0A500" : risk === "High" ? "#FF6B6B" : "var(--as-text-subtle)";
 }
 
 function formatV2BadgeValue(value: unknown): string {
@@ -665,7 +695,7 @@ function formatV2BadgeValue(value: unknown): string {
 
 function v2BadgeColor(label: string, value: unknown): string {
   const normalized = String(value || "").trim().toLowerCase();
-  if (!normalized || normalized === "unavailable" || normalized === "unknown") return "rgba(10,21,71,0.35)";
+  if (!normalized || normalized === "unavailable" || normalized === "unknown") return "var(--as-text-subtle)";
   if (label === "Signal Confidence") {
     if (normalized === "high" || normalized === "good") return "#02D99D";
     if (normalized === "medium" || normalized === "mixed" || normalized === "limited") return "#F0A500";
@@ -674,20 +704,20 @@ function v2BadgeColor(label: string, value: unknown): string {
   if (normalized === "none" || normalized === "low" || normalized === "good") return "#02D99D";
   if (normalized === "medium" || normalized === "mixed" || normalized === "limited") return "#F0A500";
   if (normalized === "high" || normalized === "poor") return "#FF6B6B";
-  return "#0A1547";
+  return "var(--as-text)";
 }
 
 function v2BadgeBg(color: string): string {
   if (color === "#02D99D") return "rgba(2,217,157,0.10)";
   if (color === "#F0A500") return "rgba(240,165,0,0.12)";
   if (color === "#FF6B6B") return "rgba(255,107,107,0.10)";
-  return "rgba(10,21,71,0.05)";
+  return "var(--as-surface-muted)";
 }
 
 /* ── Score number color: dynamic by value ───────────── */
 function subScoreNumColor(score: number | null): string {
-  if (score === null) return "rgba(10,21,71,0.25)";
-  if (score === 0) return "rgba(10,21,71,0.25)";
+  if (score === null) return "var(--as-text-subtle)";
+  if (score === 0) return "var(--as-text-subtle)";
   if (score >= 80) return "#02D99D";
   if (score >= 70) return "#F0A500";
   return "#FF6B6B";
@@ -715,13 +745,13 @@ function ScoreBar({ label, score, barColor }: SubScore & { barColor: string }) {
   return (
     <div className="mb-3 last:mb-0">
       <div className="flex items-center justify-between mb-1">
-        <span className="flex items-center gap-1 text-xs font-semibold text-[#0A1547]/60">
+        <span className="flex items-center gap-1 text-xs font-semibold" style={mutedTextStyle}>
           {label}
-          {tip && <InfoTooltip content={tip} side="top" iconClassName="w-2.5 h-2.5 text-[#0A1547]/20" />}
+          {tip && <InfoTooltip content={tip} side="top" iconClassName="w-2.5 h-2.5" />}
         </span>
         <span className="text-xs font-black" style={{ color: numColor }}>{scoreText}</span>
       </div>
-      <div className="w-full bg-gray-100 rounded-full h-1.5">
+      <div className="w-full rounded-full h-1.5" style={progressTrackStyle}>
         <div
           className="h-1.5 rounded-full transition-all duration-500"
           style={{ width: hasScore ? `${score}%` : "0%", backgroundColor: hasScore ? barColor : "transparent" }}
@@ -732,12 +762,12 @@ function ScoreBar({ label, score, barColor }: SubScore & { barColor: string }) {
 }
 
 function ScoreCell({ score }: { score: number | null }) {
-  if (score === null) return <span className="text-[#0A1547]/25 text-sm font-semibold">—</span>;
+  if (score === null) return <span className="text-sm font-semibold" style={subtleTextStyle}>—</span>;
   const color = scoreColor(score);
   return (
     <div className="min-w-[52px]">
       <p className="text-sm font-black leading-none mb-1.5" style={{ color }}>{score}%</p>
-      <div className="w-full bg-gray-100 rounded-full h-1">
+      <div className="w-full rounded-full h-1" style={progressTrackStyle}>
         <div className="h-1 rounded-full" style={{ width: `${score}%`, backgroundColor: color }} />
       </div>
     </div>
@@ -746,7 +776,7 @@ function ScoreCell({ score }: { score: number | null }) {
 
 /* ── Sort icon ──────────────────────────────────────── */
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
-  if (!active) return <ChevronsUpDown className="w-3 h-3 text-[#0A1547]/20 flex-shrink-0" />;
+  if (!active) return <ChevronsUpDown className="w-3 h-3 flex-shrink-0" style={subtleTextStyle} />;
   return dir === "asc"
     ? <ChevronUp className="w-3 h-3 text-[#A380F6] flex-shrink-0" />
     : <ChevronDown className="w-3 h-3 text-[#A380F6] flex-shrink-0" />;
@@ -830,14 +860,14 @@ function ExpandedPanel({
   ];
 
   return (
-    <div className="border-t border-gray-100 bg-[#F8F9FD] px-6 py-5">
+    <div className="border-t px-6 py-5" style={mutedPanelStyle}>
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2 mb-5">
         <button
           onClick={() => onRefresh(c)}
           disabled={refreshing}
           className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border transition-all hover:shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ backgroundColor: "white", borderColor: "rgba(10,21,71,0.12)", color: "#0A1547" }}
+          style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text)" }}
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
           {refreshing ? "Refreshing…" : "Refresh"}
@@ -846,7 +876,7 @@ function ExpandedPanel({
           onClick={() => onOpenTranscript(c)}
           disabled={transcriptDisabled}
           className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border transition-all hover:shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ backgroundColor: "white", borderColor: "rgba(10,21,71,0.12)", color: "#0A1547" }}
+          style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text)" }}
         >
           <FileText className="w-3.5 h-3.5" />
           {openingTranscript ? "Opening…" : "Transcript"}
@@ -856,7 +886,7 @@ function ExpandedPanel({
             onClick={() => onOpenRecording(c)}
             disabled={openingRecording}
             className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border transition-all hover:shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ backgroundColor: "white", borderColor: "rgba(10,21,71,0.12)", color: "#0A1547" }}
+            style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text)" }}
           >
             <Video className="w-3.5 h-3.5" />
             {openingRecording ? "Opening…" : "Recording"}
@@ -866,7 +896,7 @@ function ExpandedPanel({
           onClick={() => onOpenResume(c)}
           disabled={resumeDisabled}
           className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border transition-all hover:shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ backgroundColor: "white", borderColor: "rgba(10,21,71,0.12)", color: "#0A1547" }}
+          style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text)" }}
         >
           <Download className="w-3.5 h-3.5" />
           {openingResume ? "Opening…" : "Resume"}
@@ -875,7 +905,7 @@ function ExpandedPanel({
           onClick={() => onDownloadPdf(c)}
           disabled={pdfDisabled}
           className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border transition-all hover:shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ backgroundColor: "white", borderColor: "rgba(10,21,71,0.12)", color: "#0A1547" }}
+          style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text)" }}
         >
           <FileDown className="w-3.5 h-3.5" />
           {openingPdf ? "Generating…" : "Download PDF"}
@@ -889,29 +919,29 @@ function ExpandedPanel({
       <div className="grid md:grid-cols-2 gap-4">
         {/* Resume Analysis */}
         <div
-          className="bg-white rounded-2xl p-5"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 10px rgba(10,21,71,0.04)" }}
+          className="rounded-2xl p-5"
+          style={compactSurfaceStyle}
         >
           <div className="flex items-center gap-1.5 mb-4">
-            <p className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Resume Analysis</p>
+            <p className="text-xs font-black uppercase tracking-widest" style={primaryTextStyle}>Resume Analysis</p>
             <InfoTooltip content="Resume fit analysis based on the submitted resume and role context, including experience, skills, education, and overall match." side="bottom" />
           </div>
           <div className="mb-4">
             {c.resumeSubs.map((s) => <ScoreBar key={s.label} {...s} barColor="#02ABE0" />)}
           </div>
-          <p className="text-xs leading-relaxed text-[#0A1547]/60">
-            <span className="font-black text-[#0A1547]/80">Summary: </span>
+          <p className="text-xs leading-relaxed" style={mutedTextStyle}>
+            <span className="font-black" style={primaryTextStyle}>Summary: </span>
             {c.resumeSummary}
           </p>
         </div>
 
         {/* Interview Analysis */}
         <div
-          className="bg-white rounded-2xl p-5"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 10px rgba(10,21,71,0.04)" }}
+          className="rounded-2xl p-5"
+          style={compactSurfaceStyle}
         >
           <div className="flex items-center gap-1.5 mb-4">
-            <p className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Interview Analysis</p>
+            <p className="text-xs font-black uppercase tracking-widest" style={primaryTextStyle}>Interview Analysis</p>
             <InfoTooltip content="AI-scored evaluation of the candidate's interview performance across verbal and communication dimensions" side="bottom" />
           </div>
           {hasInterview ? (
@@ -919,35 +949,35 @@ function ExpandedPanel({
               <div className="mb-4">
                 {c.interviewSubs.map((s) => <ScoreBar key={s.label} {...s} barColor="#A380F6" />)}
               </div>
-              <p className="text-xs leading-relaxed text-[#0A1547]/60">
-                <span className="font-black text-[#0A1547]/80">Summary: </span>
+              <p className="text-xs leading-relaxed" style={mutedTextStyle}>
+                <span className="font-black" style={primaryTextStyle}>Summary: </span>
                 {c.interviewSummary}
               </p>
             </>
           ) : (
-            <p className="text-xs text-[#0A1547]/40 italic">Interview not yet completed.</p>
+            <p className="text-xs italic" style={subtleTextStyle}>Interview not yet completed.</p>
           )}
         </div>
 
         {/* Unanswered Questions */}
         <div
-          className="bg-white rounded-2xl p-5"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 10px rgba(10,21,71,0.04)" }}
+          className="rounded-2xl p-5"
+          style={compactSurfaceStyle}
         >
           <div className="flex items-center gap-1.5 mb-3">
-            <p className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Unanswered Questions</p>
+            <p className="text-xs font-black uppercase tracking-widest" style={primaryTextStyle}>Unanswered Questions</p>
             <InfoTooltip content="Candidate questions the interviewer could not answer from the available role or company context." side="bottom" />
           </div>
-          <p className="text-xs leading-relaxed text-[#0A1547]/60 whitespace-pre-line">{c.unanswered}</p>
+          <p className="text-xs leading-relaxed whitespace-pre-line" style={mutedTextStyle}>{c.unanswered}</p>
         </div>
 
         {/* Signals */}
         <div
-          className="bg-white rounded-2xl p-5"
-          style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 10px rgba(10,21,71,0.04)" }}
+          className="rounded-2xl p-5"
+          style={compactSurfaceStyle}
         >
           <div className="flex items-center gap-1.5 mb-4">
-            <p className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Signals</p>
+            <p className="text-xs font-black uppercase tracking-widest" style={primaryTextStyle}>Signals</p>
             <InfoTooltip content="Interview signals based on transcript evidence strength and AI-aided response-risk indicators" side="bottom" />
           </div>
           {hasInterview ? (
@@ -955,15 +985,15 @@ function ExpandedPanel({
               {/* Evaluation Reliability */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="flex items-center gap-1 text-xs font-semibold text-[#0A1547]/60">
+                  <span className="flex items-center gap-1 text-xs font-semibold" style={mutedTextStyle}>
                     Evaluation Reliability
                     <InfoTooltip content="Strength of evidence behind the interview score. 75-100: strong transcript support. 50-74: moderate support; validate key claims. Below 50: limited support; use follow-up." side="top" />
                   </span>
-                  <span className="text-xs font-black text-[#0A1547]">
+                  <span className="text-xs font-black" style={primaryTextStyle}>
                     {typeof c.reliability === "number" ? `${c.reliability}%` : "—"}
                   </span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                <div className="w-full rounded-full h-1.5" style={progressTrackStyle}>
                   <div
                     className="h-1.5 rounded-full"
                     style={{
@@ -975,7 +1005,7 @@ function ExpandedPanel({
                   />
                 </div>
                 {typeof c.reliability !== "number" && (
-                  <p className="text-[11px] text-[#0A1547]/45 mt-2">
+                  <p className="text-[11px] mt-2" style={mutedTextStyle}>
                     {c.reliabilityState === "not_applicable" ? "Not applicable for text interviews." : "Not yet available."}
                   </p>
                 )}
@@ -983,35 +1013,35 @@ function ExpandedPanel({
 
               {/* AI-aided interview risk */}
               <div className="flex items-center gap-2 pt-1">
-                <span className="flex items-center gap-1 text-xs font-semibold text-[#0A1547]/60">
+                <span className="flex items-center gap-1 text-xs font-semibold" style={mutedTextStyle}>
                   AI-aided interview risk
                   <InfoTooltip content="Probabilistic cue of possible AI-assisted responses for follow-up, not a definitive judgment" side="top" />
                 </span>
                 <span
                   className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: c.insufficientInterview ? "rgba(10,21,71,0.35)" : riskColor(c.risk) }}
+                  style={{ backgroundColor: c.insufficientInterview ? "var(--as-text-subtle)" : riskColor(c.risk) }}
                 />
-                <span className="text-xs font-bold" style={{ color: c.insufficientInterview ? "rgba(10,21,71,0.65)" : riskColor(c.risk) }}>
+                <span className="text-xs font-bold" style={{ color: c.insufficientInterview ? "var(--as-text-muted)" : riskColor(c.risk) }}>
                   {c.insufficientInterview ? "—" : (c.risk ?? "—")}
                 </span>
               </div>
 
               {/* Risk narrative text */}
               {c.riskText && (
-                <p className="text-[11px] text-[#0A1547]/50 leading-relaxed border-t border-gray-100 pt-3">
+                <p className="text-[11px] leading-relaxed border-t pt-3" style={{ ...mutedTextStyle, ...dividerStyle }}>
                   {c.riskText}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-xs text-[#0A1547]/40 italic">Signals will appear after the interview is completed.</p>
+            <p className="text-xs italic" style={subtleTextStyle}>Signals will appear after the interview is completed.</p>
           )}
         </div>
 
         {showAdvancedAnalysis && (
           <div
-            className="bg-white rounded-2xl p-5 md:col-span-2"
-            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 10px rgba(10,21,71,0.04)" }}
+            className="rounded-2xl p-5 md:col-span-2"
+            style={compactSurfaceStyle}
           >
             <button
               type="button"
@@ -1022,10 +1052,10 @@ function ExpandedPanel({
               className="w-full flex items-center justify-between gap-3 text-left"
             >
               <span className="flex items-center gap-1.5">
-                <span className="text-xs font-black uppercase tracking-widest text-[#0A1547]/75">Advanced Interview Analysis</span>
+                <span className="text-xs font-black uppercase tracking-widest" style={primaryTextStyle}>Advanced Interview Analysis</span>
                 <InfoTooltip content="Evidence-backed analysis of interview response quality and evaluation conditions" side="bottom" />
               </span>
-              <span className="text-[11px] font-black text-[#0A1547]/45 hover:text-[#0A1547]/70">
+              <span className="text-[11px] font-black" style={mutedTextStyle}>
                 {advancedExpanded ? "Collapse" : "Expand"}
               </span>
             </button>
@@ -1040,13 +1070,13 @@ function ExpandedPanel({
                       const color = v2BadgeColor(badge.label, badge.value);
                       return (
                         <div key={badge.label} className="grid grid-cols-[minmax(0,12rem)_8.5rem] items-center gap-3">
-                          <span className="flex items-center gap-1.5 min-w-0 text-xs font-semibold text-[#0A1547]/65">
+                          <span className="flex items-center gap-1.5 min-w-0 text-xs font-semibold" style={mutedTextStyle}>
                             <span className="truncate">{badge.label}</span>
-                            <InfoTooltip content={badge.tooltip} side="top" iconClassName="w-2.5 h-2.5 text-[#0A1547]/25" />
+                            <InfoTooltip content={badge.tooltip} side="top" iconClassName="w-2.5 h-2.5" />
                           </span>
                           <span
                             className="inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-xs font-black whitespace-nowrap"
-                            style={{ color, backgroundColor: v2BadgeBg(color), borderColor: "rgba(10,21,71,0.08)" }}
+                            style={{ color, backgroundColor: v2BadgeBg(color), borderColor: "var(--as-border)" }}
                           >
                             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                             {formatV2BadgeValue(badge.value)}
@@ -1059,10 +1089,10 @@ function ExpandedPanel({
                 {advancedEvidenceSummary && (
                   <div
                     className="mt-4 rounded-xl border p-4"
-                    style={{ backgroundColor: "rgba(10,21,71,0.02)", borderColor: "rgba(10,21,71,0.07)" }}
+                    style={mutedPanelStyle}
                   >
-                    <p className="text-xs leading-relaxed text-[#0A1547]/60">
-                      <span className="font-black text-[#0A1547]/80">Evidence Summary: </span>
+                    <p className="text-xs leading-relaxed" style={mutedTextStyle}>
+                      <span className="font-black" style={primaryTextStyle}>Evidence Summary: </span>
                       {advancedEvidenceSummary}
                     </p>
                   </div>
@@ -1071,16 +1101,16 @@ function ExpandedPanel({
                   <div className="grid md:grid-cols-2 gap-4 mt-4">
                     {advancedEvidence.length > 0 && (
                       <div className={advancedLimitations.length > 0 ? "" : "md:col-span-2"}>
-                        <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Evidence</p>
-                        <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
+                        <p className="text-[11px] font-black uppercase tracking-widest mb-2" style={mutedTextStyle}>Evidence</p>
+                        <ul className="space-y-1.5 text-xs leading-relaxed list-disc pl-4" style={mutedTextStyle}>
                           {advancedEvidence.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
                         </ul>
                       </div>
                     )}
                     {advancedLimitations.length > 0 && (
                       <div className={advancedEvidence.length > 0 ? "" : "md:col-span-2"}>
-                        <p className="text-[11px] font-black uppercase tracking-widest text-[#0A1547]/55 mb-2">Limitations</p>
-                        <ul className="space-y-1.5 text-xs leading-relaxed text-[#0A1547]/60 list-disc pl-4">
+                        <p className="text-[11px] font-black uppercase tracking-widest mb-2" style={mutedTextStyle}>Limitations</p>
+                        <ul className="space-y-1.5 text-xs leading-relaxed list-disc pl-4" style={mutedTextStyle}>
                           {advancedLimitations.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
                         </ul>
                       </div>
@@ -1635,7 +1665,8 @@ export default function CandidatesPage() {
     <th className={`px-4 py-3.5 whitespace-nowrap ${className}`}>
       <button
         onClick={() => handleSort(col)}
-        className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors ${align === "center" ? "mx-auto" : ""}`}
+        className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors ${align === "center" ? "mx-auto" : ""}`}
+        style={mutedTextStyle}
       >
         {label}
         {tooltip && <InfoTooltip content={tooltip} />}
@@ -1650,20 +1681,21 @@ export default function CandidatesPage() {
 
       {/* ── Filter bar ────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl p-6 mb-5"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl p-6 mb-5"
+        style={surfaceCardStyle}
       >
-        <h2 className="text-base font-black text-[#0A1547] mb-4">Candidates</h2>
+        <h2 className="text-base font-black mb-4" style={primaryTextStyle}>Candidates</h2>
 
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-black uppercase tracking-widest text-[#0A1547]/40">Filters</span>
+          <span className="text-xs font-black uppercase tracking-widest" style={mutedTextStyle}>Filters</span>
 
           {/* Role filter */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-[#0A1547]/50">Role</label>
+            <label className="text-xs font-semibold" style={mutedTextStyle}>Role</label>
             <div className="relative">
               <select
-                className="appearance-none w-36 px-4 py-2 rounded-full bg-gray-50 border border-gray-200 text-[#0A1547] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                className="appearance-none w-36 px-4 py-2 rounded-full border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                style={fieldSurfaceStyle}
                 value={selectedRoleId}
                 onChange={(event) => setSelectedRoleId(event.target.value)}
               >
@@ -1674,13 +1706,13 @@ export default function CandidatesPage() {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/40 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
             </div>
           </div>
 
           {/* Min Overall Score */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-[#0A1547]/50 whitespace-nowrap">Min Overall Score</label>
+            <label className="text-xs font-semibold whitespace-nowrap" style={mutedTextStyle}>Min Overall Score</label>
             <div className="relative flex items-center">
               <input
                 ref={minScoreInputRef}
@@ -1690,12 +1722,14 @@ export default function CandidatesPage() {
                 value={minScore}
                 onChange={(e) => setMinScore(e.target.value)}
                 placeholder="e.g. 70"
-                className="text-xs font-semibold text-[#0A1547] bg-gray-50 border border-gray-200 rounded-full pl-3 pr-7 py-1.5 w-24 h-[30px] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] placeholder-gray-400"
+                className="text-xs font-semibold border rounded-full pl-3 pr-7 py-1.5 w-24 h-[30px] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] placeholder-gray-400"
+                style={fieldSurfaceStyle}
               />
               {minScore !== "" && (
                 <button
                   onClick={() => { setMinScore(""); minScoreInputRef.current?.focus(); }}
-                  className="absolute right-2 text-[#0A1547]/30 hover:text-[#0A1547]/60 transition-colors"
+                  className="absolute right-2 transition-colors"
+                  style={subtleTextStyle}
                   aria-label="Clear score filter"
                 >
                   <X className="w-3 h-3" />
@@ -1710,12 +1744,14 @@ export default function CandidatesPage() {
             value={candidateSearch}
             onChange={(e) => setCandidateSearch(e.target.value)}
             placeholder="Search candidate name or email..."
-            className="text-xs font-semibold text-[#0A1547] bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 h-[30px] min-w-56 max-w-sm flex-1 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] placeholder-gray-400"
+            className="text-xs font-semibold border rounded-full px-3 py-1.5 h-[30px] min-w-56 max-w-sm flex-1 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] placeholder-gray-400"
+            style={fieldSurfaceStyle}
           />
           {candidateSearch && (
             <button
               type="button"
-              className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors"
+              className="px-3 py-2 rounded-full text-xs font-bold transition-colors"
+              style={{ backgroundColor: "var(--as-surface-muted)", color: "var(--as-text-muted)" }}
               onClick={() => setCandidateSearch("")}
             >
               Clear
@@ -1752,13 +1788,13 @@ export default function CandidatesPage() {
 
       {/* ── Table ─────────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl overflow-hidden"
+        style={surfaceCardStyle}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b" style={dividerStyle}>
                 {/* Expand toggle — not sortable */}
                 <th className="w-10 px-4 py-3.5" />
 
@@ -1774,7 +1810,7 @@ export default function CandidatesPage() {
             <tbody>
               {clientLoading || candidatesLoading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-sm text-[#0A1547]/35 font-semibold">
+                  <td colSpan={8} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
                     Loading candidates...
                   </td>
                 </tr>
@@ -1786,7 +1822,7 @@ export default function CandidatesPage() {
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-sm text-[#0A1547]/35 font-semibold">
+                  <td colSpan={8} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
                     {candidates.length === 0 ? "No candidates yet." : "No candidates match your filters."}
                   </td>
                 </tr>
@@ -1797,9 +1833,13 @@ export default function CandidatesPage() {
                   return (
                     <React.Fragment key={c.id}>
                       <tr
-                        className={`transition-colors cursor-pointer hover:bg-gray-50/70 ${
-                          isExpanded ? "bg-[#F8F9FD]" : ""
-                        } ${!isLast || isExpanded ? "border-b border-gray-100" : ""}`}
+                        className={`transition-colors cursor-pointer as-shell-dropdown-item ${
+                          !isLast || isExpanded ? "border-b" : ""
+                        }`}
+                        style={{
+                          ...(isExpanded ? { backgroundColor: "var(--as-surface-muted)" } : {}),
+                          ...((!isLast || isExpanded) ? dividerStyle : {}),
+                        }}
                         onClick={() => toggle(c.id)}
                       >
                         {/* Expand toggle */}
@@ -1809,8 +1849,8 @@ export default function CandidatesPage() {
                             style={{
                               backgroundColor: isExpanded
                                 ? "rgba(163,128,246,0.12)"
-                                : "rgba(10,21,71,0.05)",
-                              color: isExpanded ? "#A380F6" : "#0A1547",
+                                : "var(--as-surface-muted)",
+                              color: isExpanded ? "#A380F6" : "var(--as-text)",
                             }}
                             onClick={(e) => { e.stopPropagation(); toggle(c.id); }}
                             aria-label={isExpanded ? "Collapse" : "Expand"}
@@ -1824,18 +1864,18 @@ export default function CandidatesPage() {
 
                         {/* Name */}
                         <td className="px-4 py-4">
-                          <p className="font-bold text-[#0A1547] text-sm leading-snug">{c.name}</p>
-                          <p className="text-[11px] text-[#0A1547]/35 mt-0.5 md:hidden">{c.email}</p>
+                          <p className="font-bold text-sm leading-snug" style={primaryTextStyle}>{c.name}</p>
+                          <p className="text-[11px] mt-0.5 md:hidden" style={subtleTextStyle}>{c.email}</p>
                         </td>
 
                         {/* Email */}
                         <td className="px-4 py-4 hidden md:table-cell">
-                          <span className="text-sm text-[#0A1547]/55 font-medium">{c.email}</span>
+                          <span className="text-sm font-medium" style={mutedTextStyle}>{c.email}</span>
                         </td>
 
                         {/* Role */}
                         <td className="px-4 py-4 hidden lg:table-cell">
-                          <span className="text-sm text-[#0A1547]/70 font-semibold">{c.role}</span>
+                          <span className="text-sm font-semibold" style={mutedTextStyle}>{c.role}</span>
                         </td>
 
                         {/* Resume score */}
@@ -1856,16 +1896,16 @@ export default function CandidatesPage() {
                               </span>
                             </div>
                           ) : (
-                            <span className="text-[#0A1547]/25 text-sm font-semibold">—</span>
+                            <span className="text-sm font-semibold" style={subtleTextStyle}>—</span>
                           )}
                         </td>
 
                         {/* Created */}
                         <td className="px-4 py-4 pr-6 hidden sm:table-cell">
-                          <p className="text-xs font-semibold text-[#0A1547]/40 whitespace-nowrap leading-snug">
+                          <p className="text-xs font-semibold whitespace-nowrap leading-snug" style={mutedTextStyle}>
                             {c.created.split(" · ")[0]}
                           </p>
-                          <p className="text-[11px] text-[#0A1547]/25 mt-0.5">
+                          <p className="text-[11px] mt-0.5" style={subtleTextStyle}>
                             {c.created.split(" · ")[1]}
                           </p>
                         </td>
@@ -1873,7 +1913,7 @@ export default function CandidatesPage() {
 
                       {/* Expanded panel */}
                       {isExpanded && (
-                        <tr className={!isLast ? "border-b border-gray-100" : ""}>
+                        <tr className={!isLast ? "border-b" : ""} style={!isLast ? dividerStyle : undefined}>
                           <td colSpan={8} className="p-0">
                             <ExpandedPanel
                               c={c}
@@ -1897,8 +1937,8 @@ export default function CandidatesPage() {
         </div>
 
         {/* Footer row count */}
-        <div className="px-6 py-3 border-t border-gray-100 flex items-center">
-          <p className="text-[11px] text-[#0A1547]/35 font-semibold">
+        <div className="px-6 py-3 border-t flex items-center" style={dividerStyle}>
+          <p className="text-[11px] font-semibold" style={subtleTextStyle}>
             {sorted.length} of {candidates.length} candidate{candidates.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -1912,25 +1952,26 @@ export default function CandidatesPage() {
             aria-label="Close transcript"
           />
           <div
-            className="relative w-full max-w-2xl max-h-[85vh] bg-white rounded-2xl overflow-hidden"
-            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+            className="relative w-full max-w-2xl max-h-[85vh] rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={dividerStyle}>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Transcript</p>
-                <h3 className="text-sm font-black text-[#0A1547] leading-snug">{transcriptModal.candidateName}</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Transcript</p>
+                <h3 className="text-sm font-black leading-snug" style={primaryTextStyle}>{transcriptModal.candidateName}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setTranscriptModal(null)}
-                className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-[#0A1547]/40 hover:text-[#0A1547] hover:bg-gray-100 transition-colors"
+                className="w-8 h-8 rounded-lg inline-flex items-center justify-center transition-colors as-shell-dropdown-item"
+                style={mutedTextStyle}
                 aria-label="Close transcript"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="px-5 py-4 overflow-y-auto max-h-[calc(85vh-72px)]">
-              <p className="text-sm leading-relaxed text-[#0A1547]/80 whitespace-pre-wrap break-words font-semibold">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words font-semibold" style={primaryTextStyle}>
                 {transcriptModal.transcript}
               </p>
               {transcriptModalNotice && (
@@ -1946,14 +1987,16 @@ export default function CandidatesPage() {
                 <button
                   type="button"
                   onClick={() => setTranscriptModal(null)}
-                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-xs font-bold rounded-full border transition-colors"
+                  style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
                 >
                   Close
                 </button>
                 <button
                   type="button"
                   onClick={() => { void copyTranscriptFromModal(); }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full border transition-colors"
+                  style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
                 >
                   <Copy className="w-3.5 h-3.5" />
                   Copy Transcript
@@ -1981,18 +2024,19 @@ export default function CandidatesPage() {
             aria-label="Close recording"
           />
           <div
-            className="relative w-full max-w-3xl max-h-[85vh] bg-white rounded-2xl overflow-hidden"
-            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+            className="relative w-full max-w-3xl max-h-[85vh] rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={dividerStyle}>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Interview Recording</p>
-                <h3 className="text-sm font-black text-[#0A1547] leading-snug">{recordingModal.candidateName}</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Interview Recording</p>
+                <h3 className="text-sm font-black leading-snug" style={primaryTextStyle}>{recordingModal.candidateName}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setRecordingModal(null)}
-                className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-[#0A1547]/40 hover:text-[#0A1547] hover:bg-gray-100 transition-colors"
+                className="w-8 h-8 rounded-lg inline-flex items-center justify-center transition-colors as-shell-dropdown-item"
+                style={mutedTextStyle}
                 aria-label="Close recording"
               >
                 <X className="w-4 h-4" />
@@ -2007,9 +2051,9 @@ export default function CandidatesPage() {
                 Your browser does not support the video tag.
               </video>
               {recordingMeta && (
-                <p className="mt-3 text-[11px] font-semibold text-[#0A1547]/45">{recordingMeta}</p>
+                <p className="mt-3 text-[11px] font-semibold" style={mutedTextStyle}>{recordingMeta}</p>
               )}
-              <p className="mt-2 text-[11px] font-semibold text-[#0A1547]/45">
+              <p className="mt-2 text-[11px] font-semibold" style={mutedTextStyle}>
                 If the link expires, close this window and click Recording again.
               </p>
               <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -2019,7 +2063,8 @@ export default function CandidatesPage() {
                     window.open(recordingModal.url, "_blank", "noopener,noreferrer");
                     setRecordingModal(null);
                   }}
-                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-xs font-bold rounded-full border transition-colors"
+                  style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
                 >
                   Open in new tab
                 </button>
