@@ -207,6 +207,20 @@ const faqSections = [
   },
 ];
 
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+
+const mutedPanelStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+};
+
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text)", opacity: 0.65 };
+
 export default function DashboardFaqPage() {
   return (
     <DashboardLayout title="FAQ">
@@ -237,21 +251,22 @@ export default function DashboardFaqPage() {
         {faqSections.map((section) => (
           <section
             key={section.title}
-            className="bg-white rounded-2xl p-6"
-            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.05)" }}
+            className="rounded-2xl p-6"
+            style={surfaceCardStyle}
           >
-            <h3 className="text-base font-black text-[#0A1547] mb-4">{section.title}</h3>
+            <h3 className="text-base font-black mb-4" style={primaryTextStyle}>{section.title}</h3>
             <Accordion type="single" collapsible className="space-y-2">
               {section.items.map((item) => (
                 <AccordionItem
                   key={item.question}
                   value={item.question}
-                  className="rounded-xl border border-gray-100 bg-[#F8F9FD] px-4"
+                  className="rounded-xl border px-4"
+                  style={mutedPanelStyle}
                 >
-                  <AccordionTrigger className="py-4 text-sm font-bold text-[#0A1547] hover:no-underline">
+                  <AccordionTrigger className="py-4 text-sm font-bold hover:no-underline" style={primaryTextStyle}>
                     {item.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm text-[#0A1547]/65 leading-relaxed">
+                  <AccordionContent className="text-sm leading-relaxed" style={mutedTextStyle}>
                     {item.answer}
                   </AccordionContent>
                 </AccordionItem>
