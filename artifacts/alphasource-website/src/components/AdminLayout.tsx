@@ -113,6 +113,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const filteredClients = clientSearchTerm
     ? availableClients.filter((client) => adminClientSearchText(client).includes(clientSearchTerm))
     : availableClients;
+  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-color-no-bg.png" : "/logo-dark-text.png";
 
   return (
     <div
@@ -151,7 +152,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             <>
               <div className="flex flex-col min-w-0">
                 <Link href="/" onClick={() => setMobileOpen(false)}>
-                  <img src="/logo-dark-text.png" alt="AlphaSource AI" className="h-8 w-auto" />
+                  <img src={sidebarLogoSrc} alt="AlphaSource AI" className="h-8 w-auto" />
                 </Link>
                 <span
                   className="text-[9px] font-black uppercase tracking-widest mt-0.5"

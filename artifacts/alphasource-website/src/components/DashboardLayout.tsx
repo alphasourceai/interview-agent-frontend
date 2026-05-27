@@ -473,6 +473,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ? clients.filter((client) => clientSearchText(client).includes(clientSearchTerm))
     : clients;
   const clientSearchPlaceholder = getClientSearchPlaceholder(clients);
+  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-color-no-bg.png" : "/logo-dark-text.png";
 
   return (
     <div
@@ -509,7 +510,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           ) : (
             <>
               <Link href="/" onClick={() => setMobileOpen(false)}>
-                <img src="/logo-dark-text.png" alt="alphaSource AI" className="h-8 w-auto" />
+                <img src={sidebarLogoSrc} alt="alphaSource AI" className="h-8 w-auto" />
               </Link>
               <div className="flex items-center gap-1">
                 <button
