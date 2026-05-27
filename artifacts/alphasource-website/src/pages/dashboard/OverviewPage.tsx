@@ -186,7 +186,7 @@ const typeColors: Record<string, { bg: string; text: string }> = {
 };
 
 function Trend({ delta }: { delta: number }) {
-  if (delta === 0) return <span className="text-[11px] text-[#0A1547]/30 font-semibold">No change</span>;
+  if (delta === 0) return <span className="text-[11px] font-semibold" style={{ color: "var(--as-text-subtle)" }}>No change</span>;
   const positive = delta > 0;
   return (
     <span
@@ -236,6 +236,28 @@ const metricCards = [
     delta: (_s: PeriodStats) => 0,
   },
 ];
+
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const compactSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 1px 6px rgba(10,21,71,0.05)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+const progressTrackStyle = { backgroundColor: "var(--as-surface-muted)" };
+
+function timeframeButtonStyle(active: boolean) {
+  return active
+    ? { backgroundColor: "var(--as-text)", color: "var(--as-surface)" }
+    : mutedTextStyle;
+}
 
 export default function OverviewPage() {
   const [timeframe, setTimeframe] = useState<Timeframe>("30d");
@@ -421,16 +443,14 @@ export default function OverviewPage() {
         {/* Timeframe pill selector */}
         <div
           className="flex items-center gap-0.5 bg-white rounded-full p-1"
-          style={{ border: "1px solid rgba(10,21,71,0.08)", boxShadow: "0 1px 6px rgba(10,21,71,0.05)" }}
+          style={compactSurfaceStyle}
         >
           {timeframes.map((tf) => (
             <button
               key={tf}
               onClick={() => setTimeframe(tf)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-200 ${
-                timeframe === tf ? "text-white" : "text-[#0A1547]/40 hover:text-[#0A1547]"
-              }`}
-              style={timeframe === tf ? { backgroundColor: "#0A1547" } : {}}
+              className="px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-200"
+              style={timeframeButtonStyle(timeframe === tf)}
             >
               {tf}
             </button>
@@ -461,13 +481,13 @@ export default function OverviewPage() {
             <div
               key={card.key}
               className="bg-white rounded-2xl overflow-hidden flex flex-col"
-              style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+              style={surfaceCardStyle}
             >
               {/* Color accent bar */}
               <div className="h-[3px]" style={{ backgroundColor: card.color }} />
               <div className="p-5 flex flex-col flex-1">
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">{card.label}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>{card.label}</p>
                   <div
                     className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: `${card.color}18` }}
@@ -475,12 +495,12 @@ export default function OverviewPage() {
                     <Icon className="w-3.5 h-3.5" style={{ color: card.color }} />
                   </div>
                 </div>
-                <p className="text-[2.25rem] font-black text-[#0A1547] leading-none mb-2">
+                <p className="text-[2.25rem] font-black leading-none mb-2" style={primaryTextStyle}>
                   {card.format(stats)}
                 </p>
                 <div className="mt-auto space-y-0.5">
                   <Trend delta={card.delta(stats)} />
-                  <p className="text-[11px] text-[#0A1547]/30 font-medium">{card.sub}</p>
+                  <p className="text-[11px] font-medium" style={subtleTextStyle}>{card.sub}</p>
                 </div>
               </div>
             </div>
@@ -491,11 +511,11 @@ export default function OverviewPage() {
       {/* ── Recent Roles ─────────────────────────────────── */}
       <div
         className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        style={surfaceCardStyle}
       >
         {/* Section header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <p className="text-sm font-black text-[#0A1547]">Recent Roles</p>
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={dividerStyle}>
+          <p className="text-sm font-black" style={primaryTextStyle}>Recent Roles</p>
           <Link
             href="/dashboard/roles"
             className="flex items-center gap-1 text-xs font-bold transition-colors"
@@ -506,9 +526,9 @@ export default function OverviewPage() {
         </div>
 
         {/* Role rows */}
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y divide-[var(--as-border)]">
           {!overviewLoading && recentRoles.length === 0 && (
-            <div className="px-6 py-4 text-sm font-semibold text-[#0A1547]/45">
+            <div className="px-6 py-4 text-sm font-semibold" style={mutedTextStyle}>
               No roles yet for this client.
             </div>
           )}
@@ -522,11 +542,11 @@ export default function OverviewPage() {
             return (
               <div
                 key={i}
-                className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50/60 transition-colors"
+                className="as-shell-dropdown-item flex items-center gap-4 px-6 py-3.5 transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-[#0A1547] leading-snug">{role.name}</p>
-                  <p className="text-[11px] text-[#0A1547]/35 mt-0.5">{role.date}</p>
+                  <p className="text-sm font-bold leading-snug" style={primaryTextStyle}>{role.name}</p>
+                  <p className="text-[11px] mt-0.5" style={subtleTextStyle}>{role.date}</p>
                 </div>
                 <span
                   className="flex-shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold"
@@ -538,18 +558,18 @@ export default function OverviewPage() {
                   {usageAvailable ? (
                     <>
                       <div className="flex items-baseline gap-1 mb-1">
-                        <span className="text-sm font-black text-[#0A1547]">{left}</span>
-                        <span className="text-[10px] text-[#0A1547]/35 font-semibold">left</span>
-                        <span className="text-[10px] text-[#0A1547]/20 mx-0.5">/</span>
-                        <span className="text-sm font-black text-[#0A1547]/50">{used}</span>
-                        <span className="text-[10px] text-[#0A1547]/35 font-semibold">used</span>
+                        <span className="text-sm font-black" style={primaryTextStyle}>{left}</span>
+                        <span className="text-[10px] font-semibold" style={subtleTextStyle}>left</span>
+                        <span className="text-[10px] mx-0.5" style={subtleTextStyle}>/</span>
+                        <span className="text-sm font-black" style={mutedTextStyle}>{used}</span>
+                        <span className="text-[10px] font-semibold" style={subtleTextStyle}>used</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1">
+                      <div className="w-full rounded-full h-1" style={progressTrackStyle}>
                         <div className="h-1 rounded-full" style={{ width: `${pct}%`, backgroundColor: "#A380F6" }} />
                       </div>
                     </>
                   ) : (
-                    <p className="text-[11px] text-[#0A1547]/35 font-semibold">Usage unavailable</p>
+                    <p className="text-[11px] font-semibold" style={subtleTextStyle}>Usage unavailable</p>
                   )}
                 </div>
               </div>
