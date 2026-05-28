@@ -298,7 +298,7 @@ export default function SupportPage() {
             </p>
             <h2 className="text-2xl font-black text-[#0A1547] mb-3">Public release history</h2>
             <p className="text-sm text-[#0A1547]/60 leading-relaxed max-w-3xl">
-              A customer-facing summary of major alphaScreen updates. This history is intentionally high-level and focused on product value.
+              Explore recent alphaScreen updates that help teams manage roles, review candidates, and keep their screening workflow organized as the platform evolves.
             </p>
           </div>
 
