@@ -80,7 +80,7 @@ const statusColors = {
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const s = statusColors[status as keyof typeof statusColors] ?? { bg: "rgba(10,21,71,0.07)", text: "rgba(10,21,71,0.45)" };
+  const s = statusColors[status as keyof typeof statusColors] ?? { bg: "color-mix(in srgb, var(--as-text) 7%, transparent)", text: "var(--as-text-muted)" };
   return (
     <span
       className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold"
@@ -91,11 +91,29 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-const card = "bg-white rounded-2xl mb-6 overflow-hidden";
-const cardStyle = { border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" };
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+const exportButtonStyle = {
+  backgroundColor: "color-mix(in srgb, var(--as-text) 7%, transparent)",
+  color: "var(--as-text)",
+};
+const fieldSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  borderColor: "var(--as-border)",
+  color: "var(--as-text)",
+};
 
-const thCls = "px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 text-left whitespace-nowrap";
-const tdCls = "px-4 py-3 text-xs text-[#0A1547]/60 font-medium align-top";
+const card = "rounded-2xl mb-6 overflow-hidden";
+const cardStyle = surfaceCardStyle;
+
+const thCls = "px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--as-text-muted)] text-left whitespace-nowrap";
+const tdCls = "px-4 py-3 text-xs text-[var(--as-text-muted)] font-medium align-top";
 
 const env =
   typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
@@ -220,8 +238,8 @@ export default function AdminAuditLogsPage() {
   const [emailDeliveryError, setEmailDeliveryError] = useState("");
 
   const inputCls =
-    "px-3 py-2 rounded-xl text-xs text-[#0A1547] font-medium border border-[rgba(10,21,71,0.10)] " +
-    "bg-white focus:outline-none focus:border-[#A380F6] transition-colors w-32";
+    "px-3 py-2 rounded-xl text-xs font-medium border placeholder:text-[var(--as-text-subtle)] " +
+    "focus:outline-none focus:border-[#A380F6] transition-colors w-32";
 
   const authedGet = async (path: string, fallback: string): Promise<unknown> => {
     if (!backendBase) throw new Error("Missing backend base URL configuration.");
@@ -519,20 +537,21 @@ export default function AdminAuditLogsPage() {
   return (
     <AdminLayout title="Audit Logs">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Audit Logs</h2>
-        <span className="text-xs text-[#0A1547]/35 font-medium italic" style={{ color: "var(--as-text)", opacity: 0.35 }}>Global — not client specific</span>
+        <h2 className="text-2xl font-black" style={primaryTextStyle}>Audit Logs</h2>
+        <span className="text-xs font-medium italic" style={{ color: "var(--as-text)", opacity: 0.35 }}>Global — not client specific</span>
       </div>
 
       {/* ── Section 1: Contract Renewal Processing Runs ──────────────────────────── */}
       <div className={card} style={cardStyle}>
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center gap-3">
-          <p className="text-sm font-black text-[#0A1547] mr-auto">Contract Renewal Processing Runs</p>
+        <div className="px-5 py-4 border-b flex flex-wrap items-center gap-3" style={dividerStyle}>
+          <p className="text-sm font-black mr-auto" style={primaryTextStyle}>Contract Renewal Processing Runs</p>
 
           {/* Date range */}
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={auditDateFrom}
             onChange={(e) => setAuditDateFrom(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -540,6 +559,7 @@ export default function AdminAuditLogsPage() {
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={auditDateTo}
             onChange={(e) => setAuditDateTo(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -563,7 +583,7 @@ export default function AdminAuditLogsPage() {
               );
             }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all hover:opacity-90 flex-shrink-0"
-            style={{ backgroundColor: "rgba(10,21,71,0.07)", color: "#0A1547" }}
+            style={exportButtonStyle}
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
@@ -575,8 +595,8 @@ export default function AdminAuditLogsPage() {
         {/* Table — scrollable */}
         <div className="overflow-auto max-h-80">
           <table className="w-full text-sm min-w-[700px]">
-            <thead className="sticky top-0 bg-white z-10">
-              <tr className="border-b border-gray-100">
+            <thead className="sticky top-0 z-10" style={{ backgroundColor: "var(--as-surface)" }}>
+              <tr className="border-b" style={dividerStyle}>
                 <th className={thCls + " pl-5"}>Date / Time</th>
                 <th className={thCls}>Type</th>
                 <th className={thCls}>Status</th>
@@ -589,7 +609,7 @@ export default function AdminAuditLogsPage() {
             <tbody>
               {auditLoading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={7} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
                     Loading audit logs...
                   </td>
                 </tr>
@@ -601,7 +621,7 @@ export default function AdminAuditLogsPage() {
                 </tr>
               ) : filteredAuditLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={7} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
                     No audit log runs yet.
                   </td>
                 </tr>
@@ -609,16 +629,16 @@ export default function AdminAuditLogsPage() {
                 filteredAuditLogs.map((log, idx) => (
                   <tr
                     key={log.id}
-                    className="border-b border-gray-50 hover:bg-gray-50/40 transition-colors"
-                    style={idx === filteredAuditLogs.length - 1 ? { borderBottom: "none" } : {}}
+                    className="border-b transition-colors as-shell-dropdown-item"
+                    style={idx === filteredAuditLogs.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
-                    <td className={tdCls + " pl-5 font-semibold text-[#0A1547]/70 whitespace-nowrap"}>{log.date}</td>
+                    <td className={tdCls + " pl-5 font-semibold text-[var(--as-text-muted)] whitespace-nowrap"}>{log.date}</td>
                     <td className={tdCls}>{log.type}</td>
                     <td className={tdCls}><StatusBadge status={log.status} /></td>
                     <td className={tdCls}>errors {log.errors}</td>
-                    <td className={tdCls + " font-mono text-[#0A1547]/40 text-[11px]"}>{log.logId}</td>
-                    <td className={tdCls + " text-[#0A1547]/30"}>{log.eventId}</td>
-                    <td className={tdCls + " pr-5 text-[#0A1547]/30"}>{log.note}</td>
+                    <td className={tdCls + " font-mono text-[var(--as-text-subtle)] text-[11px]"}>{log.logId}</td>
+                    <td className={tdCls + " text-[var(--as-text-subtle)]"}>{log.eventId}</td>
+                    <td className={tdCls + " pr-5 text-[var(--as-text-subtle)]"}>{log.note}</td>
                   </tr>
                 ))
               )}
@@ -626,18 +646,19 @@ export default function AdminAuditLogsPage() {
           </table>
         </div>
 
-        <div className="px-5 py-2.5 border-t border-gray-100">
-          <p className="text-[11px] text-[#0A1547]/35 font-semibold">{filteredAuditLogs.length} entries</p>
+        <div className="px-5 py-2.5 border-t" style={dividerStyle}>
+          <p className="text-[11px] font-semibold" style={subtleTextStyle}>{filteredAuditLogs.length} entries</p>
         </div>
       </div>
 
       {/* ── Section 2: Agreements ──────────────────────────── */}
       <div className={card} style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center gap-3">
-          <p className="text-sm font-black text-[#0A1547] mr-auto">Agreements</p>
+        <div className="px-5 py-4 border-b flex flex-wrap items-center gap-3" style={dividerStyle}>
+          <p className="text-sm font-black mr-auto" style={primaryTextStyle}>Agreements</p>
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={agreementDateFrom}
             onChange={(e) => setAgreementDateFrom(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -645,6 +666,7 @@ export default function AdminAuditLogsPage() {
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={agreementDateTo}
             onChange={(e) => setAgreementDateTo(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -667,7 +689,7 @@ export default function AdminAuditLogsPage() {
               );
             }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all hover:opacity-90 flex-shrink-0"
-            style={{ backgroundColor: "rgba(10,21,71,0.07)", color: "#0A1547" }}
+            style={exportButtonStyle}
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
@@ -678,7 +700,7 @@ export default function AdminAuditLogsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[980px]">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b" style={dividerStyle}>
                 <th className={thCls + " pl-5"}>Event Time</th>
                 <th className={thCls}>Event Type</th>
                 <th className={thCls}>Agreement ID</th>
@@ -692,7 +714,7 @@ export default function AdminAuditLogsPage() {
             <tbody>
               {agreementLoading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={8} className="text-center py-10 text-sm font-semibold" style={subtleTextStyle}>
                     Loading agreement audit logs...
                   </td>
                 </tr>
@@ -704,7 +726,7 @@ export default function AdminAuditLogsPage() {
                 </tr>
               ) : filteredAgreementRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={8} className="text-center py-10 text-sm font-semibold" style={subtleTextStyle}>
                     No agreement audit events yet.
                   </td>
                 </tr>
@@ -712,16 +734,16 @@ export default function AdminAuditLogsPage() {
                 filteredAgreementRows.map((row, idx) => (
                   <tr
                     key={row.id}
-                    className="border-b border-gray-50 hover:bg-gray-50/40 transition-colors"
-                    style={idx === filteredAgreementRows.length - 1 ? { borderBottom: "none" } : {}}
+                    className="border-b transition-colors as-shell-dropdown-item"
+                    style={idx === filteredAgreementRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
                     <td className={tdCls + " pl-5 whitespace-nowrap"}>{row.eventAt}</td>
-                    <td className={tdCls + " font-semibold text-[#0A1547]/70"}>{row.eventType}</td>
-                    <td className={tdCls + " font-mono text-[#0A1547]/45 text-[11px]"}>{row.agreementId}</td>
+                    <td className={tdCls + " font-semibold text-[var(--as-text-muted)]"}>{row.eventType}</td>
+                    <td className={tdCls + " font-mono text-[var(--as-text-muted)] text-[11px]"}>{row.agreementId}</td>
                     <td className={tdCls}>{row.client}</td>
-                    <td className={tdCls + " text-[#0A1547]/45"}>{row.sentBy}</td>
-                    <td className={tdCls + " text-[#0A1547]/45"}>{row.sentTo}</td>
-                    <td className={tdCls + " text-[#0A1547]/35"}>{row.signerIp}</td>
+                    <td className={tdCls + " text-[var(--as-text-muted)]"}>{row.sentBy}</td>
+                    <td className={tdCls + " text-[var(--as-text-muted)]"}>{row.sentTo}</td>
+                    <td className={tdCls + " text-[var(--as-text-subtle)]"}>{row.signerIp}</td>
                     <td className={tdCls + " pr-5"}><StatusBadge status={row.status} /></td>
                   </tr>
                 ))
@@ -733,11 +755,12 @@ export default function AdminAuditLogsPage() {
 
       {/* ── Section 3: Email Delivery Problems ─────────────── */}
       <div className={card} style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center gap-3">
-          <p className="text-sm font-black text-[#0A1547] mr-auto">Email Delivery Problems</p>
+        <div className="px-5 py-4 border-b flex flex-wrap items-center gap-3" style={dividerStyle}>
+          <p className="text-sm font-black mr-auto" style={primaryTextStyle}>Email Delivery Problems</p>
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={emailDeliveryDateFrom}
             onChange={(e) => setEmailDeliveryDateFrom(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -745,6 +768,7 @@ export default function AdminAuditLogsPage() {
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={emailDeliveryDateTo}
             onChange={(e) => setEmailDeliveryDateTo(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -766,7 +790,7 @@ export default function AdminAuditLogsPage() {
               );
             }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all hover:opacity-90 flex-shrink-0"
-            style={{ backgroundColor: "rgba(10,21,71,0.07)", color: "#0A1547" }}
+            style={exportButtonStyle}
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
@@ -777,7 +801,7 @@ export default function AdminAuditLogsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[980px]">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b" style={dividerStyle}>
                 <th className={thCls + " pl-5"}>Event Time</th>
                 <th className={thCls}>Event</th>
                 <th className={thCls}>Category</th>
@@ -790,7 +814,7 @@ export default function AdminAuditLogsPage() {
             <tbody>
               {emailDeliveryLoading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={7} className="text-center py-10 text-sm font-semibold" style={subtleTextStyle}>
                     Loading email delivery events...
                   </td>
                 </tr>
@@ -802,7 +826,7 @@ export default function AdminAuditLogsPage() {
                 </tr>
               ) : filteredEmailDeliveryRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={7} className="text-center py-10 text-sm font-semibold" style={subtleTextStyle}>
                     No email delivery problem events yet.
                   </td>
                 </tr>
@@ -810,16 +834,16 @@ export default function AdminAuditLogsPage() {
                 filteredEmailDeliveryRows.map((row, idx) => (
                   <tr
                     key={row.id}
-                    className="border-b border-gray-50 hover:bg-gray-50/40 transition-colors"
-                    style={idx === filteredEmailDeliveryRows.length - 1 ? { borderBottom: "none" } : {}}
+                    className="border-b transition-colors as-shell-dropdown-item"
+                    style={idx === filteredEmailDeliveryRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
                     <td className={tdCls + " pl-5 whitespace-nowrap"}>{row.eventAt}</td>
                     <td className={tdCls}><StatusBadge status={row.eventType} /></td>
-                    <td className={tdCls + " font-semibold text-[#0A1547]/70"}>{row.category}</td>
-                    <td className={tdCls + " text-[#0A1547]/45"}>{row.email}</td>
-                    <td className={tdCls + " text-[#0A1547]/45"}>{row.reasonResponse}</td>
-                    <td className={tdCls + " font-mono text-[#0A1547]/35 text-[11px]"}>{row.messageId === "—" ? "—" : shortTail(row.messageId)}</td>
-                    <td className={tdCls + " pr-5 text-[#0A1547]/35"}>{row.alert}</td>
+                    <td className={tdCls + " font-semibold text-[var(--as-text-muted)]"}>{row.category}</td>
+                    <td className={tdCls + " text-[var(--as-text-muted)]"}>{row.email}</td>
+                    <td className={tdCls + " text-[var(--as-text-muted)]"}>{row.reasonResponse}</td>
+                    <td className={tdCls + " font-mono text-[var(--as-text-subtle)] text-[11px]"}>{row.messageId === "—" ? "—" : shortTail(row.messageId)}</td>
+                    <td className={tdCls + " pr-5 text-[var(--as-text-subtle)]"}>{row.alert}</td>
                   </tr>
                 ))
               )}
@@ -830,11 +854,12 @@ export default function AdminAuditLogsPage() {
 
       {/* ── Section 4: Billing Reconciliation ─────────────── */}
       <div className={card} style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center gap-3">
-          <p className="text-sm font-black text-[#0A1547] mr-auto">Billing Reconciliation</p>
+        <div className="px-5 py-4 border-b flex flex-wrap items-center gap-3" style={dividerStyle}>
+          <p className="text-sm font-black mr-auto" style={primaryTextStyle}>Billing Reconciliation</p>
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={billingDateFrom}
             onChange={(e) => setBillingDateFrom(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -842,6 +867,7 @@ export default function AdminAuditLogsPage() {
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={billingDateTo}
             onChange={(e) => setBillingDateTo(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -862,7 +888,7 @@ export default function AdminAuditLogsPage() {
               );
             }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all hover:opacity-90 flex-shrink-0"
-            style={{ backgroundColor: "rgba(10,21,71,0.07)", color: "#0A1547" }}
+            style={exportButtonStyle}
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
@@ -873,7 +899,7 @@ export default function AdminAuditLogsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[650px]">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b" style={dividerStyle}>
                 <th className={thCls + " pl-5"}>Client</th>
                 <th className={thCls}>Expected Amount</th>
                 <th className={thCls}>Actual Billed</th>
@@ -885,7 +911,7 @@ export default function AdminAuditLogsPage() {
             <tbody>
               {billingLoading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={6} className="text-center py-10 text-sm font-semibold" style={subtleTextStyle}>
                     Loading billing reconciliation...
                   </td>
                 </tr>
@@ -897,7 +923,7 @@ export default function AdminAuditLogsPage() {
                 </tr>
               ) : filteredBillingRows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={6} className="text-center py-10 text-sm font-semibold" style={subtleTextStyle}>
                     No billing mismatches found.
                   </td>
                 </tr>
@@ -905,13 +931,13 @@ export default function AdminAuditLogsPage() {
                 filteredBillingRows.map((row, idx) => (
                   <tr
                     key={row.id}
-                    className="border-b border-gray-50 hover:bg-gray-50/40 transition-colors"
-                    style={idx === filteredBillingRows.length - 1 ? { borderBottom: "none" } : {}}
+                    className="border-b transition-colors as-shell-dropdown-item"
+                    style={idx === filteredBillingRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
-                    <td className={tdCls + " pl-5 font-bold text-[#0A1547]/80"}>{row.client}</td>
+                    <td className={tdCls + " pl-5 font-bold text-[var(--as-text)]"}>{row.client}</td>
                     <td className={tdCls}>{row.expectedAmount}</td>
                     <td className={tdCls}>{row.actualBilled}</td>
-                    <td className={tdCls + " text-[#0A1547]/45"}>{row.difference}</td>
+                    <td className={tdCls + " text-[var(--as-text-muted)]"}>{row.difference}</td>
                     <td className={tdCls}>{row.stripeStatus}</td>
                     <td className={tdCls + " pr-5 whitespace-nowrap"}>{row.lastChecked}</td>
                   </tr>
@@ -924,11 +950,12 @@ export default function AdminAuditLogsPage() {
 
       {/* ── Section 5: Contract Cancellation Runs ─────────── */}
       <div className={card} style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center gap-3">
-          <p className="text-sm font-black text-[#0A1547] mr-auto">Contract Cancellation Runs</p>
+        <div className="px-5 py-4 border-b flex flex-wrap items-center gap-3" style={dividerStyle}>
+          <p className="text-sm font-black mr-auto" style={primaryTextStyle}>Contract Cancellation Runs</p>
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={cancellationDateFrom}
             onChange={(e) => setCancellationDateFrom(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -936,6 +963,7 @@ export default function AdminAuditLogsPage() {
           <input
             type="text"
             className={inputCls}
+            style={fieldSurfaceStyle}
             value={cancellationDateTo}
             onChange={(e) => setCancellationDateTo(e.target.value)}
             placeholder="MM/DD/YYYY"
@@ -959,7 +987,7 @@ export default function AdminAuditLogsPage() {
               );
             }}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all hover:opacity-90 flex-shrink-0"
-            style={{ backgroundColor: "rgba(10,21,71,0.07)", color: "#0A1547" }}
+            style={exportButtonStyle}
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
@@ -970,7 +998,7 @@ export default function AdminAuditLogsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b" style={dividerStyle}>
                 <th className={thCls + " pl-5"}>Client</th>
                 <th className={thCls}>Status</th>
                 <th className={thCls}>Triggered By</th>
@@ -985,7 +1013,7 @@ export default function AdminAuditLogsPage() {
             <tbody>
               {cancellationLoading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-10 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={9} className="text-center py-10 text-sm font-semibold" style={subtleTextStyle}>
                     Loading contract cancellation runs...
                   </td>
                 </tr>
@@ -997,7 +1025,7 @@ export default function AdminAuditLogsPage() {
                 </tr>
               ) : filteredCancellationRuns.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-10 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={9} className="text-center py-10 text-sm font-semibold" style={subtleTextStyle}>
                     No contract cancellation runs yet.
                   </td>
                 </tr>
@@ -1005,18 +1033,18 @@ export default function AdminAuditLogsPage() {
                 filteredCancellationRuns.map((run, idx) => (
                   <tr
                     key={run.id}
-                    className="border-b border-gray-50 hover:bg-gray-50/40 transition-colors"
-                    style={idx === filteredCancellationRuns.length - 1 ? { borderBottom: "none" } : {}}
+                    className="border-b transition-colors as-shell-dropdown-item"
+                    style={idx === filteredCancellationRuns.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
-                    <td className={tdCls + " pl-5 font-bold text-[#0A1547]/80"}>{run.client}</td>
+                    <td className={tdCls + " pl-5 font-bold text-[var(--as-text)]"}>{run.client}</td>
                     <td className={tdCls}><StatusBadge status={run.status} /></td>
-                    <td className={tdCls + " text-[#0A1547]/45"}>{run.triggeredBy}</td>
+                    <td className={tdCls + " text-[var(--as-text-muted)]"}>{run.triggeredBy}</td>
                     <td className={tdCls + " whitespace-nowrap"}>{run.started}</td>
                     <td className={tdCls + " whitespace-nowrap"}>{run.completed}</td>
-                    <td className={tdCls + " text-[#0A1547]/30"}>{run.finalInvoice}</td>
-                    <td className={tdCls + " text-[#0A1547]/30"}>{run.stripeInvoice}</td>
-                    <td className={tdCls + " text-[#0A1547]/30"}>{run.note}</td>
-                    <td className={tdCls + " pr-5 text-[#0A1547]/30"}>{run.error}</td>
+                    <td className={tdCls + " text-[var(--as-text-subtle)]"}>{run.finalInvoice}</td>
+                    <td className={tdCls + " text-[var(--as-text-subtle)]"}>{run.stripeInvoice}</td>
+                    <td className={tdCls + " text-[var(--as-text-subtle)]"}>{run.note}</td>
+                    <td className={tdCls + " pr-5 text-[var(--as-text-subtle)]"}>{run.error}</td>
                   </tr>
                 ))
               )}

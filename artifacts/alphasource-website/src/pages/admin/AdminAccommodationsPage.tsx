@@ -100,6 +100,26 @@ const statusStyle: Record<AccomStatus, { bg: string; text: string; border: strin
   Denied:   { bg: "rgba(255,107,107,0.10)", text: "#C94040", border: "rgba(255,107,107,0.22)" },
 };
 
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const dropdownSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 8px 24px rgba(10,21,71,0.12)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+const fieldSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  borderColor: "var(--as-border)",
+  color: "var(--as-text)",
+};
+
 /* ── Per-row status dropdown ─────────────────────────────────── */
 function StatusDropdown({
   value,
@@ -141,22 +161,22 @@ function StatusDropdown({
 
       {open && (
         <div
-          className="absolute z-30 top-full mt-1 left-0 w-32 bg-white rounded-xl overflow-hidden py-1"
-          style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 8px 24px rgba(10,21,71,0.12)" }}
+          className="absolute z-30 top-full mt-1 left-0 w-32 rounded-xl overflow-hidden py-1"
+          style={dropdownSurfaceStyle}
         >
           {STATUS_OPTIONS.map((opt) => {
             const os = statusStyle[opt];
             return (
               <button
                 key={opt}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors text-left as-shell-dropdown-item"
                 onClick={() => { onChange(opt); onToggle(); }}
               >
                 <span
                   className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                   style={{ backgroundColor: os.text }}
                 />
-                <span style={{ color: opt === value ? os.text : "#0A1547" }}>{opt}</span>
+                <span style={{ color: opt === value ? os.text : "var(--as-text)" }}>{opt}</span>
                 {opt === value && <span className="ml-auto text-[10px]" style={{ color: os.text }}>✓</span>}
               </button>
             );
@@ -528,31 +548,32 @@ export default function AdminAccommodationsPage() {
     .filter((r) => filterStatus === "All" || statuses[r.id] === filterStatus);
 
   const selectCls =
-    "px-3 py-2 rounded-xl text-sm text-[#0A1547] font-medium border border-[rgba(10,21,71,0.10)] " +
-    "bg-white appearance-none focus:outline-none focus:border-[#A380F6] transition-colors cursor-pointer";
+    "px-3 py-2 rounded-xl text-sm font-medium border appearance-none " +
+    "focus:outline-none focus:border-[#A380F6] transition-colors cursor-pointer";
 
   return (
     <AdminLayout title="Accommodation Requests">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Accommodation Requests</h2>
+        <h2 className="text-2xl font-black" style={primaryTextStyle}>Accommodation Requests</h2>
       </div>
 
       {/* ── Filter bar ─────────────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
+        style={surfaceCardStyle}
       >
-        <span className="text-xs font-black uppercase tracking-widest text-[#0A1547]/40">Status</span>
+        <span className="text-xs font-black uppercase tracking-widest" style={mutedTextStyle}>Status</span>
         <div className="relative w-48">
           <select
             className={selectCls + " w-full pr-8"}
+            style={fieldSurfaceStyle}
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as AccomStatus | "All")}
           >
             <option value="All">All</option>
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
         </div>
 
         <button
@@ -565,7 +586,7 @@ export default function AdminAccommodationsPage() {
           Refresh
         </button>
 
-        <span className="ml-auto text-xs text-[#0A1547]/35 font-semibold">
+        <span className="ml-auto text-xs font-semibold" style={subtleTextStyle}>
           {filtered.length} request{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -584,13 +605,13 @@ export default function AdminAccommodationsPage() {
 
       {/* ── Table ──────────────────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl overflow-hidden"
+        style={surfaceCardStyle}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[900px]">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b" style={dividerStyle}>
                 {[
                   ["Candidate", "pl-5 text-left w-[220px]"],
                   ["Role",      "text-left w-[130px]"],
@@ -601,7 +622,8 @@ export default function AdminAccommodationsPage() {
                 ].map(([label, cls]) => (
                   <th
                     key={label}
-                    className={`px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 ${cls}`}
+                    className={`px-4 py-3.5 text-[10px] font-black uppercase tracking-widest ${cls}`}
+                    style={mutedTextStyle}
                   >
                     {label}
                   </th>
@@ -612,7 +634,7 @@ export default function AdminAccommodationsPage() {
             <tbody>
               {requestsLoading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-14 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={6} className="text-center py-14 text-sm font-semibold" style={subtleTextStyle}>
                     Loading accommodation requests...
                   </td>
                 </tr>
@@ -624,7 +646,7 @@ export default function AdminAccommodationsPage() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-14 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={6} className="text-center py-14 text-sm font-semibold" style={subtleTextStyle}>
                     No accommodation requests match this filter.
                   </td>
                 </tr>
@@ -638,22 +660,22 @@ export default function AdminAccommodationsPage() {
                   return (
                     <tr
                       key={r.id}
-                      className="border-b border-gray-50 hover:bg-gray-50/40 transition-colors align-top"
-                      style={isLast ? { borderBottom: "none" } : {}}
+                      className="border-b transition-colors align-top as-shell-dropdown-item"
+                      style={isLast ? { borderBottom: "none" } : dividerStyle}
                     >
                       {/* ── Candidate ─────────────────────── */}
                       <td className="px-4 py-4 pl-5">
-                        <p className="font-bold text-[#0A1547] leading-snug">{r.name}</p>
-                        <p className="text-[11px] text-[#0A1547]/45 mt-0.5">{r.email}</p>
-                        <p className="text-[11px] text-[#0A1547]/45">{r.phone}</p>
-                        <p className="text-[11px] text-[#0A1547]/35 mt-0.5">
-                          <span className="font-semibold text-[#0A1547]/40">Created</span> {r.createdAt}
+                        <p className="font-bold leading-snug" style={primaryTextStyle}>{r.name}</p>
+                        <p className="text-[11px] mt-0.5" style={mutedTextStyle}>{r.email}</p>
+                        <p className="text-[11px]" style={mutedTextStyle}>{r.phone}</p>
+                        <p className="text-[11px] mt-0.5" style={subtleTextStyle}>
+                          <span className="font-semibold">Created</span> {r.createdAt}
                         </p>
                       </td>
 
                       {/* ── Role ──────────────────────────── */}
                       <td className="px-4 py-4">
-                        <p className="font-bold text-[#0A1547] leading-snug text-sm">{r.role}</p>
+                        <p className="font-bold leading-snug text-sm" style={primaryTextStyle}>{r.role}</p>
                         {r.hasResume ? (
                           <button
                             onClick={() => {
@@ -667,13 +689,13 @@ export default function AdminAccommodationsPage() {
                             {resumeBusy[r.id] === true ? "Opening..." : "Resume"}
                           </button>
                         ) : (
-                          <p className="text-xs text-[#0A1547]/30 font-medium mt-1">No resume</p>
+                          <p className="text-xs font-medium mt-1" style={subtleTextStyle}>No resume</p>
                         )}
                       </td>
 
                       {/* ── Request ───────────────────────── */}
                       <td className="px-4 py-4">
-                        <p className="text-xs text-[#0A1547]/65 leading-relaxed">{r.request}</p>
+                        <p className="text-xs leading-relaxed" style={mutedTextStyle}>{r.request}</p>
                       </td>
 
                       {/* ── Status ────────────────────────── */}
@@ -692,7 +714,7 @@ export default function AdminAccommodationsPage() {
                         {r.history.length > 0 && (
                           <div className="mt-2 space-y-0.5">
                             {r.history.map((h, i) => (
-                              <p key={i} className="text-[10px] text-[#0A1547]/35 leading-relaxed">
+                              <p key={i} className="text-[10px] leading-relaxed" style={subtleTextStyle}>
                                 <span className="font-semibold">{h.label}</span> {h.date}
                               </p>
                             ))}
@@ -707,15 +729,16 @@ export default function AdminAccommodationsPage() {
                           placeholder="Admin notes"
                           value={rowNotes}
                           onChange={(e) => setNotes((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                          className="w-full px-2.5 py-2 rounded-xl text-xs text-[#0A1547] font-medium border border-[rgba(10,21,71,0.10)] bg-white placeholder:text-[#0A1547]/25 focus:outline-none focus:border-[#A380F6] transition-colors"
+                          className="w-full px-2.5 py-2 rounded-xl text-xs font-medium border placeholder:text-[var(--as-text-subtle)] focus:outline-none focus:border-[#A380F6] transition-colors"
+                          style={fieldSurfaceStyle}
                         />
                         <button
                           disabled={notesSaving[r.id] === true || rowNotes.trim() === String(savedNotes[r.id] || "").trim()}
                           className="mt-2 w-full px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-all hover:opacity-90"
                           style={{
                             backgroundColor:
-                              rowNotes !== savedNotes[r.id] ? "#A380F6" : "rgba(10,21,71,0.06)",
-                            color: rowNotes !== savedNotes[r.id] ? "white" : "rgba(10,21,71,0.35)",
+                              rowNotes !== savedNotes[r.id] ? "#A380F6" : "color-mix(in srgb, var(--as-text) 6%, transparent)",
+                            color: rowNotes !== savedNotes[r.id] ? "white" : "var(--as-text-subtle)",
                           }}
                           onClick={() => {
                             void handleSaveNotes(r);
@@ -734,8 +757,8 @@ export default function AdminAccommodationsPage() {
                           disabled={!isSendable || sendLinkBusy[r.id] === true}
                           className="w-full px-3 py-2 rounded-full text-xs font-bold text-white transition-all"
                           style={{
-                            backgroundColor: isSendable ? "#A380F6" : "rgba(10,21,71,0.08)",
-                            color:           isSendable ? "white"   : "rgba(10,21,71,0.25)",
+                            backgroundColor: isSendable ? "#A380F6" : "color-mix(in srgb, var(--as-text) 8%, transparent)",
+                            color:           isSendable ? "white"   : "var(--as-text-subtle)",
                             cursor:          isSendable ? "pointer" : "not-allowed",
                           }}
                         >

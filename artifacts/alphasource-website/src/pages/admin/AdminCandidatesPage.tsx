@@ -166,20 +166,40 @@ function formatRecordingReadyAt(value?: string | null): string {
 
 /* ── Score helpers ───────────────────────────────────────────── */
 function scoreColor(s: number | null) {
-  if (s === null) return "rgba(10,21,71,0.25)";
+  if (s === null) return "var(--as-text-subtle)";
   if (s >= 75) return "#02D99D";
   if (s >= 60) return "#F0A500";
   return "#FF6B6B";
 }
 
 function ScoreCell({ score }: { score: number | null }) {
-  if (score === null) return <span className="text-sm text-[#0A1547]/25 font-semibold">—</span>;
+  if (score === null) return <span className="text-sm font-semibold" style={subtleTextStyle}>—</span>;
   return <span className="text-sm font-black" style={{ color: scoreColor(score) }}>{score}%</span>;
 }
 
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const modalSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 20px 44px rgba(10,21,71,0.24)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+const fieldSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  borderColor: "var(--as-border)",
+  color: "var(--as-text)",
+};
+
 const selectCls =
-  "px-3 py-2 rounded-xl text-sm text-[#0A1547] font-medium " +
-  "border border-[rgba(10,21,71,0.10)] bg-white appearance-none " +
+  "px-3 py-2 rounded-xl text-sm font-medium border appearance-none " +
+  "placeholder:text-[var(--as-text-subtle)] " +
   "focus:outline-none focus:border-[#A380F6] transition-colors cursor-pointer";
 
 export default function AdminCandidatesPage() {
@@ -691,7 +711,7 @@ export default function AdminCandidatesPage() {
     : "";
 
   function SortIcon({ col }: { col: SortKey }) {
-    if (sortKey !== col) return <ChevronDown className="w-3 h-3 text-[#0A1547]/20 ml-0.5 flex-shrink-0" />;
+    if (sortKey !== col) return <ChevronDown className="w-3 h-3 ml-0.5 flex-shrink-0" style={subtleTextStyle} />;
     return sortDir === "asc"
       ? <ChevronUp   className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />
       : <ChevronDown className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />;
@@ -705,7 +725,7 @@ export default function AdminCandidatesPage() {
 
       {/* ── Page header ──────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Candidates</h2>
+        <h2 className="text-2xl font-black" style={primaryTextStyle}>Candidates</h2>
       </div>
       {actionNotice && (
         <div
@@ -722,12 +742,13 @@ export default function AdminCandidatesPage() {
 
       {/* ── Filter bar ────────────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
+        style={surfaceCardStyle}
       >
         <div className="relative flex-1 min-w-48 max-w-72">
           <select
             className={selectCls + " w-full pr-8"}
+            style={fieldSurfaceStyle}
             value={roleFilter}
             onChange={(e) => { setRoleFilter(e.target.value); setExpandedId(null); }}
           >
@@ -736,11 +757,12 @@ export default function AdminCandidatesPage() {
               <option key={r} value={r}>{r}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
         </div>
 
         <input
           className={selectCls + " flex-1 min-w-48 max-w-sm cursor-text"}
+          style={fieldSurfaceStyle}
           placeholder="Search candidate name or email..."
           value={candidateSearch}
           onChange={(e) => setCandidateSearch(e.target.value)}
@@ -748,7 +770,8 @@ export default function AdminCandidatesPage() {
         {candidateSearch && (
           <button
             type="button"
-            className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors"
+            className="px-3 py-2 rounded-full text-xs font-bold transition-colors hover:bg-[var(--as-hover)]"
+            style={{ backgroundColor: "var(--as-surface-muted)", color: "var(--as-text-muted)" }}
             onClick={() => setCandidateSearch("")}
           >
             Clear
@@ -765,45 +788,47 @@ export default function AdminCandidatesPage() {
           Refresh
         </button>
 
-        <p className="text-xs text-[#0A1547]/35 font-semibold ml-auto">
+        <p className="text-xs font-semibold ml-auto" style={subtleTextStyle}>
           {sorted.length} of {byRole.length} candidate{byRole.length !== 1 ? "s" : ""}
         </p>
       </div>
 
       {/* ── Candidates table ──────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl overflow-hidden"
+        style={surfaceCardStyle}
       >
         {/* Header */}
         <div
-          className={`grid items-center px-5 py-3 border-b border-gray-100 ${
+          className={`grid items-center px-5 py-3 border-b ${
             showClient
               ? "grid-cols-[1fr_110px_130px_140px_68px_78px_68px_100px_44px]"
               : "grid-cols-[1fr_130px_140px_68px_78px_68px_100px_44px]"
           }`}
+          style={dividerStyle}
         >
           {(["name","client","role","created","resume","interview","overall"] as SortKey[])
             .filter((k) => k !== "client" || showClient)
             .map((col) => (
               <button
                 key={col}
-                className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors text-left"
+                className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[var(--as-text)] transition-colors text-left"
+                style={mutedTextStyle}
                 onClick={() => handleSort(col)}
               >
                 {col === "interview" ? "Interview" : col.charAt(0).toUpperCase() + col.slice(1)}
                 <SortIcon col={col} />
               </button>
             ))}
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Actions</p>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Delete</p>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Actions</p>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Delete</p>
         </div>
 
         {/* Rows */}
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y divide-[var(--as-border)]">
           {candidatesLoading ? (
             <div className="py-12 text-center">
-              <p className="text-sm text-[#0A1547]/35 font-semibold">Loading candidates...</p>
+              <p className="text-sm font-semibold" style={subtleTextStyle}>Loading candidates...</p>
             </div>
           ) : candidatesError ? (
             <div className="py-12 text-center">
@@ -816,13 +841,12 @@ export default function AdminCandidatesPage() {
                 <div key={c.id}>
                   {/* Main row */}
                   <div
-                    className={`grid items-center px-5 py-3 cursor-pointer hover:bg-gray-50/70 transition-colors ${
-                      expanded ? "bg-[rgba(163,128,246,0.04)]" : ""
-                    } ${
+                    className={`grid items-center px-5 py-3 cursor-pointer transition-colors as-shell-dropdown-item ${
                       showClient
                         ? "grid-cols-[1fr_110px_130px_140px_68px_78px_68px_100px_44px]"
                         : "grid-cols-[1fr_130px_140px_68px_78px_68px_100px_44px]"
                     }`}
+                    style={expanded ? { backgroundColor: "var(--as-accent-soft)" } : undefined}
                     onClick={() => toggle(c.id)}
                   >
                     {/* Name + email */}
@@ -830,23 +854,23 @@ export default function AdminCandidatesPage() {
                       <ChevronRight
                         className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 transition-transform duration-200"
                         style={{
-                          color: expanded ? "#A380F6" : "rgba(10,21,71,0.25)",
+                          color: expanded ? "#A380F6" : "var(--as-text-subtle)",
                           transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
                         }}
                       />
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">{c.name}</p>
-                        <p className="text-[11px] text-[#0A1547]/35 truncate">{c.email}</p>
+                        <p className="text-sm font-bold leading-snug truncate" style={primaryTextStyle}>{c.name}</p>
+                        <p className="text-[11px] truncate" style={subtleTextStyle}>{c.email}</p>
                       </div>
                     </div>
 
                     {showClient && (
-                      <p className="text-xs font-semibold text-[#0A1547]/50 truncate pr-2">{c.clientName}</p>
+                      <p className="text-xs font-semibold truncate pr-2" style={mutedTextStyle}>{c.clientName}</p>
                     )}
 
-                    <p className="text-xs font-semibold text-[#0A1547]/60 truncate pr-2">{c.role}</p>
+                    <p className="text-xs font-semibold truncate pr-2" style={mutedTextStyle}>{c.role}</p>
 
-                    <p className="text-[11px] font-semibold text-[#0A1547]/40">{c.created}</p>
+                    <p className="text-[11px] font-semibold" style={mutedTextStyle}>{c.created}</p>
 
                     <ScoreCell score={c.resume} />
                     <ScoreCell score={c.interview} />
@@ -901,7 +925,7 @@ export default function AdminCandidatesPage() {
                     >
                       <button
                         disabled={deleteBusy[c.id] === true}
-                        className="p-1.5 rounded-lg text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded-lg text-[var(--as-text-subtle)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         title={`Delete ${c.name}`}
                         onClick={() => {
                           void deleteCandidate(c);
@@ -915,12 +939,12 @@ export default function AdminCandidatesPage() {
                   {/* Expanded detail */}
                   {expanded && (
                     <div
-                      className="px-8 py-4 border-t border-[rgba(163,128,246,0.12)]"
-                      style={{ backgroundColor: "rgba(248,249,253,0.8)", borderLeft: "3px solid #A380F6" }}
+                      className="px-8 py-4 border-t"
+                      style={{ backgroundColor: "var(--as-surface-muted)", borderColor: "rgba(163,128,246,0.12)", borderLeft: "3px solid #A380F6" }}
                     >
                       <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
                         <div className="flex items-center gap-1.5 text-xs">
-                          <span className="font-black text-[#0A1547]/60">Status:</span>
+                          <span className="font-black" style={mutedTextStyle}>Status:</span>
                           <span
                             className="font-bold"
                             style={{ color: c.status === "Interview Complete" ? "#02D99D" : "#F0A500" }}
@@ -929,8 +953,8 @@ export default function AdminCandidatesPage() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs">
-                          <span className="font-black text-[#0A1547]/60">Report generated:</span>
-                          <span className="font-semibold text-[#0A1547]/50">{c.reportDate}</span>
+                          <span className="font-black" style={mutedTextStyle}>Report generated:</span>
+                          <span className="font-semibold" style={mutedTextStyle}>{c.reportDate}</span>
                         </div>
                       </div>
                     </div>
@@ -942,7 +966,7 @@ export default function AdminCandidatesPage() {
 
           {!candidatesLoading && !candidatesError && sorted.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-sm text-[#0A1547]/35 font-semibold">
+              <p className="text-sm font-semibold" style={subtleTextStyle}>
                 {candidateSearchTerm && byRole.length > 0 ? "No candidates match your search." : emptyMessage}
               </p>
             </div>
@@ -958,18 +982,19 @@ export default function AdminCandidatesPage() {
             aria-label="Close recording"
           />
           <div
-            className="relative w-full max-w-3xl max-h-[85vh] bg-white rounded-2xl overflow-hidden"
-            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+            className="relative w-full max-w-3xl max-h-[85vh] rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={dividerStyle}>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Interview Recording</p>
-                <h3 className="text-sm font-black text-[#0A1547] leading-snug">{recordingModal.candidateName}</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Interview Recording</p>
+                <h3 className="text-sm font-black leading-snug" style={primaryTextStyle}>{recordingModal.candidateName}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setRecordingModal(null)}
-                className="px-3 py-1.5 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/60 hover:bg-gray-50 transition-colors"
+                className="px-3 py-1.5 text-xs font-bold rounded-full border hover:bg-[var(--as-hover)] transition-colors"
+                style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
               >
                 Close
               </button>
@@ -983,7 +1008,7 @@ export default function AdminCandidatesPage() {
                 Your browser does not support the video tag.
               </video>
               {recordingMeta && (
-                <p className="mt-3 text-[11px] font-semibold text-[#0A1547]/45">{recordingMeta}</p>
+                <p className="mt-3 text-[11px] font-semibold" style={mutedTextStyle}>{recordingMeta}</p>
               )}
               <div className="mt-4 flex flex-wrap justify-end gap-2">
                 <button
@@ -992,7 +1017,8 @@ export default function AdminCandidatesPage() {
                     window.open(recordingModal.url, "_blank", "noopener,noreferrer");
                     setRecordingModal(null);
                   }}
-                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-xs font-bold rounded-full border hover:bg-[var(--as-hover)] transition-colors"
+                  style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
                 >
                   Open in new tab
                 </button>
