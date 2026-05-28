@@ -76,7 +76,7 @@ function isValidEmail(v: string) {
 }
 
 const roleStyle: Record<MemberRole, { bg: string; text: string }> = {
-  "Super Admin": { bg: "rgba(10,21,71,0.09)", text: "#0A1547" },
+  "Super Admin": { bg: "color-mix(in srgb, var(--as-text) 9%, transparent)", text: "var(--as-text)" },
   Manager:       { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
   Member:        { bg: "rgba(2,171,224,0.12)",   text: "#0285B0" },
 };
@@ -94,9 +94,28 @@ function RoleBadge({ role }: { role: MemberRole }) {
 }
 
 const inputCls =
-  "w-full px-3 py-2.5 rounded-xl text-sm bg-gray-50 border text-[#0A1547] font-medium " +
-  "placeholder:text-[#0A1547]/30 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/20 " +
+  "w-full px-3 py-2.5 rounded-xl text-sm bg-[var(--as-surface-muted)] border border-[var(--as-border)] text-[var(--as-text)] font-medium " +
+  "placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/20 " +
   "focus:border-[#A380F6] transition-all";
+
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const modalSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 24px 64px rgba(10,21,71,0.18)",
+};
+const mutedPanelStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
 
 function displayEntityLabel(label: unknown): string {
   const value = String(label || "").trim();
@@ -539,7 +558,7 @@ export default function AdminMembersPage() {
     : filteredMembers;
 
   function SortIcon({ col }: { col: SortKey }) {
-    if (sortKey !== col) return <ChevronDown className="w-3 h-3 text-[#0A1547]/20 ml-0.5 flex-shrink-0" />;
+    if (sortKey !== col) return <ChevronDown className="w-3 h-3 ml-0.5 flex-shrink-0" style={subtleTextStyle} />;
     return sortDir === "asc"
       ? <ChevronUp   className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />
       : <ChevronDown className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />;
@@ -556,12 +575,12 @@ export default function AdminMembersPage() {
           }}
         >
           <div
-            className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-white flex flex-col"
-            style={{ border: "1px solid rgba(10,21,71,0.09)", boxShadow: "0 24px 64px rgba(10,21,71,0.18)" }}
+            className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl flex flex-col"
+            style={modalSurfaceStyle}
           >
-            <div className="px-6 pt-5 pb-4 border-b border-gray-100">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1">Add Member</p>
-              <h3 className="text-lg font-black text-[#0A1547]">Assign member scopes</h3>
+            <div className="px-6 pt-5 pb-4 border-b" style={dividerStyle}>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Add Member</p>
+              <h3 className="text-lg font-black" style={primaryTextStyle}>Assign member scopes</h3>
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
@@ -588,7 +607,7 @@ export default function AdminMembersPage() {
                       setName(event.target.value);
                       setModalNotice(null);
                     }}
-                    className={inputCls + (nameErr ? " border-red-300 bg-red-50/40" : " border-gray-200")}
+                    className={inputCls + (nameErr ? " border-red-300 bg-red-50/40 dark:bg-red-500/10" : "")}
                   />
                   {nameErr && <p className="mt-1 text-[10px] text-red-500 font-semibold px-1">Name required</p>}
                 </div>
@@ -601,7 +620,7 @@ export default function AdminMembersPage() {
                       setEmail(event.target.value);
                       setModalNotice(null);
                     }}
-                    className={inputCls + (emailErr ? " border-red-300 bg-red-50/40" : " border-gray-200")}
+                    className={inputCls + (emailErr ? " border-red-300 bg-red-50/40 dark:bg-red-500/10" : "")}
                   />
                   {emailErr && <p className="mt-1 text-[10px] text-red-500 font-semibold px-1">Valid email required</p>}
                 </div>
@@ -614,19 +633,19 @@ export default function AdminMembersPage() {
                     setRole(event.target.value as MemberRole);
                     setModalNotice(null);
                   }}
-                  className={inputCls + " border-gray-200 appearance-none pr-8 cursor-pointer"}
+                  className={inputCls + " appearance-none pr-8 cursor-pointer"}
                 >
                   <option value="Member">Member</option>
                   <option value="Manager">Manager</option>
                   <option value="Super Admin">Super Admin</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
               </div>
 
               <div>
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Scopes</label>
-                  <span className="text-[11px] font-bold text-[#0A1547]/35">
+                  <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Scopes</label>
+                  <span className="text-[11px] font-bold" style={subtleTextStyle}>
                     {selectedScopeIds.length} selected
                   </span>
                 </div>
@@ -638,11 +657,14 @@ export default function AdminMembersPage() {
                     setScopeSearch(event.target.value);
                     setModalNotice(null);
                   }}
-                  className={inputCls + " border-gray-200 mb-3"}
+                  className={inputCls + " mb-3"}
                 />
-                <div className={(scopeErr ? "border-red-300 bg-red-50/20 " : "border-gray-100 ") + "max-h-64 overflow-y-auto rounded-2xl border divide-y divide-gray-50"}>
+                <div
+                  className={(scopeErr ? "border-red-300 bg-red-50/20 dark:bg-red-500/10 " : "") + "max-h-64 overflow-y-auto rounded-2xl border"}
+                  style={scopeErr ? undefined : mutedPanelStyle}
+                >
                   {filteredScopes.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-sm font-semibold text-[#0A1547]/35">
+                    <p className="px-4 py-6 text-center text-sm font-semibold" style={subtleTextStyle}>
                       No matching client or entity scopes.
                     </p>
                   ) : (
@@ -651,7 +673,8 @@ export default function AdminMembersPage() {
                       return (
                         <label
                           key={client.id}
-                          className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                          className="flex items-start gap-3 px-4 py-3 cursor-pointer border-b last:border-b-0 as-shell-dropdown-item transition-colors"
+                          style={dividerStyle}
                         >
                           <input
                             type="checkbox"
@@ -660,8 +683,8 @@ export default function AdminMembersPage() {
                             className="mt-1 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
                           />
                           <span className="min-w-0">
-                            <span className="block text-sm font-bold text-[#0A1547] truncate">{client.name}</span>
-                            <span className="block text-[11px] font-semibold text-[#0A1547]/40 truncate">{getScopeMeta(client)}</span>
+                            <span className="block text-sm font-bold truncate" style={primaryTextStyle}>{client.name}</span>
+                            <span className="block text-[11px] font-semibold truncate" style={mutedTextStyle}>{getScopeMeta(client)}</span>
                           </span>
                         </label>
                       );
@@ -672,10 +695,10 @@ export default function AdminMembersPage() {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            <div className="px-6 py-4 border-t flex items-center justify-between" style={dividerStyle}>
               <button
                 type="button"
-                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/45 hover:text-[#0A1547]/70 hover:bg-gray-100 transition-all"
+                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/45 dark:text-slate-300/65 hover:text-[#0A1547]/70 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
                 onClick={closeAddMemberModal}
                 disabled={addingMember}
               >
@@ -714,12 +737,12 @@ export default function AdminMembersPage() {
       )}
 
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl overflow-hidden"
+        style={surfaceCardStyle}
       >
         {/* Panel header + add form */}
-        <div className="px-5 py-5 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-base font-black text-[#0A1547]">Client Members</p>
+        <div className="px-5 py-5 border-b flex flex-wrap items-center justify-between gap-3" style={dividerStyle}>
+          <p className="text-base font-black" style={primaryTextStyle}>Client Members</p>
           <button
             type="button"
             onClick={openAddMemberModal}
@@ -730,24 +753,24 @@ export default function AdminMembersPage() {
           </button>
         </div>
 
-        <div className="px-5 py-3.5 border-b border-gray-100 flex flex-wrap items-center gap-3">
+        <div className="px-5 py-3.5 border-b flex flex-wrap items-center gap-3" style={dividerStyle}>
           <input
             type="text"
             placeholder="Search member name or email..."
             value={memberSearch}
             onChange={(e) => setMemberSearch(e.target.value)}
-            className={inputCls + " border-gray-200 max-w-sm"}
+            className={inputCls + " max-w-sm"}
           />
           {memberSearch && (
             <button
               type="button"
-              className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors"
+              className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 dark:text-slate-300/70 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10 transition-colors"
               onClick={() => setMemberSearch("")}
             >
               Clear
             </button>
           )}
-          <p className="text-xs text-[#0A1547]/35 font-semibold ml-auto">
+          <p className="text-xs font-semibold ml-auto" style={subtleTextStyle}>
             {sorted.length} of {visibleMembers.length} member{visibleMembers.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -756,10 +779,11 @@ export default function AdminMembersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b" style={dividerStyle}>
                 <th className="px-5 py-3.5 text-left">
                   <button
-                    className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+                    className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+                    style={mutedTextStyle}
                     onClick={() => handleSort("name")}
                   >
                     Name <SortIcon col="name" />
@@ -767,7 +791,8 @@ export default function AdminMembersPage() {
                 </th>
                 <th className="px-4 py-3.5 text-left">
                   <button
-                    className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+                    className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+                    style={mutedTextStyle}
                     onClick={() => handleSort("role")}
                   >
                     Role <SortIcon col="role" />
@@ -776,17 +801,18 @@ export default function AdminMembersPage() {
                 {isAllClientsView && (
                   <th className="px-4 py-3.5 text-left">
                     <button
-                      className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+                      className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+                      style={mutedTextStyle}
                       onClick={() => handleSort("client")}
                     >
                       Client <SortIcon col="client" />
                     </button>
                   </th>
                 )}
-                <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">
+                <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
                   Reset
                 </th>
-                <th className="px-4 py-3.5 pr-5 text-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">
+                <th className="px-4 py-3.5 pr-5 text-center text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
                   Remove
                 </th>
               </tr>
@@ -794,7 +820,7 @@ export default function AdminMembersPage() {
             <tbody>
               {membersLoading ? (
                 <tr>
-                  <td colSpan={isAllClientsView ? 5 : 4} className="text-center py-14 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={isAllClientsView ? 5 : 4} className="text-center py-14 text-sm font-semibold" style={subtleTextStyle}>
                     Loading members...
                   </td>
                 </tr>
@@ -806,7 +832,7 @@ export default function AdminMembersPage() {
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={isAllClientsView ? 5 : 4} className="text-center py-14 text-sm text-[#0A1547]/30 font-semibold">
+                  <td colSpan={isAllClientsView ? 5 : 4} className="text-center py-14 text-sm font-semibold" style={subtleTextStyle}>
                     {memberSearchTerm && visibleMembers.length > 0 ? "No members match your search." : "No members yet — add one above."}
                   </td>
                 </tr>
@@ -814,13 +840,13 @@ export default function AdminMembersPage() {
                 sorted.map((m, idx) => (
                   <tr
                     key={m.rowKey}
-                    className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors"
-                    style={idx === sorted.length - 1 ? { borderBottom: "none" } : {}}
+                    className="border-b as-shell-dropdown-item transition-colors"
+                    style={idx === sorted.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
                     {/* Name + email */}
                     <td className="px-5 py-4">
-                      <p className="font-bold text-[#0A1547] text-sm leading-snug">{m.name}</p>
-                      <p className="text-[11px] text-[#0A1547]/35 mt-0.5">{m.email}</p>
+                      <p className="font-bold text-sm leading-snug" style={primaryTextStyle}>{m.name}</p>
+                      <p className="text-[11px] mt-0.5" style={subtleTextStyle}>{m.email}</p>
                     </td>
 
                     {/* Role badge */}
@@ -831,7 +857,7 @@ export default function AdminMembersPage() {
                     {/* Client */}
                     {isAllClientsView && (
                       <td className="px-4 py-4">
-                        <p className="text-sm font-semibold text-[#0A1547]/75">{m.clientName}</p>
+                        <p className="text-sm font-semibold" style={mutedTextStyle}>{m.clientName}</p>
                       </td>
                     )}
 
@@ -842,7 +868,7 @@ export default function AdminMembersPage() {
                           void handleSendPasswordReset(m);
                         }}
                         disabled={resettingMembers[m.rowKey || m.id || m.email] === true}
-                        className="inline-flex items-center justify-center p-2 rounded-lg text-[#0A1547]/25 hover:text-[#A380F6] hover:bg-[#A380F6]/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="inline-flex items-center justify-center p-2 rounded-lg text-[#0A1547]/25 dark:text-slate-400/45 hover:text-[#A380F6] hover:bg-[#A380F6]/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         title={resettingMembers[m.rowKey || m.id || m.email] === true ? "Sending password reset..." : `Send password reset to ${m.name}`}
                       >
                         <Key className={`w-4 h-4 ${resettingMembers[m.rowKey || m.id || m.email] === true ? "animate-spin" : ""}`} />
@@ -856,7 +882,7 @@ export default function AdminMembersPage() {
                           void handleRemove(m);
                         }}
                         disabled={removingMembers[m.rowKey] === true}
-                        className="inline-flex items-center justify-center p-2 rounded-lg text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        className="inline-flex items-center justify-center p-2 rounded-lg text-[#0A1547]/25 dark:text-slate-400/45 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                         title={`Remove ${m.name}`}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -870,8 +896,8 @@ export default function AdminMembersPage() {
         </div>
 
         {/* Footer count */}
-        <div className="px-5 py-3 border-t border-gray-100">
-          <p className="text-[11px] text-[#0A1547]/35 font-semibold">
+        <div className="px-5 py-3 border-t" style={dividerStyle}>
+          <p className="text-[11px] font-semibold" style={subtleTextStyle}>
             {sorted.length} member{sorted.length !== 1 ? "s" : ""}
           </p>
         </div>

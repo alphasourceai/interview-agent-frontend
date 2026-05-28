@@ -144,6 +144,26 @@ const typeColors: Record<RoleType, { bg: string; text: string }> = {
   Technical: { bg: "rgba(2,217,157,0.12)",   text: "#009E73" },
 };
 
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const modalSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 24px 64px rgba(10,21,71,0.18)",
+};
+const fieldSurfaceStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+  color: "var(--as-text)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+
 /* ── Edit Modal ──────────────────────────────────────────────── */
 interface EditModalProps {
   config: RoleConfig;
@@ -166,8 +186,8 @@ function EditModal({ config, onClose, onSave, saving }: EditModalProps) {
     setQuestions((qs) => [...qs, { id: Date.now(), text: "" }]);
 
   const textareaCls =
-    "w-full px-3 py-2.5 rounded-xl text-sm text-[#0A1547] font-medium resize-none " +
-    "border border-[rgba(10,21,71,0.10)] bg-white placeholder:text-[#0A1547]/25 " +
+    "w-full px-3 py-2.5 rounded-xl text-sm font-medium resize-none " +
+    "border placeholder:text-[#0A1547]/25 dark:placeholder:text-slate-400/45 " +
     "focus:outline-none focus:border-[#A380F6] transition-colors leading-relaxed";
 
   const tc = typeColors[config.type];
@@ -179,16 +199,16 @@ function EditModal({ config, onClose, onSave, saving }: EditModalProps) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-white"
-        style={{ border: "1px solid rgba(10,21,71,0.09)", boxShadow: "0 24px 64px rgba(10,21,71,0.18)" }}
+        className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl"
+        style={modalSurfaceStyle}
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b flex-shrink-0" style={dividerStyle}>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1">Role Config</p>
-            <h3 className="text-base font-black text-[#0A1547] leading-snug">{config.name}</h3>
+            <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Role Config</p>
+            <h3 className="text-base font-black leading-snug" style={primaryTextStyle}>{config.name}</h3>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[10px] font-mono text-[#0A1547]/30">Token: {config.token}</span>
+              <span className="text-[10px] font-mono" style={subtleTextStyle}>Token: {config.token}</span>
               <span
                 className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold"
                 style={{ backgroundColor: tc.bg, color: tc.text }}
@@ -198,7 +218,7 @@ function EditModal({ config, onClose, onSave, saving }: EditModalProps) {
             </div>
           </div>
           <button
-            className="p-2 rounded-xl text-[#0A1547]/30 hover:text-[#0A1547]/70 hover:bg-gray-100 transition-all flex-shrink-0 -mt-1 -mr-1"
+            className="p-2 rounded-xl text-[#0A1547]/30 dark:text-slate-400/45 hover:text-[#0A1547]/70 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all flex-shrink-0 -mt-1 -mr-1"
             onClick={onClose}
           >
             <X className="w-5 h-5" />
@@ -209,12 +229,13 @@ function EditModal({ config, onClose, onSave, saving }: EditModalProps) {
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {/* Tavus Prompt */}
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 mb-2">
+            <label className="block text-[10px] font-black uppercase tracking-widest mb-2" style={mutedTextStyle}>
               Tavus Prompt
             </label>
             <textarea
               rows={3}
               className={textareaCls}
+              style={fieldSurfaceStyle}
               placeholder="Enter Tavus persona prompt…"
               value={tavus}
               onChange={(e) => setTavus(e.target.value)}
@@ -223,7 +244,7 @@ function EditModal({ config, onClose, onSave, saving }: EditModalProps) {
 
           {/* Rubric Questions */}
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 mb-3">
+            <label className="block text-[10px] font-black uppercase tracking-widest mb-3" style={mutedTextStyle}>
               Rubric Questions
             </label>
             <div className="space-y-2.5">
@@ -232,12 +253,13 @@ function EditModal({ config, onClose, onSave, saving }: EditModalProps) {
                   <textarea
                     rows={2}
                     className={textareaCls + " flex-1"}
+                    style={fieldSurfaceStyle}
                     placeholder={`Question ${i + 1}`}
                     value={qItem.text}
                     onChange={(e) => updateQ(qItem.id, e.target.value)}
                   />
                   <button
-                    className="mt-1 p-2 rounded-xl text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0"
+                    className="mt-1 p-2 rounded-xl text-[#0A1547]/25 dark:text-slate-400/45 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex-shrink-0"
                     onClick={() => deleteQ(qItem.id)}
                     title="Delete question"
                   >
@@ -259,9 +281,9 @@ function EditModal({ config, onClose, onSave, saving }: EditModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+        <div className="px-6 py-4 border-t flex items-center justify-between flex-shrink-0" style={dividerStyle}>
           <button
-            className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/40 hover:text-[#0A1547]/70 hover:bg-gray-100 transition-all"
+            className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/40 dark:text-slate-300/65 hover:text-[#0A1547]/70 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
             onClick={onClose}
           >
             Cancel
@@ -574,7 +596,7 @@ export default function AdminRoleConfigPage() {
   };
 
   function SortIcon({ col }: { col: SortKey }) {
-    if (sortKey !== col) return <ChevronDown className="w-3 h-3 text-[#0A1547]/20 ml-0.5 flex-shrink-0" />;
+    if (sortKey !== col) return <ChevronDown className="w-3 h-3 ml-0.5 flex-shrink-0" style={subtleTextStyle} />;
     return sortDir === "asc"
       ? <ChevronUp   className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />
       : <ChevronDown className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />;
@@ -608,14 +630,15 @@ export default function AdminRoleConfigPage() {
       )}
 
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl overflow-hidden"
+        style={surfaceCardStyle}
       >
-        <div className="px-5 py-4 border-b border-gray-100">
+        <div className="px-5 py-4 border-b" style={dividerStyle}>
           <div className="relative max-w-xl">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0A1547]/25" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={subtleTextStyle} />
             <input
-              className="w-full rounded-xl border border-[rgba(10,21,71,0.10)] bg-white py-2.5 pl-9 pr-3 text-sm font-semibold text-[#0A1547] placeholder:text-[#0A1547]/30 focus:border-[#A380F6] focus:outline-none"
+              className="w-full rounded-xl border py-2.5 pl-9 pr-3 text-sm font-semibold placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:border-[#A380F6] focus:outline-none"
+              style={fieldSurfaceStyle}
               placeholder="Search roles, entities, clients, tokens, or rubric text..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
@@ -624,33 +647,36 @@ export default function AdminRoleConfigPage() {
         </div>
 
         {/* Column headers */}
-        <div className="grid grid-cols-[minmax(0,1fr)_220px_140px_96px] items-center px-5 py-3 border-b border-gray-100">
+        <div className="grid grid-cols-[minmax(0,1fr)_220px_140px_96px] items-center px-5 py-3 border-b" style={dividerStyle}>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors text-left"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors text-left"
+            style={mutedTextStyle}
             onClick={() => handleSort("name")}
           >
             Role <SortIcon col="name" />
           </button>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors text-left"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors text-left"
+            style={mutedTextStyle}
             onClick={() => handleSort("entity")}
           >
             Entity <SortIcon col="entity" />
           </button>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+            style={mutedTextStyle}
             onClick={() => handleSort("type")}
           >
             Type <SortIcon col="type" />
           </button>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Config</p>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Config</p>
         </div>
 
         {/* Rows */}
-        <div className="divide-y divide-gray-50">
+        <div>
           {rolesLoading ? (
             <div className="py-12 text-center">
-              <p className="text-sm text-[#0A1547]/35 font-semibold">Loading role configs...</p>
+              <p className="text-sm font-semibold" style={subtleTextStyle}>Loading role configs...</p>
             </div>
           ) : rolesError ? (
             <div className="py-12 text-center">
@@ -661,16 +687,17 @@ export default function AdminRoleConfigPage() {
             return (
               <div
                 key={role.id}
-                className="grid grid-cols-[minmax(0,1fr)_220px_140px_96px] items-center px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
+                className="grid grid-cols-[minmax(0,1fr)_220px_140px_96px] items-center px-5 py-3.5 border-b as-shell-dropdown-item transition-colors"
+                style={dividerStyle}
               >
                 <div className="min-w-0 pr-4">
-                  <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">{role.name}</p>
-                  <p className="text-[10px] font-mono text-[#0A1547]/30 mt-0.5 truncate">{role.token}</p>
+                  <p className="text-sm font-bold leading-snug truncate" style={primaryTextStyle}>{role.name}</p>
+                  <p className="text-[10px] font-mono mt-0.5 truncate" style={subtleTextStyle}>{role.token}</p>
                 </div>
 
                 <div className="min-w-0 pr-4">
-                  <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">{role.entityName}</p>
-                  <p className="text-[10px] text-[#0A1547]/40 mt-0.5 truncate">Parent: {role.parentClientName}</p>
+                  <p className="text-sm font-bold leading-snug truncate" style={primaryTextStyle}>{role.entityName}</p>
+                  <p className="text-[10px] mt-0.5 truncate" style={mutedTextStyle}>Parent: {role.parentClientName}</p>
                 </div>
 
                 <span
@@ -696,7 +723,7 @@ export default function AdminRoleConfigPage() {
 
           {!rolesLoading && !rolesError && sorted.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-sm text-[#0A1547]/35 font-semibold">
+              <p className="text-sm font-semibold" style={subtleTextStyle}>
                 {searchQuery ? "No role configs match your search." : "No roles configured for this client."}
               </p>
             </div>
