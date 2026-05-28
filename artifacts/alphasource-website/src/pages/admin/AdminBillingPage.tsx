@@ -260,18 +260,39 @@ function billingClientSearchText(client: AdminClient): string {
 }
 
 /* ── Helpers ─────────────────────────────────────────────────── */
+const fieldSurfaceStyle =
+  "text-[var(--as-text)] border-[var(--as-border)] bg-[var(--as-surface)]";
 const inputCls =
-  "w-full px-3 py-2.5 rounded-xl text-sm text-[#0A1547] font-medium bg-white " +
-  "border border-[rgba(10,21,71,0.10)] placeholder:text-[#0A1547]/25 " +
+  `w-full px-3 py-2.5 rounded-xl text-sm font-medium border ${fieldSurfaceStyle} ` +
+  "placeholder:text-[var(--as-text-subtle)] " +
   "focus:outline-none focus:border-[#A380F6] transition-colors";
 
 const selectCls = inputCls + " appearance-none cursor-pointer pr-8";
-const fieldLabelCls = "px-1 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40";
+const fieldLabelCls = "px-1 text-[10px] font-black uppercase tracking-widest text-[var(--as-text-muted)]";
 const fieldErrorCls = "px-1 text-[11px] font-semibold text-red-500";
 const REQUIRED_MARK = " *";
 const AGREEMENT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PARENT_ONLY_BILLING_NOTICE =
   "Legal billing workflows are available on parent clients only. Select the parent client to continue.";
+
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const modalSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 20px 44px rgba(10,21,71,0.24)",
+};
+const mutedPanelStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
 
 let _lineId = 10;
 
@@ -300,30 +321,32 @@ function BillingClientSelector({
     <div className="relative">
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-2 rounded-xl border border-[rgba(10,21,71,0.10)] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#A380F6]/45"
+        className="flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left transition-colors hover:border-[#A380F6]/45"
+        style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}
         onClick={() => {
           setOpen((current) => !current);
           if (open) setSearchText("");
         }}
       >
         <span className="min-w-0">
-          <span className={`block truncate text-sm font-bold ${selected ? "text-[#0A1547]" : "text-[#0A1547]/35"}`}>
+          <span className="block truncate text-sm font-bold" style={selected ? primaryTextStyle : subtleTextStyle}>
             {selected?.name || placeholder}
           </span>
           {selected ? (
-            <span className="block truncate text-[10px] font-semibold text-[#0A1547]/40">{billingClientLabel(selected)}</span>
+            <span className="block truncate text-[10px] font-semibold" style={mutedTextStyle}>{billingClientLabel(selected)}</span>
           ) : null}
         </span>
         <ChevronDown
-          className="h-3.5 w-3.5 flex-shrink-0 text-[#0A1547]/30 transition-transform"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+          className="h-3.5 w-3.5 flex-shrink-0 transition-transform"
+          style={{ ...subtleTextStyle, transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
         />
       </button>
       {selected ? (
         <div className="mt-1 flex justify-end">
           <button
             type="button"
-            className="flex-shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold text-[#0A1547]/45 hover:bg-white hover:text-[#0A1547]/70"
+            className="flex-shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold hover:bg-[var(--as-hover)] hover:text-[var(--as-text)]"
+            style={mutedTextStyle}
             onClick={() => {
               onChange("");
               setSearchText("");
@@ -335,11 +358,15 @@ function BillingClientSelector({
         </div>
       ) : null}
       {open ? (
-        <div className="absolute left-0 right-0 z-40 mt-1 rounded-xl border border-[rgba(10,21,71,0.10)] bg-white p-2 shadow-lg">
-          <div className="mb-2 flex items-center gap-2 rounded-lg border border-[rgba(10,21,71,0.08)] bg-[#F8F9FD] px-2.5 py-2">
-            <Search className="h-3.5 w-3.5 flex-shrink-0 text-[#0A1547]/30" />
+        <div
+          className="absolute left-0 right-0 z-40 mt-1 rounded-xl border p-2"
+          style={{ ...modalSurfaceStyle, boxShadow: "var(--as-shadow)" }}
+        >
+          <div className="mb-2 flex items-center gap-2 rounded-lg border px-2.5 py-2" style={mutedPanelStyle}>
+            <Search className="h-3.5 w-3.5 flex-shrink-0" style={subtleTextStyle} />
             <input
-              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#0A1547] outline-none placeholder:text-[#0A1547]/25"
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-[var(--as-text-subtle)]"
+              style={primaryTextStyle}
               placeholder={placeholder}
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
@@ -348,13 +375,13 @@ function BillingClientSelector({
           </div>
           <div className="max-h-52 overflow-y-auto">
             {filteredOptions.length === 0 ? (
-              <p className="px-3 py-2.5 text-xs font-semibold text-[#0A1547]/40">{emptyText}</p>
+              <p className="px-3 py-2.5 text-xs font-semibold" style={subtleTextStyle}>{emptyText}</p>
             ) : (
               filteredOptions.map((client) => (
                 <button
                   key={client.id}
                   type="button"
-                  className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-gray-50"
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors as-shell-dropdown-item"
                   onClick={() => {
                     onChange(client.id);
                     setSearchText("");
@@ -362,8 +389,8 @@ function BillingClientSelector({
                   }}
                 >
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold text-[#0A1547]">{client.name}</span>
-                    <span className="block truncate text-[10px] font-semibold text-[#0A1547]/40">{billingClientLabel(client)}</span>
+                    <span className="block truncate text-sm font-bold" style={primaryTextStyle}>{client.name}</span>
+                    <span className="block truncate text-[10px] font-semibold" style={mutedTextStyle}>{billingClientLabel(client)}</span>
                   </span>
                   {value === client.id ? (
                     <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[#A380F6]" />
@@ -1350,8 +1377,8 @@ export default function AdminBillingPage() {
     setAgreementReplacementDetails(null);
   }, [agreementClientMode, scopedAgreementClientId]);
 
-  const card = "bg-white rounded-2xl mb-5 overflow-hidden";
-  const cardStyle = { border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" };
+  const card = "rounded-2xl mb-5 overflow-hidden";
+  const cardStyle = surfaceCardStyle;
   const enterpriseFeePeriod = agreementForm.billingOption === "annual" ? "per year" : "per month";
 
   const handleClearAgreementTextFields = () => {
@@ -1386,22 +1413,22 @@ export default function AdminBillingPage() {
   return (
     <AdminLayout title="Billing">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Billing</h2>
-        <span className="text-xs text-[#0A1547]/35 font-medium italic" style={{ color: "var(--as-text)", opacity: 0.35 }}>
+        <h2 className="text-2xl font-black" style={primaryTextStyle}>Billing</h2>
+        <span className="text-xs font-medium italic" style={{ color: "var(--as-text)", opacity: 0.35 }}>
           {selectedClientId === "all" ? "Global — not scoped to selected client" : `Scoped to ${selectedClient.name}`}
         </span>
       </div>
       {selectedClientIsChild ? (
-        <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+        <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-200">
           {PARENT_ONLY_BILLING_NOTICE}
         </div>
       ) : null}
 
       {/* ── Agreement Generator ───────────────────────────── */}
       <div className={card} style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-100">
-          <p className="text-sm font-black text-[#0A1547]">Agreement Generator</p>
-          <p className="text-[11px] text-[#0A1547]/45 mt-1">
+        <div className="px-5 py-4 border-b" style={dividerStyle}>
+          <p className="text-sm font-black" style={primaryTextStyle}>Agreement Generator</p>
+          <p className="text-[11px] mt-1" style={mutedTextStyle}>
             Generate a membership agreement draft PDF and send a tokenized signing link.
           </p>
         </div>
@@ -1412,18 +1439,18 @@ export default function AdminBillingPage() {
           {agreementSuccess ? (
             <p className="text-xs font-semibold text-emerald-600">{agreementSuccess}</p>
           ) : null}
-          <p className="text-[11px] font-semibold text-[#0A1547]/45 px-1">
+          <p className="text-[11px] font-semibold px-1" style={mutedTextStyle}>
             Fields marked<span className="text-red-500">{REQUIRED_MARK}</span> are required.
           </p>
           <div className="flex items-center justify-between gap-3">
-            <div className="inline-flex rounded-full border border-[rgba(10,21,71,0.12)] bg-white p-1">
+            <div className="inline-flex rounded-full border p-1" style={mutedPanelStyle}>
               <button
                 type="button"
                 onClick={() => setAgreementClientMode("attach_existing_client")}
                 className="px-3 py-1.5 text-xs font-bold rounded-full transition-colors"
                 style={{
                   backgroundColor: agreementClientMode === "attach_existing_client" ? "#A380F6" : "transparent",
-                  color: agreementClientMode === "attach_existing_client" ? "white" : "rgba(10,21,71,0.65)",
+                  color: agreementClientMode === "attach_existing_client" ? "white" : "var(--as-text-muted)",
                 }}
               >
                 Attach Existing Client
@@ -1434,7 +1461,7 @@ export default function AdminBillingPage() {
                 className="px-3 py-1.5 text-xs font-bold rounded-full transition-colors"
                 style={{
                   backgroundColor: agreementClientMode === "add_new_client" ? "#A380F6" : "transparent",
-                  color: agreementClientMode === "add_new_client" ? "white" : "rgba(10,21,71,0.65)",
+                  color: agreementClientMode === "add_new_client" ? "white" : "var(--as-text-muted)",
                 }}
               >
                 Add New Client
@@ -1443,7 +1470,8 @@ export default function AdminBillingPage() {
             <button
               type="button"
               onClick={handleClearAgreementTextFields}
-              className="px-3 py-1.5 text-xs font-bold rounded-full border border-[rgba(10,21,71,0.14)] text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+              className="px-3 py-1.5 text-xs font-bold rounded-full border hover:bg-[var(--as-hover)] transition-colors"
+              style={{ borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
             >
               Clear All
             </button>
@@ -1475,16 +1503,16 @@ export default function AdminBillingPage() {
                 ) : null}
               </div>
             ) : selectedClientIsChild ? (
-              <p className="max-w-xl rounded-xl border border-[rgba(10,21,71,0.08)] bg-[#F8F9FD] px-3 py-2 text-xs font-semibold text-[#0A1547]/45">
+              <p className="max-w-xl rounded-xl border px-3 py-2 text-xs font-semibold" style={{ ...mutedPanelStyle, ...subtleTextStyle }}>
                 Select a parent client to use agreement workflows.
               </p>
             ) : (
-              <p className="text-xs font-semibold text-[#0A1547]/55">
-                Attached client: <span className="font-black text-[#0A1547]">{selectedClient.name}</span>
+              <p className="text-xs font-semibold" style={mutedTextStyle}>
+                Attached client: <span className="font-black" style={primaryTextStyle}>{selectedClient.name}</span>
               </p>
             )
           ) : (
-            <p className="text-xs font-semibold text-[#0A1547]/55">
+            <p className="text-xs font-semibold" style={mutedTextStyle}>
               A new client will be created from this form before the agreement is sent.
             </p>
           )}
@@ -1569,7 +1597,7 @@ export default function AdminBillingPage() {
                   <option value="pro">pro</option>
                   <option value="enterprise">enterprise</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
               </div>
             </div>
             <div className="space-y-1">
@@ -1583,7 +1611,7 @@ export default function AdminBillingPage() {
                   <option value="monthly">monthly</option>
                   <option value="annual">annual</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
               </div>
             </div>
             <div className="space-y-1">
@@ -1597,7 +1625,7 @@ export default function AdminBillingPage() {
                 value={agreementDateInputs.initialTermStart}
                 onChange={(e) => updateAgreementDateInput("initialTermStart", e.target.value)}
               />
-              <p className="text-[10px] text-[#0A1547]/35 px-1">MM/DD/YYYY</p>
+              <p className="text-[10px] px-1" style={subtleTextStyle}>MM/DD/YYYY</p>
               {agreementFieldErrors.initialTermStart ? (
                 <p className={fieldErrorCls}>{agreementFieldErrors.initialTermStart}</p>
               ) : null}
@@ -1613,7 +1641,7 @@ export default function AdminBillingPage() {
                 value={agreementDateInputs.initialRenewalDate}
                 onChange={(e) => updateAgreementDateInput("initialRenewalDate", e.target.value)}
               />
-              <p className="text-[10px] text-[#0A1547]/35 px-1">MM/DD/YYYY</p>
+              <p className="text-[10px] px-1" style={subtleTextStyle}>MM/DD/YYYY</p>
               {agreementFieldErrors.initialRenewalDate ? (
                 <p className={fieldErrorCls}>{agreementFieldErrors.initialRenewalDate}</p>
               ) : null}
@@ -1629,7 +1657,7 @@ export default function AdminBillingPage() {
                   <option value="yes">Yes</option>
                   <option value="no">No</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
               </div>
             </div>
             <div className="space-y-1">
@@ -1646,7 +1674,7 @@ export default function AdminBillingPage() {
           </div>
           {agreementForm.membershipTier === "enterprise" ? (
             <div className="space-y-3 pt-1">
-              <p className="px-1 text-[10px] font-black uppercase tracking-widest text-[#0A1547]/45">
+              <p className="px-1 text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
                 Enterprise Pricing Configuration
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1729,7 +1757,7 @@ export default function AdminBillingPage() {
               disabled={agreementPreviewBusy || selectedClientIsChild}
               className="px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all"
               style={{
-                backgroundColor: agreementPreviewBusy || selectedClientIsChild ? "rgba(10,21,71,0.2)" : "#A380F6",
+                backgroundColor: agreementPreviewBusy || selectedClientIsChild ? "color-mix(in srgb, var(--as-text) 20%, transparent)" : "#A380F6",
                 cursor: agreementPreviewBusy || selectedClientIsChild ? "not-allowed" : "pointer",
               }}
             >
@@ -1741,10 +1769,10 @@ export default function AdminBillingPage() {
 
       {/* ── Pending Agreements ───────────────────────────── */}
       <div className={card} style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div className="px-5 py-4 border-b flex items-center justify-between gap-3" style={dividerStyle}>
           <div>
-            <p className="text-sm font-black text-[#0A1547]">Pending Agreements</p>
-            <p className="text-[11px] text-[#0A1547]/45 mt-1">
+            <p className="text-sm font-black" style={primaryTextStyle}>Pending Agreements</p>
+            <p className="text-[11px] mt-1" style={mutedTextStyle}>
               {selectedClientId === "all" ? "Showing all clients with pending agreements." : `Showing pending agreements for ${selectedClient.name}.`}
             </p>
           </div>
@@ -1754,7 +1782,8 @@ export default function AdminBillingPage() {
               void loadPendingAgreements();
             }}
             disabled={pendingAgreementLoading}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(10,21,71,0.12)] bg-white px-3 py-1.5 text-xs font-bold text-[#0A1547]/65 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[var(--as-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh
@@ -1765,45 +1794,45 @@ export default function AdminBillingPage() {
             <p className="text-xs font-semibold text-red-500">{pendingAgreementError}</p>
           ) : null}
           {selectedClientIsChild ? (
-            <p className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-[#F8F9FD] px-3 py-2 text-sm font-semibold text-[#0A1547]/35">
+            <p className="rounded-xl border px-3 py-2 text-sm font-semibold" style={{ ...mutedPanelStyle, ...subtleTextStyle }}>
               Select a parent client to view pending agreements.
             </p>
           ) : pendingAgreementLoading ? (
-            <p className="text-xs font-semibold text-[#0A1547]/40">Checking pending agreements...</p>
+            <p className="text-xs font-semibold" style={subtleTextStyle}>Checking pending agreements...</p>
           ) : pendingAgreements.length === 0 ? (
-            <p className="text-sm font-semibold text-[#0A1547]/35">No pending agreements.</p>
+            <p className="text-sm font-semibold" style={subtleTextStyle}>No pending agreements.</p>
           ) : (
             <div className="space-y-2.5">
               {pendingAgreements.map((agreement) => (
-                <div key={agreement.id} className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <div key={agreement.id} className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-400/25 dark:bg-amber-500/10">
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(180px,1.15fr)_minmax(420px,2fr)_140px] lg:items-center">
                     <div className="min-w-0 overflow-hidden">
                       <p className="text-[10px] font-black uppercase tracking-widest text-amber-700/70">
                         {agreement.client_legal_name || "Pending Agreement"}
                       </p>
-                      <p className="mt-1 text-sm font-black text-[#0A1547]">
+                      <p className="mt-1 text-sm font-black" style={primaryTextStyle}>
                         {agreement.status || "pending"}
                         {agreement.checkout_status ? ` · checkout ${agreement.checkout_status}` : ""}
                       </p>
-                      <p className="mt-1 text-xs font-semibold text-[#0A1547]/55">
+                      <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>
                         {agreement.admin_email || "No admin email"}
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px] font-semibold text-[#0A1547]/60 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px] font-semibold sm:grid-cols-4" style={mutedTextStyle}>
                       <span className="min-w-0">
-                        <span className="block font-black uppercase tracking-widest text-[#0A1547]/35">Sent</span>
+                        <span className="block font-black uppercase tracking-widest" style={subtleTextStyle}>Sent</span>
                         <span className="block truncate">{formatDateTime(agreement.sent_at)}</span>
                       </span>
                       <span className="min-w-0">
-                        <span className="block font-black uppercase tracking-widest text-[#0A1547]/35">Opened</span>
+                        <span className="block font-black uppercase tracking-widest" style={subtleTextStyle}>Opened</span>
                         <span className="block truncate">{formatDateTime(agreement.opened_at)}</span>
                       </span>
                       <span className="min-w-0">
-                        <span className="block font-black uppercase tracking-widest text-[#0A1547]/35">Signed</span>
+                        <span className="block font-black uppercase tracking-widest" style={subtleTextStyle}>Signed</span>
                         <span className="block truncate">{formatDateTime(agreement.signed_at)}</span>
                       </span>
                       <span className="min-w-0">
-                        <span className="block font-black uppercase tracking-widest text-[#0A1547]/35">Checkout</span>
+                        <span className="block font-black uppercase tracking-widest" style={subtleTextStyle}>Checkout</span>
                         <span className="block truncate">{formatDateTime(agreement.checkout_created_at)}</span>
                       </span>
                     </div>
@@ -1811,7 +1840,7 @@ export default function AdminBillingPage() {
                       type="button"
                       onClick={() => openVoidAgreementModal(agreement)}
                       disabled={voidingAgreement}
-                      className="w-fit whitespace-nowrap rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 lg:justify-self-end"
+                      className="w-fit whitespace-nowrap rounded-full border border-amber-300 bg-[var(--as-surface)] px-4 py-2 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 lg:justify-self-end dark:border-amber-400/35 dark:bg-amber-400/10 dark:text-amber-200 dark:hover:bg-amber-400/15"
                     >
                       Void Agreement
                     </button>
@@ -1825,8 +1854,8 @@ export default function AdminBillingPage() {
 
       {/* ── Send Invoice ────────────────────────────────────── */}
       <div className={card} style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-100">
-          <p className="text-sm font-black text-[#0A1547]">Send Invoice</p>
+        <div className="px-5 py-4 border-b" style={dividerStyle}>
+          <p className="text-sm font-black" style={primaryTextStyle}>Send Invoice</p>
         </div>
         <div className="px-5 py-4 space-y-4">
           {invoiceSendError ? (
@@ -1846,12 +1875,12 @@ export default function AdminBillingPage() {
                 emptyText="No parent clients match your search."
               />
             ) : selectedClientIsChild ? (
-              <p className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-[#F8F9FD] px-3 py-2.5 text-sm font-semibold text-[#0A1547]/35">
+              <p className="rounded-xl border px-3 py-2.5 text-sm font-semibold" style={{ ...mutedPanelStyle, ...subtleTextStyle }}>
                 Select a parent client to send invoices.
               </p>
             ) : (
-              <p className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-white px-3 py-2.5 text-sm font-semibold text-[#0A1547]/55">
-                Invoice client: <span className="font-black text-[#0A1547]">{selectedClient.name}</span>
+              <p className="rounded-xl border px-3 py-2.5 text-sm font-semibold" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}>
+                Invoice client: <span className="font-black" style={primaryTextStyle}>{selectedClient.name}</span>
               </p>
             )}
             <input
@@ -1878,7 +1907,7 @@ export default function AdminBillingPage() {
                 value={invDays}
                 onChange={(e) => setInvDays(e.target.value)}
               />
-              <p className="text-[10px] text-[#0A1547]/35 mt-1 px-1">
+              <p className="text-[10px] mt-1 px-1" style={subtleTextStyle}>
                 Number of days the customer has to pay after the invoice is sent.
               </p>
             </div>
@@ -1888,7 +1917,7 @@ export default function AdminBillingPage() {
           <div>
             <div className="grid grid-cols-[1fr_80px_120px_44px] gap-2 mb-2">
               {["Description", "Qty", "Unit ($)", "Remove"].map((h) => (
-                <p key={h} className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 px-1">{h}</p>
+                <p key={h} className="text-[10px] font-black uppercase tracking-widest px-1" style={mutedTextStyle}>{h}</p>
               ))}
             </div>
             <div className="space-y-2">
@@ -1917,7 +1946,7 @@ export default function AdminBillingPage() {
                     onChange={(e) => updateLineItem(li.id, "unit", e.target.value)}
                   />
                   <button
-                    className="flex items-center justify-center p-2 rounded-xl text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-all"
+                    className="flex items-center justify-center p-2 rounded-xl text-[var(--as-text-subtle)] hover:text-red-500 hover:bg-red-50 transition-all dark:hover:bg-red-500/10"
                     onClick={() => removeLineItem(li.id)}
                     disabled={lineItems.length === 1}
                     style={{ opacity: lineItems.length === 1 ? 0.3 : 1 }}
@@ -1945,8 +1974,8 @@ export default function AdminBillingPage() {
               onClick={() => { void handleSendInvoice(); }}
               className="px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all"
               style={{
-                backgroundColor: canSendInvoice && !invoiceSendBusy ? "#A380F6" : "rgba(10,21,71,0.08)",
-                color:           canSendInvoice && !invoiceSendBusy ? "white"   : "rgba(10,21,71,0.25)",
+                backgroundColor: canSendInvoice && !invoiceSendBusy ? "#A380F6" : "color-mix(in srgb, var(--as-text) 8%, transparent)",
+                color:           canSendInvoice && !invoiceSendBusy ? "white"   : "var(--as-text-subtle)",
                 cursor:          canSendInvoice && !invoiceSendBusy ? "pointer" : "not-allowed",
               }}
             >
@@ -1958,10 +1987,10 @@ export default function AdminBillingPage() {
 
       {/* ── Billed Revenue Trend ───────────────────────────── */}
       <div className={card} style={cardStyle}>
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-5 py-4 border-b flex items-center justify-between" style={dividerStyle}>
           <div>
-            <p className="text-sm font-black text-[#0A1547]">Billed Revenue Trend</p>
-            <p className="text-[11px] text-[#0A1547]/45 mt-1">Invoice-based billed revenue trend (not MRR / ARR).</p>
+            <p className="text-sm font-black" style={primaryTextStyle}>Billed Revenue Trend</p>
+            <p className="text-[11px] mt-1" style={mutedTextStyle}>Invoice-based billed revenue trend (not MRR / ARR).</p>
           </div>
           <button
             onClick={() => setRefreshNonce((value) => value + 1)}
@@ -1975,35 +2004,35 @@ export default function AdminBillingPage() {
         </div>
         <div className="px-5 py-4 space-y-4">
           {billingLoading ? (
-            <p className="text-sm text-[#0A1547]/35 font-semibold">Loading billing trend...</p>
+            <p className="text-sm font-semibold" style={subtleTextStyle}>Loading billing trend...</p>
           ) : billingError ? (
             <p className="text-sm text-red-500 font-semibold">{billingError}</p>
           ) : filteredInvoices.length === 0 ? (
-            <p className="text-sm text-[#0A1547]/35 font-semibold">No invoice data is available yet.</p>
+            <p className="text-sm font-semibold" style={subtleTextStyle}>No invoice data is available yet.</p>
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-white px-3 py-2.5">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Total Billed</p>
-                  <p className="text-base font-black text-[#0A1547] mt-1">{formatAmountFromCents(invoiceTrendSummary.totalCents, "usd")}</p>
+                <div className="rounded-xl border px-3 py-2.5" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}>
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Total Billed</p>
+                  <p className="text-base font-black mt-1" style={primaryTextStyle}>{formatAmountFromCents(invoiceTrendSummary.totalCents, "usd")}</p>
                 </div>
-                <div className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-white px-3 py-2.5">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Paid Billed</p>
+                <div className="rounded-xl border px-3 py-2.5" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}>
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Paid Billed</p>
                   <p className="text-base font-black text-[#00886A] mt-1">{formatAmountFromCents(invoiceTrendSummary.paidCents, "usd")}</p>
                 </div>
-                <div className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-white px-3 py-2.5">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Open Billed</p>
+                <div className="rounded-xl border px-3 py-2.5" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}>
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Open Billed</p>
                   <p className="text-base font-black text-[#C07800] mt-1">{formatAmountFromCents(invoiceTrendSummary.openCents, "usd")}</p>
                 </div>
-                <div className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-white px-3 py-2.5">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Invoices</p>
-                  <p className="text-base font-black text-[#0A1547] mt-1">{invoiceTrendSummary.count}</p>
+                <div className="rounded-xl border px-3 py-2.5" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}>
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Invoices</p>
+                  <p className="text-base font-black mt-1" style={primaryTextStyle}>{invoiceTrendSummary.count}</p>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 {([
-                  { key: "total", label: "Total Billed", color: "#0A1547" },
+                  { key: "total", label: "Total Billed", color: "var(--as-text)" },
                   { key: "paid", label: "Paid", color: "#02B289" },
                   { key: "open", label: "Open", color: "#F0A500" },
                   { key: "void", label: "Void", color: "#7B819B" },
@@ -2019,9 +2048,9 @@ export default function AdminBillingPage() {
                     }}
                     className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full text-xs font-bold border transition-colors"
                     style={{
-                      borderColor: invoiceTrendVisible[series.key] ? "rgba(10,21,71,0.2)" : "rgba(10,21,71,0.08)",
-                      color: invoiceTrendVisible[series.key] ? "#0A1547" : "rgba(10,21,71,0.45)",
-                      backgroundColor: invoiceTrendVisible[series.key] ? "rgba(10,21,71,0.04)" : "white",
+                      borderColor: invoiceTrendVisible[series.key] ? "color-mix(in srgb, var(--as-text) 20%, transparent)" : "var(--as-border)",
+                      color: invoiceTrendVisible[series.key] ? "var(--as-text)" : "var(--as-text-muted)",
+                      backgroundColor: invoiceTrendVisible[series.key] ? "var(--as-hover)" : "var(--as-surface)",
                     }}
                   >
                     <span
@@ -2038,8 +2067,8 @@ export default function AdminBillingPage() {
                   <AreaChart data={invoiceTrendData} margin={{ top: 8, right: 12, left: 8, bottom: 6 }}>
                     <defs>
                       <linearGradient id="invoice-total-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#0A1547" stopOpacity={0.24} />
-                        <stop offset="100%" stopColor="#0A1547" stopOpacity={0.02} />
+                        <stop offset="0%" stopColor="var(--as-text)" stopOpacity={0.24} />
+                        <stop offset="100%" stopColor="var(--as-text)" stopOpacity={0.02} />
                       </linearGradient>
                       <linearGradient id="invoice-paid-fill" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#02B289" stopOpacity={0.22} />
@@ -2054,26 +2083,30 @@ export default function AdminBillingPage() {
                         <stop offset="100%" stopColor="#7B819B" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(10,21,71,0.10)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--as-border)" />
                     <XAxis
                       dataKey="monthLabel"
                       tickLine={false}
                       axisLine={false}
-                      tick={{ fill: "rgba(10,21,71,0.55)", fontSize: 11, fontWeight: 600 }}
+                      tick={{ fill: "var(--as-text-muted)", fontSize: 11, fontWeight: 600 }}
                     />
                     <YAxis
                       tickLine={false}
                       axisLine={false}
-                      tick={{ fill: "rgba(10,21,71,0.45)", fontSize: 11, fontWeight: 600 }}
+                      tick={{ fill: "var(--as-text-muted)", fontSize: 11, fontWeight: 600 }}
                       tickFormatter={(value: number) => `$${Math.round(Number(value || 0)).toLocaleString()}`}
                       width={68}
                     />
                     <Tooltip
                       contentStyle={{
-                        border: "1px solid rgba(10,21,71,0.12)",
+                        backgroundColor: "var(--as-surface)",
+                        border: "1px solid var(--as-border)",
                         borderRadius: 12,
-                        boxShadow: "0 12px 24px rgba(10,21,71,0.16)",
+                        boxShadow: "var(--as-shadow)",
+                        color: "var(--as-text)",
                       }}
+                      labelStyle={{ color: "var(--as-text)" }}
+                      itemStyle={{ color: "var(--as-text-muted)" }}
                       formatter={(value: number, name: string) => {
                         const numeric = Number.isFinite(Number(value)) ? Number(value) : 0;
                         const labelMap: Record<string, string> = {
@@ -2090,10 +2123,10 @@ export default function AdminBillingPage() {
                         type="monotone"
                         dataKey="total"
                         name="total"
-                        stroke="#0A1547"
+                        stroke="var(--as-text)"
                         fill="url(#invoice-total-fill)"
                         strokeWidth={2.4}
-                        activeDot={{ r: 5, strokeWidth: 0, fill: "#0A1547" }}
+                        activeDot={{ r: 5, strokeWidth: 0, fill: "var(--as-text)" }}
                         animationDuration={320}
                       />
                     ) : null}
@@ -2150,18 +2183,19 @@ export default function AdminBillingPage() {
             aria-label="Close agreement preview"
           />
           <div
-            className="relative w-full max-w-6xl max-h-[92vh] bg-white rounded-2xl overflow-hidden"
-            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+            className="relative w-full max-w-6xl max-h-[92vh] rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={dividerStyle}>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Agreement Preview</p>
-                <h3 className="text-sm font-black text-[#0A1547] leading-snug">alphaScreen Membership Agreement (Draft)</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Agreement Preview</p>
+                <h3 className="text-sm font-black leading-snug" style={primaryTextStyle}>alphaScreen Membership Agreement (Draft)</h3>
               </div>
               <button
                 type="button"
                 onClick={closeAgreementPreview}
-                className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-[#0A1547]/40 hover:text-[#0A1547] hover:bg-gray-100 transition-colors"
+                className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:bg-[var(--as-hover)] transition-colors"
+                style={subtleTextStyle}
                 aria-label="Close agreement preview"
               >
                 <X className="w-4 h-4" />
@@ -2169,19 +2203,21 @@ export default function AdminBillingPage() {
             </div>
             <div className="px-5 py-4 overflow-y-auto max-h-[calc(92vh-72px)] space-y-4">
               {!agreementPreviewPdfUrl ? (
-                <p className="text-xs font-semibold text-[#0A1547]/45">Preparing agreement preview…</p>
+                <p className="text-xs font-semibold" style={mutedTextStyle}>Preparing agreement preview…</p>
               ) : (
                 <iframe
                   title="Agreement Preview PDF"
                   src={agreementPreviewPdfUrl}
-                  className="w-full min-h-[72vh] rounded-xl border border-gray-200"
+                  className="w-full min-h-[72vh] rounded-xl border"
+                  style={{ borderColor: "var(--as-border)" }}
                 />
               )}
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={closeAgreementPreview}
-                  className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-xs font-bold rounded-full border hover:bg-[var(--as-hover)] transition-colors"
+                  style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
                 >
                   Close
                 </button>
@@ -2212,24 +2248,24 @@ export default function AdminBillingPage() {
             aria-label="Close void agreement confirmation"
           />
           <div
-            className="relative w-full max-w-lg bg-white rounded-2xl overflow-hidden"
-            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+            className="relative w-full max-w-lg rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
           >
-            <div className="px-5 py-4 border-b border-gray-100">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Pending Agreement</p>
-              <h3 className="text-sm font-black text-[#0A1547] leading-snug mt-1">Void agreement?</h3>
+            <div className="px-5 py-4 border-b" style={dividerStyle}>
+              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Pending Agreement</p>
+              <h3 className="text-sm font-black leading-snug mt-1" style={primaryTextStyle}>Void agreement?</h3>
             </div>
             <div className="px-5 py-4 space-y-3">
-              <p className="text-sm text-[#0A1547]/75">
+              <p className="text-sm" style={mutedTextStyle}>
                 This will not change Stripe subscriptions or client billing.
               </p>
-              <div className="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-3">
-                <p className="text-xs font-black text-[#0A1547]">{voidAgreementTarget.client_legal_name || "Pending agreement"}</p>
-                <p className="mt-1 text-[11px] font-semibold text-[#0A1547]/55">
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-3 dark:border-amber-400/25 dark:bg-amber-500/10">
+                <p className="text-xs font-black" style={primaryTextStyle}>{voidAgreementTarget.client_legal_name || "Pending agreement"}</p>
+                <p className="mt-1 text-[11px] font-semibold" style={mutedTextStyle}>
                   {voidAgreementTarget.status || "pending"}
                   {voidAgreementTarget.checkout_status ? ` · checkout ${voidAgreementTarget.checkout_status}` : ""}
                 </p>
-                <p className="mt-1 text-[11px] font-semibold text-[#0A1547]/55">
+                <p className="mt-1 text-[11px] font-semibold" style={mutedTextStyle}>
                   {voidAgreementTarget.admin_email || "No admin email"}
                 </p>
               </div>
@@ -2243,12 +2279,13 @@ export default function AdminBillingPage() {
                 />
               </label>
             </div>
-            <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+            <div className="px-5 py-4 border-t flex justify-end gap-2" style={dividerStyle}>
               <button
                 type="button"
                 onClick={closeVoidAgreementModal}
                 disabled={voidingAgreement}
-                className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                className="px-4 py-2 text-xs font-bold rounded-full border hover:bg-[var(--as-hover)] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
               >
                 Cancel
               </button>
@@ -2281,37 +2318,37 @@ export default function AdminBillingPage() {
             aria-label="Close replacement confirmation"
           />
           <div
-            className="relative w-full max-w-xl bg-white rounded-2xl overflow-hidden"
-            style={{ border: "1px solid rgba(10,21,71,0.10)", boxShadow: "0 20px 44px rgba(10,21,71,0.24)" }}
+            className="relative w-full max-w-xl rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
           >
-            <div className="px-5 py-4 border-b border-gray-100">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Confirm Replacement</p>
-              <h3 className="text-sm font-black text-[#0A1547] leading-snug mt-1">Existing Agreement Found</h3>
+            <div className="px-5 py-4 border-b" style={dividerStyle}>
+              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Confirm Replacement</p>
+              <h3 className="text-sm font-black leading-snug mt-1" style={primaryTextStyle}>Existing Agreement Found</h3>
             </div>
             <div className="px-5 py-4 space-y-3">
-              <p className="text-sm text-[#0A1547]/75">
+              <p className="text-sm" style={mutedTextStyle}>
                 This client already has an active signed agreement. Sending and signing a new agreement will replace the current agreement, and only one agreement can be current at a time.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <p className="text-[#0A1547]/70">
-                  <span className="font-black text-[#0A1547]">Current Tier:</span>{" "}
+                <p style={mutedTextStyle}>
+                  <span className="font-black" style={primaryTextStyle}>Current Tier:</span>{" "}
                   {agreementReplacementDetails?.membership_tier || "—"}
                 </p>
-                <p className="text-[#0A1547]/70">
-                  <span className="font-black text-[#0A1547]">Initial Term Start:</span>{" "}
+                <p style={mutedTextStyle}>
+                  <span className="font-black" style={primaryTextStyle}>Initial Term Start:</span>{" "}
                   {agreementReplacementDetails?.initial_term_start || "—"}
                 </p>
-                <p className="text-[#0A1547]/70">
-                  <span className="font-black text-[#0A1547]">Renewal Date:</span>{" "}
+                <p style={mutedTextStyle}>
+                  <span className="font-black" style={primaryTextStyle}>Renewal Date:</span>{" "}
                   {agreementReplacementDetails?.initial_renewal_date || "—"}
                 </p>
-                <p className="text-[#0A1547]/70">
-                  <span className="font-black text-[#0A1547]">Signed Date:</span>{" "}
+                <p style={mutedTextStyle}>
+                  <span className="font-black" style={primaryTextStyle}>Signed Date:</span>{" "}
                   {agreementReplacementDetails?.signed_at ? formatDateTime(agreementReplacementDetails.signed_at) : "—"}
                 </p>
               </div>
             </div>
-            <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+            <div className="px-5 py-4 border-t flex justify-end gap-2" style={dividerStyle}>
               <button
                 type="button"
                 onClick={() => {
@@ -2319,7 +2356,8 @@ export default function AdminBillingPage() {
                   setAgreementReplacementPendingAction(null);
                   setAgreementReplacementDetails(null);
                 }}
-                className="px-4 py-2 text-xs font-bold rounded-full border border-gray-200 text-[#0A1547]/70 hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-xs font-bold rounded-full border hover:bg-[var(--as-hover)] transition-colors"
+                style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
               >
                 Cancel
               </button>
