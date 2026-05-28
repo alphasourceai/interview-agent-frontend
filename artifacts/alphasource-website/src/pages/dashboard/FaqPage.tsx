@@ -207,6 +207,95 @@ const faqSections = [
   },
 ];
 
+const guidanceCards = [
+  {
+    title: "Getting started",
+    body: "Confirm your profile, team access, billing status, and active roles before sending candidates into the interview flow.",
+  },
+  {
+    title: "Roles and candidates",
+    body: "Create clear role requirements, invite candidates consistently, and review candidate details from the selected client or entity scope.",
+  },
+  {
+    title: "Reports and scoring",
+    body: "Use reports and scores as structured decision-support signals alongside the resume, interview context, role requirements, and hiring judgment.",
+  },
+  {
+    title: "Billing, capacity, and team access",
+    body: "Review membership status, interview capacity, and team permissions so the right users can support the hiring workflow.",
+  },
+];
+
+const productUpdates = [
+  {
+    version: "alphaScreen v1.5",
+    title: "Dashboard Appearance and Support",
+    summary: "Added dashboard appearance options and expanded client support guidance.",
+    bullets: [
+      "Light, Dark, and System appearance modes",
+      "Appearance preference persists in the dashboard",
+      "Improved readability across client dashboard surfaces",
+      "Support navigation added inside the client portal",
+      "Product Updates added to the client Support page",
+    ],
+  },
+  {
+    version: "alphaScreen v1.4",
+    title: "Organization Scope Support",
+    summary: "Added support for larger organizations with multiple operating scopes.",
+    bullets: [
+      "Parent client and child entity support",
+      "Clearer selected client/entity dashboard context",
+      "Entity-aware roles, candidates, and reports",
+      "Scoped team access by organization area",
+    ],
+  },
+  {
+    version: "alphaScreen v1.3",
+    title: "Role Lifecycle and Interview Records",
+    summary: "Added stronger role lifecycle controls and authorized interview record access.",
+    bullets: [
+      "Role close and reopen controls",
+      "Clear inactive-role indicators",
+      "Authorized interview record access where available",
+      "Clearer availability and retention messaging",
+    ],
+  },
+  {
+    version: "alphaScreen v1.2",
+    title: "Membership and Capacity Workflows",
+    summary: "Added account, membership, and interview-capacity workflow support.",
+    bullets: [
+      "Membership and agreement guidance",
+      "Billing visibility for authorized users",
+      "Additional interview capacity workflow",
+      "Improved account and team access management",
+    ],
+  },
+  {
+    version: "alphaScreen v1.1",
+    title: "Candidate Review Improvements",
+    summary: "Improved candidate review clarity and dashboard usability.",
+    bullets: [
+      "Improved candidate list usability",
+      "Expanded candidate detail review",
+      "Clearer score and status presentation",
+      "Better filtering, search, and report access",
+    ],
+  },
+  {
+    version: "alphaScreen v1.0",
+    title: "Core Screening Platform",
+    summary: "Initial client dashboard platform for structured candidate screening.",
+    bullets: [
+      "Role setup and candidate invitations",
+      "Structured interview workflow",
+      "Resume and interview review support",
+      "Candidate dashboard and report review tools",
+    ],
+  },
+];
+
 const surfaceCardStyle = {
   backgroundColor: "var(--as-surface)",
   border: "1px solid var(--as-border)",
@@ -220,31 +309,101 @@ const mutedPanelStyle = {
 
 const primaryTextStyle = { color: "var(--as-text)" };
 const mutedTextStyle = { color: "var(--as-text)", opacity: 0.65 };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
 
 export default function DashboardFaqPage() {
   return (
-    <DashboardLayout title="FAQ">
+    <DashboardLayout title="Support">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-7">
         <div className="max-w-3xl">
           <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1" style={{ color: "var(--as-text)", opacity: 0.35 }}>
-            Help Center
+            Client Support
           </p>
           <h2 className="text-2xl font-black text-[#0A1547] leading-tight mb-3" style={{ color: "var(--as-text)" }}>
-            alphaScreen Support
+            Support
           </h2>
           <p className="text-sm text-[#0A1547]/60 leading-relaxed" style={{ color: "var(--as-text)", opacity: 0.6 }}>
-            This help center is for alphaScreen clients. It explains how to use the dashboard, manage roles and candidates, understand reports, and get support when something does not work as expected.
+            Practical alphaScreen guidance for managing roles, candidates, reports, membership workflows, and team access inside the client dashboard.
           </p>
         </div>
       </div>
 
       <div
-        className="rounded-2xl p-4 mb-6"
+        className="rounded-2xl p-4 mb-5"
         style={{ backgroundColor: "rgba(163,128,246,0.10)", border: "1px solid rgba(163,128,246,0.20)" }}
       >
         <p className="text-sm font-semibold text-[#0A1547]/70 leading-relaxed" style={{ color: "var(--as-text)", opacity: 0.7 }}>
           alphaScreen supports your hiring process with structured screening and interview insight. It does not replace your hiring judgment or make final employment decisions.
         </p>
+      </div>
+
+      <section
+        className="rounded-2xl p-6 mb-5"
+        style={surfaceCardStyle}
+      >
+        <div className="flex flex-col gap-1 mb-5">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
+            Support Guide
+          </p>
+          <h3 className="text-base font-black" style={primaryTextStyle}>Quick guidance</h3>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {guidanceCards.map((card) => (
+            <div
+              key={card.title}
+              className="rounded-xl border p-4"
+              style={mutedPanelStyle}
+            >
+              <h4 className="text-sm font-black mb-2" style={primaryTextStyle}>{card.title}</h4>
+              <p className="text-xs leading-relaxed" style={mutedTextStyle}>{card.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section
+        className="rounded-2xl p-6 mb-5"
+        style={surfaceCardStyle}
+      >
+        <div className="flex flex-col gap-1 mb-5">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
+            Product Updates
+          </p>
+          <h3 className="text-base font-black" style={primaryTextStyle}>alphaScreen updates</h3>
+          <p className="text-sm leading-relaxed" style={mutedTextStyle}>
+            Client-facing highlights from recent alphaScreen releases.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {productUpdates.map((update) => (
+            <article
+              key={update.version}
+              className="rounded-xl border p-4"
+              style={mutedPanelStyle}
+            >
+              <h4 className="text-sm font-black mb-2" style={primaryTextStyle}>
+                {update.version} — {update.title}
+              </h4>
+              <p className="text-xs leading-relaxed mb-3" style={mutedTextStyle}>
+                {update.summary}
+              </p>
+              <ul className="grid gap-1.5 md:grid-cols-2">
+                {update.bullets.map((bullet) => (
+                  <li key={bullet} className="text-xs leading-relaxed" style={mutedTextStyle}>
+                    • {bullet}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <div className="mb-5">
+        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>
+          Help Center
+        </p>
+        <h3 className="text-base font-black" style={primaryTextStyle}>Common questions</h3>
       </div>
 
       <div className="grid gap-5">

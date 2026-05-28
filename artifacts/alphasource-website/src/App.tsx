@@ -302,6 +302,7 @@ function DashboardGuard() {
           <Route path="/dashboard/members"    component={MembersPage} />
           <Route path="/dashboard/billing"    component={BillingPage} />
           <Route path="/dashboard/entities"   component={EntitiesPage} />
+          <Route path="/dashboard/support"    component={DashboardFaqPage} />
           <Route path="/dashboard/faq"        component={DashboardFaqPage} />
           <Route component={NotFound} />
         </Switch>

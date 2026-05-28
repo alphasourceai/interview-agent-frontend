@@ -65,7 +65,7 @@ const navItems: NavItem[] = [
   { label: "Members",    href: "/dashboard/members",    icon: UserCheck       },
   { label: "Billing",    href: "/dashboard/billing",    icon: CreditCard      },
   { label: "Entities",   href: "/dashboard/entities",   icon: Building2       },
-  { label: "FAQ",        href: "/dashboard/faq",        icon: HelpCircle      },
+  { label: "Support",    href: "/dashboard/support",    icon: HelpCircle      },
 ];
 
 /* ── Tour steps ──────────────────────────────────────────────── */
@@ -467,8 +467,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const endTour   = () => { setTourActive(false); setSpotRect(null); };
 
   const handleSignOut = () => { logout(); setLocation("/"); };
-  const isActive = (href: string) =>
-    href === "/dashboard" ? location === "/dashboard" : location.startsWith(href);
+  const isActive = (href: string) => {
+    if (href === "/dashboard") return location === "/dashboard";
+    if (href === "/dashboard/support") return location === "/dashboard/support" || location === "/dashboard/faq";
+    return location.startsWith(href);
+  };
 
   const sidebarW  = collapsed ? "w-16" : "w-60";
   const contentML = collapsed ? "lg:ml-16" : "lg:ml-60";
