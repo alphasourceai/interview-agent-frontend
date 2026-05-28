@@ -166,14 +166,38 @@ const typeColors: Record<RoleType, { bg: string; text: string }> = {
   Technical: { bg: "rgba(2,217,157,0.12)",   text: "#009E73" },
 };
 
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const modalSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 24px 70px rgba(10,21,71,0.24)",
+};
+const fieldSurfaceStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+  color: "var(--as-text)",
+};
+const mutedPanelStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+
 const inputCls =
-  "w-full px-3 py-2 rounded-xl text-sm text-[#0A1547] font-medium " +
-  "border border-[rgba(10,21,71,0.10)] bg-white " +
-  "placeholder:text-[#0A1547]/30 focus:outline-none focus:border-[#A380F6] transition-colors";
+  "w-full px-3 py-2 rounded-xl text-sm text-[var(--as-text)] font-medium " +
+  "border border-[var(--as-border)] bg-[var(--as-surface-muted)] " +
+  "placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:border-[#A380F6] transition-colors";
 
 const selectCls =
-  "w-full px-3 py-2 rounded-xl text-sm text-[#0A1547] font-medium " +
-  "border border-[rgba(10,21,71,0.10)] bg-white appearance-none " +
+  "w-full px-3 py-2 rounded-xl text-sm text-[var(--as-text)] font-medium " +
+  "border border-[var(--as-border)] bg-[var(--as-surface-muted)] appearance-none " +
   "focus:outline-none focus:border-[#A380F6] transition-colors cursor-pointer";
 
 export default function AdminRolesPage() {
@@ -716,7 +740,7 @@ export default function AdminRolesPage() {
   };
 
   function SortIcon({ col }: { col: SortKey }) {
-    if (sortKey !== col) return <ChevronDown className="w-3 h-3 text-[#0A1547]/20 ml-0.5 flex-shrink-0" />;
+    if (sortKey !== col) return <ChevronDown className="w-3 h-3 ml-0.5 flex-shrink-0" style={subtleTextStyle} />;
     return sortDir === "asc"
       ? <ChevronUp   className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />
       : <ChevronDown className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />;
@@ -744,8 +768,8 @@ export default function AdminRolesPage() {
 
       {/* ── Create role form ──────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl p-5 mb-5"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl p-5 mb-5"
+        style={surfaceCardStyle}
       >
         <div className="flex gap-3 flex-wrap">
           <input
@@ -764,12 +788,13 @@ export default function AdminRolesPage() {
               <option>Detailed</option>
               <option>Technical</option>
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
           </div>
 
           {/* JD file upload */}
           <label
-            className="flex-1 min-w-48 flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-[#0A1547]/40 font-medium border border-dashed border-[rgba(10,21,71,0.18)] bg-white cursor-pointer hover:border-[#A380F6]/50 hover:text-[#A380F6]/60 transition-colors"
+            className="flex-1 min-w-48 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-dashed cursor-pointer hover:border-[#A380F6]/50 hover:text-[#A380F6]/60 transition-colors"
+            style={{ ...fieldSurfaceStyle, color: "var(--as-text-muted)" }}
           >
             <Upload className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="truncate">
@@ -803,8 +828,8 @@ export default function AdminRolesPage() {
 
       {/* ── Search ────────────────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
+        style={surfaceCardStyle}
       >
         <input
           className={inputCls + " max-w-sm"}
@@ -813,18 +838,19 @@ export default function AdminRolesPage() {
           onChange={(e) => setRoleSearch(e.target.value)}
         />
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Status</span>
-          <div className="inline-flex items-center rounded-full bg-[#0A1547]/5 p-1">
+          <span className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Status</span>
+          <div className="inline-flex items-center rounded-full p-1" style={mutedPanelStyle}>
             {(["active", "inactive", "all"] as const).map((value) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setRoleStatusFilter(value)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                className="px-3 py-1.5 rounded-full text-xs font-bold transition-colors hover:text-[#A380F6]"
+                style={
                   roleStatusFilter === value
-                    ? "bg-white text-[#0A1547] shadow-sm"
-                    : "text-[#0A1547]/45 hover:text-[#0A1547]/70"
-                }`}
+                    ? { backgroundColor: "var(--as-surface)", color: "var(--as-text)", boxShadow: "0 1px 3px rgba(10,21,71,0.08)" }
+                    : mutedTextStyle
+                }
               >
                 {value === "active" ? "Active" : value === "inactive" ? "Inactive" : "All"}
               </button>
@@ -834,63 +860,68 @@ export default function AdminRolesPage() {
         {roleSearch && (
           <button
             type="button"
-            className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors"
+            className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 dark:text-slate-300/70 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10 transition-colors"
             onClick={() => setRoleSearch("")}
           >
             Clear
           </button>
         )}
-        <p className="text-xs text-[#0A1547]/35 font-semibold ml-auto">
+        <p className="text-xs font-semibold ml-auto" style={subtleTextStyle}>
           {sorted.length} of {filteredByClient.length} role{filteredByClient.length !== 1 ? "s" : ""}
         </p>
       </div>
 
       {/* ── Roles table ───────────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl overflow-hidden"
+        style={surfaceCardStyle}
       >
         {/* Header */}
         <div
-          className="grid grid-cols-[minmax(150px,1fr)_120px_110px_78px_105px_76px_50px_50px_96px_104px] items-center px-5 py-3 border-b border-gray-100"
+          className="grid grid-cols-[minmax(150px,1fr)_120px_110px_78px_105px_76px_50px_50px_96px_104px] items-center px-5 py-3 border-b"
+          style={dividerStyle}
         >
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors text-left"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors text-left"
+            style={mutedTextStyle}
             onClick={() => handleSort("name")}
           >
             Role <SortIcon col="name" />
           </button>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+            style={mutedTextStyle}
             onClick={() => handleSort("entity")}
           >
             Entity <SortIcon col="entity" />
           </button>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+            style={mutedTextStyle}
             onClick={() => handleSort("created")}
           >
             Created <SortIcon col="created" />
           </button>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+            style={mutedTextStyle}
             onClick={() => handleSort("type")}
           >
             Type <SortIcon col="type" />
           </button>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Usage</p>
-          <p className="text-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Add’l Int.</p>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Rubric</p>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">JD</p>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Link</p>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Actions</p>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Usage</p>
+          <p className="text-center text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Add’l Int.</p>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Rubric</p>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>JD</p>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Link</p>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Actions</p>
         </div>
 
         {/* Rows */}
-        <div className="divide-y divide-gray-50">
+        <div>
           {rolesLoading ? (
             <div className="py-12 text-center">
-              <p className="text-sm text-[#0A1547]/35 font-semibold">Loading roles...</p>
+              <p className="text-sm font-semibold" style={subtleTextStyle}>Loading roles...</p>
             </div>
           ) : rolesError ? (
             <div className="py-12 text-center">
@@ -903,37 +934,38 @@ export default function AdminRolesPage() {
               return (
                 <div
                   key={role.id}
-                  className="grid grid-cols-[minmax(150px,1fr)_120px_110px_78px_105px_76px_50px_50px_96px_104px] items-center px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
+                  className="grid grid-cols-[minmax(150px,1fr)_120px_110px_78px_105px_76px_50px_50px_96px_104px] items-center px-5 py-3.5 border-b as-shell-dropdown-item transition-colors"
+                  style={dividerStyle}
                 >
                   {/* Name + parent */}
                   <div className="min-w-0 pr-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">{role.name}</p>
+                      <p className="text-sm font-bold leading-snug truncate" style={primaryTextStyle}>{role.name}</p>
                       {role.isInactive && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-[#0A1547]/7 text-[#0A1547]/45">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black" style={{ backgroundColor: "color-mix(in srgb, var(--as-text) 7%, transparent)", color: "var(--as-text-muted)" }}>
                           Inactive
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-[#0A1547]/35 mt-0.5 font-semibold truncate">
+                    <p className="text-[10px] mt-0.5 font-semibold truncate" style={subtleTextStyle}>
                       Parent: {role.parentClientName}
                     </p>
                     {role.isInactive && (
-                      <p className="text-[10px] text-[#0A1547]/35 mt-0.5 truncate">
+                      <p className="text-[10px] mt-0.5 truncate" style={subtleTextStyle}>
                         Recordings expire 14 days after role closure.
                       </p>
                     )}
                   </div>
 
                   {/* Entity */}
-                  <p className="text-xs font-semibold text-[#0A1547]/50 truncate pr-2">
+                  <p className="text-xs font-semibold truncate pr-2" style={mutedTextStyle}>
                     {role.entityName || "—"}
                   </p>
 
                   {/* Created */}
                   <div className="pr-2">
-                    <p className="text-xs text-[#0A1547]/55 font-bold leading-snug">{role.createdDate}</p>
-                    <p className="text-[10px] text-[#0A1547]/35 font-semibold mt-0.5">{role.createdTime}</p>
+                    <p className="text-xs font-bold leading-snug" style={mutedTextStyle}>{role.createdDate}</p>
+                    <p className="text-[10px] font-semibold mt-0.5" style={subtleTextStyle}>{role.createdTime}</p>
                   </div>
 
                   {/* Type badge */}
@@ -945,14 +977,14 @@ export default function AdminRolesPage() {
                   </span>
 
                   {/* Usage */}
-                  <p className="text-xs text-[#0A1547]/55 font-bold pr-2">
+                  <p className="text-xs font-bold pr-2" style={mutedTextStyle}>
                     {role.remainingInterviews == null || role.usedInterviews == null
                       ? "—"
                       : `${role.remainingInterviews} left / ${role.usedInterviews} used`}
                   </p>
 
                   {/* Add'l interviews */}
-                  <p className="text-center text-xs text-[#0A1547]/55 font-bold">
+                  <p className="text-center text-xs font-bold" style={mutedTextStyle}>
                     {role.purchasedInterviews == null ? "—" : role.purchasedInterviews}
                   </p>
 
@@ -963,7 +995,7 @@ export default function AdminRolesPage() {
                         void openRoleRubric(role);
                       }}
                       disabled={loadingRubric[role.id] === true}
-                      className="p-1.5 rounded-lg text-[#0A1547]/30 hover:text-[#A380F6] hover:bg-[rgba(163,128,246,0.08)] transition-all"
+                      className="p-1.5 rounded-lg text-[#0A1547]/30 dark:text-slate-400/45 hover:text-[#A380F6] hover:bg-[rgba(163,128,246,0.08)] transition-all"
                       title="View rubric"
                     >
                       <FileText className="w-4 h-4" />
@@ -978,13 +1010,13 @@ export default function AdminRolesPage() {
                           void openRoleJd(role);
                         }}
                         disabled={openingJd[role.id] === true}
-                        className="p-1.5 rounded-lg text-[#0A1547]/30 hover:text-[#A380F6] hover:bg-[rgba(163,128,246,0.08)] transition-all"
+                        className="p-1.5 rounded-lg text-[#0A1547]/30 dark:text-slate-400/45 hover:text-[#A380F6] hover:bg-[rgba(163,128,246,0.08)] transition-all"
                         title="View job description"
                       >
                         <FileText className="w-4 h-4" />
                       </button>
                     ) : (
-                      <span className="text-sm text-[#0A1547]/20 font-semibold">—</span>
+                      <span className="text-sm font-semibold" style={subtleTextStyle}>—</span>
                     )}
                   </div>
 
@@ -992,8 +1024,8 @@ export default function AdminRolesPage() {
                   <button
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 w-fit"
                     style={{
-                      backgroundColor: role.isInactive ? "rgba(10,21,71,0.06)" : isCopied ? "#02D99D" : "#A380F6",
-                      color: role.isInactive ? "rgba(10,21,71,0.38)" : "#FFFFFF",
+                      backgroundColor: role.isInactive ? "var(--as-surface-muted)" : isCopied ? "#02D99D" : "#A380F6",
+                      color: role.isInactive ? "var(--as-text-subtle)" : "#FFFFFF",
                     }}
                     onClick={() => {
                       void handleCopy(role);
@@ -1014,7 +1046,7 @@ export default function AdminRolesPage() {
                       className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                         role.isInactive
                           ? "text-[#009E73] bg-[#02D99D]/10 hover:bg-[#02D99D]/15"
-                          : "text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10"
+                          : "text-[#0A1547]/55 dark:text-slate-300/70 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10"
                       }`}
                     >
                       {role.isInactive ? "Reopen" : "Close"}
@@ -1024,7 +1056,7 @@ export default function AdminRolesPage() {
                         setRoleDeleteConfirm({ role });
                       }}
                       disabled={deletingRoles[role.id] === true}
-                      className="p-1.5 rounded-lg text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-all"
+                      className="p-1.5 rounded-lg text-[#0A1547]/25 dark:text-slate-400/45 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
                       title={`Delete ${role.name}`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1037,7 +1069,7 @@ export default function AdminRolesPage() {
 
           {!rolesLoading && !rolesError && sorted.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-sm text-[#0A1547]/35 font-semibold">
+              <p className="text-sm font-semibold" style={subtleTextStyle}>
                 {roleSearchTerm && filteredByClient.length > 0
                   ? "No roles match your search."
                   : roleStatusFilter === "inactive"
@@ -1059,35 +1091,37 @@ export default function AdminRolesPage() {
             aria-label="Cancel role status change"
           />
           <div
-            className="relative w-full max-w-md rounded-2xl bg-white border border-[rgba(10,21,71,0.10)] shadow-[0_24px_70px_rgba(10,21,71,0.24)] overflow-hidden"
+            className="relative w-full max-w-md rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-role-status-confirm-title"
           >
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 id="admin-role-status-confirm-title" className="text-base font-black text-[#0A1547]">
+            <div className="px-6 py-5 border-b" style={dividerStyle}>
+              <h3 id="admin-role-status-confirm-title" className="text-base font-black" style={primaryTextStyle}>
                 {roleStatusConfirm.nextStatus === "inactive" ? "Close role" : "Reopen role"}
               </h3>
             </div>
             <div className="px-6 py-5">
               {roleStatusConfirm.nextStatus === "inactive" ? (
-                <div className="space-y-3 text-sm leading-6 text-[#0A1547]/70 font-medium">
+                <div className="space-y-3 text-sm leading-6 font-medium" style={mutedTextStyle}>
                   <p>{`Close "${roleStatusConfirm.role.name}"? This role will stop accepting new candidates/interviews. Existing candidates, reports, and interviews will remain viewable.`}</p>
                   <p>
                     Recordings associated with this role will remain available for <span className="font-bold">14 days</span> after closure, then will be <span className="font-bold">permanently deleted</span> if the role remains inactive.
                   </p>
                 </div>
               ) : (
-                <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
+                <p className="text-sm leading-6 font-medium" style={mutedTextStyle}>
                   {`Reopen "${roleStatusConfirm.role.name}" and allow new candidates/interviews?`}
                 </p>
               )}
             </div>
-            <div className="px-6 py-4 bg-gray-50/70 border-t border-gray-100 flex items-center justify-end gap-2">
+            <div className="px-6 py-4 border-t flex items-center justify-end gap-2" style={{ ...dividerStyle, backgroundColor: "var(--as-surface-muted)" }}>
               <button
                 type="button"
                 onClick={() => setRoleStatusConfirm(null)}
-                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-white border border-[rgba(10,21,71,0.10)] hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 dark:text-slate-300/70 border hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}
               >
                 Cancel
               </button>
@@ -1116,26 +1150,28 @@ export default function AdminRolesPage() {
             aria-label="Cancel role delete"
           />
           <div
-            className="relative w-full max-w-md rounded-2xl bg-white border border-[rgba(10,21,71,0.10)] shadow-[0_24px_70px_rgba(10,21,71,0.24)] overflow-hidden"
+            className="relative w-full max-w-md rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-role-delete-confirm-title"
           >
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 id="admin-role-delete-confirm-title" className="text-base font-black text-[#0A1547]">
+            <div className="px-6 py-5 border-b" style={dividerStyle}>
+              <h3 id="admin-role-delete-confirm-title" className="text-base font-black" style={primaryTextStyle}>
                 Delete role
               </h3>
             </div>
             <div className="px-6 py-5">
-              <p className="text-sm leading-6 text-[#0A1547]/70 font-medium">
+              <p className="text-sm leading-6 font-medium" style={mutedTextStyle}>
                 {`Delete "${roleDeleteConfirm.role.name}"? This permanently removes the role. Existing related records may no longer be connected to this role in the same way. Use Close instead if you only want to stop accepting new candidates.`}
               </p>
             </div>
-            <div className="px-6 py-4 bg-gray-50/70 border-t border-gray-100 flex items-center justify-end gap-2">
+            <div className="px-6 py-4 border-t flex items-center justify-end gap-2" style={{ ...dividerStyle, backgroundColor: "var(--as-surface-muted)" }}>
               <button
                 type="button"
                 onClick={() => setRoleDeleteConfirm(null)}
-                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-white border border-[rgba(10,21,71,0.10)] hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 dark:text-slate-300/70 border hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}
               >
                 Cancel
               </button>
@@ -1155,11 +1191,11 @@ export default function AdminRolesPage() {
       )}
       {rubricModal && (
         <div className="fixed inset-0 z-40 bg-black/35 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-white rounded-2xl border border-[rgba(10,21,71,0.10)] shadow-[0_20px_60px_rgba(10,21,71,0.22)] overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-base font-black text-[#0A1547]">Rubric — {rubricModal.roleName}</h3>
+          <div className="w-full max-w-2xl rounded-2xl overflow-hidden" style={modalSurfaceStyle}>
+            <div className="px-5 py-4 border-b flex items-center justify-between" style={dividerStyle}>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Rubric — {rubricModal.roleName}</h3>
               <button
-                className="px-3 py-1.5 rounded-full text-xs font-bold text-[#0A1547]/60 hover:bg-gray-100 transition-colors"
+                className="px-3 py-1.5 rounded-full text-xs font-bold text-[#0A1547]/60 dark:text-slate-300/70 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
                 onClick={() => setRubricModal(null)}
               >
                 Close
@@ -1167,11 +1203,11 @@ export default function AdminRolesPage() {
             </div>
             <div className="px-5 py-4 max-h-[60vh] overflow-auto">
               {rubricModal.questions.length === 0 ? (
-                <p className="text-sm text-[#0A1547]/45 font-semibold">No rubric questions found.</p>
+                <p className="text-sm font-semibold" style={mutedTextStyle}>No rubric questions found.</p>
               ) : (
                 <ol className="list-decimal pl-5 space-y-2">
                   {rubricModal.questions.map((question, index) => (
-                    <li key={`${question}-${index}`} className="text-sm text-[#0A1547]/75 leading-relaxed">
+                    <li key={`${question}-${index}`} className="text-sm leading-relaxed" style={mutedTextStyle}>
                       {question}
                     </li>
                   ))}
