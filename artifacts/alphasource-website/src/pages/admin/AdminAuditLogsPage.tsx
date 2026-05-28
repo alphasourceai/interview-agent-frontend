@@ -114,6 +114,85 @@ const cardStyle = surfaceCardStyle;
 
 const thCls = "px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--as-text-muted)] text-left whitespace-nowrap";
 const tdCls = "px-4 py-3 text-xs text-[var(--as-text-muted)] font-medium align-top";
+const PAGE_SIZE = 25;
+
+function paginateRows<T>(rows: T[], page: number) {
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const end = Math.min(startIndex + PAGE_SIZE, total);
+  return {
+    pageRows: rows.slice(startIndex, end),
+    safePage,
+    totalPages,
+    start: total === 0 ? 0 : startIndex + 1,
+    end,
+    total,
+  };
+}
+
+interface PaginationFooterProps {
+  start: number;
+  end: number;
+  total: number;
+  safePage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+function PaginationFooter({
+  start,
+  end,
+  total,
+  safePage,
+  totalPages,
+  onPageChange,
+}: PaginationFooterProps) {
+  if (total <= PAGE_SIZE) return null;
+
+  const isFirstPage = safePage <= 1;
+  const isLastPage = safePage >= totalPages;
+  const buttonStyle = {
+    backgroundColor: "var(--as-surface)",
+    borderColor: "var(--as-border)",
+    color: "var(--as-text-muted)",
+  };
+
+  return (
+    <div className="px-5 py-3 border-t flex flex-wrap items-center justify-between gap-3" style={dividerStyle}>
+      <p className="text-[11px] font-semibold" style={{ color: "var(--as-text-muted)" }}>
+        {start}–{end} of {total}
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={isFirstPage}
+          onClick={() => onPageChange(safePage - 1)}
+          className="px-3 py-1.5 rounded-full text-xs font-bold border transition-colors hover:bg-[var(--as-hover)] disabled:opacity-45 disabled:cursor-not-allowed"
+          style={buttonStyle}
+        >
+          Previous
+        </button>
+        <span
+          className="min-w-[82px] text-center text-[11px] font-semibold"
+          style={{ color: "var(--as-text-subtle)" }}
+        >
+          Page {safePage} of {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={isLastPage}
+          onClick={() => onPageChange(safePage + 1)}
+          className="px-3 py-1.5 rounded-full text-xs font-bold border transition-colors hover:bg-[var(--as-hover)] disabled:opacity-45 disabled:cursor-not-allowed"
+          style={buttonStyle}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const env =
   typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
@@ -236,6 +315,11 @@ export default function AdminAuditLogsPage() {
   const [cancellationError, setCancellationError] = useState("");
   const [agreementError, setAgreementError] = useState("");
   const [emailDeliveryError, setEmailDeliveryError] = useState("");
+  const [auditPage, setAuditPage] = useState(1);
+  const [agreementPage, setAgreementPage] = useState(1);
+  const [emailDeliveryPage, setEmailDeliveryPage] = useState(1);
+  const [billingPage, setBillingPage] = useState(1);
+  const [cancellationPage, setCancellationPage] = useState(1);
 
   const inputCls =
     "px-3 py-2 rounded-xl text-xs font-medium border placeholder:text-[var(--as-text-subtle)] " +
@@ -470,6 +554,26 @@ export default function AdminAuditLogsPage() {
     void refreshEmailDeliveryRows();
   }, []);
 
+  useEffect(() => {
+    setAuditPage(1);
+  }, [auditDateFrom, auditDateTo]);
+
+  useEffect(() => {
+    setAgreementPage(1);
+  }, [agreementDateFrom, agreementDateTo, selectedClientId]);
+
+  useEffect(() => {
+    setEmailDeliveryPage(1);
+  }, [emailDeliveryDateFrom, emailDeliveryDateTo]);
+
+  useEffect(() => {
+    setBillingPage(1);
+  }, [billingDateFrom, billingDateTo, selectedClientId]);
+
+  useEffect(() => {
+    setCancellationPage(1);
+  }, [cancellationDateFrom, cancellationDateTo, selectedClientId]);
+
   const auditStartTs = parseBoundary(auditDateFrom, false);
   const auditEndTs = parseBoundary(auditDateTo, true);
   const filteredAuditLogs = auditLogs.filter((log) => {
@@ -521,6 +625,12 @@ export default function AdminAuditLogsPage() {
     if (emailDeliveryEndTs != null && row.eventTs > emailDeliveryEndTs) return false;
     return true;
   });
+
+  const auditPagination = paginateRows(filteredAuditLogs, auditPage);
+  const agreementPagination = paginateRows(filteredAgreementRows, agreementPage);
+  const emailDeliveryPagination = paginateRows(filteredEmailDeliveryRows, emailDeliveryPage);
+  const billingPagination = paginateRows(filteredBillingRows, billingPage);
+  const cancellationPagination = paginateRows(filteredCancellationRuns, cancellationPage);
 
   const refreshBtn = (label: string, onClick: () => Promise<void>, loading = false) => (
     <button
@@ -626,11 +736,11 @@ export default function AdminAuditLogsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredAuditLogs.map((log, idx) => (
+                auditPagination.pageRows.map((log, idx) => (
                   <tr
                     key={log.id}
                     className="border-b transition-colors as-shell-dropdown-item"
-                    style={idx === filteredAuditLogs.length - 1 ? { borderBottom: "none" } : dividerStyle}
+                    style={idx === auditPagination.pageRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
                     <td className={tdCls + " pl-5 font-semibold text-[var(--as-text-muted)] whitespace-nowrap"}>{log.date}</td>
                     <td className={tdCls}>{log.type}</td>
@@ -646,9 +756,7 @@ export default function AdminAuditLogsPage() {
           </table>
         </div>
 
-        <div className="px-5 py-2.5 border-t" style={dividerStyle}>
-          <p className="text-[11px] font-semibold" style={subtleTextStyle}>{filteredAuditLogs.length} entries</p>
-        </div>
+        <PaginationFooter {...auditPagination} onPageChange={setAuditPage} />
       </div>
 
       {/* ── Section 2: Agreements ──────────────────────────── */}
@@ -731,11 +839,11 @@ export default function AdminAuditLogsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredAgreementRows.map((row, idx) => (
+                agreementPagination.pageRows.map((row, idx) => (
                   <tr
                     key={row.id}
                     className="border-b transition-colors as-shell-dropdown-item"
-                    style={idx === filteredAgreementRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
+                    style={idx === agreementPagination.pageRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
                     <td className={tdCls + " pl-5 whitespace-nowrap"}>{row.eventAt}</td>
                     <td className={tdCls + " font-semibold text-[var(--as-text-muted)]"}>{row.eventType}</td>
@@ -751,6 +859,7 @@ export default function AdminAuditLogsPage() {
             </tbody>
           </table>
         </div>
+        <PaginationFooter {...agreementPagination} onPageChange={setAgreementPage} />
       </div>
 
       {/* ── Section 3: Email Delivery Problems ─────────────── */}
@@ -831,11 +940,11 @@ export default function AdminAuditLogsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredEmailDeliveryRows.map((row, idx) => (
+                emailDeliveryPagination.pageRows.map((row, idx) => (
                   <tr
                     key={row.id}
                     className="border-b transition-colors as-shell-dropdown-item"
-                    style={idx === filteredEmailDeliveryRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
+                    style={idx === emailDeliveryPagination.pageRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
                     <td className={tdCls + " pl-5 whitespace-nowrap"}>{row.eventAt}</td>
                     <td className={tdCls}><StatusBadge status={row.eventType} /></td>
@@ -850,6 +959,7 @@ export default function AdminAuditLogsPage() {
             </tbody>
           </table>
         </div>
+        <PaginationFooter {...emailDeliveryPagination} onPageChange={setEmailDeliveryPage} />
       </div>
 
       {/* ── Section 4: Billing Reconciliation ─────────────── */}
@@ -928,11 +1038,11 @@ export default function AdminAuditLogsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredBillingRows.map((row, idx) => (
+                billingPagination.pageRows.map((row, idx) => (
                   <tr
                     key={row.id}
                     className="border-b transition-colors as-shell-dropdown-item"
-                    style={idx === filteredBillingRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
+                    style={idx === billingPagination.pageRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
                     <td className={tdCls + " pl-5 font-bold text-[var(--as-text)]"}>{row.client}</td>
                     <td className={tdCls}>{row.expectedAmount}</td>
@@ -946,6 +1056,7 @@ export default function AdminAuditLogsPage() {
             </tbody>
           </table>
         </div>
+        <PaginationFooter {...billingPagination} onPageChange={setBillingPage} />
       </div>
 
       {/* ── Section 5: Contract Cancellation Runs ─────────── */}
@@ -1030,11 +1141,11 @@ export default function AdminAuditLogsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredCancellationRuns.map((run, idx) => (
+                cancellationPagination.pageRows.map((run, idx) => (
                   <tr
                     key={run.id}
                     className="border-b transition-colors as-shell-dropdown-item"
-                    style={idx === filteredCancellationRuns.length - 1 ? { borderBottom: "none" } : dividerStyle}
+                    style={idx === cancellationPagination.pageRows.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
                     <td className={tdCls + " pl-5 font-bold text-[var(--as-text)]"}>{run.client}</td>
                     <td className={tdCls}><StatusBadge status={run.status} /></td>
@@ -1051,6 +1162,7 @@ export default function AdminAuditLogsPage() {
             </tbody>
           </table>
         </div>
+        <PaginationFooter {...cancellationPagination} onPageChange={setCancellationPage} />
       </div>
     </AdminLayout>
   );
