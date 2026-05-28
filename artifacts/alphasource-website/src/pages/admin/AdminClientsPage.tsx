@@ -252,8 +252,29 @@ const planColors: Record<string, { bg: string; text: string }> = {
   enterprise: { bg: "rgba(2,217,157,0.12)",   text: "#009E73" },
 };
 
+const surfaceCardStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
+const modalSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "0 12px 30px rgba(10,21,71,0.18)",
+};
+const fieldSurfaceStyle =
+  "text-[var(--as-text)] border-[var(--as-border)] bg-[var(--as-surface)]";
+const mutedPanelStyle = {
+  backgroundColor: "var(--as-surface-muted)",
+  borderColor: "var(--as-border)",
+};
+const dividerStyle = { borderColor: "var(--as-border)" };
+const primaryTextStyle = { color: "var(--as-text)" };
+const mutedTextStyle = { color: "var(--as-text-muted)" };
+const subtleTextStyle = { color: "var(--as-text-subtle)" };
+
 function PlanBadge({ tier }: { tier: PlanTier }) {
-  if (!tier) return <span className="text-sm text-[#0A1547]/25">—</span>;
+  if (!tier) return <span className="text-sm" style={subtleTextStyle}>—</span>;
   const c = planColors[tier];
   return (
     <span
@@ -275,7 +296,7 @@ function StatusBadge({ status, subtext }: { status: BillingStatus; subtext: stri
       >
         {status}
       </p>
-      <p className="text-xs font-semibold text-[#0A1547]/40">{subtext}</p>
+      <p className="text-xs font-semibold" style={mutedTextStyle}>{subtext}</p>
     </div>
   );
 }
@@ -285,13 +306,11 @@ type SortDir = "asc" | "desc";
 
 /* ── Input / Select helpers ──────────────────────────────────── */
 const inputCls =
-  "w-full px-3 py-2 rounded-xl text-sm text-[#0A1547] font-medium " +
-  "border border-[rgba(10,21,71,0.10)] bg-white " +
-  "placeholder:text-[#0A1547]/30 focus:outline-none focus:border-[#A380F6] transition-colors";
+  `w-full px-3 py-2 rounded-xl text-sm font-medium border ${fieldSurfaceStyle} ` +
+  "placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:border-[#A380F6] transition-colors";
 
 const selectCls =
-  "w-full px-3 py-2 rounded-xl text-sm text-[#0A1547] font-medium " +
-  "border border-[rgba(10,21,71,0.10)] bg-white appearance-none " +
+  `w-full px-3 py-2 rounded-xl text-sm font-medium border ${fieldSurfaceStyle} appearance-none ` +
   "focus:outline-none focus:border-[#A380F6] transition-colors cursor-pointer";
 
 /* ── Main component ──────────────────────────────────────────── */
@@ -899,7 +918,7 @@ export default function AdminClientsPage() {
   /* sort indicator */
   function SortIcon({ col }: { col: SortKey }) {
     if (sortKey !== col)
-      return <ChevronDown className="w-3 h-3 text-[#0A1547]/20 ml-0.5 flex-shrink-0" />;
+      return <ChevronDown className="w-3 h-3 ml-0.5 flex-shrink-0" style={subtleTextStyle} />;
     return sortDir === "asc"
       ? <ChevronUp   className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />
       : <ChevronDown className="w-3 h-3 text-[#A380F6] ml-0.5 flex-shrink-0" />;
@@ -938,8 +957,8 @@ export default function AdminClientsPage() {
 
       {/* ── Create client form ────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl p-5 mb-5"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl p-5 mb-5"
+        style={surfaceCardStyle}
       >
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
           <input
@@ -985,8 +1004,8 @@ export default function AdminClientsPage() {
 
       {/* ── Search ────────────────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
+        style={surfaceCardStyle}
       >
         <input
           className={inputCls + " max-w-sm"}
@@ -997,60 +1016,64 @@ export default function AdminClientsPage() {
         {clientSearch && (
           <button
             type="button"
-            className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors"
+            className="px-3 py-2 rounded-full text-xs font-bold text-[#0A1547]/55 dark:text-slate-300/70 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10 transition-colors"
             onClick={() => setClientSearch("")}
           >
             Clear
           </button>
         )}
-        <p className="text-xs text-[#0A1547]/35 font-semibold ml-auto">
+        <p className="text-xs font-semibold ml-auto" style={subtleTextStyle}>
           {sorted.length} of {clients.length} client{clients.length !== 1 ? "s" : ""}
         </p>
       </div>
 
       {/* ── Clients table ─────────────────────────────────── */}
       <div
-        className="bg-white rounded-2xl overflow-hidden"
-        style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 2px 12px rgba(10,21,71,0.04)" }}
+        className="rounded-2xl overflow-hidden"
+        style={surfaceCardStyle}
       >
         {/* Table header */}
-        <div className="grid grid-cols-[1fr_110px_130px_120px_90px_56px] items-center px-5 py-3 border-b border-gray-100">
+        <div className="grid grid-cols-[1fr_110px_130px_120px_90px_56px] items-center px-5 py-3 border-b" style={dividerStyle}>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors text-left"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors text-left"
+            style={mutedTextStyle}
             onClick={() => handleSort("name")}
           >
             Name <SortIcon col="name" />
           </button>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+            style={mutedTextStyle}
             onClick={() => handleSort("planTier")}
           >
             Plan tier <SortIcon col="planTier" />
           </button>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+            style={mutedTextStyle}
             onClick={() => handleSort("billingStatus")}
           >
             Billing status <SortIcon col="billingStatus" />
           </button>
           <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 hover:text-[#0A1547]/70 transition-colors"
+            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+            style={mutedTextStyle}
             onClick={() => handleSort("billingCycle")}
           >
             Billing cycle <SortIcon col="billingCycle" />
           </button>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
             Auto-Renew
           </p>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
             Remove
           </p>
         </div>
 
         {/* Rows */}
-        <div className="divide-y divide-gray-50">
+        <div>
           {clientsLoading ? (
-            <div className="px-5 py-6 text-sm font-semibold text-[#0A1547]/45">
+            <div className="px-5 py-6 text-sm font-semibold" style={mutedTextStyle}>
               Loading clients...
             </div>
           ) : clientsError ? (
@@ -1058,7 +1081,7 @@ export default function AdminClientsPage() {
               {clientsError}
             </div>
           ) : sorted.length === 0 ? (
-            <div className="px-5 py-6 text-sm font-semibold text-[#0A1547]/35">
+            <div className="px-5 py-6 text-sm font-semibold" style={subtleTextStyle}>
               {clientSearchTerm && clients.length > 0 ? "No clients match your search." : "No clients found."}
             </div>
           ) : sorted.map((client) => {
@@ -1092,8 +1115,9 @@ export default function AdminClientsPage() {
                 {/* Main row */}
                 <div
                   className={`grid grid-cols-[1fr_110px_130px_120px_90px_56px] items-center px-5 py-3.5
-                    cursor-pointer transition-colors hover:bg-gray-50/70
+                    cursor-pointer transition-colors as-shell-dropdown-item border-b
                     ${expanded ? "bg-[rgba(163,128,246,0.04)]" : ""}`}
+                  style={dividerStyle}
                   onClick={() => toggleExpand(client.id)}
                 >
                   {/* Name + created date */}
@@ -1101,50 +1125,50 @@ export default function AdminClientsPage() {
                     <ChevronRight
                       className="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200"
                       style={{
-                        color: expanded ? "#A380F6" : "rgba(10,21,71,0.25)",
+                        color: expanded ? "#A380F6" : "var(--as-text-subtle)",
                         transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
                       }}
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-[#0A1547] leading-snug truncate">
+                      <p className="text-sm font-bold leading-snug truncate" style={primaryTextStyle}>
                         {client.name}
                       </p>
-                      <p className="text-[10px] text-[#0A1547]/35 mt-0.5">
+                      <p className="text-[10px] mt-0.5" style={subtleTextStyle}>
                         {clientHierarchyLabel(client)} · Created {client.createdDate}
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    {rowIsChildEntity ? <span className="text-sm text-[#0A1547]/25">—</span> : <PlanBadge tier={client.planTier} />}
+                    {rowIsChildEntity ? <span className="text-sm" style={subtleTextStyle}>—</span> : <PlanBadge tier={client.planTier} />}
                   </div>
 
                   <div>
                     {rowIsChildEntity ? (
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5 text-[#0A1547]/35">entity</p>
-                        <p className="text-xs font-semibold text-[#0A1547]/40">Billed to parent</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={subtleTextStyle}>entity</p>
+                        <p className="text-xs font-semibold" style={mutedTextStyle}>Billed to parent</p>
                       </div>
                     ) : (
                       <StatusBadge status={effectiveStatus} subtext={getOverrideSubtext(override)} />
                     )}
                   </div>
 
-                  <p className="text-sm text-[#0A1547]/50 font-semibold">
+                  <p className="text-sm font-semibold" style={mutedTextStyle}>
                     {rowIsChildEntity ? "—" : (client.billingCycle ?? "—")}
                   </p>
 
                   {/* Auto-renew checkbox */}
                   <div className="flex items-center">
                     {rowIsChildEntity ? (
-                      <span className="text-sm text-[#0A1547]/25">—</span>
+                      <span className="text-sm" style={subtleTextStyle}>—</span>
                     ) : (
                       <button
                         disabled={autoRenewBusy[client.id] === true}
                         className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all cursor-pointer hover:scale-105 ${
                           autoRenew
                             ? "border-[#A380F6] bg-[#A380F6]"
-                            : "border-[rgba(10,21,71,0.15)] bg-transparent hover:border-[#A380F6]/50"
+                            : "border-[rgba(10,21,71,0.15)] dark:border-slate-500/40 bg-transparent hover:border-[#A380F6]/50"
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1165,7 +1189,7 @@ export default function AdminClientsPage() {
                   <div className="flex items-center justify-center">
                     <button
                       disabled={deleteBusy[client.id] === true}
-                      className="p-1.5 rounded-lg text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1.5 rounded-lg text-[#0A1547]/25 dark:text-slate-400/45 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       title={`Remove ${client.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1180,8 +1204,12 @@ export default function AdminClientsPage() {
                 {/* Expanded detail panel */}
                 {expanded && (
                   <div
-                    className="px-8 py-5 border-t border-[rgba(163,128,246,0.12)]"
-                    style={{ backgroundColor: "rgba(248,249,253,0.8)", borderLeft: "3px solid #A380F6" }}
+                    className="px-8 py-5 border-t"
+                    style={{
+                      backgroundColor: "var(--as-surface-muted)",
+                      borderColor: "rgba(163,128,246,0.12)",
+                      borderLeft: "3px solid #A380F6",
+                    }}
                   >
                     <div className="flex flex-col lg:flex-row gap-6">
 
@@ -1189,7 +1217,7 @@ export default function AdminClientsPage() {
                       <div className="flex-1 min-w-0">
                         {rowIsChildEntity ? (
                           <>
-                            <p className="text-xs font-black text-[#0A1547] mb-2">Entity details</p>
+                            <p className="text-xs font-black mb-2" style={primaryTextStyle}>Entity details</p>
                             <div className="space-y-1.5">
                               {[
                                 ["Entity type", client.entity_label || "Child entity"],
@@ -1198,15 +1226,15 @@ export default function AdminClientsPage() {
                                 ["Created", client.createdDate],
                               ].map(([label, value]) => (
                                 <div key={String(label)} className="flex items-baseline gap-1.5 text-xs">
-                                  <span className="text-[#0A1547]/40 font-semibold flex-shrink-0">{String(label)}:</span>
-                                  <span className="text-[#0A1547]/70 font-semibold">{String(value || "—")}</span>
+                                  <span className="font-semibold flex-shrink-0" style={subtleTextStyle}>{String(label)}:</span>
+                                  <span className="font-semibold" style={mutedTextStyle}>{String(value || "—")}</span>
                                 </div>
                               ))}
                             </div>
                           </>
                         ) : (
                           <>
-                            <p className="text-xs font-black text-[#0A1547] mb-2">Membership details</p>
+                            <p className="text-xs font-black mb-2" style={primaryTextStyle}>Membership details</p>
                             <div className="space-y-1.5">
                               {[
                                 ["Membership tier",     client.planTier ?? "—"],
@@ -1218,14 +1246,14 @@ export default function AdminClientsPage() {
                                 ["Renewal",            autoRenew ? "Auto-renew on" : "Auto-renew off"],
                               ].map(([label, value]) => (
                                 <div key={String(label)} className="flex items-baseline gap-1.5 text-xs">
-                                  <span className="text-[#0A1547]/40 font-semibold flex-shrink-0">{String(label)}:</span>
-                                  <span className="text-[#0A1547]/70 font-semibold">{value as React.ReactNode}</span>
+                                  <span className="font-semibold flex-shrink-0" style={subtleTextStyle}>{String(label)}:</span>
+                                  <span className="font-semibold" style={mutedTextStyle}>{value as React.ReactNode}</span>
                                 </div>
                               ))}
                             </div>
                             {isEnterpriseClient && (
-                              <div className="mt-4 rounded-xl px-3.5 py-3 border border-[rgba(10,21,71,0.08)] bg-white/80">
-                                <p className="text-[11px] font-black uppercase tracking-wider text-[#0A1547]/55 mb-2.5">Enterprise Membership</p>
+                              <div className="mt-4 rounded-xl px-3.5 py-3 border" style={mutedPanelStyle}>
+                                <p className="text-[11px] font-black uppercase tracking-wider mb-2.5" style={mutedTextStyle}>Enterprise Membership</p>
                                 <div className="space-y-1.5">
                                   {[
                                     ["Membership fee", membershipFeeLabel],
@@ -1235,8 +1263,8 @@ export default function AdminClientsPage() {
                                     ["Additional interview fee", additionalInterviewFeeLabel],
                                   ].map(([label, value]) => (
                                     <div key={String(label)} className="flex items-baseline gap-1.5 text-xs">
-                                      <span className="text-[#0A1547]/40 font-semibold flex-shrink-0">{String(label)}:</span>
-                                      <span className="text-[#0A1547]/70 font-semibold">{String(value || "—")}</span>
+                                      <span className="font-semibold flex-shrink-0" style={subtleTextStyle}>{String(label)}:</span>
+                                      <span className="font-semibold" style={mutedTextStyle}>{String(value || "—")}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -1252,7 +1280,8 @@ export default function AdminClientsPage() {
                         {!rowIsChildEntity && (
                           <button
                             type="button"
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-[#0A1547] bg-white border border-[rgba(10,21,71,0.08)] hover:bg-gray-50 transition-colors"
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold border hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                            style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text)" }}
                             onClick={(e) => {
                               e.stopPropagation();
                               openEntityModal(client);
@@ -1282,7 +1311,7 @@ export default function AdminClientsPage() {
 
                         {/* Access override */}
                         <div>
-                          <p className="text-xs font-black text-[#0A1547] mb-2">Access override</p>
+                          <p className="text-xs font-black mb-2" style={primaryTextStyle}>Access override</p>
                           <div className="relative">
                             <select
                               className={selectCls}
@@ -1303,15 +1332,15 @@ export default function AdminClientsPage() {
                               <option>Force Active</option>
                               <option>Force Inactive</option>
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
                           </div>
                         </div>
 
                         {/* Inactive-only: Membership Checkout Link */}
                         {showCheckout && (
                           <div>
-                            <p className="text-xs font-black text-[#0A1547] mb-1">Legacy Checkout Tools</p>
-                            <p className="text-[11px] text-[#0A1547]/45 font-medium mb-2">
+                            <p className="text-xs font-black mb-1" style={primaryTextStyle}>Legacy Checkout Tools</p>
+                            <p className="text-[11px] font-medium mb-2" style={mutedTextStyle}>
                               Primary onboarding now starts from the signed agreement flow. Use this only as a fallback.
                             </p>
                             <div className="flex gap-2 mb-2">
@@ -1328,7 +1357,7 @@ export default function AdminClientsPage() {
                                   <option value="pro">Pro</option>
                                   <option value="enterprise">Enterprise</option>
                                 </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
                               </div>
                               <div className="relative flex-1">
                                 <select
@@ -1342,7 +1371,7 @@ export default function AdminClientsPage() {
                                   <option>Monthly</option>
                                   <option>Annual</option>
                                 </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
                               </div>
                             </div>
 
@@ -1404,38 +1433,49 @@ export default function AdminClientsPage() {
                 )}
                 {nestedChildren.length > 0 && (
                   <div
-                    className="px-8 py-4 border-t border-[rgba(163,128,246,0.10)]"
-                    style={{ backgroundColor: "rgba(248,249,253,0.72)", borderLeft: "3px solid #A380F6" }}
+                    className="px-8 py-4 border-t"
+                    style={{
+                      backgroundColor: "var(--as-surface-muted)",
+                      borderColor: "rgba(163,128,246,0.10)",
+                      borderLeft: "3px solid #A380F6",
+                    }}
                   >
-                    <div className="rounded-xl border border-[rgba(10,21,71,0.08)] bg-white/95 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-[rgba(10,21,71,0.06)]">
-                        <p className="text-xs font-black text-[#0A1547]">Child entities</p>
-                        <p className="text-[11px] text-[#0A1547]/45 font-semibold">
+                    <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}>
+                      <div className="px-4 py-3 border-b" style={dividerStyle}>
+                        <p className="text-xs font-black" style={primaryTextStyle}>Child entities</p>
+                        <p className="text-[11px] font-semibold" style={mutedTextStyle}>
                           Operational scopes under {client.name}
                         </p>
                       </div>
-                      <div className="hidden lg:grid grid-cols-[1fr_120px_140px_220px_44px] gap-3 px-4 py-2 bg-[#0A1547]/[0.015] text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35">
+                      <div
+                        className="hidden lg:grid grid-cols-[1fr_120px_140px_220px_44px] gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest"
+                        style={{ ...mutedPanelStyle, ...subtleTextStyle }}
+                      >
                         <span>Name</span>
                         <span>Label</span>
                         <span>Billing</span>
                         <span>Access override</span>
                         <span>Remove</span>
                       </div>
-                      <div className="divide-y divide-[rgba(10,21,71,0.06)]">
+                      <div>
                         {nestedChildren.map((child) => {
                           const childOverride = overrides[child.id] ?? "Inherit";
                           return (
-                            <div key={child.id} className="grid grid-cols-1 lg:grid-cols-[1fr_120px_140px_220px_44px] gap-3 items-center px-4 py-3">
+                            <div
+                              key={child.id}
+                              className="grid grid-cols-1 lg:grid-cols-[1fr_120px_140px_220px_44px] gap-3 items-center px-4 py-3 border-b last:border-b-0 as-shell-dropdown-item transition-colors"
+                              style={dividerStyle}
+                            >
                               <div className="min-w-0">
-                                <p className="text-sm font-bold text-[#0A1547] truncate">{child.name}</p>
-                                <p className="text-[11px] text-[#0A1547]/40 font-semibold">
+                                <p className="text-sm font-bold truncate" style={primaryTextStyle}>{child.name}</p>
+                                <p className="text-[11px] font-semibold" style={mutedTextStyle}>
                                   Under {child.parent_client_name || client.name}
                                 </p>
                               </div>
-                              <p className="text-xs font-bold text-[#0A1547]/60">
+                              <p className="text-xs font-bold" style={mutedTextStyle}>
                                 {displayEntityLabel(child)}
                               </p>
-                              <p className="text-xs font-bold text-[#0A1547]/45">
+                              <p className="text-xs font-bold" style={mutedTextStyle}>
                                 Billed to parent
                               </p>
                               <div className="relative">
@@ -1458,12 +1498,12 @@ export default function AdminClientsPage() {
                                   <option>Force Active</option>
                                   <option>Force Inactive</option>
                                 </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0A1547]/30 pointer-events-none" />
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
                               </div>
                               <div className="flex items-center lg:justify-center">
                                 <button
                                   disabled={deleteBusy[child.id] === true}
-                                  className="p-1.5 rounded-lg text-[#0A1547]/25 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="p-1.5 rounded-lg text-[#0A1547]/25 dark:text-slate-400/45 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                   title={`Remove ${child.name}`}
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1494,11 +1534,11 @@ export default function AdminClientsPage() {
             onClick={closeEntityModal}
           />
           <div
-            className="relative w-full max-w-md rounded-2xl bg-white p-5"
-            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 12px 30px rgba(10,21,71,0.18)" }}
+            className="relative w-full max-w-md rounded-2xl p-5"
+            style={modalSurfaceStyle}
           >
-            <h3 className="text-base font-black text-[#0A1547]">Add entity</h3>
-            <p className="mt-1 text-sm text-[#0A1547]/55 font-semibold">
+            <h3 className="text-base font-black" style={primaryTextStyle}>Add entity</h3>
+            <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>
               Under {entityModalParent.name}
             </p>
             <div className="mt-4 space-y-3">
@@ -1519,7 +1559,7 @@ export default function AdminClientsPage() {
               <button
                 type="button"
                 disabled={entityCreateBusy}
-                className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/70 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/70 dark:text-slate-300/80 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
                 onClick={closeEntityModal}
               >
                 Cancel
@@ -1548,17 +1588,17 @@ export default function AdminClientsPage() {
             onClick={closeLegacyCheckoutConfirm}
           />
           <div
-            className="relative w-full max-w-md rounded-2xl bg-white p-5"
-            style={{ border: "1px solid rgba(10,21,71,0.07)", boxShadow: "0 12px 30px rgba(10,21,71,0.18)" }}
+            className="relative w-full max-w-md rounded-2xl p-5"
+            style={modalSurfaceStyle}
           >
-            <h3 className="text-base font-black text-[#0A1547]">Use legacy checkout?</h3>
-            <p className="mt-2 text-sm text-[#0A1547]/70 font-medium">
+            <h3 className="text-base font-black" style={primaryTextStyle}>Use legacy checkout?</h3>
+            <p className="mt-2 text-sm font-medium" style={mutedTextStyle}>
               This is not the primary checkout flow. Are you sure you do not need to send an agreement first?
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/70 bg-[#0A1547]/5 hover:bg-[#0A1547]/10 transition-colors"
+                className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/70 dark:text-slate-300/80 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10 transition-colors"
                 onClick={closeLegacyCheckoutConfirm}
               >
                 Cancel
