@@ -22,7 +22,7 @@ const faqSections = [
     title: "About alphaSource",
     items: [
       {
-        question: "What does alphaSource AI do?",
+        question: "What does alphaSource do?",
         answer: "alphaSource builds practical AI tools and custom AI workflows for companies that want to reduce repetitive work, improve decision-making, and give their teams more time for the work only people can do.",
       },
       {
@@ -72,16 +72,16 @@ const faqSections = [
         answer: "No. Many clients know the problem before they know the solution. We can help define the opportunity, shape the workflow, and decide what kind of AI tool makes sense.",
       },
       {
-        question: "How long does implementation take?",
-        answer: "It depends on the complexity of the workflow, the data involved, and the level of customization needed. Smaller tools can move quickly. Larger systems require more planning, testing, and rollout support.",
+        question: "How long does a rollout take?",
+        answer: "It depends on the complexity of the workflow, the information involved, and the level of customization needed. Smaller tools can move quickly. Larger systems require more planning, testing, and rollout support.",
       },
       {
-        question: "Can alphaSource integrate with our existing systems?",
-        answer: "Often, yes. Integration depends on the tools you use, available APIs, data access, permissions, and security requirements. We evaluate this during discovery.",
+        question: "Can alphaSource connect with our current tools?",
+        answer: "Often, yes. The best approach depends on the tools your team uses, the access available, permissions, and security requirements. We evaluate this during discovery.",
       },
       {
-        question: "How do you handle privacy and sensitive data?",
-        answer: "We design AI workflows with privacy, security, and appropriate access controls in mind. The exact approach depends on the project, the data involved, and the systems we connect to.",
+        question: "How do you handle privacy and sensitive information?",
+        answer: "We design AI workflows with privacy, security, and appropriate access controls in mind. The exact approach depends on the project, the information involved, and the systems involved.",
       },
     ],
   },
@@ -104,46 +104,165 @@ const faqSections = [
   },
 ];
 
-export default function FaqPage() {
+const releaseNotes = [
+  {
+    version: "alphaScreen v1.5",
+    name: "Dashboard Appearance Modes",
+    summary: "Added dashboard appearance options and improved support navigation.",
+    bullets: [
+      "Light, Dark, and System appearance modes",
+      "Appearance preference persists in the dashboard",
+      "Improved readability across dashboard surfaces",
+      "Public Support hub introduced for product guidance and release notes",
+    ],
+  },
+  {
+    version: "alphaScreen v1.4",
+    name: "Enterprise Organization Support",
+    summary: "Added support for larger organizations with multiple operating scopes.",
+    bullets: [
+      "Parent client and child entity organization",
+      "Entity-aware role and candidate review",
+      "Scoped team access by organization area",
+      "Clearer dashboard context for selected client/entity",
+    ],
+  },
+  {
+    version: "alphaScreen v1.3",
+    name: "Role Management and Interview Records",
+    summary: "Added stronger role lifecycle controls and authorized interview record access.",
+    bullets: [
+      "Role close and reopen controls",
+      "Clear inactive-role indicators",
+      "Authorized access to interview records where available",
+      "Clearer retention and availability messaging",
+    ],
+  },
+  {
+    version: "alphaScreen v1.2",
+    name: "Membership and Billing Workflow",
+    summary: "Added structured account access and membership workflow support.",
+    bullets: [
+      "Membership and agreement support",
+      "Billing visibility for authorized users",
+      "Additional interview capacity workflow",
+      "Improved account and team access management",
+    ],
+  },
+  {
+    version: "alphaScreen v1.1",
+    name: "Candidate Review Improvements",
+    summary: "Improved candidate review clarity and dashboard usability.",
+    bullets: [
+      "Improved candidate list and expanded candidate details",
+      "Clearer score and status presentation",
+      "Better filtering and search behavior",
+      "Improved report access and review flow",
+    ],
+  },
+  {
+    version: "alphaScreen v1.0",
+    name: "Core Screening Platform",
+    summary: "First full platform version for structured candidate screening.",
+    bullets: [
+      "Role setup and candidate invitation workflows",
+      "Structured interview experience",
+      "Resume and interview review support",
+      "Candidate reporting and dashboard review tools",
+    ],
+  },
+  {
+    version: "alphaScreen v0.5",
+    name: "Early Access Preview",
+    summary: "Early preview used to validate the structured candidate screening workflow.",
+    bullets: [
+      "Early role and candidate workflow",
+      "Candidate interview link experience",
+      "Initial AI-assisted candidate review concept",
+    ],
+  },
+];
+
+export default function SupportPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FD]">
       <div className="relative pt-32 pb-16 overflow-hidden">
         <div className="absolute inset-0 gradient-hero-bg" />
-        <div className="relative max-w-4xl mx-auto px-6 lg:px-8">
+        <div className="relative max-w-5xl mx-auto px-6 lg:px-8">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={fadeUp}
           >
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#A380F6]/30 text-sm font-medium text-[#A380F6] mb-5 shadow-sm">
-              FAQ
+              Support
             </div>
             <h1 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight mb-4">
-              Frequently Asked Questions
+              Support
             </h1>
             <p className="text-base lg:text-lg text-[#0A1547]/60 leading-relaxed max-w-3xl">
-              AI should give your team time back, not add another system to manage. Here are the questions we hear most often about alphaSource, our products, and how we work with clients.
+              Product guidance, common questions, and public release notes for alphaSource products, starting with alphaScreen.
             </p>
           </motion.div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 lg:px-8 pb-24">
-        <motion.div
+      <div className="max-w-5xl mx-auto px-6 lg:px-8 pb-24 space-y-8">
+        <motion.section
           initial="hidden"
           animate="visible"
           custom={1}
           variants={fadeUp}
+          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:p-8"
+          style={{ color: "#0A1547" }}
+        >
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-[#A380F6] mb-3">
+                alphaScreen support
+              </p>
+              <h2 className="text-2xl font-black text-[#0A1547] mb-3">
+                Help for structured candidate screening
+              </h2>
+              <p className="text-sm text-[#0A1547]/65 leading-relaxed">
+                Use this hub to understand alphaScreen at a high level, review common questions, and follow customer-facing product updates.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[#A380F6]/20 bg-[#F8F9FD] p-5">
+              <h3 className="text-sm font-black text-[#0A1547] mb-3">Available here</h3>
+              <ul className="space-y-2 text-sm text-[#0A1547]/65">
+                <li>• Product overview and common questions</li>
+                <li>• Public alphaScreen release history</li>
+                <li>• Visual examples coming soon</li>
+              </ul>
+            </div>
+          </div>
+        </motion.section>
+
+        <motion.section
+          initial="hidden"
+          animate="visible"
+          custom={2}
+          variants={fadeUp}
           className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:p-10"
           style={{ color: "#0A1547" }}
         >
+          <div className="mb-8">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-[#A380F6] mb-3">
+              Common questions
+            </p>
+            <h2 className="text-2xl font-black text-[#0A1547] mb-3">Public FAQ</h2>
+            <p className="text-sm text-[#0A1547]/60 leading-relaxed max-w-3xl">
+              Answers to common questions about alphaSource, alphaScreen, and getting started.
+            </p>
+          </div>
           <div className="space-y-9">
             {faqSections.map((section, sectionIndex) => (
               <section
                 key={section.title}
                 className={sectionIndex === faqSections.length - 1 ? "" : "pb-9 border-b border-gray-100"}
               >
-                <h2 className="text-lg font-black text-[#0A1547] mb-4">{section.title}</h2>
+                <h3 className="text-lg font-black text-[#0A1547] mb-4">{section.title}</h3>
                 <Accordion type="single" collapsible className="space-y-2">
                   {section.items.map((item) => (
                     <AccordionItem
@@ -163,7 +282,49 @@ export default function FaqPage() {
               </section>
             ))}
           </div>
-        </motion.div>
+        </motion.section>
+
+        <motion.section
+          initial="hidden"
+          animate="visible"
+          custom={3}
+          variants={fadeUp}
+          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:p-10"
+          style={{ color: "#0A1547" }}
+        >
+          <div className="mb-8">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-[#A380F6] mb-3">
+              alphaScreen release notes
+            </p>
+            <h2 className="text-2xl font-black text-[#0A1547] mb-3">Public release history</h2>
+            <p className="text-sm text-[#0A1547]/60 leading-relaxed max-w-3xl">
+              A customer-facing summary of major alphaScreen updates. This history is intentionally high-level and focused on product value.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {releaseNotes.map((release) => (
+              <article
+                key={release.version}
+                className="rounded-2xl border border-gray-100 bg-[#F8F9FD] p-5"
+              >
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-3">
+                  <h3 className="text-base font-black text-[#0A1547]">
+                    {release.version} — {release.name}
+                  </h3>
+                </div>
+                <p className="text-sm text-[#0A1547]/65 leading-relaxed mb-4">
+                  {release.summary}
+                </p>
+                <ul className="grid gap-2 sm:grid-cols-2 text-sm text-[#0A1547]/65">
+                  {release.bullets.map((bullet) => (
+                    <li key={bullet}>• {bullet}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </motion.section>
       </div>
     </div>
   );

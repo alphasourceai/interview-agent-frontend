@@ -124,8 +124,8 @@ export default function Footer() {
                 { label: "Home",         href: "/" },
                 { label: "About Us",     href: "/about" },
                 { label: "alphaScreen",  href: "/alphascreen" },
-                { label: "FAQ",          href: "/faq" },
                 { label: "How It Works", href: "/#how-it-works" },
+                { label: "Support",      href: "/support" },
               ].map((link) => (
                 <li key={link.label}>
                   <a href={link.href} className="text-sm text-white/60 hover:text-[#A380F6] transition-colors">

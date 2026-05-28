@@ -14,7 +14,7 @@ import Footer from "@/components/Footer";
 import HomePage from "@/pages/HomePage";
 import AlphaScreenPage from "@/pages/AlphaScreenPage";
 import AboutPage from "@/pages/AboutPage";
-import PublicFaqPage from "@/pages/FaqPage";
+import PublicSupportPage from "@/pages/FaqPage";
 import TermsPage from "@/pages/TermsPage";
 import CandidateTermsPage from "@/pages/CandidateTermsPage";
 import InterviewPage from "@/pages/InterviewPage";
@@ -423,7 +423,8 @@ function Router() {
           <Route path="/"            component={HomePage} />
           <Route path="/alphascreen" component={AlphaScreenPage} />
           <Route path="/about"       component={AboutPage} />
-          <Route path="/faq"         component={PublicFaqPage} />
+          <Route path="/support"     component={PublicSupportPage} />
+          <Route path="/faq"         component={PublicSupportPage} />
           <Route path="/terms"       component={TermsPage} />
           <Route component={NotFound} />
         </Switch>
