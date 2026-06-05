@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, ReactNode } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import {
@@ -70,40 +70,50 @@ const navItems: NavItem[] = [
 
 /* ── Tour steps ──────────────────────────────────────────────── */
 interface TourStep {
-  navIndex: number;
+  href:     string;
   title:    string;
   emoji:    string;
   desc:     string;
   bullets:  string[];
 }
 
-const TOUR_STEPS: TourStep[] = [
-  {
-    navIndex: 0, title: "Overview", emoji: "📊",
+const TOUR_STEPS_BY_HREF: Record<string, TourStep> = {
+  "/dashboard": {
+    href: "/dashboard", title: "Overview", emoji: "📊",
     desc: "Your command center — see active roles, recent candidate submissions, score distributions, and top performers at a glance.",
     bullets: ["Hiring pipeline summary", "Recent candidate activity", "Score distribution charts"],
   },
-  {
-    navIndex: 1, title: "Roles", emoji: "💼",
+  "/dashboard/roles": {
+    href: "/dashboard/roles", title: "Roles", emoji: "💼",
     desc: "Create and manage open positions. Each role links to its AlphaScreen interview session and tracks every candidate assigned to it.",
     bullets: ["Create & publish new roles", "Track open vs. closed roles", "View candidates per role"],
   },
-  {
-    navIndex: 2, title: "Candidates", emoji: "👥",
+  "/dashboard/candidates": {
+    href: "/dashboard/candidates", title: "Candidates", emoji: "👥",
     desc: "Review every applicant. Expand any row to see AI-scored resume and interview analyses, behavioral signals, and risk flags.",
     bullets: ["Resume & interview AI analysis", "Dynamic score coloring", "Sort, filter, and export results"],
   },
-  {
-    navIndex: 3, title: "Members", emoji: "🛡️",
+  "/dashboard/members": {
+    href: "/dashboard/members", title: "Members", emoji: "🛡️",
     desc: "Control who can access your AlphaSource dashboard. Invite teammates, assign roles, and remove users when needed.",
-    bullets: ["Invite team members by email", "Assign Admin or Viewer roles", "Remove or reset access"],
+    bullets: ["Invite team members by email", "Assign team access by client/entity scope", "Remove or reset access"],
   },
-  {
-    navIndex: 4, title: "Billing", emoji: "💳",
+  "/dashboard/billing": {
+    href: "/dashboard/billing", title: "Billing", emoji: "💳",
     desc: "Manage your subscription plan, review past invoices, and update payment details — all in one place.",
     bullets: ["View your current plan", "Full invoice history", "Update payment methods"],
   },
-];
+  "/dashboard/entities": {
+    href: "/dashboard/entities", title: "Entities", emoji: "🏢",
+    desc: "Manage parent-client and child-entity structure when your organization has multiple operating scopes.",
+    bullets: ["View parent and child entities", "Add or edit entity names and labels", "Keep roles, candidates, and reports organized by scope"],
+  },
+  "/dashboard/support": {
+    href: "/dashboard/support", title: "Support", emoji: "❓",
+    desc: "Find alphaScreen guidance, common questions, and product updates directly inside the client portal.",
+    bullets: ["Review dashboard help topics", "See client-facing product updates", "Understand roles, candidates, reports, billing, and team access"],
+  },
+};
 
 /* ── Spotlight + callout tour overlay ───────────────────────── */
 interface SpotRect { top: number; left: number; width: number; height: number }
@@ -213,7 +223,7 @@ function TourSpotlight({
           {/* Step dots + count */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-1.5">
-              {TOUR_STEPS.map((_, i) => (
+              {Array.from({ length: total }).map((_, i) => (
                 <span
                   key={i}
                   className="rounded-full transition-all duration-300"
@@ -403,21 +413,36 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { mode: appearanceMode, resolvedMode } = useAppearance();
   const { selectedClient, setSelectedClient, clients, loading: clientsLoading, error: clientsError, isGlobalAdmin } = useClient();
   const dropdownRef  = useRef<HTMLDivElement>(null);
-  const activeTourStep = TOUR_STEPS[tourStep] || null;
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => {
+      if (item.label === "Members") return hasMembersNavAccess(selectedClient);
+      if (item.label === "Billing") return hasBillingNavAccess(selectedClient);
+      if (item.label === "Entities") return hasEntitiesNavAccess(selectedClient, isGlobalAdmin);
+      return true;
+    }),
+    [isGlobalAdmin, selectedClient],
+  );
+  const visibleTourSteps = useMemo(
+    () => visibleNavItems
+      .map((item) => TOUR_STEPS_BY_HREF[item.href])
+      .filter((step): step is TourStep => Boolean(step)),
+    [visibleNavItems],
+  );
+  const activeTourStep = visibleTourSteps[tourStep] || null;
 
-  /* One ref per nav item */
-  const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  /* One ref per visible nav item */
+  const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
 
   /* Measure the current tour nav item */
   const measureStep = useCallback((step: number) => {
-    const stepConfig = TOUR_STEPS[step];
+    const stepConfig = visibleTourSteps[step];
     if (!stepConfig) return;
-    const el = navRefs.current[stepConfig.navIndex];
+    const el = navRefs.current[stepConfig.href];
     if (el) {
       const r = el.getBoundingClientRect();
       setSpotRect({ top: r.top, left: r.left, width: r.width, height: r.height });
     }
-  }, []);
+  }, [visibleTourSteps]);
 
   /* Remeasure on step change or resize */
   useEffect(() => {
@@ -427,6 +452,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, [tourActive, tourStep, measureStep, collapsed]);
+
+  useEffect(() => {
+    if (!tourActive) return;
+    if (tourStep < visibleTourSteps.length) return;
+    setTourStep(Math.max(0, visibleTourSteps.length - 1));
+  }, [tourActive, tourStep, visibleTourSteps.length]);
 
   /* Client dropdown outside-click */
   useEffect(() => {
@@ -456,13 +487,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   /* Tour controls */
   const startTour = () => {
+    if (visibleTourSteps.length === 0) return;
     if (collapsed) setCollapsed(false);
     setTourStep(0);
     setTourActive(true);
     /* Measure after a frame so the sidebar has expanded */
     requestAnimationFrame(() => measureStep(0));
   };
-  const nextStep  = () => setTourStep((s) => Math.min(s + 1, TOUR_STEPS.length - 1));
+  const nextStep  = () => setTourStep((s) => Math.min(s + 1, visibleTourSteps.length - 1));
   const prevStep  = () => setTourStep((s) => Math.max(s - 1, 0));
   const endTour   = () => { setTourActive(false); setSpotRect(null); };
 
@@ -640,10 +672,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Nav links */}
         <nav className={`flex-1 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden
           ${collapsed ? "px-0 flex flex-col items-center" : "px-3"}`}>
-          {navItems.map((item, idx) => {
-            if (item.label === "Members" && !hasMembersNavAccess(selectedClient)) return null;
-            if (item.label === "Billing" && !hasBillingNavAccess(selectedClient)) return null;
-            if (item.label === "Entities" && !hasEntitiesNavAccess(selectedClient, isGlobalAdmin)) return null;
+          {visibleNavItems.map((item) => {
             const active = isActive(item.href);
 
             if (collapsed) {
@@ -651,7 +680,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  ref={(el) => { navRefs.current[idx] = el as HTMLAnchorElement | null; }}
+                  ref={(el) => { navRefs.current[item.href] = el as HTMLAnchorElement | null; }}
                   onClick={() => setMobileOpen(false)}
                   title={item.label}
                   className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-150 ${
@@ -667,7 +696,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                ref={(el) => { navRefs.current[idx] = el as HTMLAnchorElement | null; }}
+                ref={(el) => { navRefs.current[item.href] = el as HTMLAnchorElement | null; }}
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
                   active ? "as-shell-link-active" : "as-shell-link"
@@ -760,7 +789,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           spotRect={spotRect}
           step={activeTourStep}
           stepIndex={tourStep}
-          total={TOUR_STEPS.length}
+          total={visibleTourSteps.length}
           sidebarRight={sidebarRight}
           onPrev={prevStep}
           onNext={nextStep}
