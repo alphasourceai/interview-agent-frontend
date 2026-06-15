@@ -27,6 +27,7 @@ import MembershipAgreementSignerPage from "@/pages/MembershipAgreementSignerPage
 /* Client dashboard */
 import OverviewPage from "@/pages/dashboard/OverviewPage";
 import RolesPage from "@/pages/dashboard/RolesPage";
+import AutomationPage from "@/pages/dashboard/AutomationPage";
 import CandidatesPage from "@/pages/dashboard/CandidatesPage";
 import MembersPage from "@/pages/dashboard/MembersPage";
 import BillingPage from "@/pages/dashboard/BillingPage";
@@ -49,6 +50,7 @@ import NotFound from "@/pages/not-found";
 const queryClient = new QueryClient();
 const DASHBOARD_TAB_ROUTE: Record<string, string> = {
   roles: "/dashboard/roles",
+  automation: "/dashboard/automation",
   candidates: "/dashboard/candidates",
   members: "/dashboard/members",
   billing: "/dashboard/billing",
@@ -298,6 +300,7 @@ function DashboardGuard() {
         <Switch>
           <Route path="/dashboard"            component={OverviewPage} />
           <Route path="/dashboard/roles"      component={RolesPage} />
+          <Route path="/dashboard/automation" component={AutomationPage} />
           <Route path="/dashboard/candidates" component={CandidatesPage} />
           <Route path="/dashboard/members"    component={MembersPage} />
           <Route path="/dashboard/billing"    component={BillingPage} />
