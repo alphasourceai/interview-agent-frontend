@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, Loader2, ShieldCheck, Workflow } from "lucide-react";
+import { CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient } from "@/context/ClientContext";
@@ -81,6 +81,9 @@ const fieldSurfaceStyle = {
 const primaryTextStyle = { color: "var(--as-text)" };
 const mutedTextStyle = { color: "var(--as-text-muted)" };
 const subtleTextStyle = { color: "var(--as-text-subtle)" };
+const fieldLabelCls = "block text-[10px] font-black uppercase tracking-widest mb-1.5";
+const inputCls = "w-full px-3.5 py-2 rounded-xl border text-sm placeholder-gray-400 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all";
+const selectCls = "w-full appearance-none px-3.5 py-2 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9";
 
 const env =
   typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
@@ -200,8 +203,10 @@ async function getSessionToken(): Promise<string> {
 export default function AutomationPage() {
   const { selectedClient } = useClient();
   const [options, setOptions] = useState<AutomationConfigOptions | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [ruleEnabled, setRuleEnabled] = useState(false);
+  const [ruleName, setRuleName] = useState("");
   const [criteriaValues, setCriteriaValues] = useState<Record<string, CriteriaValue>>({});
   const [selectedActionType, setSelectedActionType] = useState("");
   const [schedulingUrl, setSchedulingUrl] = useState("");
@@ -284,37 +289,18 @@ export default function AutomationPage() {
     .split(/[\n,]+/)
     .map((email) => email.trim())
     .filter(Boolean).length;
+  const numberCriteriaKeys = criteriaKeys.filter((key) => criteriaFields[key]?.type !== "boolean");
+  const booleanCriteriaKeys = criteriaKeys.filter((key) => criteriaFields[key]?.type === "boolean");
 
-  const renderCriteriaInput = (key: string, field: ConfigField) => {
+  const renderNumberCriteria = (key: string, field: ConfigField) => {
     const copy = criteriaLabels[key] || {
       label: titleCase(key),
-      help: "Backend-supported rule field.",
+      help: "Backend-supported rule threshold.",
     };
-    if (field.type === "boolean") {
-      return (
-        <label
-          key={key}
-          className="rounded-xl border p-4 flex items-start gap-3 cursor-pointer"
-          style={mutedPanelStyle}
-        >
-          <input
-            type="checkbox"
-            checked={Boolean(criteriaValues[key])}
-            onChange={(event) => setCriteriaValues((prev) => ({ ...prev, [key]: event.target.checked }))}
-            className="mt-1 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
-          />
-          <span className="min-w-0">
-            <span className="block text-sm font-black" style={primaryTextStyle}>{copy.label}</span>
-            <span className="block text-xs leading-relaxed mt-1" style={mutedTextStyle}>{copy.help}</span>
-          </span>
-        </label>
-      );
-    }
-
     const bounds = numericFieldBounds(field);
     return (
-      <div key={key} className="rounded-xl border p-4" style={mutedPanelStyle}>
-        <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
+      <div key={key}>
+        <label className={fieldLabelCls} style={mutedTextStyle}>
           {copy.label}
         </label>
         <input
@@ -324,36 +310,58 @@ export default function AutomationPage() {
           value={String(criteriaValues[key] ?? "")}
           onChange={(event) => setCriteriaValues((prev) => ({ ...prev, [key]: event.target.value }))}
           placeholder="No threshold"
-          className="w-full px-4 py-2.5 rounded-xl border text-sm placeholder-gray-400 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all"
+          className={inputCls}
           style={fieldSurfaceStyle}
         />
-        <p className="text-xs leading-relaxed mt-2" style={subtleTextStyle}>
-          {copy.help} Supported range: {bounds.min}-{bounds.max}.
+        <p className="mt-1 text-[10px] font-semibold" style={subtleTextStyle}>
+          Range {bounds.min}-{bounds.max}
         </p>
       </div>
     );
   };
 
-  const safetyItems = [
+  const renderBooleanCriteria = (key: string) => {
+    const copy = criteriaLabels[key] || {
+      label: titleCase(key),
+      help: "Backend-supported rule option.",
+    };
+    return (
+      <label
+        key={key}
+        className="rounded-xl border px-3 py-2.5 flex items-start gap-2.5 cursor-pointer"
+        style={mutedPanelStyle}
+      >
+        <input
+          type="checkbox"
+          checked={Boolean(criteriaValues[key])}
+          onChange={(event) => setCriteriaValues((prev) => ({ ...prev, [key]: event.target.checked }))}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
+        />
+        <span className="min-w-0">
+          <span className="block text-xs font-black" style={primaryTextStyle}>{copy.label}</span>
+          <span className="block text-[11px] leading-relaxed mt-0.5" style={mutedTextStyle}>{copy.help}</span>
+        </span>
+      </label>
+    );
+  };
+
+  type SafetyKey = keyof NonNullable<AutomationConfigOptions["safety"]>;
+  const safetyItems: Array<{ key: SafetyKey; text: string }> = [
     {
-      key: "digest_requires_approval" as const,
-      title: "Approval required",
-      body: "Matched candidates are routed for internal approval before candidate-facing outreach.",
+      key: "digest_requires_approval",
+      text: "Matched candidates are routed for internal approval before outreach.",
     },
     {
-      key: "digest_aggregates_by_recipient" as const,
-      title: "Digest groups by recipient",
-      body: "Pending approval items are grouped into one digest per recipient where supported.",
+      key: "digest_aggregates_by_recipient",
+      text: "Approval digests are grouped by recipient.",
     },
     {
-      key: "scheduler_send_requires_env_flag" as const,
-      title: "Scheduler controls unavailable",
-      body: "Scheduled sending is controlled outside this dashboard and is not exposed on this page.",
+      key: "scheduler_send_requires_env_flag",
+      text: "Scheduler controls are not available on this page.",
     },
     {
-      key: "candidate_email_send_is_manual_after_approval" as const,
-      title: "Candidate outreach stays controlled",
-      body: "Candidate email sending remains a manual post-approval action.",
+      key: "candidate_email_send_is_manual_after_approval",
+      text: "Candidate-facing outreach remains manual after approval.",
     },
   ];
 
@@ -361,7 +369,7 @@ export default function AutomationPage() {
     <DashboardLayout title="Automation">
       <CurrentScopeBanner client={selectedClient} />
 
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+      <div className="mb-5">
         <div className="max-w-3xl">
           <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>
             Candidate Automation
@@ -370,27 +378,20 @@ export default function AutomationPage() {
             Automation
           </h2>
           <p className="text-sm leading-relaxed" style={mutedTextStyle}>
-            Configure frontend-ready automation rule options for identifying candidates for internal approval before any candidate-facing action is sent.
+            Configure supported rule options for identifying candidates for internal approval. Candidate-facing outreach remains manual after approval.
           </p>
-        </div>
-        <div
-          className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-black"
-          style={{ backgroundColor: "rgba(163,128,246,0.12)", color: "#7C5FCC" }}
-        >
-          <Workflow className="h-4 w-4" />
-          Foundation preview
         </div>
       </div>
 
       {loading && (
-        <div className="rounded-2xl p-6 mb-5 flex items-center gap-3" style={surfaceCardStyle}>
+        <div className="rounded-2xl px-5 py-4 mb-5 flex items-center gap-3" style={surfaceCardStyle}>
           <Loader2 className="h-4 w-4 animate-spin text-[#A380F6]" />
           <p className="text-sm font-semibold" style={mutedTextStyle}>Loading automation options...</p>
         </div>
       )}
 
       {!loading && error && (
-        <div className="rounded-2xl p-6 mb-5" style={surfaceCardStyle}>
+        <div className="rounded-2xl p-5 mb-5" style={surfaceCardStyle}>
           <p className="text-sm font-bold text-red-500 mb-3">{error}</p>
           <button
             type="button"
@@ -404,48 +405,83 @@ export default function AutomationPage() {
       )}
 
       {!loading && !error && (
-        <>
-          <section className="rounded-2xl p-6 mb-5" style={surfaceCardStyle}>
-            <div className="flex flex-col gap-1 mb-5">
-              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
-                Rule Criteria
-              </p>
-              <h3 className="text-base font-black" style={primaryTextStyle}>Candidate matching thresholds</h3>
-              <p className="text-sm leading-relaxed" style={mutedTextStyle}>
-                These local controls mirror backend-supported criteria. Saving is intentionally disabled in this phase.
-              </p>
+        <div className="space-y-5">
+          <section className="rounded-2xl p-5" style={surfaceCardStyle}>
+            <div className="flex flex-col gap-1 mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Rule setup</p>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Local draft settings</h3>
+            </div>
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+              <label className="rounded-xl border px-3 py-2.5 flex items-start gap-2.5 cursor-pointer" style={mutedPanelStyle}>
+                <input
+                  type="checkbox"
+                  checked={ruleEnabled}
+                  onChange={(event) => setRuleEnabled(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
+                />
+                <span>
+                  <span className="block text-xs font-black" style={primaryTextStyle}>Automation enabled</span>
+                  <span className="block text-[11px] mt-0.5" style={mutedTextStyle}>Local only in this phase.</span>
+                </span>
+              </label>
+              <div>
+                <label className={fieldLabelCls} style={mutedTextStyle}>Rule name</label>
+                <input
+                  type="text"
+                  value={ruleName}
+                  onChange={(event) => setRuleName(event.target.value)}
+                  placeholder="Second-round approval rule"
+                  className={inputCls}
+                  style={fieldSurfaceStyle}
+                />
+              </div>
+            </div>
+            <p className="mt-3 text-xs font-semibold" style={subtleTextStyle}>
+              Saving will be enabled in the next phase.
+            </p>
+          </section>
+
+          <section className="rounded-2xl p-5" style={surfaceCardStyle}>
+            <div className="flex flex-col gap-1 mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Candidate criteria</p>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Matching thresholds</h3>
             </div>
             {criteriaKeys.length === 0 ? (
-              <div className="rounded-xl border px-4 py-6 text-center text-sm font-semibold" style={mutedPanelStyle}>
+              <div className="rounded-xl border px-4 py-5 text-center text-sm font-semibold" style={mutedPanelStyle}>
                 <span style={mutedTextStyle}>No rule criteria options were returned.</span>
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {criteriaKeys.map((key) => renderCriteriaInput(key, criteriaFields[key]))}
+              <div className="space-y-3">
+                {numberCriteriaKeys.length > 0 && (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {numberCriteriaKeys.map((key) => renderNumberCriteria(key, criteriaFields[key]))}
+                  </div>
+                )}
+                {booleanCriteriaKeys.length > 0 && (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {booleanCriteriaKeys.map((key) => renderBooleanCriteria(key))}
+                  </div>
+                )}
               </div>
             )}
           </section>
 
-          <section className="rounded-2xl p-6 mb-5" style={surfaceCardStyle}>
-            <div className="flex flex-col gap-1 mb-5">
-              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
-                Second-Round Action
-              </p>
-              <h3 className="text-base font-black" style={primaryTextStyle}>Internal approval action setup</h3>
-              <p className="text-sm leading-relaxed" style={mutedTextStyle}>
-                This section prepares action configuration only. It does not send scheduling emails.
+          <section className="rounded-2xl p-5" style={surfaceCardStyle}>
+            <div className="flex flex-col gap-1 mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Approval workflow</p>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Action and digest settings</h3>
+              <p className="text-xs leading-relaxed" style={mutedTextStyle}>
+                This prepares internal approval configuration only. It does not send scheduling emails or expose scheduler controls.
               </p>
             </div>
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-3 lg:grid-cols-3">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
-                  Action type
-                </label>
+                <label className={fieldLabelCls} style={mutedTextStyle}>Action type</label>
                 <div className="relative">
                   <select
                     value={selectedActionType}
                     onChange={(event) => setSelectedActionType(event.target.value)}
-                    className="w-full appearance-none px-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                    className={selectCls}
                     style={fieldSurfaceStyle}
                   >
                     {actionTypes.length === 0 ? (
@@ -460,73 +496,56 @@ export default function AutomationPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
-                  Scheduling URL
-                </label>
+                <label className={fieldLabelCls} style={mutedTextStyle}>Scheduling URL</label>
                 <input
                   type="url"
                   value={schedulingUrl}
                   onChange={(event) => setSchedulingUrl(event.target.value)}
                   placeholder="https://..."
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm placeholder-gray-400 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all"
+                  className={inputCls}
                   style={fieldSurfaceStyle}
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
-                  Scheduling label
-                </label>
+                <label className={fieldLabelCls} style={mutedTextStyle}>Scheduling label</label>
                 <input
                   type="text"
                   value={schedulingLabel}
                   onChange={(event) => setSchedulingLabel(event.target.value.slice(0, labelMaxLength))}
                   maxLength={labelMaxLength}
                   placeholder="Schedule next interview"
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm placeholder-gray-400 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all"
+                  className={inputCls}
                   style={fieldSurfaceStyle}
                 />
                 <p className="mt-1 text-[10px] font-semibold" style={subtleTextStyle}>
-                  {schedulingLabel.length}/{labelMaxLength} characters
+                  {schedulingLabel.length}/{labelMaxLength}
                 </p>
               </div>
             </div>
-          </section>
 
-          <section className="rounded-2xl p-6 mb-5" style={surfaceCardStyle}>
-            <div className="flex flex-col gap-1 mb-5">
-              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
-                Approval Digest
-              </p>
-              <h3 className="text-base font-black" style={primaryTextStyle}>Internal approval digest configuration</h3>
-              <p className="text-sm leading-relaxed" style={mutedTextStyle}>
-                Configure how internal approval digests should be prepared. This page does not expose scheduler controls.
-              </p>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <label className="rounded-xl border p-4 flex items-start gap-3 cursor-pointer" style={mutedPanelStyle}>
+            <div className="my-4 border-t" style={{ borderColor: "var(--as-border)" }} />
+
+            <div className="grid gap-3 lg:grid-cols-3">
+              <label className="rounded-xl border px-3 py-2.5 flex items-start gap-2.5 cursor-pointer" style={mutedPanelStyle}>
                 <input
                   type="checkbox"
                   checked={digestEnabled}
                   onChange={(event) => setDigestEnabled(event.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
                 />
                 <span>
-                  <span className="block text-sm font-black" style={primaryTextStyle}>Enable pending approval digest</span>
-                  <span className="block text-xs leading-relaxed mt-1" style={mutedTextStyle}>
-                    Prepare grouped internal approval summaries for configured recipients.
-                  </span>
+                  <span className="block text-xs font-black" style={primaryTextStyle}>Approval digest enabled</span>
+                  <span className="block text-[11px] mt-0.5" style={mutedTextStyle}>Grouped internal approval summaries.</span>
                 </span>
               </label>
-              <div className="rounded-xl border p-4" style={mutedPanelStyle}>
-                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
-                  Recipient emails
-                </label>
+              <div className="lg:col-span-2">
+                <label className={fieldLabelCls} style={mutedTextStyle}>Recipient emails</label>
                 <textarea
                   value={recipientEmails}
                   onChange={(event) => setRecipientEmails(event.target.value)}
                   placeholder="manager@example.com"
-                  rows={4}
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm placeholder-gray-400 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all"
+                  rows={2}
+                  className={inputCls}
                   style={fieldSurfaceStyle}
                 />
                 <p className="mt-1 text-[10px] font-semibold" style={recipientCount > recipientLimit ? { color: "#EF4444" } : subtleTextStyle}>
@@ -534,52 +553,44 @@ export default function AutomationPage() {
                 </p>
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
-                  Approval base URL
-                </label>
+                <label className={fieldLabelCls} style={mutedTextStyle}>Approval base URL</label>
                 <input
                   type="url"
                   value={approvalBaseUrl}
                   onChange={(event) => setApprovalBaseUrl(event.target.value)}
                   placeholder="https://app.alphasourceai.com"
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm placeholder-gray-400 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all"
+                  className={inputCls}
                   style={fieldSurfaceStyle}
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
-                  Timezone
-                </label>
+                <label className={fieldLabelCls} style={mutedTextStyle}>Timezone</label>
                 <input
                   type="text"
                   value={timezone}
                   onChange={(event) => setTimezone(event.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm placeholder-gray-400 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all"
+                  className={inputCls}
                   style={fieldSurfaceStyle}
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
-                  Send time
-                </label>
+                <label className={fieldLabelCls} style={mutedTextStyle}>Send time</label>
                 <input
                   type="time"
                   value={sendTimeLocal}
                   onChange={(event) => setSendTimeLocal(event.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all"
+                  className={inputCls}
                   style={fieldSurfaceStyle}
                 />
-                <p className="mt-1 text-[10px] font-semibold" style={subtleTextStyle}>Expected format: {sendTimeFormat}</p>
+                <p className="mt-1 text-[10px] font-semibold" style={subtleTextStyle}>{sendTimeFormat}</p>
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
-                  Frequency
-                </label>
+                <label className={fieldLabelCls} style={mutedTextStyle}>Frequency</label>
                 <div className="relative">
                   <select
                     value={frequency}
                     onChange={(event) => setFrequency(event.target.value)}
-                    className="w-full appearance-none px-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                    className={selectCls}
                     style={fieldSurfaceStyle}
                   >
                     {frequencies.length === 0 ? (
@@ -595,19 +606,21 @@ export default function AutomationPage() {
               </div>
               {frequency === "weekly" && (
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>
-                    Weekly day
-                  </label>
+                  <label className={fieldLabelCls} style={mutedTextStyle}>Weekly day</label>
                   <div className="relative">
                     <select
                       value={weeklyDay}
                       onChange={(event) => setWeeklyDay(event.target.value)}
-                      className="w-full appearance-none px-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                      className={selectCls}
                       style={fieldSurfaceStyle}
                     >
-                      {weeklyDays.map((day) => (
-                        <option key={day} value={day}>{titleCase(day)}</option>
-                      ))}
+                      {weeklyDays.length === 0 ? (
+                        <option value="">No weekly days available</option>
+                      ) : (
+                        weeklyDays.map((day) => (
+                          <option key={day} value={day}>{titleCase(day)}</option>
+                        ))
+                      )}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
                   </div>
@@ -616,46 +629,26 @@ export default function AutomationPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl p-6 mb-5" style={surfaceCardStyle}>
-            <div className="flex items-start gap-3 mb-5">
-              <div className="rounded-xl p-2" style={{ backgroundColor: "rgba(2,217,157,0.12)", color: "#009E73" }}>
-                <ShieldCheck className="h-5 w-5" />
+          <section className="rounded-2xl p-4" style={compactSurfaceStyle}>
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Safety</p>
+                <h3 className="text-sm font-black" style={primaryTextStyle}>Workflow guardrails</h3>
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Safety</p>
-                <h3 className="text-base font-black" style={primaryTextStyle}>Built-in workflow guardrails</h3>
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {safetyItems.map((item) => (
-                <div key={item.key} className="rounded-xl border p-4 flex gap-3" style={compactSurfaceStyle}>
-                  <CheckCircle2
-                    className="h-4 w-4 mt-0.5 flex-shrink-0"
-                    style={{ color: safety[item.key] === false ? "var(--as-text-subtle)" : "#02D99D" }}
-                  />
-                  <div>
-                    <h4 className="text-sm font-black mb-1" style={primaryTextStyle}>{item.title}</h4>
-                    <p className="text-xs leading-relaxed" style={mutedTextStyle}>{item.body}</p>
-                  </div>
-                </div>
-              ))}
+              <ul className="grid flex-1 gap-2 md:grid-cols-2">
+                {safetyItems.map((item) => (
+                  <li key={item.key} className="flex items-start gap-2 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
+                    <CheckCircle2
+                      className="h-3.5 w-3.5 mt-0.5 flex-shrink-0"
+                      style={{ color: safety[item.key] === false ? "var(--as-text-subtle)" : "#02D99D" }}
+                    />
+                    {item.text}
+                  </li>
+                ))}
+              </ul>
             </div>
           </section>
-
-          <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={compactSurfaceStyle}>
-            <p className="text-sm font-semibold leading-relaxed" style={mutedTextStyle}>
-              Rule saving will be enabled in the next phase. Changes on this page are local only.
-            </p>
-            <button
-              type="button"
-              disabled
-              className="px-5 py-2.5 rounded-full text-xs font-black cursor-not-allowed opacity-70"
-              style={{ backgroundColor: "var(--as-surface-muted)", color: "var(--as-text-subtle)" }}
-            >
-              Saving coming next
-            </button>
-          </div>
-        </>
+        </div>
       )}
     </DashboardLayout>
   );
