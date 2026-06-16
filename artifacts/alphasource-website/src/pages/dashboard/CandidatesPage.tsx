@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -15,6 +15,7 @@ import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useClient } from "@/context/ClientContext";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ──────────────────────────────────────────── */
@@ -61,6 +62,7 @@ interface Candidate {
   recordingReadyAt?: string | null;
   name: string;
   email: string;
+  entityName?: string;
   role: string;
   resume: number | null;
   interview: number | null;
@@ -93,7 +95,7 @@ interface ClientRoleOption {
   title: string;
 }
 
-type SortKey = "name" | "email" | "role" | "resume" | "interview" | "overall" | "created";
+type SortKey = "name" | "email" | "entity" | "role" | "resume" | "interview" | "overall" | "created";
 type SortDir = "asc" | "desc";
 
 const env =
@@ -456,6 +458,7 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
     recordingReadyAt: String(item.recording_ready_at || "").trim() || null,
     name: String(candidate.name || "").trim() || "Unnamed Candidate",
     email: String(candidate.email || "").trim() || "—",
+    entityName: String(item.entity_name || "").trim() || "—",
     role: String(role.title || "").trim() || "—",
     resume: resumeScore,
     interview: displayedInterviewScore,
@@ -1128,13 +1131,14 @@ function ExpandedPanel({
 
 /* ── Main page ──────────────────────────────────────── */
 export default function CandidatesPage() {
-  const { selectedClient, selectedClientId, loading: clientLoading, error: clientError } = useClient();
+  const { clients, selectedClient, selectedClientId, loading: clientLoading, error: clientError } = useClient();
   const [expandedId, setExpandedId] = useState<string | number | null>(null);
   const [minScore, setMinScore]         = useState("");
   const [sortKey, setSortKey]           = useState<SortKey | null>(null);
   const [sortDir, setSortDir]           = useState<SortDir>("asc");
   const [clientRoles, setClientRoles] = useState<ClientRoleOption[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("all");
+  const [entityFilter, setEntityFilter] = useState<EntityFilterValue>("parent");
   const [candidateSearch, setCandidateSearch] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
@@ -1148,6 +1152,14 @@ export default function CandidatesPage() {
   const minScoreInputRef                = useRef<HTMLInputElement>(null);
 
   const minScoreNum = minScore === "" ? null : parseInt(minScore, 10);
+  const entityOptions = useMemo(
+    () => buildEntityFilterOptions(clients, selectedClientId),
+    [clients, selectedClientId],
+  );
+
+  useEffect(() => {
+    setEntityFilter(defaultEntityFilterValue(clients, selectedClientId));
+  }, [clients, selectedClientId]);
 
   const toggle = (id: string | number) => setExpandedId((prev) => (prev === id ? null : id));
 
@@ -1198,14 +1210,14 @@ export default function CandidatesPage() {
       const token = String(session?.access_token || "").trim();
       if (!token) throw new Error("Missing session token.");
 
-      const response = await fetch(
-        `${backendBase}/dashboard/rows?client_id=${encodeURIComponent(selectedClientId)}`,
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "omit",
-        },
-      );
+      const params = new URLSearchParams({ client_id: selectedClientId });
+      if (entityOptions.length > 0) params.set("entity_filter", entityFilterQueryValue(entityFilter));
+
+      const response = await fetch(`${backendBase}/dashboard/rows?${params.toString()}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "omit",
+      });
 
       const text = await response.text();
       if (!response.ok) {
@@ -1233,7 +1245,7 @@ export default function CandidatesPage() {
     } finally {
       if (showPageLoader) setCandidatesLoading(false);
     }
-  }, [selectedClientId, clientLoading, clientError]);
+  }, [selectedClientId, clientLoading, clientError, entityFilter, entityOptions.length]);
 
   const withCandidateAction = useCallback(async (
     candidate: Candidate,
@@ -1523,14 +1535,14 @@ export default function CandidatesPage() {
         const token = String(session?.access_token || "").trim();
         if (!token) throw new Error("Missing session token.");
 
-        const response = await fetch(
-          `${backendBase}/roles?client_id=${encodeURIComponent(selectedClientId)}`,
-          {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}` },
-            credentials: "omit",
-          },
-        );
+        const params = new URLSearchParams({ client_id: selectedClientId });
+        if (entityOptions.length > 0) params.set("entity_filter", entityFilterQueryValue(entityFilter));
+
+        const response = await fetch(`${backendBase}/roles?${params.toString()}`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "omit",
+        });
         const text = await response.text();
         if (!response.ok) throw new Error(extractErrorMessage(text));
 
@@ -1559,12 +1571,12 @@ export default function CandidatesPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError]);
+  }, [selectedClientId, clientLoading, clientError, entityFilter, entityOptions.length]);
 
   useEffect(() => {
     setSelectedRoleId("all");
     setCandidateSearch("");
-  }, [selectedClientId]);
+  }, [selectedClientId, entityFilter]);
 
   useEffect(() => {
     setCandidateSearch("");
@@ -1620,6 +1632,7 @@ export default function CandidatesPage() {
         switch (sortKey) {
           case "name":      av = a.name; bv = b.name; break;
           case "email":     av = a.email; bv = b.email; break;
+          case "entity":    av = a.entityName || ""; bv = b.entityName || ""; break;
           case "role":      av = a.role; bv = b.role; break;
           case "resume":    av = a.resume ?? -1; bv = b.resume ?? -1; break;
           case "interview": av = a.interview ?? -1; bv = b.interview ?? -1; break;
@@ -1688,6 +1701,28 @@ export default function CandidatesPage() {
 
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-black uppercase tracking-widest" style={mutedTextStyle}>Filters</span>
+
+          {/* Role filter */}
+          {entityOptions.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold" style={mutedTextStyle}>Entity</label>
+              <div className="relative">
+                <select
+                  className="appearance-none w-44 px-4 py-2 rounded-full border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                  style={fieldSurfaceStyle}
+                  value={entityFilter}
+                  onChange={(event) => setEntityFilter(event.target.value)}
+                >
+                  {entityOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
+              </div>
+            </div>
+          )}
 
           {/* Role filter */}
           <div className="flex items-center gap-2">
@@ -1800,6 +1835,7 @@ export default function CandidatesPage() {
 
                 <Th col="name"      label="Name" />
                 <Th col="email"     label="Email"     className="hidden md:table-cell" />
+                <Th col="entity"    label="Entity"    className="hidden lg:table-cell" />
                 <Th col="role"      label="Role"      className="hidden lg:table-cell" />
                 <Th col="resume"    label="Resume"    tooltip="Resume score based on role/JD alignment across experience, skills, education, and overall resume fit." />
                 <Th col="interview" label="Interview" tooltip="Interview score based on recorded interview responses and available supporting analysis. Dash means unavailable or insufficient evidence." />
@@ -1810,19 +1846,19 @@ export default function CandidatesPage() {
             <tbody>
               {clientLoading || candidatesLoading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
+                  <td colSpan={9} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
                     Loading candidates...
                   </td>
                 </tr>
               ) : clientError || candidatesError ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-sm text-red-500 font-semibold">
+                  <td colSpan={9} className="text-center py-12 text-sm text-red-500 font-semibold">
                     {clientError || candidatesError}
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
+                  <td colSpan={9} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
                     {candidates.length === 0 ? "No candidates yet." : "No candidates match your filters."}
                   </td>
                 </tr>
@@ -1875,6 +1911,11 @@ export default function CandidatesPage() {
 
                         {/* Role */}
                         <td className="px-4 py-4 hidden lg:table-cell">
+                          <span className="text-sm font-semibold" style={mutedTextStyle}>{c.entityName || "—"}</span>
+                        </td>
+
+                        {/* Role */}
+                        <td className="px-4 py-4 hidden lg:table-cell">
                           <span className="text-sm font-semibold" style={mutedTextStyle}>{c.role}</span>
                         </td>
 
@@ -1914,7 +1955,7 @@ export default function CandidatesPage() {
                       {/* Expanded panel */}
                       {isExpanded && (
                         <tr className={!isLast ? "border-b" : ""} style={!isLast ? dividerStyle : undefined}>
-                          <td colSpan={8} className="p-0">
+                          <td colSpan={9} className="p-0">
                             <ExpandedPanel
                               c={c}
                               onRefresh={refreshCandidatesFromRow}

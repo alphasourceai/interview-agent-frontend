@@ -1,16 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trash2, UserPlus, ChevronDown, ChevronUp, ChevronsUpDown, Key } from "lucide-react";
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient, type Client, type ClientMembership } from "@/context/ClientContext";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 type MemberRole = "Manager" | "Member";
-type SortKey = "name" | "email" | "role";
+type SortKey = "name" | "email" | "entity" | "role";
 type SortDir = "asc" | "desc";
 
 interface Member {
   id: string | number;
+  rowId: string;
+  entityId: string;
+  entityName: string;
   name: string;
   email: string;
   role: MemberRole;
@@ -238,6 +242,7 @@ export default function MembersPage() {
   const [name, setName]         = useState("");
   const [email, setEmail]       = useState("");
   const [role, setRole]         = useState<MemberRole>("Member");
+  const [entityFilter, setEntityFilter] = useState<EntityFilterValue>("parent");
   const [submitted, setSubmitted] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [modalNotice, setModalNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -250,6 +255,10 @@ export default function MembersPage() {
   const [resettingPasswords, setResettingPasswords] = useState<Record<string, boolean>>({});
   const [actionNotice, setActionNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [membersReloadKey, setMembersReloadKey] = useState(0);
+  const entityOptions = useMemo(
+    () => buildEntityFilterOptions(clients, selectedClientId),
+    [clients, selectedClientId],
+  );
 
   const nameErr  = submitted && name.trim() === "";
   const emailErr = submitted && !isValidEmail(email);
@@ -261,6 +270,10 @@ export default function MembersPage() {
   const filteredAssignableScopes = normalizedScopeSearch
     ? assignableScopes.filter((client) => scopeSearchText(client).includes(normalizedScopeSearch))
     : assignableScopes;
+
+  useEffect(() => {
+    setEntityFilter(defaultEntityFilterValue(clients, selectedClientId));
+  }, [clients, selectedClientId]);
 
   useEffect(() => {
     let alive = true;
@@ -313,14 +326,14 @@ export default function MembersPage() {
         const token = String(session?.access_token || "").trim();
         if (!token) throw new Error("Missing session token.");
 
-        const response = await fetch(
-          `${backendBase}/client-members?client_id=${encodeURIComponent(selectedClientId)}`,
-          {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}` },
-            credentials: "omit",
-          },
-        );
+        const params = new URLSearchParams({ client_id: selectedClientId });
+        if (entityOptions.length > 0) params.set("entity_filter", entityFilterQueryValue(entityFilter));
+
+        const response = await fetch(`${backendBase}/client-members?${params.toString()}`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "omit",
+        });
 
         const text = await response.text();
         if (!response.ok) {
@@ -349,8 +362,13 @@ export default function MembersPage() {
                 : "";
             const id = rawIdText || `member-${index + 1}`;
             const nameValue = String(item.name || "").trim() || fallbackNameFromEmail(rawEmail);
+            const entityId = String(item.entity_id || item.client_id || "").trim();
+            const rowId = String(item.row_id || `${entityId}:${id}`).trim() || id;
             return {
               id,
+              rowId,
+              entityId,
+              entityName: String(item.entity_name || "").trim() || selectedClient.name || "—",
               name: nameValue,
               email: rawEmail || "—",
               role: toMemberRole(item.role),
@@ -372,7 +390,7 @@ export default function MembersPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError, canManageMembers, membersReloadKey]);
+  }, [selectedClientId, selectedClient.name, clientLoading, clientError, canManageMembers, entityFilter, entityOptions.length, membersReloadKey]);
 
   useEffect(() => {
     setActionNotice(null);
@@ -529,7 +547,7 @@ export default function MembersPage() {
     }
   };
 
-  const handleRemove = async (id: string | number) => {
+  const handleRemove = async (member: Member) => {
     if (!canManageMembers) return;
     if (!selectedClientId) return;
     if (!backendBase) {
@@ -537,14 +555,16 @@ export default function MembersPage() {
       return;
     }
 
-    const memberId = String(id);
+    const memberId = String(member.id);
+    const memberClientId = String(member.entityId || selectedClientId).trim();
+    const memberRowId = String(member.rowId || member.id);
     setActionNotice(null);
-    setRemovingMembers((prev) => ({ ...prev, [memberId]: true }));
+    setRemovingMembers((prev) => ({ ...prev, [memberRowId]: true }));
 
     try {
       const token = await getSessionToken();
       const response = await fetch(
-        `${backendBase}/client-members/${encodeURIComponent(memberId)}?client_id=${encodeURIComponent(selectedClientId)}`,
+        `${backendBase}/client-members/${encodeURIComponent(memberId)}?client_id=${encodeURIComponent(memberClientId)}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -563,7 +583,7 @@ export default function MembersPage() {
         throw new Error(extractErrorMessage(text) || "Could not remove member.");
       }
 
-      setMembers((prev) => prev.filter((m) => String(m.id) !== memberId));
+      setMembers((prev) => prev.filter((m) => String(m.rowId) !== memberRowId));
       setActionNotice({ tone: "success", text: "Member removed." });
     } catch (error) {
       setActionNotice({
@@ -571,11 +591,11 @@ export default function MembersPage() {
         text: error instanceof Error ? error.message : "Could not remove member.",
       });
     } finally {
-      setRemovingMembers((prev) => ({ ...prev, [memberId]: false }));
+      setRemovingMembers((prev) => ({ ...prev, [memberRowId]: false }));
     }
   };
 
-  const handleResetPassword = async (id: string | number, emailValue: string) => {
+  const handleResetPassword = async (member: Member) => {
     if (!canResetPassword) return;
     if (!selectedClientId) return;
     if (!backendBase) {
@@ -583,15 +603,17 @@ export default function MembersPage() {
       return;
     }
 
-    const memberId = String(id || "").trim();
-    const email = String(emailValue || "").trim();
+    const memberId = String(member.id || "").trim();
+    const memberRowId = String(member.rowId || member.id);
+    const email = String(member.email || "").trim();
+    const memberClientId = String(member.entityId || selectedClientId).trim();
     if (!memberId || !email || email === "—") {
       setActionNotice({ tone: "error", text: "Member email is required for password reset." });
       return;
     }
 
     setActionNotice(null);
-    setResettingPasswords((prev) => ({ ...prev, [memberId]: true }));
+    setResettingPasswords((prev) => ({ ...prev, [memberRowId]: true }));
 
     try {
       const token = await getSessionToken();
@@ -603,7 +625,7 @@ export default function MembersPage() {
         },
         credentials: "omit",
         body: JSON.stringify({
-          client_id: selectedClientId,
+          client_id: memberClientId,
           email,
         }),
       });
@@ -618,7 +640,7 @@ export default function MembersPage() {
         text: error instanceof Error ? error.message : "Could not send password reset.",
       });
     } finally {
-      setResettingPasswords((prev) => ({ ...prev, [memberId]: false }));
+      setResettingPasswords((prev) => ({ ...prev, [memberRowId]: false }));
     }
   };
 
@@ -633,8 +655,8 @@ export default function MembersPage() {
 
   const sorted = sortKey
     ? [...members].sort((a, b) => {
-        const av = a[sortKey];
-        const bv = b[sortKey];
+        const av = sortKey === "entity" ? a.entityName : a[sortKey];
+        const bv = sortKey === "entity" ? b.entityName : b[sortKey];
         const cmp = av.localeCompare(bv);
         return sortDir === "asc" ? cmp : -cmp;
       })
@@ -661,7 +683,7 @@ export default function MembersPage() {
     </th>
   );
 
-  const columnCount = canManageMembers ? 5 : 3;
+  const columnCount = canManageMembers ? 6 : 4;
 
   if (clientLoading) {
     return (
@@ -721,9 +743,29 @@ export default function MembersPage() {
 
           {canManageMembers && (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold" style={mutedTextStyle}>
-                Add managers or members to one or more client scopes.
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-xs font-semibold" style={mutedTextStyle}>
+                  Add managers or members to one or more client scopes.
+                </p>
+                {entityOptions.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Entity</label>
+                    <div className="relative">
+                      <select
+                        value={entityFilter}
+                        onChange={(event) => setEntityFilter(event.target.value)}
+                        className="appearance-none w-44 px-4 py-2 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                        style={fieldSurfaceStyle}
+                      >
+                        {entityOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={openAddMemberModal}
                 className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-full transition-all hover:opacity-90 active:scale-[0.97] flex-shrink-0"
@@ -743,6 +785,7 @@ export default function MembersPage() {
               <tr className="border-b" style={dividerStyle}>
                 <ThSort col="name"  label="Name"   className="pl-6" />
                 <ThSort col="email" label="Email"  />
+                <ThSort col="entity" label="Entity" />
                 <ThSort col="role"  label="Role"   />
                 {canManageMembers && (
                   <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase tracking-widest whitespace-nowrap" style={mutedTextStyle}>
@@ -780,7 +823,7 @@ export default function MembersPage() {
                   const selfMember = isSelfMember(m);
                   return (
                   <tr
-                    key={m.id}
+                    key={m.rowId}
                     className="border-b as-shell-dropdown-item transition-colors"
                     style={idx === sorted.length - 1 ? { borderBottom: "none" } : dividerStyle}
                   >
@@ -797,19 +840,24 @@ export default function MembersPage() {
 
                     {/* Role badge */}
                     <td className="px-4 py-4">
+                      <span className="text-sm font-semibold" style={mutedTextStyle}>{m.entityName}</span>
+                    </td>
+
+                    {/* Role badge */}
+                    <td className="px-4 py-4">
                       <RoleBadge role={m.role} />
                     </td>
 
                     {canManageMembers && (
                       <td className="px-4 py-4 text-center">
                         <button
-                          onClick={() => { void handleResetPassword(m.id, m.email); }}
-                          disabled={Boolean(resettingPasswords[String(m.id)])}
+                          onClick={() => { void handleResetPassword(m); }}
+                          disabled={Boolean(resettingPasswords[String(m.rowId)])}
                           className="p-2 rounded-lg text-[#0A1547]/25 dark:text-slate-400/45 hover:text-[#A380F6] hover:bg-[#A380F6]/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                          title={resettingPasswords[String(m.id)] ? "Sending password reset..." : `Send password reset to ${m.name}`}
-                          aria-label={resettingPasswords[String(m.id)] ? `Sending password reset to ${m.name}` : `Send password reset to ${m.name}`}
+                          title={resettingPasswords[String(m.rowId)] ? "Sending password reset..." : `Send password reset to ${m.name}`}
+                          aria-label={resettingPasswords[String(m.rowId)] ? `Sending password reset to ${m.name}` : `Send password reset to ${m.name}`}
                         >
-                          <Key className={`w-4 h-4 ${resettingPasswords[String(m.id)] ? "animate-spin" : ""}`} />
+                          <Key className={`w-4 h-4 ${resettingPasswords[String(m.rowId)] ? "animate-spin" : ""}`} />
                         </button>
                       </td>
                     )}
@@ -818,8 +866,8 @@ export default function MembersPage() {
                     {canManageMembers && (
                       <td className="px-4 py-4 pr-6 text-center">
                         <button
-                          onClick={() => { void handleRemove(m.id); }}
-                          disabled={selfMember || Boolean(removingMembers[String(m.id)])}
+                          onClick={() => { void handleRemove(m); }}
+                          disabled={selfMember || Boolean(removingMembers[String(m.rowId)])}
                           className="p-2 rounded-lg text-[#0A1547]/25 dark:text-slate-400/45 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                           aria-label={selfMember ? `Cannot remove ${m.name}` : `Remove ${m.name}`}
                           title={selfMember ? "You cannot remove yourself" : `Remove ${m.name}`}

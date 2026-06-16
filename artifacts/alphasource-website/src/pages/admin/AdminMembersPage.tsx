@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import { Trash2, ChevronDown, ChevronUp, Key } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
 type MemberRole = "Super Admin" | "Manager" | "Member";
-type SortKey    = "name" | "role" | "client";
+type SortKey    = "name" | "role" | "client" | "entity";
 type SortDir    = "asc"  | "desc";
 
 interface Member {
@@ -14,6 +15,7 @@ interface Member {
   rowKey: string;
   clientId: string;
   clientName: string;
+  entityName: string;
   name: string;
   email: string;
   role: MemberRole;
@@ -165,6 +167,7 @@ export default function AdminMembersPage() {
   const [name, setName]           = useState("");
   const [email, setEmail]         = useState("");
   const [role, setRole]           = useState<MemberRole>("Member");
+  const [entityFilter, setEntityFilter] = useState<EntityFilterValue>("parent");
   const [submitted, setSubmitted] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedScopeIds, setSelectedScopeIds] = useState<string[]>([]);
@@ -192,10 +195,22 @@ export default function AdminMembersPage() {
     () => adminClients.filter((client) => String(client.id || "").trim() && client.id !== "all"),
     [adminClients],
   );
+  const hierarchyClients = useMemo(
+    () => adminClients.filter((client) => client.id !== "all"),
+    [adminClients],
+  );
+  const entityOptions = useMemo(
+    () => buildEntityFilterOptions(hierarchyClients, activeClientId),
+    [hierarchyClients, activeClientId],
+  );
 
   useEffect(() => {
     setMemberSearch("");
-  }, [activeClientId]);
+  }, [activeClientId, entityFilter]);
+
+  useEffect(() => {
+    setEntityFilter(defaultEntityFilterValue(hierarchyClients, activeClientId));
+  }, [hierarchyClients, activeClientId]);
 
   /* Reset local form/sort state whenever selected client changes */
   useEffect(() => {
@@ -235,15 +250,14 @@ export default function AdminMembersPage() {
   useEffect(() => {
     let alive = true;
 
-    const fetchMembersForClient = async (clientId: string, clientName: string, token: string): Promise<Member[]> => {
-      const response = await fetch(
-        `${backendBase}/admin/client-members?client_id=${encodeURIComponent(clientId)}`,
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "omit",
-        },
-      );
+    const fetchMembersForClient = async (clientId: string, clientName: string, token: string, entityValue = ""): Promise<Member[]> => {
+      const params = new URLSearchParams({ client_id: clientId });
+      if (entityValue) params.set("entity_filter", entityValue);
+      const response = await fetch(`${backendBase}/admin/client-members?${params.toString()}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "omit",
+      });
       const text = await response.text();
       if (!response.ok) throw new Error(extractErrorMessage(text));
       const payload = parseJsonSafe(text);
@@ -257,12 +271,15 @@ export default function AdminMembersPage() {
           const memberId = String(item.id || item.user_id || item.email || `${clientId}:${index}`);
           const memberEmail = String(item.email || "").trim() || "—";
           const createdAt = String(item.created_at || "").trim();
-          const rowKey = `${clientId}:${memberId}:${createdAt || `idx:${index}`}:${memberEmail}`;
+          const rowClientId = String(item.client_id || item.entity_id || clientId).trim() || clientId;
+          const rowKey = String(item.row_id || `${rowClientId}:${memberId}:${createdAt || `idx:${index}`}:${memberEmail}`);
+          const entityName = String(item.entity_name || item.client_name || clientName || "—").trim() || "—";
           return {
             id: memberId,
             rowKey,
-            clientId,
-            clientName: String(item.client_name || clientName || "—").trim() || "—",
+            clientId: rowClientId,
+            clientName: entityName,
+            entityName,
             name: String(item.name || "").trim() || "—",
             email: memberEmail,
             role: normalizeMemberRole(item.role),
@@ -320,7 +337,8 @@ export default function AdminMembersPage() {
         } else if (activeClientId) {
           const selectedClientName =
             adminClients.find((client) => String(client.id || "").trim() === activeClientId)?.name || "—";
-          nextMembers = await fetchMembersForClient(activeClientId, selectedClientName, token);
+          const entityValue = entityOptions.length > 0 ? entityFilterQueryValue(entityFilter) : "";
+          nextMembers = await fetchMembersForClient(activeClientId, selectedClientName, token, entityValue);
         }
 
         if (!alive) return;
@@ -338,7 +356,7 @@ export default function AdminMembersPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, adminClients, adminClientsLoading, adminClientsError, membersReloadKey]);
+  }, [selectedClientId, activeClientId, adminClients, adminClientsLoading, adminClientsError, entityFilter, entityOptions.length, membersReloadKey]);
 
   const nameErr  = submitted && name.trim() === "";
   const emailErr = submitted && !isValidEmail(email);
@@ -462,7 +480,8 @@ export default function AdminMembersPage() {
       setActionNotice({ tone: "error", text: "Missing backend base URL configuration." });
       return;
     }
-    if (!activeClientId || activeClientId === "all") {
+    const removeClientId = String(member.clientId || activeClientId).trim();
+    if (!removeClientId || removeClientId === "all") {
       setActionNotice({ tone: "error", text: "Select a client to perform this action." });
       return;
     }
@@ -473,7 +492,7 @@ export default function AdminMembersPage() {
     try {
       const token = await getSessionToken();
       const response = await fetch(
-        `${backendBase}/admin/client-members/${encodeURIComponent(id)}?client_id=${encodeURIComponent(activeClientId)}`,
+        `${backendBase}/admin/client-members/${encodeURIComponent(id)}?client_id=${encodeURIComponent(removeClientId)}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -534,9 +553,7 @@ export default function AdminMembersPage() {
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const visibleMembers = isAllClientsView
-    ? members
-    : members.filter((member) => member.clientId === activeClientId);
+  const visibleMembers = members;
 
   const memberSearchTerm = memberSearch.trim().toLowerCase();
   const filteredMembers = memberSearchTerm
@@ -544,14 +561,15 @@ export default function AdminMembersPage() {
         [
           member.name,
           member.email,
+          member.entityName,
         ].some((value) => String(value || "").toLowerCase().includes(memberSearchTerm)),
       )
     : visibleMembers;
 
   const sorted = sortKey
     ? [...filteredMembers].sort((a, b) => {
-        const av = (sortKey === "client" ? a.clientName : a[sortKey]).toLowerCase();
-        const bv = (sortKey === "client" ? b.clientName : b[sortKey]).toLowerCase();
+        const av = (sortKey === "client" ? a.clientName : sortKey === "entity" ? a.entityName : a[sortKey]).toLowerCase();
+        const bv = (sortKey === "client" ? b.clientName : sortKey === "entity" ? b.entityName : b[sortKey]).toLowerCase();
         const cmp = av.localeCompare(bv);
         return sortDir === "asc" ? cmp : -cmp;
       })
@@ -754,6 +772,20 @@ export default function AdminMembersPage() {
         </div>
 
         <div className="px-5 py-3.5 border-b flex flex-wrap items-center gap-3" style={dividerStyle}>
+          {entityOptions.length > 0 && (
+            <div className="relative w-48">
+              <select
+                value={entityFilter}
+                onChange={(event) => setEntityFilter(event.target.value)}
+                className={inputCls + " appearance-none pr-8 cursor-pointer"}
+              >
+                {entityOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
+            </div>
+          )}
           <input
             type="text"
             placeholder="Search member name or email..."
@@ -798,6 +830,15 @@ export default function AdminMembersPage() {
                     Role <SortIcon col="role" />
                   </button>
                 </th>
+                <th className="px-4 py-3.5 text-left">
+                  <button
+                    className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+                    style={mutedTextStyle}
+                    onClick={() => handleSort("entity")}
+                  >
+                    Entity <SortIcon col="entity" />
+                  </button>
+                </th>
                 {isAllClientsView && (
                   <th className="px-4 py-3.5 text-left">
                     <button
@@ -820,19 +861,19 @@ export default function AdminMembersPage() {
             <tbody>
               {membersLoading ? (
                 <tr>
-                  <td colSpan={isAllClientsView ? 5 : 4} className="text-center py-14 text-sm font-semibold" style={subtleTextStyle}>
+                  <td colSpan={isAllClientsView ? 6 : 5} className="text-center py-14 text-sm font-semibold" style={subtleTextStyle}>
                     Loading members...
                   </td>
                 </tr>
               ) : membersError ? (
                 <tr>
-                  <td colSpan={isAllClientsView ? 5 : 4} className="text-center py-14 text-sm text-red-500 font-semibold">
+                  <td colSpan={isAllClientsView ? 6 : 5} className="text-center py-14 text-sm text-red-500 font-semibold">
                     {membersError}
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={isAllClientsView ? 5 : 4} className="text-center py-14 text-sm font-semibold" style={subtleTextStyle}>
+                  <td colSpan={isAllClientsView ? 6 : 5} className="text-center py-14 text-sm font-semibold" style={subtleTextStyle}>
                     {memberSearchTerm && visibleMembers.length > 0 ? "No members match your search." : "No members yet — add one above."}
                   </td>
                 </tr>
@@ -852,6 +893,10 @@ export default function AdminMembersPage() {
                     {/* Role badge */}
                     <td className="px-4 py-4">
                       <RoleBadge role={m.role} />
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <p className="text-sm font-semibold" style={mutedTextStyle}>{m.entityName}</p>
                     </td>
 
                     {/* Client */}

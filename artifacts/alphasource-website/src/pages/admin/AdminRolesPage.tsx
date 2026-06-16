@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, FileText, Copy, Trash2, Upload } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -215,6 +216,7 @@ export default function AdminRolesPage() {
   const [rolesError, setRolesError] = useState<string>("");
   const [roleSearch, setRoleSearch] = useState("");
   const [roleStatusFilter, setRoleStatusFilter] = useState<RoleStatusFilter>("active");
+  const [entityFilter, setEntityFilter] = useState<EntityFilterValue>("parent");
   const [actionNotice, setActionNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [openingJd, setOpeningJd] = useState<Record<string, boolean>>({});
   const [loadingRubric, setLoadingRubric] = useState<Record<string, boolean>>({});
@@ -227,6 +229,14 @@ export default function AdminRolesPage() {
   const [roleDeleteConfirm, setRoleDeleteConfirm] = useState<{ role: Role } | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [form, setForm] = useState({ title: "", type: "Basic", jdFileName: "" });
+  const hierarchyClients = useMemo(
+    () => adminClients.filter((client) => client.id !== "all"),
+    [adminClients],
+  );
+  const entityOptions = useMemo(
+    () => buildEntityFilterOptions(hierarchyClients, selectedClientId),
+    [hierarchyClients, selectedClientId],
+  );
 
   const clientById = useMemo<Record<string, AdminClient>>(
     () =>
@@ -249,6 +259,10 @@ export default function AdminRolesPage() {
     setRoleStatusConfirm(null);
     setRoleDeleteConfirm(null);
   }, [selectedClientId]);
+
+  useEffect(() => {
+    setEntityFilter(defaultEntityFilterValue(hierarchyClients, selectedClientId));
+  }, [hierarchyClients, selectedClientId]);
 
   const getSessionToken = async (): Promise<string> => {
     const {
@@ -290,13 +304,11 @@ export default function AdminRolesPage() {
         const token = String(session?.access_token || "").trim();
         if (!token) throw new Error("Missing session token.");
 
-        const isAllClients = selectedClientId === "all";
-        const statusParam = `status=${encodeURIComponent(roleStatusFilter)}`;
-        const url = isAllClients
-          ? `${backendBase}/admin/roles?${statusParam}`
-          : `${backendBase}/admin/roles?client_id=${encodeURIComponent(selectedClientId)}&${statusParam}`;
+        const params = new URLSearchParams({ status: roleStatusFilter });
+        if (selectedClientId !== "all") params.set("client_id", selectedClientId);
+        if (entityOptions.length > 0) params.set("entity_filter", entityFilterQueryValue(entityFilter));
 
-        const response = await fetch(url, {
+        const response = await fetch(`${backendBase}/admin/roles?${params.toString()}`, {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
           credentials: "omit",
@@ -318,7 +330,7 @@ export default function AdminRolesPage() {
             const owningClient = clientById[roleClientId];
             const parentClientId = String(owningClient?.parent_client_id || "").trim();
             const isChildClient = owningClient?.is_child_client === true || Boolean(parentClientId);
-            const entityName = String(owningClient?.name || "").trim() || "—";
+            const entityName = String(item.entity_name || owningClient?.name || "").trim() || "—";
             const parentClientName = String(
               isChildClient
                 ? (owningClient?.parent_client_name || clientById[parentClientId]?.name || "")
@@ -371,7 +383,7 @@ export default function AdminRolesPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, adminClientsLoading, adminClientsError, clientById, roleStatusFilter, refreshNonce]);
+  }, [selectedClientId, adminClientsLoading, adminClientsError, clientById, roleStatusFilter, entityFilter, entityOptions.length, refreshNonce]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -379,9 +391,7 @@ export default function AdminRolesPage() {
   };
 
   /* Filter by selected client */
-  const filteredByClient = selectedClientId === "all"
-    ? roles
-    : roles.filter((r) => r.clientId === selectedClientId);
+  const filteredByClient = roles;
 
   const roleSearchTerm = roleSearch.trim().toLowerCase();
   const filtered = roleSearchTerm
@@ -857,6 +867,24 @@ export default function AdminRolesPage() {
             ))}
           </div>
         </div>
+        {entityOptions.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Entity</label>
+            <div className="relative">
+              <select
+                value={entityFilter}
+                onChange={(event) => setEntityFilter(event.target.value)}
+                className="appearance-none w-44 px-4 py-2 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                style={fieldSurfaceStyle}
+              >
+                {entityOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
+            </div>
+          </div>
+        )}
         {roleSearch && (
           <button
             type="button"
