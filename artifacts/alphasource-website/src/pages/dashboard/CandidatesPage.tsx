@@ -1833,9 +1833,9 @@ export default function CandidatesPage() {
                 {/* Expand toggle — not sortable */}
                 <th className="w-10 px-4 py-3.5" />
 
-                <Th col="name"      label="Candidate" className="w-[28%] min-w-[14rem]" />
-                <Th col="entity"    label="Entity"    className="hidden lg:table-cell w-[14%] min-w-[9rem]" />
-                <Th col="role"      label="Role"      className="hidden lg:table-cell w-[16%] min-w-[10rem]" />
+                <Th col="name"      label="Candidate" className="w-[22%] min-w-[11rem]" />
+                <Th col="entity"    label="Entity"    className="hidden lg:table-cell w-[13%] min-w-[8rem]" />
+                <Th col="role"      label="Role"      className="hidden lg:table-cell w-[15%] min-w-[9rem]" />
                 <Th col="resume"    label="Resume"    tooltip="Resume score based on role/JD alignment across experience, skills, education, and overall resume fit." />
                 <Th col="interview" label="Interview" tooltip="Interview score based on recorded interview responses and available supporting analysis. Dash means unavailable or insufficient evidence." />
                 <Th col="overall"   label="Overall"   tooltip="Combined candidate score from resume and interview signals when both are available." />
@@ -1898,19 +1898,21 @@ export default function CandidatesPage() {
                         </td>
 
                         {/* Candidate */}
-                        <td className="px-4 py-4 w-[28%] min-w-[14rem]">
-                          <p className="font-bold text-sm leading-snug break-words" style={primaryTextStyle}>{c.name}</p>
-                          <p className="text-[11px] mt-1 leading-snug break-all" style={subtleTextStyle}>{c.email}</p>
+                        <td className="px-4 py-4 w-[22%] min-w-[11rem]">
+                          <div className="min-w-0 max-w-[12rem]">
+                            <p className="font-bold text-sm leading-snug truncate" style={primaryTextStyle}>{c.name}</p>
+                            <p className="text-[11px] mt-1 leading-snug truncate" style={subtleTextStyle} title={c.email}>{c.email}</p>
+                          </div>
                         </td>
 
                         {/* Entity */}
-                        <td className="px-4 py-4 hidden lg:table-cell w-[14%] min-w-[9rem]">
-                          <span className="block text-sm font-semibold leading-snug break-words" style={mutedTextStyle}>{c.entityName || "—"}</span>
+                        <td className="px-4 py-4 hidden lg:table-cell w-[13%] min-w-[8rem]">
+                          <span className="block text-xs font-semibold leading-snug break-words" style={mutedTextStyle}>{c.entityName || "—"}</span>
                         </td>
 
                         {/* Role */}
-                        <td className="px-4 py-4 hidden lg:table-cell w-[16%] min-w-[10rem]">
-                          <span className="block text-sm font-semibold leading-snug break-words" style={mutedTextStyle}>{c.role}</span>
+                        <td className="px-4 py-4 hidden lg:table-cell w-[15%] min-w-[9rem]">
+                          <span className="block text-xs font-semibold leading-snug break-words" style={mutedTextStyle}>{c.role}</span>
                         </td>
 
                         {/* Resume score */}
