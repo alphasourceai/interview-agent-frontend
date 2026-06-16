@@ -333,7 +333,7 @@ export default function AutomationApprovalPage({ params }: AutomationApprovalPag
             <StateCard
               icon={<CheckCircle2 className="h-6 w-6" />}
               title="Approved"
-              body="This candidate is approved for the next step. Candidate outreach remains controlled separately."
+              body="Candidate approved. This older link does not send the scheduling email."
               tone="success"
             />
           )}
@@ -342,7 +342,7 @@ export default function AutomationApprovalPage({ params }: AutomationApprovalPag
             <StateCard
               icon={<XCircle className="h-6 w-6" />}
               title="Not approved"
-              body="This candidate will not move forward through this automation."
+              body="Candidate not approved."
               tone="warning"
             />
           )}
@@ -355,10 +355,10 @@ export default function AutomationApprovalPage({ params }: AutomationApprovalPag
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-black leading-tight text-[#0A1547]">
-                    Review candidate for next step
+                    Review candidate
                   </h1>
                   <p className="mt-3 text-sm leading-relaxed text-[#0A1547]/65">
-                    This candidate matched your automation settings. Review the information below and choose whether they should move forward.
+                    This is an older one-candidate review link. New approval emails now use a shared review page for all candidates.
                   </p>
                 </div>
               </div>
@@ -380,7 +380,7 @@ export default function AutomationApprovalPage({ params }: AutomationApprovalPag
               <div className="mt-6 rounded-2xl bg-[#F8F9FD] px-4 py-4 text-sm leading-relaxed text-[#0A1547]/68">
                 <p>Scores help organize the review, but hiring decisions stay with your team.</p>
                 <p className="mt-2 font-bold text-[#0A1547]">
-                  Approving does not email the candidate from this page. Candidate outreach remains controlled separately.
+                  Approving from this older link marks the candidate approved, but it does not send the scheduling email. If you expected to send the scheduling email, use the latest Review candidates link from your approval email.
                 </p>
               </div>
 
