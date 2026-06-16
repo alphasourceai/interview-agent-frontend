@@ -1833,10 +1833,9 @@ export default function CandidatesPage() {
                 {/* Expand toggle — not sortable */}
                 <th className="w-10 px-4 py-3.5" />
 
-                <Th col="name"      label="Name" />
-                <Th col="email"     label="Email"     className="hidden md:table-cell" />
-                <Th col="entity"    label="Entity"    className="hidden lg:table-cell" />
-                <Th col="role"      label="Role"      className="hidden lg:table-cell" />
+                <Th col="name"      label="Candidate" className="w-[28%] min-w-[14rem]" />
+                <Th col="entity"    label="Entity"    className="hidden lg:table-cell w-[14%] min-w-[9rem]" />
+                <Th col="role"      label="Role"      className="hidden lg:table-cell w-[16%] min-w-[10rem]" />
                 <Th col="resume"    label="Resume"    tooltip="Resume score based on role/JD alignment across experience, skills, education, and overall resume fit." />
                 <Th col="interview" label="Interview" tooltip="Interview score based on recorded interview responses and available supporting analysis. Dash means unavailable or insufficient evidence." />
                 <Th col="overall"   label="Overall"   tooltip="Combined candidate score from resume and interview signals when both are available." />
@@ -1846,19 +1845,19 @@ export default function CandidatesPage() {
             <tbody>
               {clientLoading || candidatesLoading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
+                  <td colSpan={8} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
                     Loading candidates...
                   </td>
                 </tr>
               ) : clientError || candidatesError ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-sm text-red-500 font-semibold">
+                  <td colSpan={8} className="text-center py-12 text-sm text-red-500 font-semibold">
                     {clientError || candidatesError}
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
+                  <td colSpan={8} className="text-center py-12 text-sm font-semibold" style={subtleTextStyle}>
                     {candidates.length === 0 ? "No candidates yet." : "No candidates match your filters."}
                   </td>
                 </tr>
@@ -1898,25 +1897,20 @@ export default function CandidatesPage() {
                           </button>
                         </td>
 
-                        {/* Name */}
-                        <td className="px-4 py-4">
-                          <p className="font-bold text-sm leading-snug" style={primaryTextStyle}>{c.name}</p>
-                          <p className="text-[11px] mt-0.5 md:hidden" style={subtleTextStyle}>{c.email}</p>
+                        {/* Candidate */}
+                        <td className="px-4 py-4 w-[28%] min-w-[14rem]">
+                          <p className="font-bold text-sm leading-snug break-words" style={primaryTextStyle}>{c.name}</p>
+                          <p className="text-[11px] mt-1 leading-snug break-all" style={subtleTextStyle}>{c.email}</p>
                         </td>
 
-                        {/* Email */}
-                        <td className="px-4 py-4 hidden md:table-cell">
-                          <span className="text-sm font-medium" style={mutedTextStyle}>{c.email}</span>
-                        </td>
-
-                        {/* Role */}
-                        <td className="px-4 py-4 hidden lg:table-cell">
-                          <span className="text-sm font-semibold" style={mutedTextStyle}>{c.entityName || "—"}</span>
+                        {/* Entity */}
+                        <td className="px-4 py-4 hidden lg:table-cell w-[14%] min-w-[9rem]">
+                          <span className="block text-sm font-semibold leading-snug break-words" style={mutedTextStyle}>{c.entityName || "—"}</span>
                         </td>
 
                         {/* Role */}
-                        <td className="px-4 py-4 hidden lg:table-cell">
-                          <span className="text-sm font-semibold" style={mutedTextStyle}>{c.role}</span>
+                        <td className="px-4 py-4 hidden lg:table-cell w-[16%] min-w-[10rem]">
+                          <span className="block text-sm font-semibold leading-snug break-words" style={mutedTextStyle}>{c.role}</span>
                         </td>
 
                         {/* Resume score */}
@@ -1955,7 +1949,7 @@ export default function CandidatesPage() {
                       {/* Expanded panel */}
                       {isExpanded && (
                         <tr className={!isLast ? "border-b" : ""} style={!isLast ? dividerStyle : undefined}>
-                          <td colSpan={9} className="p-0">
+                          <td colSpan={8} className="p-0">
                             <ExpandedPanel
                               c={c}
                               onRefresh={refreshCandidatesFromRow}
