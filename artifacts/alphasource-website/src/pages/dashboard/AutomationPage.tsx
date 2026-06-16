@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, Loader2, Save } from "lucide-react";
+import { CheckCircle2, ChevronDown, Loader2, Save, X } from "lucide-react";
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
+import InfoTooltip from "@/components/InfoTooltip";
 import { useClient } from "@/context/ClientContext";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -65,6 +66,13 @@ interface ClientRoleOption {
   title: string;
 }
 
+interface ClientMemberOption {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface AutomationRule {
   id: string;
   name: string;
@@ -83,6 +91,60 @@ interface AutomationRule {
 
 const ACTION_TYPE_SECOND_ROUND = "send_second_round_scheduling_email";
 const DEFAULT_RULE_NAME = "Automation rule";
+const DEFAULT_SCHEDULING_LABEL = "Schedule Your Interview";
+const DEFAULT_APPROVAL_TIMEZONE = "America/Denver";
+const DEFAULT_SEND_TIME = "08:00";
+
+const usTimezoneOptions = [
+  { value: "America/New_York", label: "Eastern" },
+  { value: "America/Chicago", label: "Central" },
+  { value: "America/Denver", label: "Mountain" },
+  { value: "America/Los_Angeles", label: "Pacific" },
+  { value: "America/Anchorage", label: "Alaska" },
+  { value: "Pacific/Honolulu", label: "Hawaii" },
+];
+
+const sendTimeOptions = [
+  "06:00",
+  "06:30",
+  "07:00",
+  "07:30",
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "12:00",
+  "12:30",
+  "13:00",
+  "13:30",
+  "14:00",
+  "14:30",
+  "15:00",
+  "15:30",
+  "16:00",
+  "16:30",
+  "17:00",
+  "17:30",
+  "18:00",
+];
+
+const weekdayOptions = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+];
+
+const frequencyOptions = [
+  { value: "daily", label: "Daily" },
+  { value: "weekdays", label: "Weekdays" },
+  { value: "weekly", label: "Weekly" },
+];
 
 const surfaceCardStyle = {
   backgroundColor: "var(--as-surface)",
@@ -151,20 +213,13 @@ const criteriaLabels: Record<string, { label: string; help: string }> = {
   },
   allow_resume_only: {
     label: "Allow resume-only matching",
-    help: "Permit matching when interview or overall thresholds are not part of the rule.",
+    help: "Permit matching when interview or overall thresholds are not part of this automation.",
   },
   require_sufficient_content: {
     label: "Require sufficient content",
-    help: "Require enough candidate content before the rule can identify a candidate for approval.",
+    help: "Require enough candidate content before a candidate can be sent for approval.",
   },
 };
-const criteriaOrder = [
-  "min_overall_score",
-  "min_resume_score",
-  "min_interview_score",
-  "allow_resume_only",
-  "require_sufficient_content",
-];
 const scoreCriteriaKeys = [
   "min_overall_score",
   "min_resume_score",
@@ -218,6 +273,35 @@ function toClientRoles(value: unknown): ClientRoleOption[] {
     .filter((item) => Boolean(item.id));
 }
 
+function toMemberRole(value: unknown): string {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "manager" || normalized === "admin") return "Manager";
+  return "Member";
+}
+
+function fallbackNameFromEmail(email: string): string {
+  const local = String(email || "").split("@")[0] || "";
+  return local.trim() || "Unnamed Member";
+}
+
+function toClientMembers(value: unknown): ClientMemberOption[] {
+  return responseItems(value)
+    .filter((item): item is Record<string, unknown> => isRecord(item))
+    .map((item, index) => {
+      const email = String(item.email || "").trim().toLowerCase();
+      const rawId = item.id ?? item.user_id ?? email;
+      const id = String(rawId || "").trim() || `member-${index + 1}`;
+      const name = collapseWhitespace(String(item.name || "").trim()) || fallbackNameFromEmail(email);
+      return {
+        id,
+        name,
+        email,
+        role: toMemberRole(item.role),
+      };
+    })
+    .filter((item) => Boolean(item.email) && isValidEmail(item.email));
+}
+
 function toAutomationRule(value: unknown): AutomationRule | null {
   if (!isRecord(value)) return null;
   const id = String(value.id || "").trim();
@@ -250,6 +334,20 @@ function toAutomationRules(value: unknown): AutomationRule[] {
 function toSavedRule(value: unknown): AutomationRule | null {
   if (!isRecord(value)) return toAutomationRule(value);
   return toAutomationRule(isRecord(value.item) ? value.item : value);
+}
+
+function ruleTimestamp(rule: AutomationRule): number {
+  const updated = Date.parse(String(rule.updated_at || ""));
+  if (Number.isFinite(updated)) return updated;
+  const created = Date.parse(String(rule.created_at || ""));
+  return Number.isFinite(created) ? created : 0;
+}
+
+function ruleForRole(rules: AutomationRule[], roleId: string): AutomationRule | null {
+  const matches = rules
+    .filter((rule) => rule.role_id === roleId && !rule.archived_at)
+    .sort((a, b) => ruleTimestamp(b) - ruleTimestamp(a) || b.id.localeCompare(a.id));
+  return matches[0] || null;
 }
 
 function titleCase(value: string): string {
@@ -308,6 +406,11 @@ function collapseWhitespace(value: string): string {
   return value.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function generatedRuleName(roleTitle: string): string {
+  const cleanTitle = collapseWhitespace(roleTitle);
+  return cleanTitle ? `Second-round review - ${cleanTitle}` : DEFAULT_RULE_NAME;
+}
+
 function parseScoreValue(value: CriteriaValue | undefined): number | null {
   const text = String(value ?? "").trim();
   if (!text) return null;
@@ -315,15 +418,14 @@ function parseScoreValue(value: CriteriaValue | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
-function splitRecipientEmails(value: string): string[] {
+function normalizeEmailList(values: unknown[]): string[] {
   const seen = new Set<string>();
   const emails: string[] = [];
-  value
-    .split(/[\n,]+/)
-    .map((email) => email.trim().toLowerCase())
+  values
+    .map((email) => String(email || "").trim().toLowerCase())
     .filter(Boolean)
     .forEach((email) => {
-      if (seen.has(email)) return;
+      if (seen.has(email) || !isValidEmail(email)) return;
       seen.add(email);
       emails.push(email);
     });
@@ -343,6 +445,25 @@ function isValidHttpUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function getCurrentAppOrigin(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.origin.replace(/\/+$/, "");
+}
+
+function safeTimezone(value: unknown): string {
+  const normalized = String(value || "").trim();
+  return usTimezoneOptions.some((item) => item.value === normalized)
+    ? normalized
+    : DEFAULT_APPROVAL_TIMEZONE;
+}
+
+function safeSendTime(value: unknown): string {
+  const normalized = String(value || "").trim();
+  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(normalized) && sendTimeOptions.includes(normalized)
+    ? normalized
+    : DEFAULT_SEND_TIME;
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -374,6 +495,9 @@ export default function AutomationPage() {
   const [roles, setRoles] = useState<ClientRoleOption[]>([]);
   const [rolesLoading, setRolesLoading] = useState(false);
   const [rolesError, setRolesError] = useState("");
+  const [members, setMembers] = useState<ClientMemberOption[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersError, setMembersError] = useState("");
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [rulesLoading, setRulesLoading] = useState(false);
   const [rulesError, setRulesError] = useState("");
@@ -382,27 +506,18 @@ export default function AutomationPage() {
   const [saving, setSaving] = useState(false);
   const [actionNotice, setActionNotice] = useState<Notice | null>(null);
   const [ruleEnabled, setRuleEnabled] = useState(false);
-  const [ruleName, setRuleName] = useState("");
   const [criteriaValues, setCriteriaValues] = useState<Record<string, CriteriaValue>>({});
   const [selectedActionType, setSelectedActionType] = useState("");
   const [schedulingUrl, setSchedulingUrl] = useState("");
   const [schedulingLabel, setSchedulingLabel] = useState("");
-  const [digestEnabled, setDigestEnabled] = useState(false);
-  const [recipientEmails, setRecipientEmails] = useState("");
-  const [approvalBaseUrl, setApprovalBaseUrl] = useState("");
-  const [timezone, setTimezone] = useState("America/Denver");
-  const [sendTimeLocal, setSendTimeLocal] = useState("08:00");
+  const [selectedRecipientEmails, setSelectedRecipientEmails] = useState<string[]>([]);
+  const [timezone, setTimezone] = useState(DEFAULT_APPROVAL_TIMEZONE);
+  const [sendTimeLocal, setSendTimeLocal] = useState(DEFAULT_SEND_TIME);
   const [frequency, setFrequency] = useState("daily");
   const [weeklyDay, setWeeklyDay] = useState("monday");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const criteriaFields = options?.criteria_config?.fields || {};
-  const criteriaKeys = useMemo(() => {
-    const configured = new Set(Object.keys(criteriaFields));
-    return [
-      ...criteriaOrder.filter((key) => configured.has(key)),
-      ...Object.keys(criteriaFields).filter((key) => !criteriaOrder.includes(key)),
-    ];
-  }, [criteriaFields]);
   const actionTypes = options?.action_config?.action_types || [];
   const defaultActionType = actionTypes.find((item) => item.value === ACTION_TYPE_SECOND_ROUND)?.value || actionTypes[0]?.value || ACTION_TYPE_SECOND_ROUND;
   const selectedAction = actionTypes.find((item) => item.value === selectedActionType) || actionTypes[0] || null;
@@ -410,67 +525,79 @@ export default function AutomationPage() {
   const labelMaxLength = actionFields.second_round_scheduling_label?.max_length || 80;
   const digestOptions = options?.digest_config?.pending_approval_digest || {};
   const recipientLimit = digestOptions.recipient_limit || 10;
-  const frequencies = digestOptions.frequencies || [];
-  const weeklyDays = digestOptions.weekly_days || [];
-  const sendTimeFormat = digestOptions.send_time_local_format || "HH:MM";
   const safety = options?.safety || {};
-  const recipientList = useMemo(() => splitRecipientEmails(recipientEmails), [recipientEmails]);
+  const recipientList = useMemo(
+    () => normalizeEmailList(selectedRecipientEmails),
+    [selectedRecipientEmails],
+  );
   const recipientCount = recipientList.length;
-  const numberCriteriaKeys = criteriaKeys.filter((key) => criteriaFields[key]?.type !== "boolean");
-  const booleanCriteriaKeys = criteriaKeys.filter((key) => criteriaFields[key]?.type === "boolean");
   const selectedRule = rules.find((rule) => rule.id === selectedRuleId) || null;
-  const isEditingSavedRule = Boolean(selectedRuleId);
+  const selectedRole = roles.find((role) => role.id === selectedRoleId) || null;
+  const generatedName = generatedRuleName(selectedRole?.title || "");
+  const configDisabled = !ruleEnabled;
+  const memberByEmail = useMemo(
+    () => new Map(members.map((member) => [member.email, member])),
+    [members],
+  );
+  const selectedRecipients = recipientList.map((email) => {
+    const member = memberByEmail.get(email);
+    return member || { id: email, name: fallbackNameFromEmail(email), email, role: "Member" };
+  });
+  const availableRecipientMembers = members.filter(
+    (member) => !recipientList.includes(member.email),
+  );
   const blockingError = error || clientError;
   const isInitialLoading = loading || clientLoading;
 
   const resetDraftForm = useCallback((roleId = "") => {
-    const nextFrequency = String(digestOptions.default_frequency || frequencies[0]?.value || "daily");
+    const configuredFrequency = String(digestOptions.default_frequency || "daily");
+    const nextFrequency = frequencyOptions.some((item) => item.value === configuredFrequency)
+      ? configuredFrequency
+      : "daily";
     setSelectedRuleId("");
     setSelectedRoleId(roleId);
     setRuleEnabled(false);
-    setRuleName("");
     setCriteriaValues(getInitialCriteriaValues(criteriaFields));
     setSelectedActionType(defaultActionType);
     setSchedulingUrl("");
-    setSchedulingLabel("");
-    setDigestEnabled(false);
-    setRecipientEmails("");
-    setApprovalBaseUrl("");
-    setTimezone(String(digestOptions.default_timezone || "America/Denver"));
-    setSendTimeLocal("08:00");
+    setSchedulingLabel(DEFAULT_SCHEDULING_LABEL);
+    setSelectedRecipientEmails([]);
+    setTimezone(safeTimezone(digestOptions.default_timezone));
+    setSendTimeLocal(DEFAULT_SEND_TIME);
     setFrequency(nextFrequency);
-    setWeeklyDay(String(weeklyDays[0] || "monday"));
-  }, [criteriaFields, defaultActionType, digestOptions.default_frequency, digestOptions.default_timezone, frequencies, weeklyDays]);
+    setWeeklyDay("monday");
+    setAdvancedOpen(false);
+  }, [criteriaFields, defaultActionType, digestOptions.default_frequency, digestOptions.default_timezone]);
 
   const populateFormFromRule = useCallback((rule: AutomationRule) => {
     const actionConfig = isRecord(rule.action_config) ? rule.action_config : {};
     const pendingDigest = getPendingDigest(rule);
     const configuredFrequency = stringField(pendingDigest.frequency);
-    const supportedFrequencies = frequencies.map((item) => item.value);
     const nextFrequency =
-      configuredFrequency && (supportedFrequencies.length === 0 || supportedFrequencies.includes(configuredFrequency))
+      configuredFrequency && frequencyOptions.some((item) => item.value === configuredFrequency)
         ? configuredFrequency
-        : String(digestOptions.default_frequency || frequencies[0]?.value || "daily");
-    const recipientEmailsValue = Array.isArray(pendingDigest.recipient_emails)
-      ? pendingDigest.recipient_emails.map((email) => String(email || "").trim()).filter(Boolean).join("\n")
-      : "";
+        : "daily";
 
     setSelectedRuleId(rule.id);
     setSelectedRoleId(rule.role_id);
     setRuleEnabled(rule.enabled === true);
-    setRuleName(rule.name || DEFAULT_RULE_NAME);
     setCriteriaValues(criteriaValuesFromRule(criteriaFields, rule));
     setSelectedActionType(defaultActionType);
     setSchedulingUrl(stringField(actionConfig.second_round_scheduling_url));
-    setSchedulingLabel(stringField(actionConfig.second_round_scheduling_label).slice(0, labelMaxLength));
-    setDigestEnabled(pendingDigest.enabled === true);
-    setRecipientEmails(recipientEmailsValue);
-    setApprovalBaseUrl(stringField(pendingDigest.approval_base_url));
-    setTimezone(stringField(pendingDigest.timezone) || String(digestOptions.default_timezone || "America/Denver"));
-    setSendTimeLocal(stringField(pendingDigest.send_time_local) || "08:00");
+    setSchedulingLabel(
+      (stringField(actionConfig.second_round_scheduling_label) || DEFAULT_SCHEDULING_LABEL).slice(0, labelMaxLength),
+    );
+    setSelectedRecipientEmails(
+      Array.isArray(pendingDigest.recipient_emails)
+        ? normalizeEmailList(pendingDigest.recipient_emails)
+        : [],
+    );
+    setTimezone(safeTimezone(pendingDigest.timezone || digestOptions.default_timezone));
+    setSendTimeLocal(safeSendTime(pendingDigest.send_time_local));
     setFrequency(nextFrequency);
-    setWeeklyDay(stringField(pendingDigest.weekly_day) || String(weeklyDays[0] || "monday"));
-  }, [criteriaFields, defaultActionType, digestOptions.default_frequency, digestOptions.default_timezone, frequencies, labelMaxLength, weeklyDays]);
+    setWeeklyDay(weekdayOptions.includes(stringField(pendingDigest.weekly_day)) ? stringField(pendingDigest.weekly_day) : "monday");
+    setAdvancedOpen(false);
+  }, [criteriaFields, defaultActionType, digestOptions.default_timezone, labelMaxLength]);
 
   const loadOptions = useCallback(async () => {
     if (!backendBase) {
@@ -499,15 +626,14 @@ export default function AutomationPage() {
       const parsedCriteriaFields = parsed.criteria_config?.fields || {};
       const parsedActionTypes = parsed.action_config?.action_types || [];
       const parsedDigestOptions = parsed.digest_config?.pending_approval_digest || {};
-      const parsedFrequencies = parsedDigestOptions.frequencies || [];
-      const parsedWeeklyDays = parsedDigestOptions.weekly_days || [];
+      const parsedFrequency = String(parsedDigestOptions.default_frequency || "daily");
 
       setOptions(parsed);
       setCriteriaValues(getInitialCriteriaValues(parsedCriteriaFields));
       setSelectedActionType(parsedActionTypes.find((item) => item.value === ACTION_TYPE_SECOND_ROUND)?.value || parsedActionTypes[0]?.value || ACTION_TYPE_SECOND_ROUND);
-      setTimezone(String(parsedDigestOptions.default_timezone || "America/Denver"));
-      setFrequency(String(parsedDigestOptions.default_frequency || parsedFrequencies[0]?.value || "daily"));
-      setWeeklyDay(String(parsedWeeklyDays[0] || "monday"));
+      setTimezone(safeTimezone(parsedDigestOptions.default_timezone));
+      setFrequency(frequencyOptions.some((item) => item.value === parsedFrequency) ? parsedFrequency : "daily");
+      setWeeklyDay("monday");
     } catch (loadError) {
       setOptions(null);
       setError(loadError instanceof Error ? loadError.message : "Failed to load automation options.");
@@ -595,6 +721,67 @@ export default function AutomationPage() {
   useEffect(() => {
     let alive = true;
 
+    const loadMembers = async () => {
+      if (clientLoading) return;
+      if (clientError) {
+        if (!alive) return;
+        setMembers([]);
+        setMembersError(clientError);
+        setMembersLoading(false);
+        return;
+      }
+      if (!selectedClientId) {
+        if (!alive) return;
+        setMembers([]);
+        setMembersError("");
+        setMembersLoading(false);
+        return;
+      }
+      if (!backendBase) {
+        if (!alive) return;
+        setMembers([]);
+        setMembersError("Missing backend base URL configuration.");
+        setMembersLoading(false);
+        return;
+      }
+
+      if (!alive) return;
+      setMembersLoading(true);
+      setMembersError("");
+
+      try {
+        const token = await getSessionToken();
+        const response = await fetch(
+          `${backendBase}/client-members?client_id=${encodeURIComponent(selectedClientId)}`,
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "omit",
+          },
+        );
+        const text = await response.text();
+        if (!response.ok) throw new Error(extractErrorMessage(text, "Failed to load team members."));
+
+        if (!alive) return;
+        setMembers(toClientMembers(parseJsonSafe(text)));
+      } catch (loadError) {
+        if (!alive) return;
+        setMembers([]);
+        setMembersError(loadError instanceof Error ? loadError.message : "Failed to load team members.");
+      } finally {
+        if (alive) setMembersLoading(false);
+      }
+    };
+
+    void loadMembers();
+    return () => {
+      alive = false;
+    };
+  }, [clientError, clientLoading, selectedClientId]);
+
+  useEffect(() => {
+    let alive = true;
+
     const loadRules = async () => {
       if (clientLoading) return;
       if (clientError) {
@@ -634,14 +821,14 @@ export default function AutomationPage() {
           },
         );
         const text = await response.text();
-        if (!response.ok) throw new Error(extractErrorMessage(text, "Failed to load automation rules."));
+        if (!response.ok) throw new Error(extractErrorMessage(text, "Failed to load saved automation settings."));
 
         if (!alive) return;
         setRules(toAutomationRules(parseJsonSafe(text)));
       } catch (loadError) {
         if (!alive) return;
         setRules([]);
-        setRulesError(loadError instanceof Error ? loadError.message : "Failed to load automation rules.");
+        setRulesError(loadError instanceof Error ? loadError.message : "Failed to load saved automation settings.");
       } finally {
         if (alive) setRulesLoading(false);
       }
@@ -653,11 +840,34 @@ export default function AutomationPage() {
     };
   }, [clientError, clientLoading, selectedClientId]);
 
+  const selectRoleAutomation = useCallback((roleId: string) => {
+    setActionNotice(null);
+    if (!roleId) {
+      resetDraftForm("");
+      return;
+    }
+    const existingRule = ruleForRole(rules, roleId);
+    if (existingRule) {
+      populateFormFromRule(existingRule);
+      return;
+    }
+    resetDraftForm(roleId);
+  }, [populateFormFromRule, resetDraftForm, rules]);
+
+  useEffect(() => {
+    if (!selectedRoleId || rulesLoading) return;
+    const existingRule = ruleForRole(rules, selectedRoleId);
+    if (existingRule && existingRule.id !== selectedRuleId) {
+      populateFormFromRule(existingRule);
+    }
+  }, [populateFormFromRule, rules, rulesLoading, selectedRoleId, selectedRuleId]);
+
   const validateForm = () => {
-    const normalizedName = collapseWhitespace(ruleName);
-    if (!selectedClientId) return { error: "Select a client before saving an automation rule." };
-    if (!selectedRoleId) return { error: "Select a role before saving an automation rule." };
-    if (!normalizedName) return { error: "Rule name is required." };
+    const normalizedName = generatedName;
+    if (!selectedClientId) return { error: "Select a client before saving this automation." };
+    if (!selectedRoleId) return { error: "Select a role before saving this automation." };
+    if (!selectedRole) return { error: "Select a valid role before saving this automation." };
+    if (!normalizedName) return { error: "Automation settings could not be prepared for this role." };
 
     for (const key of scoreCriteriaKeys) {
       const parsed = parseScoreValue(criteriaValues[key]);
@@ -667,52 +877,68 @@ export default function AutomationPage() {
       }
     }
 
-    if (!isValidHttpUrl(schedulingUrl)) {
-      return { error: "Scheduling URL must be blank or a valid http/https URL." };
+    if (!schedulingUrl.trim()) {
+      return { error: "Scheduling URL is required before saving this automation." };
     }
-    if (!isValidHttpUrl(approvalBaseUrl)) {
-      return { error: "Approval base URL must be blank or a valid http/https URL." };
+    if (!isValidHttpUrl(schedulingUrl)) {
+      return { error: "Scheduling URL must be a valid http/https URL." };
+    }
+
+    const approvalBaseUrl = getCurrentAppOrigin();
+    if (!approvalBaseUrl || !isValidHttpUrl(approvalBaseUrl)) {
+      return { error: "A valid approval link base URL is required before saving." };
     }
 
     const invalidEmail = recipientList.find((email) => !isValidEmail(email));
     if (invalidEmail) return { error: `Recipient email is invalid: ${invalidEmail}` };
+    if (recipientList.length === 0) {
+      return { error: "Choose at least one approval recipient." };
+    }
     if (recipientList.length > recipientLimit) {
-      return { error: `Recipient emails must include ${recipientLimit} or fewer addresses.` };
+      return { error: `Approval recipients must include ${recipientLimit} or fewer people.` };
     }
 
     if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(sendTimeLocal)) {
       return { error: "Send time must use HH:MM 24-hour format." };
     }
 
-    const supportedFrequencies = frequencies.map((item) => item.value).filter(Boolean);
-    const allowedFrequencies = supportedFrequencies.length > 0 ? supportedFrequencies : ["daily"];
+    const allowedFrequencies = frequencyOptions.map((item) => item.value);
     if (!allowedFrequencies.includes(frequency)) {
       return { error: "Frequency is not supported by the backend." };
     }
     if (frequency === "weekly") {
       if (!weeklyDay) return { error: "Weekly day is required when frequency is weekly." };
-      if (weeklyDays.length > 0 && !weeklyDays.includes(weeklyDay)) {
+      if (!weekdayOptions.includes(weeklyDay)) {
         return { error: "Weekly day is not supported by the backend." };
       }
     }
 
-    return { error: "", normalizedName };
+    if (!usTimezoneOptions.some((item) => item.value === timezone)) {
+      return { error: "Choose a supported US timezone." };
+    }
+
+    return { error: "", normalizedName, approvalBaseUrl };
   };
 
-  const buildPayload = (normalizedName: string) => {
+  const buildPayload = (normalizedName: string, approvalBaseUrl: string) => {
+    const recipientNames = recipientList.reduce<Record<string, string>>((acc, email) => {
+      const member = memberByEmail.get(email);
+      const name = collapseWhitespace(member?.name || fallbackNameFromEmail(email)).slice(0, 120);
+      if (name) acc[email] = name;
+      return acc;
+    }, {});
     const criteria_config = {
       min_overall_score: parseScoreValue(criteriaValues.min_overall_score),
       min_resume_score: parseScoreValue(criteriaValues.min_resume_score),
       min_interview_score: parseScoreValue(criteriaValues.min_interview_score),
       allow_resume_only: criteriaValues.allow_resume_only === true,
-      require_sufficient_content: criteriaValues.require_sufficient_content === undefined
-        ? true
-        : criteriaValues.require_sufficient_content === true,
+      require_sufficient_content: true,
     };
     const pendingApprovalDigest: Record<string, unknown> = {
-      enabled: digestEnabled,
+      enabled: true,
       recipient_emails: recipientList,
-      approval_base_url: approvalBaseUrl.trim(),
+      recipient_names: recipientNames,
+      approval_base_url: approvalBaseUrl,
       send_time_local: sendTimeLocal.trim(),
       timezone: timezone.trim(),
       frequency,
@@ -739,7 +965,7 @@ export default function AutomationPage() {
 
     const validation = validateForm();
     if (validation.error || !validation.normalizedName) {
-      setActionNotice({ tone: "error", text: validation.error || "Automation rule could not be saved." });
+      setActionNotice({ tone: "error", text: validation.error || "Automation could not be saved." });
       return;
     }
     if (!backendBase) {
@@ -750,7 +976,7 @@ export default function AutomationPage() {
     setSaving(true);
     try {
       const token = await getSessionToken();
-      const basePayload = buildPayload(validation.normalizedName);
+      const basePayload = buildPayload(validation.normalizedName, validation.approvalBaseUrl);
       const isPatch = Boolean(selectedRuleId);
       const payload = isPatch
         ? basePayload
@@ -773,10 +999,10 @@ export default function AutomationPage() {
         body: JSON.stringify(payload),
       });
       const text = await response.text();
-      if (!response.ok) throw new Error(extractErrorMessage(text, "Failed to save automation rule."));
+      if (!response.ok) throw new Error(extractErrorMessage(text, "Failed to save automation."));
 
       const savedRule = toSavedRule(parseJsonSafe(text));
-      if (!savedRule) throw new Error("Automation rule save response was not recognized.");
+      if (!savedRule) throw new Error("Automation save response was not recognized.");
 
       setRules((current) => {
         const exists = current.some((rule) => rule.id === savedRule.id);
@@ -786,44 +1012,33 @@ export default function AutomationPage() {
       populateFormFromRule(savedRule);
       setActionNotice({
         tone: "success",
-        text: isPatch ? "Automation rule saved." : "Automation rule created.",
+        text: isPatch ? "Automation saved." : "Automation created.",
       });
     } catch (saveError) {
       setActionNotice({
         tone: "error",
-        text: saveError instanceof Error ? saveError.message : "Failed to save automation rule.",
+        text: saveError instanceof Error ? saveError.message : "Failed to save automation.",
       });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleRuleSelection = (ruleId: string) => {
-    setActionNotice(null);
-    if (!ruleId) {
-      resetDraftForm(selectedRoleId);
-      return;
-    }
-    const rule = rules.find((item) => item.id === ruleId);
-    if (rule) populateFormFromRule(rule);
-  };
-
   const handleRoleSelection = (roleId: string) => {
-    setActionNotice(null);
-    if (isEditingSavedRule) return;
-    setSelectedRoleId(roleId);
+    selectRoleAutomation(roleId);
   };
 
   const renderNumberCriteria = (key: string, field: ConfigField) => {
     const copy = criteriaLabels[key] || {
       label: titleCase(key),
-      help: "Backend-supported rule threshold.",
+      help: "Backend-supported automation threshold.",
     };
     const bounds = numericFieldBounds(field);
     return (
       <div key={key}>
-        <label className={fieldLabelCls} style={mutedTextStyle}>
+        <label className={`${fieldLabelCls} flex items-center gap-1`} style={mutedTextStyle}>
           {copy.label}
+          <InfoTooltip content={copy.help} side="bottom" />
         </label>
         <input
           type="number"
@@ -845,7 +1060,7 @@ export default function AutomationPage() {
   const renderBooleanCriteria = (key: string) => {
     const copy = criteriaLabels[key] || {
       label: titleCase(key),
-      help: "Backend-supported rule option.",
+      help: "Backend-supported automation option.",
     };
     return (
       <label
@@ -870,19 +1085,19 @@ export default function AutomationPage() {
   type SafetyKey = keyof NonNullable<AutomationConfigOptions["safety"]>;
   const safetyItems: Array<{ key?: SafetyKey; text: string }> = [
     {
-      text: "Saving a rule does not email candidates.",
+      text: "Saving this automation does not email candidates.",
     },
     {
       key: "digest_requires_approval",
-      text: "Matched candidates are routed for internal approval.",
+      text: "Matching candidates are gathered for your team to review.",
+    },
+    {
+      key: "digest_aggregates_by_recipient",
+      text: "Your team receives one approval email with qualified candidates.",
     },
     {
       key: "candidate_email_send_is_manual_after_approval",
-      text: "Candidate-facing outreach remains manual after approval.",
-    },
-    {
-      key: "scheduler_send_requires_env_flag",
-      text: "Scheduler controls are not available on this page.",
+      text: "Scores help organize the review, but hiring decisions stay with your team.",
     },
   ];
 
@@ -890,7 +1105,7 @@ export default function AutomationPage() {
     <DashboardLayout title="Automation">
       <CurrentScopeBanner client={selectedClient} />
 
-      <div className="mb-5">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
           <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>
             Candidate Automation
@@ -899,9 +1114,34 @@ export default function AutomationPage() {
             Automation
           </h2>
           <p className="text-sm leading-relaxed" style={mutedTextStyle}>
-            Configure supported rule options for identifying candidates for internal approval. Saving a rule does not email candidates.
+            Choose when candidates should be sent to your team for review before a second-round interview.
           </p>
         </div>
+        <label className="inline-flex items-center gap-3 rounded-2xl border px-4 py-3 shrink-0" style={compactSurfaceStyle}>
+          <span className="min-w-0">
+            <span className="flex items-center gap-1 text-xs font-black" style={primaryTextStyle}>
+              Automation on/off
+              <InfoTooltip content="Turns review automation on for the selected role. Saving settings here does not email candidates." side="bottom" />
+            </span>
+            <span className="block text-[11px] font-semibold mt-0.5" style={subtleTextStyle}>
+              {ruleEnabled ? "On for this role" : "Off for this role"}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={ruleEnabled}
+            onChange={(event) => setRuleEnabled(event.target.checked)}
+            className="sr-only"
+            aria-label="Automation on/off"
+          />
+          <span
+            className={`relative inline-flex h-7 w-12 rounded-full transition-colors ${ruleEnabled ? "bg-[#A380F6]" : "bg-slate-300 dark:bg-slate-700"}`}
+          >
+            <span
+              className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${ruleEnabled ? "translate-x-6" : "translate-x-1"}`}
+            />
+          </span>
+        </label>
       </div>
 
       {isInitialLoading && (
@@ -939,61 +1179,14 @@ export default function AutomationPage() {
             </div>
           )}
 
-          {rules.length > 0 && (
-            <section className="rounded-2xl p-4" style={compactSurfaceStyle}>
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:items-end">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Saved rules</p>
-                  <p className="text-sm font-black" style={primaryTextStyle}>
-                    {rules.length} rule{rules.length === 1 ? "" : "s"}
-                  </p>
-                </div>
-                <div>
-                  <label className={fieldLabelCls} style={mutedTextStyle}>Rule</label>
-                  <div className="relative">
-                    <select
-                      value={selectedRuleId}
-                      onChange={(event) => handleRuleSelection(event.target.value)}
-                      className={selectCls}
-                      style={fieldSurfaceStyle}
-                      disabled={rulesLoading}
-                    >
-                      <option value="">Create a new rule</option>
-                      {rules.map((rule) => {
-                        const roleTitle = roles.find((role) => role.id === rule.role_id)?.title || "Unknown role";
-                        return (
-                          <option key={rule.id} value={rule.id}>
-                            {rule.name} - {roleTitle}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {(rolesError || rulesError) && (
+          {(rolesError || membersError || rulesError) && (
             <div className={`${noticeCls} ${errorNoticeCls}`} role="status" aria-live="polite">
-              {rolesError || rulesError}
+              {rolesError || membersError || rulesError}
             </div>
           )}
 
           <section className="rounded-2xl p-5" style={surfaceCardStyle}>
-            <div className="flex flex-col gap-1 mb-4">
-              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Rule setup</p>
-              <h3 className="text-base font-black" style={primaryTextStyle}>
-                {selectedRule ? "Edit automation rule" : "Create automation rule"}
-              </h3>
-              {selectedRule?.updated_at && (
-                <p className="text-[11px] font-semibold" style={subtleTextStyle}>
-                  Last updated {formatDate(selectedRule.updated_at)}
-                </p>
-              )}
-            </div>
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1.4fr)_minmax(0,1fr)]">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end">
               <div>
                 <label className={fieldLabelCls} style={mutedTextStyle}>Role</label>
                 <div className="relative">
@@ -1002,7 +1195,7 @@ export default function AutomationPage() {
                     onChange={(event) => handleRoleSelection(event.target.value)}
                     className={selectCls}
                     style={fieldSurfaceStyle}
-                    disabled={rolesLoading || rulesLoading || isEditingSavedRule}
+                    disabled={rolesLoading || rulesLoading}
                   >
                     <option value="">
                       {rolesLoading ? "Loading roles..." : "Select a role..."}
@@ -1016,93 +1209,77 @@ export default function AutomationPage() {
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
                 </div>
                 <p className="mt-1 text-[10px] font-semibold" style={subtleTextStyle}>
-                  {isEditingSavedRule ? "Role is fixed for saved rules." : "Select the role this new rule will target."}
+                  {selectedRule ? "Saved settings loaded for this role." : "Choose the role this automation should use."}
                 </p>
               </div>
-              <div>
-                <label className={fieldLabelCls} style={mutedTextStyle}>Rule name</label>
-                <input
-                  type="text"
-                  value={ruleName}
-                  onChange={(event) => setRuleName(event.target.value)}
-                  placeholder="Second-round approval rule"
-                  className={inputCls}
-                  style={fieldSurfaceStyle}
-                />
+              <div className="rounded-xl border px-4 py-3" style={mutedPanelStyle}>
+                <p className="text-xs font-black" style={primaryTextStyle}>
+                  {selectedRole ? `${selectedRole.title} automation` : "Select a role to start"}
+                </p>
+                <p className="text-[11px] font-semibold mt-1" style={mutedTextStyle}>
+                  {selectedRule?.updated_at ? `Last saved ${formatDate(selectedRule.updated_at)}` : "One automation is shown per role."}
+                </p>
               </div>
-              <label className="rounded-xl border px-3 py-2.5 flex items-start gap-2.5 cursor-pointer" style={mutedPanelStyle}>
-                <input
-                  type="checkbox"
-                  checked={ruleEnabled}
-                  onChange={(event) => setRuleEnabled(event.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
-                />
-                <span>
-                  <span className="block text-xs font-black" style={primaryTextStyle}>Automation enabled</span>
-                  <span className="block text-[11px] mt-0.5" style={mutedTextStyle}>
-                    {isEditingSavedRule ? "Saved rule configuration." : "Ready to save for this role."}
-                  </span>
-                </span>
-              </label>
             </div>
           </section>
 
-          <section className="rounded-2xl p-5" style={surfaceCardStyle}>
+          {configDisabled && selectedRoleId && (
+            <div className="rounded-2xl px-4 py-3 text-xs font-semibold" style={mutedPanelStyle}>
+              <span style={mutedTextStyle}>Automation is off for this role. You can prepare settings now and turn it on when ready.</span>
+            </div>
+          )}
+
+          <section className={`rounded-2xl p-5 transition-opacity ${configDisabled ? "opacity-55" : ""}`} style={surfaceCardStyle}>
             <div className="flex flex-col gap-1 mb-4">
               <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Candidate criteria</p>
-              <h3 className="text-base font-black" style={primaryTextStyle}>Matching thresholds</h3>
-            </div>
-            {criteriaKeys.length === 0 ? (
-              <div className="rounded-xl border px-4 py-5 text-center text-sm font-semibold" style={mutedPanelStyle}>
-                <span style={mutedTextStyle}>No rule criteria options were returned.</span>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {numberCriteriaKeys.length > 0 && (
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {numberCriteriaKeys.map((key) => renderNumberCriteria(key, criteriaFields[key]))}
-                  </div>
-                )}
-                {booleanCriteriaKeys.length > 0 && (
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {booleanCriteriaKeys.map((key) => renderBooleanCriteria(key))}
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-2xl p-5" style={surfaceCardStyle}>
-            <div className="flex flex-col gap-1 mb-4">
-              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Approval workflow</p>
-              <h3 className="text-base font-black" style={primaryTextStyle}>Action and digest settings</h3>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Who should be reviewed?</h3>
               <p className="text-xs leading-relaxed" style={mutedTextStyle}>
-                Matched candidates are routed for internal approval. Candidate-facing outreach remains manual after approval.
+                Candidates who meet your score settings will be added to your approval email.
               </p>
             </div>
-            <div className="grid gap-3 lg:grid-cols-3">
-              <div>
-                <label className={fieldLabelCls} style={mutedTextStyle}>Action type</label>
-                <div className="relative">
-                  <select
-                    value={selectedActionType}
-                    onChange={(event) => setSelectedActionType(event.target.value)}
-                    className={selectCls}
-                    style={fieldSurfaceStyle}
-                  >
-                    {actionTypes.length === 0 ? (
-                      <option value={ACTION_TYPE_SECOND_ROUND}>Second-round scheduling email</option>
-                    ) : (
-                      actionTypes.map((action) => (
-                        <option key={action.value} value={action.value}>{action.label}</option>
-                      ))
-                    )}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
-                </div>
+            <div className="space-y-3">
+              <div className="max-w-sm">
+                {renderNumberCriteria("min_overall_score", criteriaFields.min_overall_score || {})}
               </div>
+              <div className="rounded-xl border" style={mutedPanelStyle}>
+                <button
+                  type="button"
+                  onClick={() => setAdvancedOpen((open) => !open)}
+                  className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left"
+                >
+                  <span className="flex items-center gap-1 text-sm font-black" style={primaryTextStyle}>
+                    Advanced score options
+                    <InfoTooltip content="Optional settings for teams that want separate resume or interview thresholds." side="bottom" />
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} style={mutedTextStyle} />
+                </button>
+                {advancedOpen && (
+                  <div className="border-t p-4 space-y-3" style={{ borderColor: "var(--as-border)" }}>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {renderNumberCriteria("min_resume_score", criteriaFields.min_resume_score || {})}
+                      {renderNumberCriteria("min_interview_score", criteriaFields.min_interview_score || {})}
+                    </div>
+                    {renderBooleanCriteria("allow_resume_only")}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className={`rounded-2xl p-5 transition-opacity ${configDisabled ? "opacity-55" : ""}`} style={surfaceCardStyle}>
+            <div className="flex flex-col gap-1 mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Next step</p>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Add the scheduling link</h3>
+              <p className="text-xs leading-relaxed" style={mutedTextStyle}>
+                Approved candidates will receive this link when your team sends the next-step email.
+              </p>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
               <div>
-                <label className={fieldLabelCls} style={mutedTextStyle}>Scheduling URL</label>
+                <label className={`${fieldLabelCls} flex items-center gap-1`} style={mutedTextStyle}>
+                  Scheduling URL
+                  <InfoTooltip content="The scheduling page approved candidates should use for the next interview step." side="bottom" />
+                </label>
                 <input
                   type="url"
                   value={schedulingUrl}
@@ -1113,13 +1290,16 @@ export default function AutomationPage() {
                 />
               </div>
               <div>
-                <label className={fieldLabelCls} style={mutedTextStyle}>Scheduling label</label>
+                <label className={`${fieldLabelCls} flex items-center gap-1`} style={mutedTextStyle}>
+                  Button text for candidate email
+                  <InfoTooltip content="This is the button or link text candidates see in the scheduling email." side="bottom" />
+                </label>
                 <input
                   type="text"
                   value={schedulingLabel}
                   onChange={(event) => setSchedulingLabel(event.target.value.slice(0, labelMaxLength))}
                   maxLength={labelMaxLength}
-                  placeholder="Schedule next interview"
+                  placeholder={DEFAULT_SCHEDULING_LABEL}
                   className={inputCls}
                   style={fieldSurfaceStyle}
                 />
@@ -1128,70 +1308,82 @@ export default function AutomationPage() {
                 </p>
               </div>
             </div>
+          </section>
 
-            <div className="my-4 border-t" style={{ borderColor: "var(--as-border)" }} />
-
-            <div className="grid gap-3 lg:grid-cols-3">
-              <label className="rounded-xl border px-3 py-2.5 flex items-start gap-2.5 cursor-pointer" style={mutedPanelStyle}>
-                <input
-                  type="checkbox"
-                  checked={digestEnabled}
-                  onChange={(event) => setDigestEnabled(event.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
-                />
-                <span>
-                  <span className="block text-xs font-black" style={primaryTextStyle}>Approval digest enabled</span>
-                  <span className="block text-[11px] mt-0.5" style={mutedTextStyle}>Grouped internal approval summaries.</span>
-                </span>
-              </label>
-              <div className="lg:col-span-2">
-                <label className={fieldLabelCls} style={mutedTextStyle}>Recipient emails</label>
-                <textarea
-                  value={recipientEmails}
-                  onChange={(event) => setRecipientEmails(event.target.value)}
-                  placeholder="manager@example.com"
-                  rows={2}
-                  className={inputCls}
-                  style={fieldSurfaceStyle}
-                />
+          <section className={`rounded-2xl p-5 transition-opacity ${configDisabled ? "opacity-55" : ""}`} style={surfaceCardStyle}>
+            <div className="flex flex-col gap-1 mb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Approval email</p>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Choose who reviews candidates</h3>
+              <p className="text-xs leading-relaxed" style={mutedTextStyle}>
+                We'll send one email with matching candidates for your team to approve.
+              </p>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+              <div>
+                <label className={`${fieldLabelCls} flex items-center gap-1`} style={mutedTextStyle}>
+                  Approval recipients
+                  <InfoTooltip content="Choose team members who should receive the approval email for this role." side="bottom" />
+                </label>
+                <div className="relative">
+                  <select
+                    value=""
+                    onChange={(event) => {
+                      const email = event.target.value;
+                      if (!email) return;
+                      setSelectedRecipientEmails((current) => normalizeEmailList([...current, email]).slice(0, recipientLimit));
+                    }}
+                    className={selectCls}
+                    style={fieldSurfaceStyle}
+                    disabled={membersLoading || availableRecipientMembers.length === 0 || recipientCount >= recipientLimit}
+                  >
+                    <option value="">
+                      {membersLoading ? "Loading team members..." : "Add team member..."}
+                    </option>
+                    {availableRecipientMembers.map((member) => (
+                      <option key={member.id} value={member.email}>
+                        {member.name} — {member.email} — {member.role}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
+                </div>
                 <p className="mt-1 text-[10px] font-semibold" style={recipientCount > recipientLimit ? { color: "#EF4444" } : subtleTextStyle}>
                   {recipientCount}/{recipientLimit} recipients
                 </p>
+                {members.length === 0 && !membersLoading && (
+                  <p className="mt-2 text-[11px] font-semibold" style={mutedTextStyle}>
+                    No team members with email addresses are available for this client.
+                  </p>
+                )}
+                {selectedRecipients.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedRecipients.map((member) => (
+                      <span
+                        key={member.email}
+                        className="inline-flex max-w-full items-center gap-2 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold"
+                        style={mutedPanelStyle}
+                      >
+                        <span className="min-w-0 truncate" style={primaryTextStyle}>
+                          {member.name} — {member.email} — {member.role}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRecipientEmails((current) => current.filter((email) => email !== member.email))}
+                          className="shrink-0 rounded-full p-0.5 hover:bg-red-500/10 hover:text-red-500"
+                          aria-label={`Remove ${member.name}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
-                <label className={fieldLabelCls} style={mutedTextStyle}>Approval base URL</label>
-                <input
-                  type="url"
-                  value={approvalBaseUrl}
-                  onChange={(event) => setApprovalBaseUrl(event.target.value)}
-                  placeholder="https://app.alphasourceai.com"
-                  className={inputCls}
-                  style={fieldSurfaceStyle}
-                />
-              </div>
-              <div>
-                <label className={fieldLabelCls} style={mutedTextStyle}>Timezone</label>
-                <input
-                  type="text"
-                  value={timezone}
-                  onChange={(event) => setTimezone(event.target.value)}
-                  className={inputCls}
-                  style={fieldSurfaceStyle}
-                />
-              </div>
-              <div>
-                <label className={fieldLabelCls} style={mutedTextStyle}>Send time</label>
-                <input
-                  type="time"
-                  value={sendTimeLocal}
-                  onChange={(event) => setSendTimeLocal(event.target.value)}
-                  className={inputCls}
-                  style={fieldSurfaceStyle}
-                />
-                <p className="mt-1 text-[10px] font-semibold" style={subtleTextStyle}>{sendTimeFormat}</p>
-              </div>
-              <div>
-                <label className={fieldLabelCls} style={mutedTextStyle}>Frequency</label>
+                <label className={`${fieldLabelCls} flex items-center gap-1`} style={mutedTextStyle}>
+                  Send schedule
+                  <InfoTooltip content="How often the approval email should gather matching candidates for reviewers." side="bottom" />
+                </label>
                 <div className="relative">
                   <select
                     value={frequency}
@@ -1199,19 +1391,14 @@ export default function AutomationPage() {
                     className={selectCls}
                     style={fieldSurfaceStyle}
                   >
-                    {frequencies.length === 0 ? (
-                      <option value="daily">Daily</option>
-                    ) : (
-                      frequencies.map((item) => (
-                        <option key={item.value} value={item.value}>{item.label}</option>
-                      ))
-                    )}
+                    {frequencyOptions.map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
                 </div>
-              </div>
-              {frequency === "weekly" && (
-                <div>
+                {frequency === "weekly" && (
+                  <div className="mt-3">
                   <label className={fieldLabelCls} style={mutedTextStyle}>Weekly day</label>
                   <div className="relative">
                     <select
@@ -1220,26 +1407,63 @@ export default function AutomationPage() {
                       className={selectCls}
                       style={fieldSurfaceStyle}
                     >
-                      {weeklyDays.length === 0 ? (
-                        <option value="">No weekly days available</option>
-                      ) : (
-                        weeklyDays.map((day) => (
-                          <option key={day} value={day}>{titleCase(day)}</option>
-                        ))
-                      )}
+                      {weekdayOptions.map((day) => (
+                        <option key={day} value={day}>{titleCase(day)}</option>
+                      ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
                   </div>
                 </div>
-              )}
+                )}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                <div>
+                  <label className={`${fieldLabelCls} flex items-center gap-1`} style={mutedTextStyle}>
+                    Send time
+                    <InfoTooltip content="The local time reviewers should receive the approval email." side="bottom" />
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={sendTimeLocal}
+                      onChange={(event) => setSendTimeLocal(event.target.value)}
+                      className={selectCls}
+                      style={fieldSurfaceStyle}
+                    >
+                      {sendTimeOptions.map((time) => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
+                  </div>
+                </div>
+                <div>
+                  <label className={`${fieldLabelCls} flex items-center gap-1`} style={mutedTextStyle}>
+                    Timezone
+                    <InfoTooltip content="The US timezone used for the approval email schedule." side="bottom" />
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={timezone}
+                      onChange={(event) => setTimezone(event.target.value)}
+                      className={selectCls}
+                      style={fieldSurfaceStyle}
+                    >
+                      {usTimezoneOptions.map((item) => (
+                        <option key={item.value} value={item.value}>{item.label} — {item.value}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
           <section className="rounded-2xl p-4" style={compactSurfaceStyle}>
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Safety</p>
-                <h3 className="text-sm font-black" style={primaryTextStyle}>Workflow guardrails</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>How this works</p>
+                <h3 className="text-sm font-black" style={primaryTextStyle}>Review flow</h3>
               </div>
               <ul className="grid flex-1 gap-2 md:grid-cols-2">
                 {safetyItems.map((item) => (
@@ -1259,12 +1483,12 @@ export default function AutomationPage() {
             <button
               type="button"
               onClick={() => { void handleSave(); }}
-              disabled={saving || rolesLoading || rulesLoading}
+              disabled={saving || rolesLoading || rulesLoading || membersLoading}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-xs font-bold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-55 disabled:cursor-not-allowed"
               style={{ backgroundColor: "#A380F6" }}
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-              {saving ? "Saving..." : "Save automation rule"}
+              {saving ? "Saving..." : "Save automation"}
             </button>
           </div>
         </div>
