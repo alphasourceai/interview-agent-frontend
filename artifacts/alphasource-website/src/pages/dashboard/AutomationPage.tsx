@@ -1255,7 +1255,7 @@ export default function AutomationPage() {
               <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Next step</p>
               <h3 className="text-base font-black" style={primaryTextStyle}>Add the scheduling link</h3>
               <p className="text-xs leading-relaxed" style={mutedTextStyle}>
-                Approved candidates will receive this link when your team sends the next-step email.
+                Approved candidates receive this link when your team approves them from the review page.
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-2">

@@ -500,7 +500,7 @@ export default function AutomationDigestApprovalPage({ params }: AutomationDiges
           ? emailsSent === 0 && nextStatus === "sent"
             ? "Already sent."
             : "Scheduling email sent."
-          : "Candidate not approved.";
+          : "Candidate not approved. No email was sent.";
       setFeedback(itemId, { message });
     } catch {
       setFeedback(itemId, { error: "Network error saving your response. Please try again." });
