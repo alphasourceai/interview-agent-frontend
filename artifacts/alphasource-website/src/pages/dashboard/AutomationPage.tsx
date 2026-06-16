@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, Loader2, Save, X } from "lucide-react";
+import { ChevronDown, Loader2, Save, X } from "lucide-react";
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
@@ -525,7 +525,6 @@ export default function AutomationPage() {
   const labelMaxLength = actionFields.second_round_scheduling_label?.max_length || 80;
   const digestOptions = options?.digest_config?.pending_approval_digest || {};
   const recipientLimit = digestOptions.recipient_limit || 10;
-  const safety = options?.safety || {};
   const recipientList = useMemo(
     () => normalizeEmailList(selectedRecipientEmails),
     [selectedRecipientEmails],
@@ -1082,23 +1081,11 @@ export default function AutomationPage() {
     );
   };
 
-  type SafetyKey = keyof NonNullable<AutomationConfigOptions["safety"]>;
-  const safetyItems: Array<{ key?: SafetyKey; text: string }> = [
-    {
-      text: "Saving this automation does not email candidates.",
-    },
-    {
-      key: "digest_requires_approval",
-      text: "Matching candidates are gathered for your team to review.",
-    },
-    {
-      key: "digest_aggregates_by_recipient",
-      text: "Your team receives one approval email with qualified candidates.",
-    },
-    {
-      key: "candidate_email_send_is_manual_after_approval",
-      text: "Scores help organize the review, but hiring decisions stay with your team.",
-    },
+  const safetyItems = [
+    "Saving this automation does not email candidates.",
+    "Candidates who meet your settings are gathered for review.",
+    "Your team receives one approval email with the matching candidates.",
+    "Scores help organize the review, but hiring decisions stay with your team.",
   ];
 
   return (
@@ -1107,14 +1094,11 @@ export default function AutomationPage() {
 
       <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
-          <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>
-            Candidate Automation
-          </p>
           <h2 className="text-2xl font-black leading-tight mb-3" style={primaryTextStyle}>
             Automation
           </h2>
           <p className="text-sm leading-relaxed" style={mutedTextStyle}>
-            Choose when candidates should be sent to your team for review before a second-round interview.
+            Set when candidates should be gathered for your team to review before a second-round interview. You choose the score criteria, reviewers, and how often the approval email is sent.
           </p>
         </div>
         <label className="inline-flex items-center gap-3 rounded-2xl border px-4 py-3 shrink-0" style={compactSurfaceStyle}>
@@ -1460,19 +1444,15 @@ export default function AutomationPage() {
           </section>
 
           <section className="rounded-2xl p-4" style={compactSurfaceStyle}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="flex flex-col gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>How this works</p>
                 <h3 className="text-sm font-black" style={primaryTextStyle}>Review flow</h3>
               </div>
-              <ul className="grid flex-1 gap-2 md:grid-cols-2">
+              <ul className="list-disc pl-5 space-y-1.5">
                 {safetyItems.map((item) => (
-                  <li key={item.text} className="flex items-start gap-2 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
-                    <CheckCircle2
-                      className="h-3.5 w-3.5 mt-0.5 flex-shrink-0"
-                      style={{ color: item.key && safety[item.key] === false ? "var(--as-text-subtle)" : "#02D99D" }}
-                    />
-                    {item.text}
+                  <li key={item} className="text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
+                    {item}
                   </li>
                 ))}
               </ul>
