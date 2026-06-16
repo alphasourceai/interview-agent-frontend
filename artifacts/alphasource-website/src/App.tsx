@@ -23,10 +23,13 @@ import AccommodationRequestPage from "@/pages/AccommodationRequestPage";
 import TextInterviewPage from "@/pages/TextInterviewPage";
 import PwResetPage from "@/pages/PwResetPage";
 import MembershipAgreementSignerPage from "@/pages/MembershipAgreementSignerPage";
+import AutomationApprovalPage from "@/pages/AutomationApprovalPage";
+import AutomationDigestApprovalPage from "@/pages/AutomationDigestApprovalPage";
 
 /* Client dashboard */
 import OverviewPage from "@/pages/dashboard/OverviewPage";
 import RolesPage from "@/pages/dashboard/RolesPage";
+import AutomationPage from "@/pages/dashboard/AutomationPage";
 import CandidatesPage from "@/pages/dashboard/CandidatesPage";
 import MembersPage from "@/pages/dashboard/MembersPage";
 import BillingPage from "@/pages/dashboard/BillingPage";
@@ -49,6 +52,7 @@ import NotFound from "@/pages/not-found";
 const queryClient = new QueryClient();
 const DASHBOARD_TAB_ROUTE: Record<string, string> = {
   roles: "/dashboard/roles",
+  automation: "/dashboard/automation",
   candidates: "/dashboard/candidates",
   members: "/dashboard/members",
   billing: "/dashboard/billing",
@@ -298,6 +302,7 @@ function DashboardGuard() {
         <Switch>
           <Route path="/dashboard"            component={OverviewPage} />
           <Route path="/dashboard/roles"      component={RolesPage} />
+          <Route path="/dashboard/automation" component={AutomationPage} />
           <Route path="/dashboard/candidates" component={CandidatesPage} />
           <Route path="/dashboard/members"    component={MembersPage} />
           <Route path="/dashboard/billing"    component={BillingPage} />
@@ -380,6 +385,8 @@ function Router() {
   const [location] = useLocation();
   const isDashboard = location === "/dashboard" || location.startsWith("/dashboard/");
   const isAdmin     = location === "/admin"     || location.startsWith("/admin/");
+  const isAutomationDigestApproval = location === "/automation/digest-approval" || location.startsWith("/automation/digest-approval/");
+  const isAutomationApproval = location === "/automation/approval" || location.startsWith("/automation/approval/");
   const isInterview =
     location === "/interview" ||
     location.startsWith("/interview/") ||
@@ -396,6 +403,20 @@ function Router() {
 
   if (isDashboard) return <DashboardGuard />;
   if (isAdmin)     return <AdminGuard />;
+  if (isAutomationDigestApproval) return (
+    <Switch>
+      <Route path="/automation/digest-approval/:token" component={AutomationDigestApprovalPage} />
+      <Route path="/automation/digest-approval" component={AutomationDigestApprovalPage} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+  if (isAutomationApproval) return (
+    <Switch>
+      <Route path="/automation/approval/:token" component={AutomationApprovalPage} />
+      <Route path="/automation/approval" component={AutomationApprovalPage} />
+      <Route component={NotFound} />
+    </Switch>
+  );
   if (isInterview) return (
     <Switch>
       <Route path="/accommodation-request/:role_token" component={AccommodationRequestPage} />

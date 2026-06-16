@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FileText,
   Upload,
@@ -13,10 +13,11 @@ import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useClient } from "@/context/ClientContext";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 type InterviewType = "Basic" | "Detailed" | "Technical";
-type RoleSortKey = "name" | "type" | "left" | "used" | "date";
+type RoleSortKey = "name" | "entity" | "type" | "left" | "used" | "date";
 type SortDir = "asc" | "desc";
 type RoleStatusFilter = "active" | "inactive" | "all";
 
@@ -59,7 +60,9 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 
 interface Role {
   id: string;
+  clientId: string;
   name: string;
+  entityName: string;
   date: string;
   type: InterviewType;
   left: number;
@@ -346,7 +349,7 @@ function DocButton({
 }
 
 export default function RolesPage() {
-  const { selectedClient, selectedClientId, loading: clientLoading, error: clientError, isGlobalAdmin, memberships } = useClient();
+  const { clients, selectedClient, selectedClientId, loading: clientLoading, error: clientError, isGlobalAdmin, memberships } = useClient();
   const selectedMembershipRole = String(
     memberships.find((membership) => membership.client_id === selectedClientId)?.role ||
       selectedClient.role ||
@@ -363,6 +366,7 @@ export default function RolesPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [roleSearch, setRoleSearch] = useState("");
   const [roleStatusFilter, setRoleStatusFilter] = useState<RoleStatusFilter>("active");
+  const [entityFilter, setEntityFilter] = useState<EntityFilterValue>("parent");
   const [roles, setRoles] = useState<Role[]>([]);
   const [rolesLoading, setRolesLoading] = useState(false);
   const [rolesError, setRolesError] = useState("");
@@ -386,6 +390,14 @@ export default function RolesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const embeddedCheckoutContainerRef = useRef<HTMLDivElement>(null);
   const embeddedCheckoutInstanceRef = useRef<{ unmount?: () => void; destroy?: () => void } | null>(null);
+  const entityOptions = useMemo(
+    () => buildEntityFilterOptions(clients, selectedClientId),
+    [clients, selectedClientId],
+  );
+
+  useEffect(() => {
+    setEntityFilter(defaultEntityFilterValue(clients, selectedClientId));
+  }, [clients, selectedClientId]);
 
   useEffect(() => {
     setActionNotice(null);
@@ -574,6 +586,7 @@ export default function RolesPage() {
         let bv: string | number;
         switch (sortKey) {
           case "name": av = a.name; bv = b.name; break;
+          case "entity": av = a.entityName; bv = b.entityName; break;
           case "type": av = a.type; bv = b.type; break;
           case "left": av = a.left; bv = b.left; break;
           case "used": av = a.used; bv = b.used; break;
@@ -728,14 +741,17 @@ export default function RolesPage() {
         const token = String(session?.access_token || "").trim();
         if (!token) throw new Error("Missing session token.");
 
-        const response = await fetch(
-          `${backendBase}/roles?client_id=${encodeURIComponent(selectedClientId)}&status=${encodeURIComponent(roleStatusFilter)}`,
-          {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}` },
-            credentials: "omit",
-          },
-        );
+        const params = new URLSearchParams({
+          client_id: selectedClientId,
+          status: roleStatusFilter,
+        });
+        if (entityOptions.length > 0) params.set("entity_filter", entityFilterQueryValue(entityFilter));
+
+        const response = await fetch(`${backendBase}/roles?${params.toString()}`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "omit",
+        });
 
         const text = await response.text();
         if (!response.ok) {
@@ -763,7 +779,9 @@ export default function RolesPage() {
             const status = String(item.status || "active").trim().toLowerCase() || "active";
             return {
               id: String(item.id || ""),
+              clientId: String(item.client_id || "").trim(),
               name: String(item.title || "").trim() || "Untitled Role",
+              entityName: String(item.entity_name || "").trim() || selectedClient.name || "—",
               date: date.text,
               type: mapInterviewType(item.interview_type),
               left: toWholeNonNegative(item.remaining_interviews),
@@ -798,7 +816,7 @@ export default function RolesPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError, roleStatusFilter, rolesReloadNonce]);
+  }, [selectedClientId, selectedClient.name, clientLoading, clientError, roleStatusFilter, entityFilter, entityOptions.length, rolesReloadNonce]);
 
   const getSessionToken = async (): Promise<string> => {
     const {
@@ -874,6 +892,7 @@ export default function RolesPage() {
 
   const requestRubricChanges = async () => {
     if (!rubricModalRole?.id || !selectedClientId) return;
+    const roleClientId = rubricModalRole.clientId || selectedClientId;
     setRubricSending(true);
     setRubricError("");
     setActionNotice(null);
@@ -890,7 +909,7 @@ export default function RolesPage() {
           },
           credentials: "omit",
           body: JSON.stringify({
-            client_id: selectedClientId,
+            client_id: roleClientId,
             notes: rubricNotes,
             questions: rubricQuestions,
           }),
@@ -911,6 +930,7 @@ export default function RolesPage() {
 
   const deleteRole = async (role: Role) => {
     if (!role.id || !selectedClientId) return;
+    const roleClientId = role.clientId || selectedClientId;
     if (!canManageRoles) {
       setActionNotice({
         tone: "error",
@@ -923,7 +943,7 @@ export default function RolesPage() {
     try {
       if (!backendBase) throw new Error("Missing backend base URL configuration.");
       const token = await getSessionToken();
-      const query = `id=${encodeURIComponent(role.id)}&client_id=${encodeURIComponent(selectedClientId)}`;
+      const query = `id=${encodeURIComponent(role.id)}&client_id=${encodeURIComponent(roleClientId)}`;
       const headers = { Authorization: `Bearer ${token}` };
 
       let response = await fetch(`${backendBase}/roles/admin/roles?${query}`, {
@@ -966,6 +986,7 @@ export default function RolesPage() {
 
   const updateRoleStatus = async (role: Role, nextStatus: "active" | "inactive") => {
     if (!role.id || !selectedClientId || updatingRoleStatus[role.id]) return;
+    const roleClientId = role.clientId || selectedClientId;
     if (!canManageRoles) {
       setActionNotice({
         tone: "error",
@@ -979,7 +1000,7 @@ export default function RolesPage() {
       if (!backendBase) throw new Error("Missing backend base URL configuration.");
       const token = await getSessionToken();
       const response = await fetch(
-        `${backendBase}/roles/${encodeURIComponent(role.id)}/status?client_id=${encodeURIComponent(selectedClientId)}`,
+        `${backendBase}/roles/${encodeURIComponent(role.id)}/status?client_id=${encodeURIComponent(roleClientId)}`,
         {
           method: "PATCH",
           headers: {
@@ -1011,7 +1032,7 @@ export default function RolesPage() {
     }
   };
 
-  const roleTableColumnCount = canManageRoles ? 7 : 6;
+  const roleTableColumnCount = canManageRoles ? 8 : 7;
 
   return (
     <DashboardLayout title="Roles">
@@ -1167,6 +1188,24 @@ export default function RolesPage() {
             ))}
           </div>
         </div>
+        {entityOptions.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Entity</label>
+            <div className="relative">
+              <select
+                value={entityFilter}
+                onChange={(event) => setEntityFilter(event.target.value)}
+                className="appearance-none w-44 px-4 py-2 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                style={fieldSurfaceStyle}
+              >
+                {entityOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
+            </div>
+          </div>
+        )}
         {roleSearch && (
           <button
             type="button"
@@ -1218,6 +1257,16 @@ export default function RolesPage() {
                   </button>
                 </th>
                 {/* Type — sortable */}
+                <th className="text-left px-4 py-3.5 whitespace-nowrap">
+                  <button
+                    onClick={() => handleSort("entity")}
+                    className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
+                    style={mutedTextStyle}
+                  >
+                    Entity
+                    <SortIcon active={sortKey === "entity"} dir={sortDir} />
+                  </button>
+                </th>
                 <th className="text-left px-4 py-3.5 whitespace-nowrap">
                   <button
                     onClick={() => handleSort("type")}
@@ -1318,6 +1367,10 @@ export default function RolesPage() {
                         Recordings expire 14 days after role closure.
                       </p>
                     )}
+                  </td>
+
+                  <td className="px-4 py-4">
+                    <span className="text-sm font-semibold" style={mutedTextStyle}>{role.entityName}</span>
                   </td>
 
                   {/* Type */}

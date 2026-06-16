@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, ChevronRight, RefreshCw, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { useAdminClient } from "@/context/AdminClientContext";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -11,6 +12,7 @@ interface Candidate {
   email: string;
   clientId: string;
   clientName: string;
+  entityName: string;
   roleId: string;
   role: string;
   created: string;
@@ -37,7 +39,7 @@ interface RecordingModalState {
   duration?: number | null;
 }
 
-type SortKey = "name" | "client" | "role" | "created" | "resume" | "interview" | "overall";
+type SortKey = "name" | "client" | "entity" | "role" | "created" | "resume" | "interview" | "overall";
 type SortDir = "asc" | "desc";
 
 const env =
@@ -206,6 +208,7 @@ export default function AdminCandidatesPage() {
   const {
     selectedClient,
     selectedClientId,
+    clients: adminClients,
     loading: adminClientsLoading,
     error: adminClientsError,
   } = useAdminClient();
@@ -213,6 +216,7 @@ export default function AdminCandidatesPage() {
   const [sortKey, setSortKey]       = useState<SortKey>("created");
   const [sortDir, setSortDir]       = useState<SortDir>("desc");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [entityFilter, setEntityFilter] = useState<EntityFilterValue>("parent");
   const [candidateSearch, setCandidateSearch] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState<boolean>(false);
@@ -225,6 +229,14 @@ export default function AdminCandidatesPage() {
   const [recordingBusy, setRecordingBusy] = useState<Record<string, boolean>>({});
   const [deleteBusy, setDeleteBusy] = useState<Record<string, boolean>>({});
   const [recordingModal, setRecordingModal] = useState<RecordingModalState | null>(null);
+  const hierarchyClients = useMemo(
+    () => adminClients.filter((client) => client.id !== "all"),
+    [adminClients],
+  );
+  const entityOptions = useMemo(
+    () => buildEntityFilterOptions(hierarchyClients, selectedClientId),
+    [hierarchyClients, selectedClientId],
+  );
 
   const toggle = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
 
@@ -241,7 +253,11 @@ export default function AdminCandidatesPage() {
 
   useEffect(() => {
     setCandidateSearch("");
-  }, [selectedClientId, roleFilter]);
+  }, [selectedClientId, roleFilter, entityFilter]);
+
+  useEffect(() => {
+    setEntityFilter(defaultEntityFilterValue(hierarchyClients, selectedClientId));
+  }, [hierarchyClients, selectedClientId]);
 
   const getSessionToken = async (): Promise<string> => {
     const {
@@ -539,23 +555,22 @@ export default function AdminCandidatesPage() {
         const token = String(session?.access_token || "").trim();
         if (!token) throw new Error("Missing session token.");
 
+        const params = new URLSearchParams({ client_id: selectedClientId });
+        if (entityOptions.length > 0) params.set("entity_filter", entityFilterQueryValue(entityFilter));
+        const roleParams = new URLSearchParams({ client_id: selectedClientId });
+        if (entityOptions.length > 0) roleParams.set("entity_filter", entityFilterQueryValue(entityFilter));
+
         const [candidatesResponse, rolesResponse] = await Promise.all([
-          fetch(
-            `${backendBase}/admin/candidates?client_id=${encodeURIComponent(selectedClientId)}`,
-            {
-              method: "GET",
-              headers: { Authorization: `Bearer ${token}` },
-              credentials: "omit",
-            },
-          ),
-          fetch(
-            `${backendBase}/admin/roles?client_id=${encodeURIComponent(selectedClientId)}`,
-            {
-              method: "GET",
-              headers: { Authorization: `Bearer ${token}` },
-              credentials: "omit",
-            },
-          ).catch(() => null),
+          fetch(`${backendBase}/admin/candidates?${params.toString()}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "omit",
+          }),
+          fetch(`${backendBase}/admin/roles?${roleParams.toString()}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "omit",
+          }).catch(() => null),
         ]);
 
         const candidatesText = await candidatesResponse.text();
@@ -614,7 +629,8 @@ export default function AdminCandidatesPage() {
               name: String(item.name || "").trim() || "—",
               email: String(item.email || "").trim() || "—",
               clientId: String(item.client_id || selectedClientId).trim(),
-              clientName: selectedClient.name,
+              clientName: String(item.entity_name || selectedClient.name || "").trim() || "—",
+              entityName: String(item.entity_name || selectedClient.name || "").trim() || "—",
               role: roleTitle || roleId || "—",
               roleId,
               created: created.text,
@@ -651,7 +667,7 @@ export default function AdminCandidatesPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, selectedClient.name, adminClientsLoading, adminClientsError, refreshNonce]);
+  }, [selectedClientId, selectedClient.name, adminClientsLoading, adminClientsError, entityFilter, entityOptions.length, refreshNonce]);
 
   useEffect(() => {
     if (roleFilter === "all") return;
@@ -676,6 +692,7 @@ export default function AdminCandidatesPage() {
         [
           candidate.name,
           candidate.email,
+          candidate.entityName,
         ].some((value) => String(value || "").toLowerCase().includes(candidateSearchTerm)),
       )
     : byRole;
@@ -687,6 +704,7 @@ export default function AdminCandidatesPage() {
     switch (sortKey) {
       case "name":      av = a.name.toLowerCase();     bv = b.name.toLowerCase();     break;
       case "client":    av = a.clientName.toLowerCase();bv = b.clientName.toLowerCase();break;
+      case "entity":    av = a.entityName.toLowerCase();bv = b.entityName.toLowerCase();break;
       case "role":      av = a.role.toLowerCase();     bv = b.role.toLowerCase();     break;
       case "created":   av = a.createdTs;              bv = b.createdTs;              break;
       case "resume":    av = a.resume    ?? -1;        bv = b.resume    ?? -1;        break;
@@ -745,6 +763,25 @@ export default function AdminCandidatesPage() {
         className="rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
         style={surfaceCardStyle}
       >
+        {entityOptions.length > 0 && (
+          <div className="relative flex-1 min-w-48 max-w-64">
+            <select
+              className={selectCls + " w-full pr-8"}
+              style={fieldSurfaceStyle}
+              value={entityFilter}
+              onChange={(e) => {
+                setEntityFilter(e.target.value);
+                setExpandedId(null);
+              }}
+            >
+              {entityOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
+          </div>
+        )}
+
         <div className="relative flex-1 min-w-48 max-w-72">
           <select
             className={selectCls + " w-full pr-8"}
@@ -802,12 +839,12 @@ export default function AdminCandidatesPage() {
         <div
           className={`grid items-center px-5 py-3 border-b ${
             showClient
-              ? "grid-cols-[1fr_110px_130px_140px_68px_78px_68px_100px_44px]"
-              : "grid-cols-[1fr_130px_140px_68px_78px_68px_100px_44px]"
+              ? "grid-cols-[1fr_110px_130px_130px_140px_68px_78px_68px_100px_44px]"
+              : "grid-cols-[1fr_130px_130px_140px_68px_78px_68px_100px_44px]"
           }`}
           style={dividerStyle}
         >
-          {(["name","client","role","created","resume","interview","overall"] as SortKey[])
+          {(["name","client","entity","role","created","resume","interview","overall"] as SortKey[])
             .filter((k) => k !== "client" || showClient)
             .map((col) => (
               <button
@@ -843,8 +880,8 @@ export default function AdminCandidatesPage() {
                   <div
                     className={`grid items-center px-5 py-3 cursor-pointer transition-colors as-shell-dropdown-item ${
                       showClient
-                        ? "grid-cols-[1fr_110px_130px_140px_68px_78px_68px_100px_44px]"
-                        : "grid-cols-[1fr_130px_140px_68px_78px_68px_100px_44px]"
+                        ? "grid-cols-[1fr_110px_130px_130px_140px_68px_78px_68px_100px_44px]"
+                        : "grid-cols-[1fr_130px_130px_140px_68px_78px_68px_100px_44px]"
                     }`}
                     style={expanded ? { backgroundColor: "var(--as-accent-soft)" } : undefined}
                     onClick={() => toggle(c.id)}
@@ -867,6 +904,8 @@ export default function AdminCandidatesPage() {
                     {showClient && (
                       <p className="text-xs font-semibold truncate pr-2" style={mutedTextStyle}>{c.clientName}</p>
                     )}
+
+                    <p className="text-xs font-semibold truncate pr-2" style={mutedTextStyle}>{c.entityName}</p>
 
                     <p className="text-xs font-semibold truncate pr-2" style={mutedTextStyle}>{c.role}</p>
 

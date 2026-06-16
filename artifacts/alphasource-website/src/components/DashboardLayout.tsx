@@ -4,6 +4,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
   Briefcase,
+  Workflow,
   Users,
   UserCheck,
   CreditCard,
@@ -61,6 +62,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Overview",   href: "/dashboard",           icon: LayoutDashboard },
   { label: "Roles",      href: "/dashboard/roles",      icon: Briefcase       },
+  { label: "Automation", href: "/dashboard/automation", icon: Workflow        },
   { label: "Candidates", href: "/dashboard/candidates", icon: Users           },
   { label: "Members",    href: "/dashboard/members",    icon: UserCheck       },
   { label: "Billing",    href: "/dashboard/billing",    icon: CreditCard      },
@@ -87,6 +89,11 @@ const TOUR_STEPS_BY_HREF: Record<string, TourStep> = {
     href: "/dashboard/roles", title: "Roles", emoji: "💼",
     desc: "Create and manage open positions. Each role links to its AlphaScreen interview session and tracks every candidate assigned to it.",
     bullets: ["Create & publish new roles", "Track open vs. closed roles", "View candidates per role"],
+  },
+  "/dashboard/automation": {
+    href: "/dashboard/automation", title: "Automation", emoji: "⚙️",
+    desc: "Review supported automation rule options for internal approval workflows before any candidate-facing action is sent.",
+    bullets: ["Configure score criteria", "Prepare approval digest settings", "Keep candidate outreach controlled"],
   },
   "/dashboard/candidates": {
     href: "/dashboard/candidates", title: "Candidates", emoji: "👥",
