@@ -3,7 +3,7 @@ import { Trash2, UserPlus, ChevronDown, ChevronUp, ChevronsUpDown, Key } from "l
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient, type Client, type ClientMembership } from "@/context/ClientContext";
-import { buildEntityFilterOptionsFromRows, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { buildEntityFilterOptionsFromRows, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 type MemberRole = "Manager" | "Member";
@@ -262,6 +262,7 @@ export default function MembersPage() {
     }))),
     [clients, selectedClientId, members],
   );
+  const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions, "members"), [entityOptions]);
 
   const nameErr  = submitted && name.trim() === "";
   const emailErr = submitted && !isValidEmail(email);
@@ -751,21 +752,24 @@ export default function MembersPage() {
                   Add managers or members to one or more client scopes.
                 </p>
                 {entityOptions.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Entity</label>
-                    <div className="relative">
-                      <select
-                        value={entityFilter}
-                        onChange={(event) => setEntityFilter(event.target.value)}
-                        className="appearance-none w-44 px-4 py-2 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
-                        style={fieldSurfaceStyle}
-                      >
-                        {entityOptions.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
+                  <div className="flex max-w-sm flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Entity</label>
+                      <div className="relative">
+                        <select
+                          value={entityFilter}
+                          onChange={(event) => setEntityFilter(event.target.value)}
+                          className="appearance-none w-44 px-4 py-2 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
+                          style={fieldSurfaceStyle}
+                        >
+                          {entityOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
+                      </div>
                     </div>
+                    <p className="text-[10px] font-semibold leading-relaxed" style={subtleTextStyle}>{entityHelpText}</p>
                   </div>
                 )}
               </div>

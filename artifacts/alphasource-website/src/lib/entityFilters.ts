@@ -14,6 +14,8 @@ export interface EntityFilterOption {
   label: string;
 }
 
+export type EntityFilterHelpMode = "records" | "members";
+
 export interface EntityRowLike {
   clientId?: string | null;
   client_id?: string | null;
@@ -140,4 +142,15 @@ export function buildEntityFilterOptionsFromRows(
 
 export function entityFilterQueryValue(value: EntityFilterValue): string {
   return cleanText(value);
+}
+
+export function entityFilterHelpText(
+  options: EntityFilterOption[],
+  mode: EntityFilterHelpMode = "records",
+): string {
+  const allLabel = options.find((option) => option.value === "all")?.label || "All entities";
+  if (mode === "members") {
+    return `The Parent option shows members assigned directly to the parent. The ${allLabel} option shows parent plus child entity member assignments. A specific entity option shows members assigned directly to that entity; inherited or effective access is not included. The Entity column shows where each row belongs.`;
+  }
+  return `The Parent option shows records assigned directly to the parent. The ${allLabel} option shows parent plus child entity records. A specific entity option shows records assigned directly to that entity. The Entity column shows which entity each row belongs to.`;
 }

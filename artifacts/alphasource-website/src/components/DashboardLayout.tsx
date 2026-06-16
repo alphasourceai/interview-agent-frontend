@@ -87,23 +87,23 @@ const TOUR_STEPS_BY_HREF: Record<string, TourStep> = {
   },
   "/dashboard/roles": {
     href: "/dashboard/roles", title: "Roles", emoji: "💼",
-    desc: "Create and manage open positions. Each role links to its AlphaScreen interview session and tracks every candidate assigned to it.",
-    bullets: ["Create & publish new roles", "Track open vs. closed roles", "View candidates per role"],
+    desc: "Create and manage open positions. Parent and child-entity clients can use the Entity selector to review roles assigned directly to the parent, all entities, or one specific entity.",
+    bullets: ["Create & publish new roles", "Track open vs. closed roles", "Use the Entity column to confirm role scope"],
   },
   "/dashboard/automation": {
     href: "/dashboard/automation", title: "Automation", emoji: "⚙️",
-    desc: "Review supported automation rule options for internal approval workflows before any candidate-facing action is sent.",
-    bullets: ["Configure score criteria", "Prepare approval digest settings", "Keep candidate outreach controlled"],
+    desc: "Configure Candidate Automation to gather candidates who meet thresholds into one Review Candidates digest for client admin approval before any scheduling email is sent.",
+    bullets: ["Set score thresholds and reviewers", "Review candidates awaiting approval", "Approving sends the configured scheduling link"],
   },
   "/dashboard/candidates": {
     href: "/dashboard/candidates", title: "Candidates", emoji: "👥",
-    desc: "Review every applicant. Expand any row to see AI-scored resume and interview analyses, behavioral signals, and risk flags.",
-    bullets: ["Resume & interview AI analysis", "Dynamic score coloring", "Sort, filter, and export results"],
+    desc: "Review every applicant. Parent and child-entity clients can filter candidates by parent, all entities, or one specific entity and confirm ownership in the Entity column.",
+    bullets: ["Resume & interview AI analysis", "Sort, filter, and export results", "Review the Entity column before sharing records"],
   },
   "/dashboard/members": {
     href: "/dashboard/members", title: "Members", emoji: "🛡️",
-    desc: "Control who can access your AlphaSource dashboard. Invite teammates, assign roles, and remove users when needed.",
-    bullets: ["Invite team members by email", "Assign team access by client/entity scope", "Remove or reset access"],
+    desc: "Control who can access your AlphaSource dashboard. Entity filtering shows direct member assignments for the selected scope, not inherited or effective access.",
+    bullets: ["Invite team members by email", "Assign team access by client/entity scope", "Use Entity filtering to review direct assignments"],
   },
   "/dashboard/billing": {
     href: "/dashboard/billing", title: "Billing", emoji: "💳",
@@ -117,8 +117,8 @@ const TOUR_STEPS_BY_HREF: Record<string, TourStep> = {
   },
   "/dashboard/support": {
     href: "/dashboard/support", title: "Support", emoji: "❓",
-    desc: "Find alphaScreen guidance, common questions, and product updates directly inside the client portal.",
-    bullets: ["Review dashboard help topics", "See client-facing product updates", "Understand roles, candidates, reports, billing, and team access"],
+    desc: "Find alphaScreen guidance, common questions, product updates, and client data-practice documentation directly inside the client portal.",
+    bullets: ["Review dashboard help topics", "See client-facing product updates", "Understand retention, deletion, incidents, automation, and entity filtering"],
   },
 };
 

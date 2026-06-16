@@ -44,6 +44,10 @@ const faqSections = [
         answer: "Roles, candidates, interviews, and reports belong to the selected client or entity scope. Use the client selector to choose the parent client or child entity before managing roles or reviewing candidates.",
       },
       {
+        question: "How does Entity filtering work on Roles, Candidates, and Members?",
+        answer: "For parent/child entity clients, Roles, Candidates, and Members include an Entity selector. The Parent option shows records assigned directly to the parent organization. The All offices, All locations, or All entities option shows parent plus child entity records. A specific entity option shows records assigned directly to that entity. The Entity column shows which entity each row belongs to. On Members, filtering shows direct assignments for the selected entity, not inherited or effective access.",
+      },
+      {
         question: "Can I delete or archive an entity?",
         answer: "No. Entity delete and archive actions are not available yet. If an entity was created by mistake or needs to be removed, contact alphaSource support.",
       },
@@ -92,6 +96,27 @@ const faqSections = [
       {
         question: "What should candidates know before interviewing?",
         answer: "Candidates should be in a quiet place, use a stable internet connection, allow camera and microphone permissions, and answer naturally. They should not rely on outside help during the interview.",
+      },
+    ],
+  },
+  {
+    title: "Candidate automation",
+    items: [
+      {
+        question: "What does Candidate Automation do?",
+        answer: "Candidate Automation helps your team identify candidates who meet configured thresholds and prepare them for second-round review. It organizes candidates for client admin review and does not make final hiring decisions.",
+      },
+      {
+        question: "Does automation email candidates when a digest is created?",
+        answer: "No. Creating a digest does not automatically email candidates. The client admin receives one Review Candidates digest link, and the review page shows candidates awaiting approval.",
+      },
+      {
+        question: "What happens when we approve, reject, or do not approve a candidate?",
+        answer: "Approving a candidate sends the configured scheduling link immediately. Rejecting a candidate or leaving them unapproved sends no candidate email.",
+      },
+      {
+        question: "Where does the scheduling link come from?",
+        answer: "The scheduling link comes from the Automation page configuration for that role. Client admins can turn automation off or edit the thresholds, reviewers, digest schedule, and scheduling link.",
       },
     ],
   },
@@ -217,6 +242,10 @@ const guidanceCards = [
     body: "Create clear role requirements, invite candidates consistently, and review candidate details from the selected client or entity scope.",
   },
   {
+    title: "Automation and approvals",
+    body: "Use Candidate Automation to gather qualified candidates for client admin review before any configured scheduling link is sent.",
+  },
+  {
     title: "Reports and scoring",
     body: "Use reports and scores as structured decision-support signals alongside the resume, interview context, role requirements, and hiring judgment.",
   },
@@ -226,7 +255,43 @@ const guidanceCards = [
   },
 ];
 
+const dataPracticeSections = [
+  {
+    title: "Data Retention and Deletion",
+    body: "AlphaSource AI generally retains client and candidate records only as needed for the service, operations, legal obligations, security, and account administration.",
+    bullets: [
+      "Candidate records, interview media, transcripts, analysis, reports, and related hiring records may be retained for up to 24 months after candidate completion, role closure, or client relationship termination unless a different contractual, operational, or legal requirement applies.",
+      "Billing, agreement, tax, payment, and account records may be retained for up to 7 years or as required for legal or accounting obligations.",
+      "Operational, audit, security, access, delivery, and diagnostic logs are normally retained for 12-24 months unless needed longer for security, legal, compliance, dispute, or abuse-prevention purposes.",
+      "Clients may request deletion or export of eligible records. Verified deletion requests are targeted for completion within 30 days where practical and legally permitted.",
+      "Some records may be retained when required for legal, contractual, security, financial, backup, or abuse-prevention reasons. Deleted data may persist in backups for a limited period before normal backup expiration.",
+    ],
+  },
+  {
+    title: "Incident Response and Client Notification",
+    body: "AlphaSource AI maintains an incident response process for suspected security or privacy incidents.",
+    bullets: [
+      "The process includes severity triage, containment, investigation, remediation, and post-incident review.",
+      "If AlphaSource AI confirms an incident that materially affects client data, affected clients will be notified without undue delay and, where required or practical, targeted within 72 hours after confirmation.",
+      "Notice may include the nature of the incident, data types involved, mitigation steps, actions taken, recommended client steps, and contact information.",
+      "Some details may be limited during an active investigation or where disclosure would increase security risk.",
+      "For security or privacy questions, contact support at info@alphasourceai.com.",
+    ],
+  },
+];
+
 const productUpdates = [
+  {
+    version: "alphaScreen v1.6",
+    title: "Candidate Automation and Entity Filtering",
+    summary: "Added client admin approval workflow guidance and clearer organization filtering support.",
+    bullets: [
+      "Candidate Automation gathers threshold-matching candidates for review",
+      "Review Candidates digest link supports controlled approval before candidate outreach",
+      "Roles, Candidates, and Members include parent, all-entity, and specific-entity filtering",
+      "Members filtering clarifies direct assignments by selected entity",
+    ],
+  },
   {
     version: "alphaScreen v1.5",
     title: "Dashboard Appearance and Support",
@@ -357,6 +422,42 @@ export default function DashboardFaqPage() {
               <h4 className="text-sm font-black mb-2" style={primaryTextStyle}>{card.title}</h4>
               <p className="text-xs leading-relaxed" style={mutedTextStyle}>{card.body}</p>
             </div>
+          ))}
+        </div>
+      </section>
+
+      <section
+        className="rounded-2xl p-6 mb-5"
+        style={surfaceCardStyle}
+      >
+        <div className="flex flex-col gap-1 mb-5">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
+            Security and Data Practices
+          </p>
+          <h3 className="text-base font-black" style={primaryTextStyle}>Client data guidance</h3>
+          <p className="text-sm leading-relaxed" style={mutedTextStyle}>
+            Client-facing documentation for retention, deletion, incident response, and notification practices.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {dataPracticeSections.map((section) => (
+            <article
+              key={section.title}
+              className="rounded-xl border p-4"
+              style={mutedPanelStyle}
+            >
+              <h4 className="text-sm font-black mb-2" style={primaryTextStyle}>{section.title}</h4>
+              <p className="text-xs leading-relaxed mb-3" style={mutedTextStyle}>
+                {section.body}
+              </p>
+              <ul className="grid gap-1.5">
+                {section.bullets.map((bullet) => (
+                  <li key={bullet} className="text-xs leading-relaxed" style={mutedTextStyle}>
+                    • {bullet}
+                  </li>
+                ))}
+              </ul>
+            </article>
           ))}
         </div>
       </section>

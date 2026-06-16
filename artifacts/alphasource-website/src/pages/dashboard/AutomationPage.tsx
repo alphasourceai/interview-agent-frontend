@@ -1082,9 +1082,14 @@ export default function AutomationPage() {
   };
 
   const safetyItems = [
-    "Saving this automation does not email candidates.",
-    "Candidates who meet your settings are gathered for review.",
-    "Your team receives one approval email with the matching candidates.",
+    "Candidate Automation identifies candidates who meet your configured thresholds and prepares them for second-round review.",
+    "Saving this automation or creating a digest does not email candidates.",
+    "Your client admin reviewers receive one Review Candidates digest link.",
+    "The review page shows candidates awaiting approval.",
+    "Approving a candidate sends the configured scheduling link immediately.",
+    "Rejecting or not approving a candidate sends no candidate email.",
+    "The scheduling link comes from this Automation page configuration.",
+    "Client admins can turn automation off or edit these settings.",
     "Scores help organize the review, but hiring decisions stay with your team.",
   ];
 
@@ -1098,7 +1103,7 @@ export default function AutomationPage() {
             Automation
           </h2>
           <p className="text-sm leading-relaxed" style={mutedTextStyle}>
-            Set when candidates should be gathered for your team to review before a second-round interview. You choose the score criteria, reviewers, and how often the approval email is sent.
+            Set when candidates should be gathered for client admin review before a second-round interview. You choose the score criteria, reviewers, digest schedule, and scheduling link.
           </p>
         </div>
         <label className="inline-flex items-center gap-3 rounded-2xl border px-4 py-3 shrink-0" style={compactSurfaceStyle}>
@@ -1218,7 +1223,7 @@ export default function AutomationPage() {
               <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Candidate criteria</p>
               <h3 className="text-base font-black" style={primaryTextStyle}>Who should be reviewed?</h3>
               <p className="text-xs leading-relaxed" style={mutedTextStyle}>
-                Candidates who meet your score settings will be added to your approval email.
+                Candidates who meet your score settings are gathered for the Review Candidates digest before any candidate-facing scheduling email is sent.
               </p>
             </div>
             <div className="space-y-3">
@@ -1299,7 +1304,7 @@ export default function AutomationPage() {
               <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Approval email</p>
               <h3 className="text-base font-black" style={primaryTextStyle}>Choose who reviews candidates</h3>
               <p className="text-xs leading-relaxed" style={mutedTextStyle}>
-                We'll send one email with matching candidates for your team to approve.
+                Client admin reviewers receive one Review Candidates digest link with candidates awaiting approval.
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]">
