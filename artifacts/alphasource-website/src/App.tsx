@@ -23,6 +23,7 @@ import AccommodationRequestPage from "@/pages/AccommodationRequestPage";
 import TextInterviewPage from "@/pages/TextInterviewPage";
 import PwResetPage from "@/pages/PwResetPage";
 import MembershipAgreementSignerPage from "@/pages/MembershipAgreementSignerPage";
+import AutomationApprovalPage from "@/pages/AutomationApprovalPage";
 
 /* Client dashboard */
 import OverviewPage from "@/pages/dashboard/OverviewPage";
@@ -383,6 +384,7 @@ function Router() {
   const [location] = useLocation();
   const isDashboard = location === "/dashboard" || location.startsWith("/dashboard/");
   const isAdmin     = location === "/admin"     || location.startsWith("/admin/");
+  const isAutomationApproval = location === "/automation/approval" || location.startsWith("/automation/approval/");
   const isInterview =
     location === "/interview" ||
     location.startsWith("/interview/") ||
@@ -399,6 +401,13 @@ function Router() {
 
   if (isDashboard) return <DashboardGuard />;
   if (isAdmin)     return <AdminGuard />;
+  if (isAutomationApproval) return (
+    <Switch>
+      <Route path="/automation/approval/:token" component={AutomationApprovalPage} />
+      <Route path="/automation/approval" component={AutomationApprovalPage} />
+      <Route component={NotFound} />
+    </Switch>
+  );
   if (isInterview) return (
     <Switch>
       <Route path="/accommodation-request/:role_token" component={AccommodationRequestPage} />
