@@ -13,7 +13,7 @@ import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useClient } from "@/context/ClientContext";
-import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { buildEntityFilterOptionsFromRows, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 type InterviewType = "Basic" | "Detailed" | "Technical";
@@ -391,8 +391,11 @@ export default function RolesPage() {
   const embeddedCheckoutContainerRef = useRef<HTMLDivElement>(null);
   const embeddedCheckoutInstanceRef = useRef<{ unmount?: () => void; destroy?: () => void } | null>(null);
   const entityOptions = useMemo(
-    () => buildEntityFilterOptions(clients, selectedClientId),
-    [clients, selectedClientId],
+    () => buildEntityFilterOptionsFromRows(clients, selectedClientId, roles.map((role) => ({
+      clientId: role.clientId,
+      entityName: role.entityName,
+    }))),
+    [clients, selectedClientId, roles],
   );
 
   useEffect(() => {

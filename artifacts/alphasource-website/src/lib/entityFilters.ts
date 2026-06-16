@@ -14,6 +14,17 @@ export interface EntityFilterOption {
   label: string;
 }
 
+export interface EntityRowLike {
+  clientId?: string | null;
+  client_id?: string | null;
+  entityId?: string | null;
+  entity_id?: string | null;
+  entityName?: string | null;
+  entity_name?: string | null;
+  entityLabel?: string | null;
+  entity_label?: string | null;
+}
+
 function cleanText(value: unknown): string {
   return String(value || "").trim();
 }
@@ -71,20 +82,59 @@ export function buildEntityFilterOptions(
   clients: EntityClientLike[],
   selectedClientId: string,
 ): EntityFilterOption[] {
+  const selected = clients.find((client) => client.id === selectedClientId) || null;
   const parent = findHierarchyParent(clients, selectedClientId);
-  if (!parent?.id) return [];
+  const parentId = cleanText(parent?.id) || cleanText(selected?.parent_client_id) || (!isChildEntity(selected) ? cleanText(selected?.id) : "");
+  if (!selected?.id || !parentId) return [];
 
-  const children = getHierarchyChildren(clients, parent.id);
-  if (children.length === 0) return [];
+  const children = getHierarchyChildren(clients, parentId);
+  const knownChildren =
+    isChildEntity(selected) && !children.some((child) => child.id === selected.id)
+      ? [...children, selected]
+      : children;
+  const hasHierarchySignal = knownChildren.length > 0 || selected.is_parent_client === true || isChildEntity(selected);
+  if (!hasHierarchySignal) return [];
 
-  const labelSource = children.find((child) => cleanText(child.entity_label))?.entity_label || parent.entity_label;
+  const labelSource = knownChildren.find((child) => cleanText(child.entity_label))?.entity_label || selected.entity_label || parent?.entity_label;
   return [
     { value: "parent", label: "Parent" },
     { value: "all", label: `All ${pluralizeEntityLabel(labelSource)}` },
-    ...children.map((child) => ({
+    ...knownChildren.map((child) => ({
       value: child.id,
       label: displayEntityName(child.name, "Unnamed entity"),
     })),
+  ];
+}
+
+export function buildEntityFilterOptionsFromRows(
+  clients: EntityClientLike[],
+  selectedClientId: string,
+  rows: EntityRowLike[],
+): EntityFilterOption[] {
+  const options = buildEntityFilterOptions(clients, selectedClientId);
+  const selected = clients.find((client) => client.id === selectedClientId) || null;
+  const parentId = cleanText(selected?.parent_client_id) || selectedClientId;
+  const knownValues = new Set(options.map((option) => option.value));
+  const rowOptions: EntityFilterOption[] = [];
+  let labelSource = selected?.entity_label || "";
+
+  for (const row of rows) {
+    const id = cleanText(row.entityId ?? row.entity_id ?? row.clientId ?? row.client_id);
+    if (!id || id === parentId || knownValues.has(id)) continue;
+    const label = displayEntityName(row.entityName ?? row.entity_name, "");
+    if (!label) continue;
+    const rowLabel = cleanText(row.entityLabel ?? row.entity_label);
+    if (!labelSource && rowLabel) labelSource = rowLabel;
+    knownValues.add(id);
+    rowOptions.push({ value: id, label });
+  }
+
+  if (!rowOptions.length) return options;
+  if (options.length > 0) return [...options, ...rowOptions];
+  return [
+    { value: "parent", label: "Parent" },
+    { value: "all", label: `All ${pluralizeEntityLabel(labelSource)}` },
+    ...rowOptions.sort((a, b) => a.label.localeCompare(b.label)),
   ];
 }
 

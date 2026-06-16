@@ -3,7 +3,7 @@ import { Trash2, UserPlus, ChevronDown, ChevronUp, ChevronsUpDown, Key } from "l
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient, type Client, type ClientMembership } from "@/context/ClientContext";
-import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { buildEntityFilterOptionsFromRows, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 type MemberRole = "Manager" | "Member";
@@ -256,8 +256,11 @@ export default function MembersPage() {
   const [actionNotice, setActionNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [membersReloadKey, setMembersReloadKey] = useState(0);
   const entityOptions = useMemo(
-    () => buildEntityFilterOptions(clients, selectedClientId),
-    [clients, selectedClientId],
+    () => buildEntityFilterOptionsFromRows(clients, selectedClientId, members.map((member) => ({
+      clientId: member.entityId,
+      entityName: member.entityName,
+    }))),
+    [clients, selectedClientId, members],
   );
 
   const nameErr  = submitted && name.trim() === "";
