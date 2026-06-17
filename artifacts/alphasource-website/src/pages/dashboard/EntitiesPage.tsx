@@ -490,6 +490,8 @@ export default function EntitiesPage() {
   const temporaryCredentials = Array.isArray(importResult?.temporary_credentials)
     ? importResult.temporary_credentials.filter((credential) => credential.temporary_password)
     : [];
+  const importHasResult = Boolean(importResult);
+  const importCounts = importResult?.counts;
 
   useEffect(() => {
     let alive = true;
@@ -1215,9 +1217,11 @@ export default function EntitiesPage() {
           >
             <div className="flex items-center justify-between gap-4 px-6 py-4 border-b" style={dividerStyle}>
               <div>
-                <h3 className="text-base font-black" style={primaryTextStyle}>Import entities</h3>
+                <h3 className="text-base font-black" style={primaryTextStyle}>{importHasResult ? "Import results" : "Import entities"}</h3>
                 <p className="text-xs font-semibold mt-0.5" style={mutedTextStyle}>
-                  Create child entities under {parent?.name || selectedClient.name || "the selected parent client"}.
+                  {importHasResult
+                    ? "Review created entities, member assignments, and any one-time temporary passwords."
+                    : `Create child entities under ${parent?.name || selectedClient.name || "the selected parent client"}.`}
                 </p>
               </div>
               <button
@@ -1232,18 +1236,7 @@ export default function EntitiesPage() {
             </div>
 
             <div className="px-6 py-5 space-y-4 overflow-y-auto">
-              <div className="rounded-xl border p-4" style={mutedPanelStyle}>
-                <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="w-4 h-4 mt-0.5 text-[#A380F6] flex-shrink-0" />
-                  <div className="space-y-1 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
-                    <p>Imports create child entities only. Billing, agreements, subscriptions, and payment settings stay with the parent client.</p>
-                    <p>Location type is saved as the entity label when provided. If all member fields are supplied, the user is added directly to that imported entity as Manager or Member.</p>
-                    <p>No automatic emails are sent. Temporary passwords for newly created users are shown only after import and should be shared securely. Imported users should reset or change the password on first login.</p>
-                  </div>
-                </div>
-              </div>
-
-              {importNotice && (
+              {importNotice && !importHasResult && (
                 <div
                   className={`rounded-xl px-3.5 py-2 text-xs font-semibold ${
                     importNotice.tone === "success"
@@ -1257,144 +1250,159 @@ export default function EntitiesPage() {
                 </div>
               )}
 
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-                <div className="rounded-xl border p-4 space-y-3" style={mutedPanelStyle}>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Template</p>
-                    <p className="text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
-                      Use these columns exactly: Name, Location type, Location user name, Location user email, Manager/Member designation.
-                    </p>
+              {!importHasResult && (
+                <>
+                  <div className="rounded-xl border p-4" style={mutedPanelStyle}>
+                    <div className="flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 text-[#A380F6] flex-shrink-0" />
+                      <div className="space-y-1 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
+                        <p>Imports create child entities only. Billing, agreements, subscriptions, and payment settings stay with the parent client.</p>
+                        <p>Location type is saved as the entity label when provided. If all member fields are supplied, the user is added directly to that imported entity as Manager or Member.</p>
+                        <p>No automatic emails are sent. Temporary passwords for newly created users are shown only after import and should be shared securely. Imported users should reset or change the password on first login.</p>
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={downloadCsvTemplate}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white hover:opacity-90"
-                    style={{ backgroundColor: "#A380F6" }}
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download template
-                  </button>
-                  <p className="text-[11px] font-semibold leading-relaxed" style={subtleTextStyle}>
-                    The template includes example rows only. Replace them before importing.
-                  </p>
-                </div>
 
-                <div className="rounded-xl border p-4 space-y-3" style={mutedPanelStyle}>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Upload or paste CSV</p>
-                    <p className="text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
-                      Select a CSV file or paste CSV content below, then review every parsed row before import.
-                    </p>
-                  </div>
-                  <label className="inline-flex w-fit items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold cursor-pointer text-[#A380F6] bg-[#A380F6]/10 hover:bg-[#A380F6]/15 transition-colors">
-                    <Upload className="w-3.5 h-3.5" />
-                    Select CSV
-                    <input
-                      type="file"
-                      accept=".csv,text/csv"
-                      className="hidden"
-                      disabled={importSubmitting}
-                      onChange={(event) => handleImportFile(event.target.files?.[0] || null)}
-                    />
-                  </label>
-                  {importFileName && (
-                    <p className="text-[11px] font-semibold" style={subtleTextStyle}>{importFileName}</p>
-                  )}
-                  <textarea
-                    value={importCsvText}
-                    onChange={(event) => {
-                      setImportCsvText(event.target.value);
-                      setImportNotice(null);
-                      setImportResult(null);
-                      setImportConfirmed(false);
-                    }}
-                    disabled={importSubmitting}
-                    rows={7}
-                    placeholder="Name,Location type,Location user name,Location user email,Manager/Member designation"
-                    className="w-full px-4 py-3 rounded-xl text-xs border placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
-                    style={fieldSurfaceStyle}
-                  />
-                </div>
-              </div>
-
-              {(importParseError || importRows.length > 0) && (
-                <div className="rounded-xl border overflow-hidden" style={mutedPanelStyle}>
-                  <div className="px-4 py-3 border-b flex flex-wrap items-center justify-between gap-2" style={dividerStyle}>
-                    <div>
-                      <p className="text-sm font-black" style={primaryTextStyle}>Preview</p>
-                      <p className="text-[11px] font-semibold mt-0.5" style={mutedTextStyle}>
-                        {importRows.length} parsed row{importRows.length === 1 ? "" : "s"} · {importReadyCount} ready · {importSkipCount} skipped · {importErrorCount} with errors
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+                    <div className="rounded-xl border p-4 space-y-3" style={mutedPanelStyle}>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Template</p>
+                        <p className="text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
+                          Use these columns exactly: Name, Location type, Location user name, Location user email, Manager/Member designation.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={downloadCsvTemplate}
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white hover:opacity-90"
+                        style={{ backgroundColor: "#A380F6" }}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download template
+                      </button>
+                      <p className="text-[11px] font-semibold leading-relaxed" style={subtleTextStyle}>
+                        The template includes example rows only. Replace them before importing.
                       </p>
                     </div>
+
+                    <div className="rounded-xl border p-4 space-y-3" style={mutedPanelStyle}>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Upload or paste CSV</p>
+                        <p className="text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
+                          Select a CSV file or paste CSV content below, then review every parsed row before import.
+                        </p>
+                      </div>
+                      <label className="inline-flex w-fit items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold cursor-pointer text-[#A380F6] bg-[#A380F6]/10 hover:bg-[#A380F6]/15 transition-colors">
+                        <Upload className="w-3.5 h-3.5" />
+                        Select CSV
+                        <input
+                          type="file"
+                          accept=".csv,text/csv"
+                          className="hidden"
+                          disabled={importSubmitting}
+                          onChange={(event) => handleImportFile(event.target.files?.[0] || null)}
+                        />
+                      </label>
+                      {importFileName && (
+                        <p className="text-[11px] font-semibold" style={subtleTextStyle}>{importFileName}</p>
+                      )}
+                      <textarea
+                        value={importCsvText}
+                        onChange={(event) => {
+                          setImportCsvText(event.target.value);
+                          setImportNotice(null);
+                          setImportResult(null);
+                          setImportConfirmed(false);
+                        }}
+                        disabled={importSubmitting}
+                        rows={7}
+                        placeholder="Name,Location type,Location user name,Location user email,Manager/Member designation"
+                        className="w-full px-4 py-3 rounded-xl text-xs border placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
+                        style={fieldSurfaceStyle}
+                      />
+                    </div>
                   </div>
 
-                  {importParseError ? (
-                    <div className="p-4 text-sm font-semibold text-red-500">{importParseError}</div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b" style={dividerStyle}>
-                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Row</th>
-                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Name</th>
-                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Location type</th>
-                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>User name</th>
-                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>User email</th>
-                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Designation</th>
-                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Action</th>
-                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {importRows.map((row) => (
-                            <tr key={`${row.rowNumber}-${row.name}`} className="border-b last:border-b-0" style={dividerStyle}>
-                              <td className="px-3 py-2 font-semibold" style={mutedTextStyle}>{row.rowNumber}</td>
-                              <td className="px-3 py-2 font-semibold min-w-[10rem]" style={primaryTextStyle}>{row.name || "—"}</td>
-                              <td className="px-3 py-2 font-semibold" style={mutedTextStyle}>{row.locationType || "—"}</td>
-                              <td className="px-3 py-2 font-semibold min-w-[9rem]" style={mutedTextStyle}>{row.locationUserName || "—"}</td>
-                              <td className="px-3 py-2 font-semibold max-w-[12rem] truncate" style={mutedTextStyle} title={row.locationUserEmail}>{row.locationUserEmail || "—"}</td>
-                              <td className="px-3 py-2 font-semibold" style={mutedTextStyle}>{displayImportRole(row.memberRole)}</td>
-                              <td className="px-3 py-2 font-semibold min-w-[10rem]" style={mutedTextStyle}>{rowImportAction(row)}</td>
-                              <td className="px-3 py-2 min-w-[14rem]">
-                                <div className="space-y-1">
-                                  <span
-                                    className={`inline-flex rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-widest ${
-                                      row.status === "ready"
-                                        ? "text-[#009E73] bg-[#02D99D]/10"
-                                        : row.status === "skip"
-                                          ? "text-[#A380F6] bg-[#A380F6]/10"
-                                          : "text-red-500 bg-red-50 dark:bg-red-500/10"
-                                    }`}
-                                  >
-                                    {row.status === "ready" ? "Ready" : row.status === "skip" ? "Skip duplicate" : "Error"}
-                                  </span>
-                                  {row.status === "skip" && (
-                                    <p className="text-[11px] font-semibold leading-relaxed" style={mutedTextStyle}>Entity name already exists under this parent.</p>
-                                  )}
-                                  {[...row.errors, ...row.warnings].map((message) => (
-                                    <p key={message} className={`text-[11px] font-semibold leading-relaxed ${row.errors.includes(message) ? "text-red-500" : ""}`} style={row.errors.includes(message) ? undefined : subtleTextStyle}>
-                                      {message}
-                                    </p>
-                                  ))}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  {(importParseError || importRows.length > 0) && (
+                    <div className="rounded-xl border overflow-hidden" style={mutedPanelStyle}>
+                      <div className="px-4 py-3 border-b flex flex-wrap items-center justify-between gap-2" style={dividerStyle}>
+                        <div>
+                          <p className="text-sm font-black" style={primaryTextStyle}>Preview</p>
+                          <p className="text-[11px] font-semibold mt-0.5" style={mutedTextStyle}>
+                            {importRows.length} parsed row{importRows.length === 1 ? "" : "s"} · {importReadyCount} ready · {importSkipCount} skipped · {importErrorCount} with errors
+                          </p>
+                        </div>
+                      </div>
+
+                      {importParseError ? (
+                        <div className="p-4 text-sm font-semibold text-red-500">{importParseError}</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b" style={dividerStyle}>
+                                <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Row</th>
+                                <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Name</th>
+                                <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Location type</th>
+                                <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>User name</th>
+                                <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>User email</th>
+                                <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Designation</th>
+                                <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Action</th>
+                                <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {importRows.map((row) => (
+                                <tr key={`${row.rowNumber}-${row.name}`} className="border-b last:border-b-0" style={dividerStyle}>
+                                  <td className="px-3 py-2 font-semibold" style={mutedTextStyle}>{row.rowNumber}</td>
+                                  <td className="px-3 py-2 font-semibold min-w-[10rem]" style={primaryTextStyle}>{row.name || "—"}</td>
+                                  <td className="px-3 py-2 font-semibold" style={mutedTextStyle}>{row.locationType || "—"}</td>
+                                  <td className="px-3 py-2 font-semibold min-w-[9rem]" style={mutedTextStyle}>{row.locationUserName || "—"}</td>
+                                  <td className="px-3 py-2 font-semibold max-w-[12rem] truncate" style={mutedTextStyle} title={row.locationUserEmail}>{row.locationUserEmail || "—"}</td>
+                                  <td className="px-3 py-2 font-semibold" style={mutedTextStyle}>{displayImportRole(row.memberRole)}</td>
+                                  <td className="px-3 py-2 font-semibold min-w-[10rem]" style={mutedTextStyle}>{rowImportAction(row)}</td>
+                                  <td className="px-3 py-2 min-w-[14rem]">
+                                    <div className="space-y-1">
+                                      <span
+                                        className={`inline-flex rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-widest ${
+                                          row.status === "ready"
+                                            ? "text-[#009E73] bg-[#02D99D]/10"
+                                            : row.status === "skip"
+                                              ? "text-[#A380F6] bg-[#A380F6]/10"
+                                              : "text-red-500 bg-red-50 dark:bg-red-500/10"
+                                        }`}
+                                      >
+                                        {row.status === "ready" ? "Ready" : row.status === "skip" ? "Skip duplicate" : "Error"}
+                                      </span>
+                                      {row.status === "skip" && (
+                                        <p className="text-[11px] font-semibold leading-relaxed" style={mutedTextStyle}>Entity name already exists under this parent.</p>
+                                      )}
+                                      {[...row.errors, ...row.warnings].map((message) => (
+                                        <p key={message} className={`text-[11px] font-semibold leading-relaxed ${row.errors.includes(message) ? "text-red-500" : ""}`} style={row.errors.includes(message) ? undefined : subtleTextStyle}>
+                                          {message}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
+                </>
               )}
 
-              {importResult?.counts && (
-                <div className="rounded-xl border p-4 space-y-3" style={mutedPanelStyle}>
+              {importHasResult && (
+                <div className="rounded-xl border p-4 space-y-4" style={mutedPanelStyle}>
                   <div>
-                    <p className="text-sm font-black" style={primaryTextStyle}>Import results</p>
-                    <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>
-                      {importResult.counts.created} entities created, {importResult.counts.skipped} skipped, {importResult.counts.failed} failed.
-                      {" "}{importResult.counts.members_created || 0} members assigned, {importResult.counts.members_skipped || 0} member assignments skipped, {importResult.counts.member_assignment_failed || 0} member assignment failures.
-                      {" "}Emails sent: {importResult.counts.emails_sent ?? 0}.
+                    <p className="text-base font-black" style={primaryTextStyle}>Import results</p>
+                    <p className="text-xs font-semibold mt-1 leading-relaxed" style={mutedTextStyle}>
+                      {importCounts?.created || 0} entities created, {importCounts?.skipped || 0} skipped, {importCounts?.failed || 0} failed.
+                      {" "}{importCounts?.members_created || 0} members assigned, {importCounts?.members_skipped || 0} member assignments skipped, {importCounts?.member_assignment_failed || 0} member assignment failures.
+                      {" "}Emails sent: {importCounts?.emails_sent ?? 0}.
                     </p>
                   </div>
 
@@ -1446,7 +1454,7 @@ export default function EntitiesPage() {
                   )}
 
                   <div className="grid gap-2">
-                    {(importResult.results || []).map((row) => (
+                    {(importResult?.results || []).map((row) => (
                       <div key={`${row.row_number}-${row.name}-${row.status}`} className="rounded-lg border px-3 py-2" style={fieldSurfaceStyle}>
                         <p className="text-xs font-black" style={primaryTextStyle}>
                           Row {row.row_number || "—"} · {row.name || "Unnamed"} · {row.status || "unknown"}
@@ -1462,36 +1470,57 @@ export default function EntitiesPage() {
             </div>
 
             <div className="px-6 py-4 border-t flex flex-col gap-3 md:flex-row md:items-center md:justify-between" style={{ ...dividerStyle, backgroundColor: "var(--as-surface-muted)" }}>
-              <label className="flex items-start gap-2 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
-                <input
-                  type="checkbox"
-                  checked={importConfirmed}
-                  onChange={(event) => setImportConfirmed(event.target.checked)}
-                  disabled={importSubmitting || importRows.length === 0 || importErrorCount > 0 || Boolean(importParseError)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
-                />
-                I reviewed the preview. Create ready entities and direct member assignments under the selected parent client. No automatic emails will be sent; any temporary passwords shown after import must be shared securely, and users should reset or change them on first login.
-              </label>
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeImport}
-                  disabled={importSubmitting}
-                  className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/55 dark:text-slate-300/70 hover:text-[#0A1547] dark:hover:text-white hover:bg-white dark:hover:bg-white/5 disabled:opacity-50"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { void submitImport(); }}
-                  disabled={importSubmitting || !importConfirmed || importReadyCount === 0 || importErrorCount > 0 || Boolean(importParseError)}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: "#A380F6" }}
-                >
-                  <Upload className="w-4 h-4" />
-                  {importSubmitting ? "Importing..." : "Confirm import"}
-                </button>
-              </div>
+              {importHasResult ? (
+                <div className="flex w-full flex-wrap items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={resetImportState}
+                    className="px-4 py-2 rounded-full text-sm font-bold text-[#A380F6] bg-[#A380F6]/10 hover:bg-[#A380F6]/15"
+                  >
+                    Import another CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeImport}
+                    className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/55 dark:text-slate-300/70 hover:text-[#0A1547] dark:hover:text-white hover:bg-white dark:hover:bg-white/5"
+                  >
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <label className="flex items-start gap-2 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
+                    <input
+                      type="checkbox"
+                      checked={importConfirmed}
+                      onChange={(event) => setImportConfirmed(event.target.checked)}
+                      disabled={importSubmitting || importRows.length === 0 || importErrorCount > 0 || Boolean(importParseError)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
+                    />
+                    I reviewed the preview. Create ready entities and direct member assignments under the selected parent client. No automatic emails will be sent; any temporary passwords shown after import must be shared securely, and users should reset or change them on first login.
+                  </label>
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={closeImport}
+                      disabled={importSubmitting}
+                      className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/55 dark:text-slate-300/70 hover:text-[#0A1547] dark:hover:text-white hover:bg-white dark:hover:bg-white/5 disabled:opacity-50"
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { void submitImport(); }}
+                      disabled={importSubmitting || !importConfirmed || importReadyCount === 0 || importErrorCount > 0 || Boolean(importParseError)}
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: "#A380F6" }}
+                    >
+                      <Upload className="w-4 h-4" />
+                      {importSubmitting ? "Importing..." : "Confirm import"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
