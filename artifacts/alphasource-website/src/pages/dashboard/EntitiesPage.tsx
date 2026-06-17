@@ -19,6 +19,7 @@ interface RawImportRow {
   rowNumber: number;
   name: string;
   locationType: string;
+  locationUserName: string;
   locationUserEmail: string;
   memberRole: string;
 }
@@ -35,12 +36,32 @@ interface ImportResultCounts {
   created: number;
   skipped: number;
   failed: number;
+  members_created?: number;
+  members_skipped?: number;
+  member_assignment_failed?: number;
+  auth_users_created?: number;
+  temporary_passwords_generated?: number;
+  emails_sent?: number;
+}
+
+interface ImportAssignmentResult {
+  status?: string;
+  code?: string;
+  detail?: string;
+  auth_user_created?: boolean;
+  temporary_password?: string | null;
+  temporary_password_available?: boolean;
+  temporary_password_sensitive?: boolean;
+  force_reset_supported?: boolean;
+  force_reset_metadata_set?: boolean;
+  emails_sent?: number;
 }
 
 interface ImportResultRow {
   row_number?: number;
   name?: string;
   location_type?: string;
+  location_user_name?: string;
   location_user_email?: string;
   member_role?: string;
   status?: string;
@@ -48,17 +69,28 @@ interface ImportResultRow {
   errors?: string[];
   warnings?: string[];
   item?: unknown;
-  assignment?: {
-    status?: string;
-    code?: string;
-    detail?: string;
-  } | null;
+  assignment?: ImportAssignmentResult | null;
+}
+
+interface ImportTemporaryCredential {
+  row_number?: number;
+  entity_id?: string;
+  entity_name?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  temporary_password?: string;
+  sensitive?: boolean;
+  force_reset_supported?: boolean;
+  force_reset_metadata_set?: boolean;
 }
 
 interface ImportResult {
   counts?: ImportResultCounts;
   results?: ImportResultRow[];
   created?: unknown[];
+  temporary_credentials?: ImportTemporaryCredential[];
+  sensitive_result?: boolean;
 }
 
 const STANDARD_ENTITY_LABELS = [
@@ -70,10 +102,10 @@ const STANDARD_ENTITY_LABELS = [
   { label: "Contractor", value: "contractor" },
 ] as const;
 const CUSTOM_ENTITY_LABEL = "custom";
-const IMPORT_TEMPLATE_HEADERS = ["Name", "Location type", "Location user email", "Manager/Member designation"];
+const IMPORT_TEMPLATE_HEADERS = ["Name", "Location type", "Location user name", "Location user email", "Manager/Member designation"];
 const IMPORT_TEMPLATE_ROWS = [
-  ["Castle Rock Office", "Office", "manager@example.com", "Manager"],
-  ["Denver Office", "Office", "member@example.com", "Member"],
+  ["Castle Rock Office", "Office", "Alex Manager", "manager@example.com", "Manager"],
+  ["Denver Office", "Office", "Jordan Member", "member@example.com", "Member"],
 ];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -228,6 +260,31 @@ function downloadCsvTemplate() {
   URL.revokeObjectURL(url);
 }
 
+function downloadTemporaryCredentialsCsv(credentials: ImportTemporaryCredential[]) {
+  const rows = [
+    ["Row", "Entity", "Member name", "Member email", "Role", "Temporary password", "Force reset supported", "Reset metadata flag set"],
+    ...credentials.map((credential) => [
+      credential.row_number ?? "",
+      credential.entity_name ?? "",
+      credential.name ?? "",
+      credential.email ?? "",
+      displayImportRole(String(credential.role || "")),
+      credential.temporary_password ?? "",
+      credential.force_reset_supported ? "Yes" : "No",
+      credential.force_reset_metadata_set ? "Yes" : "No",
+    ]),
+  ];
+  const blob = new Blob([rows.map((row) => row.map(csvEscape).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "alphascreen-entities-import-temporary-passwords.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -301,10 +358,11 @@ function parseImportRows(csvText: string): { rows: RawImportRow[]; error: string
     rowNumber: index + 2,
     name: String(row[0] || "").trim(),
     locationType: String(row[1] || "").trim().toLowerCase(),
-    locationUserEmail: String(row[2] || "").trim().toLowerCase(),
-    memberRole: normalizeImportRole(row[3]),
+    locationUserName: String(row[2] || "").trim(),
+    locationUserEmail: String(row[3] || "").trim().toLowerCase(),
+    memberRole: normalizeImportRole(row[4]),
   })).filter((row) => (
-    row.name || row.locationType || row.locationUserEmail || row.memberRole
+    row.name || row.locationType || row.locationUserName || row.locationUserEmail || row.memberRole
   ));
 
   return { rows, error: "" };
@@ -322,17 +380,26 @@ function buildImportPreviewRows(rows: RawImportRow[], existingEntities: ClientEn
     const errors: string[] = [];
     const warnings: string[] = [];
     const key = row.name.trim().toLowerCase();
+    const hasMemberName = Boolean(row.locationUserName);
+    const hasMemberEmail = Boolean(row.locationUserEmail);
+    const hasMemberRole = Boolean(row.memberRole);
     if (!row.name) errors.push("Name is required.");
     if (key && (counts.get(key) || 0) > 1) errors.push("Duplicate entity name in this CSV.");
     if (row.locationUserEmail && !EMAIL_RE.test(row.locationUserEmail)) errors.push("Location user email must be a valid email address.");
     if (row.memberRole && !["manager", "member"].includes(row.memberRole)) {
       errors.push("Manager/Member designation must be blank, Manager, or Member.");
     }
-    if (row.memberRole && !row.locationUserEmail) {
-      errors.push("Location user email is required when Manager/Member designation is supplied.");
+    if ((hasMemberEmail || hasMemberRole) && !hasMemberName) {
+      errors.push("Location user name is required when Location user email or Manager/Member designation is supplied.");
     }
-    if (row.locationUserEmail || row.memberRole) {
-      warnings.push("Member assignment will not be created during this import.");
+    if ((hasMemberName || hasMemberRole) && !hasMemberEmail) {
+      errors.push("Location user email is required when Location user name or Manager/Member designation is supplied.");
+    }
+    if ((hasMemberName || hasMemberEmail) && !hasMemberRole) {
+      errors.push("Manager/Member designation is required when Location user name or Location user email is supplied.");
+    }
+    if (hasMemberName || hasMemberEmail || hasMemberRole) {
+      warnings.push("No automatic emails will be sent. Temporary passwords may appear only in the import results for newly created users.");
     }
 
     const existingDuplicate = key && existingNames.has(key);
@@ -349,6 +416,26 @@ function displayImportRole(role: string): string {
   if (role === "manager") return "Manager";
   if (role === "member") return "Member";
   return role || "—";
+}
+
+function rowImportAction(row: ImportPreviewRow): string {
+  if (row.status === "skip") return "Skip existing entity";
+  if (row.status === "error") return "Fix before import";
+  return row.locationUserName && row.locationUserEmail && row.memberRole
+    ? "Create entity + member"
+    : "Create entity only";
+}
+
+function assignmentSummary(assignment?: ImportAssignmentResult | null): string {
+  if (!assignment) return "No member assignment requested.";
+  if (assignment.status === "created") {
+    return assignment.auth_user_created
+      ? "Member assigned. New auth user created with a temporary password. No email sent."
+      : "Member assigned to an existing auth user. No email sent.";
+  }
+  if (assignment.status === "skipped") return assignment.detail || "Member assignment skipped.";
+  if (assignment.status === "failed") return assignment.detail || "Member assignment failed.";
+  return assignment.detail || "Member assignment status unavailable.";
 }
 
 export default function EntitiesPage() {
@@ -400,6 +487,9 @@ export default function EntitiesPage() {
   const importReadyCount = importRows.filter((row) => row.status === "ready").length;
   const importSkipCount = importRows.filter((row) => row.status === "skip").length;
   const importErrorCount = importRows.filter((row) => row.status === "error").length;
+  const temporaryCredentials = Array.isArray(importResult?.temporary_credentials)
+    ? importResult.temporary_credentials.filter((credential) => credential.temporary_password)
+    : [];
 
   useEffect(() => {
     let alive = true;
@@ -661,8 +751,10 @@ export default function EntitiesPage() {
         body: JSON.stringify({
           client_id: selectedClientId,
           rows: importRows.map((row) => ({
+            row_number: row.rowNumber,
             name: row.name,
             location_type: row.locationType,
+            location_user_name: row.locationUserName,
             location_user_email: row.locationUserEmail,
             member_role: row.memberRole,
           })),
@@ -688,9 +780,9 @@ export default function EntitiesPage() {
       setImportConfirmed(false);
       const counts = payload?.counts;
       setImportNotice({
-        tone: counts?.failed ? "error" : "success",
+        tone: counts?.failed || counts?.member_assignment_failed ? "error" : "success",
         text: counts
-          ? `Import complete: ${counts.created} created, ${counts.skipped} skipped, ${counts.failed} failed.`
+          ? `Import complete: ${counts.created} entities created, ${counts.skipped} skipped, ${counts.failed} failed, ${counts.members_created || 0} members assigned, ${counts.member_assignment_failed || 0} member assignment failures.`
           : "Import complete.",
       });
     } catch (importError) {
@@ -1145,7 +1237,8 @@ export default function EntitiesPage() {
                   <AlertTriangle className="w-4 h-4 mt-0.5 text-[#A380F6] flex-shrink-0" />
                   <div className="space-y-1 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
                     <p>Imports create child entities only. Billing, agreements, subscriptions, and payment settings stay with the parent client.</p>
-                    <p>Location type is saved as the entity label when provided. Location user email and Manager/Member designation are validated for review, but member assignments are not created during this import.</p>
+                    <p>Location type is saved as the entity label when provided. If all member fields are supplied, the user is added directly to that imported entity as Manager or Member.</p>
+                    <p>No automatic emails are sent. Temporary passwords for newly created users are shown only after import and should be shared securely. Imported users should reset or change the password on first login.</p>
                   </div>
                 </div>
               </div>
@@ -1169,7 +1262,7 @@ export default function EntitiesPage() {
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>Template</p>
                     <p className="text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
-                      Use these columns exactly: Name, Location type, Location user email, Manager/Member designation.
+                      Use these columns exactly: Name, Location type, Location user name, Location user email, Manager/Member designation.
                     </p>
                   </div>
                   <button
@@ -1217,7 +1310,7 @@ export default function EntitiesPage() {
                     }}
                     disabled={importSubmitting}
                     rows={7}
-                    placeholder="Name,Location type,Location user email,Manager/Member designation"
+                    placeholder="Name,Location type,Location user name,Location user email,Manager/Member designation"
                     className="w-full px-4 py-3 rounded-xl text-xs border placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6]"
                     style={fieldSurfaceStyle}
                   />
@@ -1245,8 +1338,10 @@ export default function EntitiesPage() {
                             <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Row</th>
                             <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Name</th>
                             <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Location type</th>
+                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>User name</th>
                             <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>User email</th>
                             <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Designation</th>
+                            <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Action</th>
                             <th className="px-3 py-2 text-left font-black uppercase tracking-widest" style={subtleTextStyle}>Status</th>
                           </tr>
                         </thead>
@@ -1256,8 +1351,10 @@ export default function EntitiesPage() {
                               <td className="px-3 py-2 font-semibold" style={mutedTextStyle}>{row.rowNumber}</td>
                               <td className="px-3 py-2 font-semibold min-w-[10rem]" style={primaryTextStyle}>{row.name || "—"}</td>
                               <td className="px-3 py-2 font-semibold" style={mutedTextStyle}>{row.locationType || "—"}</td>
+                              <td className="px-3 py-2 font-semibold min-w-[9rem]" style={mutedTextStyle}>{row.locationUserName || "—"}</td>
                               <td className="px-3 py-2 font-semibold max-w-[12rem] truncate" style={mutedTextStyle} title={row.locationUserEmail}>{row.locationUserEmail || "—"}</td>
                               <td className="px-3 py-2 font-semibold" style={mutedTextStyle}>{displayImportRole(row.memberRole)}</td>
+                              <td className="px-3 py-2 font-semibold min-w-[10rem]" style={mutedTextStyle}>{rowImportAction(row)}</td>
                               <td className="px-3 py-2 min-w-[14rem]">
                                 <div className="space-y-1">
                                   <span
@@ -1295,20 +1392,68 @@ export default function EntitiesPage() {
                   <div>
                     <p className="text-sm font-black" style={primaryTextStyle}>Import results</p>
                     <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>
-                      {importResult.counts.created} created, {importResult.counts.skipped} skipped, {importResult.counts.failed} failed.
+                      {importResult.counts.created} entities created, {importResult.counts.skipped} skipped, {importResult.counts.failed} failed.
+                      {" "}{importResult.counts.members_created || 0} members assigned, {importResult.counts.members_skipped || 0} member assignments skipped, {importResult.counts.member_assignment_failed || 0} member assignment failures.
+                      {" "}Emails sent: {importResult.counts.emails_sent ?? 0}.
                     </p>
                   </div>
+
+                  {temporaryCredentials.length > 0 && (
+                    <div className="rounded-xl border border-amber-300 bg-amber-50/70 p-4 space-y-3 dark:bg-amber-500/10 dark:border-amber-400/30">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <p className="text-sm font-black text-amber-800 dark:text-amber-200">Sensitive temporary passwords</p>
+                          <p className="text-xs font-semibold mt-1 leading-relaxed text-amber-800/80 dark:text-amber-100/80">
+                            These passwords are shown only in this import result for newly created auth users. Share them securely and instruct users to reset or change the password on first login.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => downloadTemporaryCredentialsCsv(temporaryCredentials)}
+                          className="inline-flex w-fit items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-amber-900 bg-white hover:bg-amber-100 dark:text-amber-100 dark:bg-white/10 dark:hover:bg-white/15"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Download sensitive CSV
+                        </button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-amber-300/70 dark:border-amber-400/30">
+                              <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Row</th>
+                              <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Name</th>
+                              <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Email</th>
+                              <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Temporary password</th>
+                              <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Reset</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {temporaryCredentials.map((credential) => (
+                              <tr key={`${credential.row_number}-${credential.email}`} className="border-b last:border-b-0 border-amber-300/50 dark:border-amber-400/20">
+                                <td className="px-3 py-2 font-semibold text-amber-900 dark:text-amber-100">{credential.row_number || "—"}</td>
+                                <td className="px-3 py-2 font-semibold text-amber-900 dark:text-amber-100">{credential.name || "—"}</td>
+                                <td className="px-3 py-2 font-semibold text-amber-900 dark:text-amber-100">{credential.email || "—"}</td>
+                                <td className="px-3 py-2 font-mono text-[11px] text-amber-950 dark:text-amber-50">{credential.temporary_password}</td>
+                                <td className="px-3 py-2 font-semibold text-amber-900 dark:text-amber-100">
+                                  {credential.force_reset_supported ? "Forced" : credential.force_reset_metadata_set ? "Metadata flag only" : "Not supported"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-2">
                     {(importResult.results || []).map((row) => (
                       <div key={`${row.row_number}-${row.name}-${row.status}`} className="rounded-lg border px-3 py-2" style={fieldSurfaceStyle}>
                         <p className="text-xs font-black" style={primaryTextStyle}>
                           Row {row.row_number || "—"} · {row.name || "Unnamed"} · {row.status || "unknown"}
                         </p>
-                        {(row.detail || row.assignment?.detail || (row.errors || []).length > 0) && (
-                          <p className="text-[11px] font-semibold mt-1 leading-relaxed" style={mutedTextStyle}>
-                            {row.detail || row.assignment?.detail || (row.errors || []).join(" ")}
-                          </p>
-                        )}
+                        <p className="text-[11px] font-semibold mt-1 leading-relaxed" style={mutedTextStyle}>
+                          {row.detail || (row.errors || []).join(" ") || assignmentSummary(row.assignment)}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -1325,7 +1470,7 @@ export default function EntitiesPage() {
                   disabled={importSubmitting || importRows.length === 0 || importErrorCount > 0 || Boolean(importParseError)}
                   className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
                 />
-                I reviewed the preview. Create ready entities under the selected parent client.
+                I reviewed the preview. Create ready entities and direct member assignments under the selected parent client. No automatic emails will be sent; any temporary passwords shown after import must be shared securely, and users should reset or change them on first login.
               </label>
               <div className="flex items-center justify-end gap-3">
                 <button
