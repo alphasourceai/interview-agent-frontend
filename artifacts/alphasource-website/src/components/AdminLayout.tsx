@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Check,
   Search,
+  Bot,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAppearance } from "@/context/AppearanceContext";
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { label: "Roles",                 href: "/admin/roles",                icon: Briefcase },
   { label: "Candidates",            href: "/admin/candidates",           icon: Users },
   { label: "Role Config",           href: "/admin/role-config",          icon: Settings },
+  { label: "Automation",            href: "/admin/automation",           icon: Bot },
   { label: "Members",               href: "/admin/members",              icon: UserCheck },
   { label: "Accommodations",        href: "/admin/accommodations",       icon: HeartHandshake },
   { label: "Billing",               href: "/admin/billing",              icon: CreditCard },

@@ -8,6 +8,7 @@ export interface AdminClient {
   color: string;
   parent_client_id?: string | null;
   entity_label?: string | null;
+  archived_at?: string | null;
   billing_client_id?: string | null;
   is_parent_client?: boolean;
   is_child_client?: boolean;
@@ -245,6 +246,7 @@ export function AdminClientProvider({ children }: { children: ReactNode }) {
             color: colorForClient(id, index),
             parent_client_id: optionalText(item.parent_client_id),
             entity_label: optionalText(item.entity_label),
+            archived_at: optionalText(item.archived_at),
             billing_client_id: optionalText(item.billing_client_id),
             is_parent_client: optionalBoolean(item.is_parent_client),
             is_child_client: optionalBoolean(item.is_child_client),
@@ -252,7 +254,8 @@ export function AdminClientProvider({ children }: { children: ReactNode }) {
             child_count: optionalNumber(item.child_count),
           };
         })
-        .filter((item) => Boolean(item.id));
+        .filter((item) => Boolean(item.id))
+        .filter((item) => !(item.is_child_client === true || item.parent_client_id) || !item.archived_at);
       const dedupedClients = normalizedClients.filter(
         (client, index, list) => list.findIndex((entry) => entry.id === client.id) === index,
       );

@@ -42,6 +42,7 @@ import AdminClientsPage from "@/pages/admin/AdminClientsPage";
 import AdminRolesPage from "@/pages/admin/AdminRolesPage";
 import AdminCandidatesPage from "@/pages/admin/AdminCandidatesPage";
 import AdminRoleConfigPage from "@/pages/admin/AdminRoleConfigPage";
+import AdminAutomationPage from "@/pages/admin/AdminAutomationPage";
 import AdminMembersPage from "@/pages/admin/AdminMembersPage";
 import AdminAccommodationsPage from "@/pages/admin/AdminAccommodationsPage";
 import AdminBillingPage from "@/pages/admin/AdminBillingPage";
@@ -338,6 +339,7 @@ function AdminGuard() {
           <Route path="/admin/roles"            component={AdminRolesPage} />
           <Route path="/admin/candidates"       component={AdminCandidatesPage} />
           <Route path="/admin/role-config"      component={AdminRoleConfigPage} />
+          <Route path="/admin/automation"       component={AdminAutomationPage} />
           <Route path="/admin/members"          component={AdminMembersPage} />
           <Route path="/admin/accommodations"   component={AdminAccommodationsPage} />
           <Route path="/admin/billing"          component={AdminBillingPage} />

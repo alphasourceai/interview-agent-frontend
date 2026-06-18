@@ -5,6 +5,7 @@ export interface EntityClientLike {
   name: string;
   parent_client_id?: string | null;
   entity_label?: string | null;
+  archived_at?: string | null;
   is_child_client?: boolean;
   is_parent_client?: boolean;
 }
@@ -60,7 +61,7 @@ export function getHierarchyChildren(
   const parentId = cleanText(parentClientId);
   if (!parentId) return [];
   return clients
-    .filter((client) => cleanText(client.parent_client_id) === parentId)
+    .filter((client) => cleanText(client.parent_client_id) === parentId && !cleanText(client.archived_at))
     .sort((a, b) => cleanText(a.name).localeCompare(cleanText(b.name)));
 }
 

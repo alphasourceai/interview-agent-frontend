@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Building2, Check, Download, Edit2, Plus, Save, Upload, X } from "lucide-react";
+import { AlertTriangle, Archive, Building2, Check, Download, Edit2, Plus, Save, Upload, X } from "lucide-react";
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient } from "@/context/ClientContext";
@@ -10,6 +10,7 @@ interface ClientEntity {
   name: string;
   parent_client_id: string | null;
   entity_label: string | null;
+  archived_at?: string | null;
   billing_client_id?: string | null;
   is_parent_client?: boolean;
   is_child_client?: boolean;
@@ -197,6 +198,7 @@ function toEntity(value: unknown): ClientEntity | null {
     name: String(source.name || "").trim() || "Unnamed entity",
     parent_client_id: String(source.parent_client_id || "").trim() || null,
     entity_label: String(source.entity_label || "").trim() || null,
+    archived_at: String(source.archived_at || "").trim() || null,
     billing_client_id: String(source.billing_client_id || "").trim() || null,
     is_parent_client: source.is_parent_client === true,
     is_child_client: source.is_child_client === true,
@@ -445,6 +447,7 @@ export default function EntitiesPage() {
     loading: clientLoading,
     error: clientError,
     isGlobalAdmin,
+    refreshClients,
   } = useClient();
 
   const canManageEntities = isGlobalAdmin || normalizeRole(selectedClient.role) === "super_admin";
@@ -458,6 +461,9 @@ export default function EntitiesPage() {
   const [editEntityLabelChoice, setEditEntityLabelChoice] = useState("office");
   const [editCustomEntityLabel, setEditCustomEntityLabel] = useState("");
   const [savingId, setSavingId] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<ClientEntity | null>(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveNotice, setArchiveNotice] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createEntityLabelChoice, setCreateEntityLabelChoice] = useState("office");
@@ -856,6 +862,66 @@ export default function EntitiesPage() {
     }
   };
 
+  const openArchiveConfirm = (entity: ClientEntity) => {
+    setNotice(null);
+    setArchiveNotice("");
+    setArchiveTarget(entity);
+  };
+
+  const closeArchiveConfirm = () => {
+    if (archiveBusy) return;
+    setArchiveTarget(null);
+    setArchiveNotice("");
+  };
+
+  const archiveEntity = async () => {
+    const entity = archiveTarget;
+    if (!entity?.id) return;
+    if (!selectedClientId) {
+      setArchiveNotice("Client selection is required.");
+      return;
+    }
+    if (!backendBase) {
+      setArchiveNotice("Missing backend base URL configuration.");
+      return;
+    }
+
+    setArchiveBusy(true);
+    setArchiveNotice("");
+    setNotice(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = String(session?.access_token || "").trim();
+      if (!token) throw new Error("Missing session token.");
+
+      const response = await fetch(`${backendBase}/clients/entities/${encodeURIComponent(entity.id)}/archive`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "omit",
+        body: JSON.stringify({ client_id: selectedClientId }),
+      });
+
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text, "Could not archive entity."));
+
+      setEntities((prev) => prev.filter((item) => item.id !== entity.id));
+      if (editingId === entity.id) cancelEdit();
+      setArchiveTarget(null);
+      setNotice({ tone: "success", text: "Entity archived." });
+      void refreshClients().catch(() => {});
+    } catch (archiveError) {
+      setArchiveNotice(archiveError instanceof Error ? archiveError.message : "Could not archive entity.");
+    } finally {
+      setArchiveBusy(false);
+    }
+  };
+
   if (clientLoading) {
     return (
       <DashboardLayout title="Entities">
@@ -1063,14 +1129,25 @@ export default function EntitiesPage() {
                                   {displayEntityLabel(entity.entity_label)} under {parent?.name || "parent client"}
                                 </p>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => startEdit(entity)}
-                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-[#A380F6] bg-[#A380F6]/10 hover:bg-[#A380F6]/15 transition-colors"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                                Edit
-                              </button>
+                              <div className="flex items-center gap-2 md:justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => openArchiveConfirm(entity)}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#0A1547]/35 dark:text-slate-400/65 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                  title={`Archive ${entity.name}`}
+                                  aria-label={`Archive ${entity.name}`}
+                                >
+                                  <Archive className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(entity)}
+                                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-[#A380F6] bg-[#A380F6]/10 hover:bg-[#A380F6]/15 transition-colors"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                  Edit
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1083,6 +1160,66 @@ export default function EntitiesPage() {
           </div>
         </div>
       </div>
+
+      {archiveTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A1547]/35 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Archive entity"
+        >
+          <div
+            className="w-full max-w-md rounded-2xl overflow-hidden"
+            style={modalSurfaceStyle}
+          >
+            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b" style={dividerStyle}>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Archive entity</h3>
+              <button
+                type="button"
+                onClick={closeArchiveConfirm}
+                disabled={archiveBusy}
+                className="p-2 rounded-lg text-[#0A1547]/35 dark:text-slate-300/65 hover:text-[#0A1547] dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-50"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-sm font-semibold leading-relaxed" style={mutedTextStyle}>
+                This hides the entity from normal active entity selectors. Existing roles, candidates, members, and history remain intact. Billing and agreements remain with the parent client. This does not delete historical records.
+              </p>
+              {archiveNotice && (
+                <div
+                  className="mt-4 rounded-xl px-3.5 py-2 text-xs font-semibold text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {archiveNotice}
+                </div>
+              )}
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeArchiveConfirm}
+                  disabled={archiveBusy}
+                  className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/70 dark:text-slate-300/80 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { void archiveEntity(); }}
+                  disabled={archiveBusy}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  {archiveBusy ? "Archiving..." : "Archive entity"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {createOpen && (
         <div
