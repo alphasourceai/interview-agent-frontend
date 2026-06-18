@@ -10,13 +10,25 @@ type HealthStatus = "healthy" | "warning" | "problem" | "unknown" | "not_configu
 interface MetricItem {
   label: string;
   value: unknown;
+  help?: string;
 }
 
 interface CostSummary {
+  label?: string;
   estimated?: number | string | null;
+  value?: number | string | null;
   currency?: string | null;
+  display?: string | null;
+  source_label?: string | null;
   source?: string | null;
   note?: string | null;
+  help?: string | null;
+}
+
+interface ReadinessItem {
+  label: string;
+  status: string;
+  help?: string;
 }
 
 interface PlatformService {
@@ -24,11 +36,24 @@ interface PlatformService {
   name: string;
   status: HealthStatus;
   configured: boolean | "unknown";
+  live_connected?: boolean;
+  live_api_connected?: boolean;
+  connection_label?: string;
+  source_label?: string;
   source: string;
+  meaning?: string;
+  health_summary?: string;
   usage: MetricItem[];
   errors: MetricItem[];
+  usage_summary?: MetricItem[];
+  problem_summary?: MetricItem[];
+  problems?: MetricItem[];
   cost: CostSummary;
+  cost_summary?: CostSummary;
   health_detail: string;
+  readiness_items?: ReadinessItem[];
+  troubleshooting_note?: string | null;
+  notes?: string[];
   last_checked: string | null;
 }
 
@@ -47,6 +72,7 @@ interface ReadinessRow {
   live_usage_connected: boolean;
   event_source: string;
   notes: string;
+  items?: ReadinessItem[];
 }
 
 interface MetricsPayload {
@@ -159,12 +185,6 @@ function formatValue(value: unknown): string {
   return String(value);
 }
 
-function summarizeItems(items: MetricItem[] | undefined, max = 2): string {
-  const rows = (items || []).slice(0, max);
-  if (rows.length === 0) return "Not available";
-  return rows.map((item) => `${item.label}: ${formatValue(item.value)}`).join(" · ");
-}
-
 function statusClass(status: unknown): string {
   const normalized = String(status || "").toLowerCase();
   if (normalized === "healthy") return "bg-[#02D99D]/10 text-[#00886A]";
@@ -203,11 +223,45 @@ function configuredLabel(value: boolean | "unknown" | undefined): string {
 
 function costLabel(cost: CostSummary | undefined): string {
   if (!cost) return "Not available";
+  if (cost.display) return String(cost.display);
   if (typeof cost.estimated === "number") {
     return `${cost.currency || "USD"} ${cost.estimated.toLocaleString()}`;
   }
+  if (typeof cost.value === "number") {
+    return `${cost.currency || "USD"} ${cost.value.toLocaleString()}`;
+  }
   if (cost.estimated) return String(cost.estimated);
+  if (cost.value) return String(cost.value);
   return "Not available";
+}
+
+function serviceUsage(service: PlatformService): MetricItem[] {
+  return service.usage_summary || service.usage || [];
+}
+
+function serviceProblems(service: PlatformService): MetricItem[] {
+  return service.problem_summary || service.problems || service.errors || [];
+}
+
+function serviceCost(service: PlatformService): CostSummary {
+  return service.cost_summary || service.cost || {};
+}
+
+function SmallMetricList({ items, emptyText }: { items: MetricItem[]; emptyText: string }) {
+  const rows = items.slice(0, 5);
+  if (rows.length === 0) {
+    return <p className="text-xs font-semibold" style={mutedTextStyle}>{emptyText}</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {rows.map((item) => (
+        <div key={item.label} className="flex items-start justify-between gap-3 text-xs">
+          <span className="font-semibold" style={mutedTextStyle} title={item.help}>{item.label}</span>
+          <span className="font-black text-right" style={primaryTextStyle}>{formatValue(item.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function AdminMetricsPage() {
@@ -275,7 +329,10 @@ export default function AdminMetricsPage() {
           <div>
             <h2 className="text-2xl font-black" style={primaryTextStyle}>Platform Health & Usage</h2>
             <p className="text-sm font-semibold mt-1" style={mutedTextStyle}>
-              Infrastructure, vendor API, usage, error, and cost visibility across alphaScreen.
+              Live service health, API usage, errors, and cost signals for alphaScreen.
+            </p>
+            <p className="text-xs font-semibold mt-2 max-w-3xl" style={mutedTextStyle}>
+              This page checks the services alphaScreen depends on. Some rows use live vendor APIs; others use alphaScreen records until a live usage connection is available.
             </p>
             <p className="text-xs font-semibold mt-2" style={subtleTextStyle}>
               {dateLabel} · Last refreshed {formatDateTime(lastRefreshed)}
@@ -360,46 +417,74 @@ export default function AdminMetricsPage() {
           <div className="px-4 py-3 border-b flex items-center justify-between gap-3" style={dividerStyle}>
             <div>
               <h3 className="text-sm font-black" style={primaryTextStyle}>Vendor Usage And Health</h3>
-              <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>One row per core dependency. Usage and problems are summaries, not raw event logs.</p>
+              <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>One card per core dependency. Usage and problems are summaries, not raw event logs.</p>
             </div>
             <ShieldCheck className="w-4 h-4 text-[#A380F6]" />
           </div>
           {loading && services.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading vendors...</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead style={mutedPanelStyle}>
-                  <tr className="text-left text-[10px] font-black" style={subtleTextStyle}>
-                    <th className="px-4 py-3">Service</th>
-                    <th className="px-4 py-3">Health</th>
-                    <th className="px-4 py-3">Usage</th>
-                    <th className="px-4 py-3">Problems</th>
-                    <th className="px-4 py-3">Cost</th>
-                    <th className="px-4 py-3">Source</th>
-                    <th className="px-4 py-3">Last checked</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {services.map((service) => (
-                    <tr key={service.key} className="border-t align-top" style={dividerStyle}>
-                      <td className="px-4 py-3 min-w-[150px]">
-                        <p className="font-black" style={primaryTextStyle}>{service.name}</p>
-                        <p className="text-[11px] font-semibold mt-1" style={mutedTextStyle}>{service.health_detail}</p>
-                      </td>
-                      <td className="px-4 py-3"><StatusBadge status={service.status} /></td>
-                      <td className="px-4 py-3 min-w-[220px] text-xs font-semibold" style={mutedTextStyle}>{summarizeItems(service.usage, 3)}</td>
-                      <td className="px-4 py-3 min-w-[220px] text-xs font-semibold" style={mutedTextStyle}>{summarizeItems(service.errors, 3)}</td>
-                      <td className="px-4 py-3 min-w-[150px]">
-                        <p className="text-xs font-black" style={primaryTextStyle}>{costLabel(service.cost)}</p>
-                        <p className="text-[11px] font-semibold mt-1" style={subtleTextStyle}>{service.cost?.source ? titleCase(service.cost.source) : "Not available"}</p>
-                      </td>
-                      <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap" style={mutedTextStyle}>{titleCase(service.source)}</td>
-                      <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap" style={mutedTextStyle}>{formatDateTime(service.last_checked)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 p-4">
+              {services.map((service) => {
+                const cost = serviceCost(service);
+                return (
+                  <article key={service.key} className="rounded-2xl border p-4" style={mutedPanelStyle}>
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div>
+                        <p className="text-base font-black" style={primaryTextStyle}>{service.name}</p>
+                        <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{service.health_summary || service.health_detail}</p>
+                      </div>
+                      <StatusBadge status={service.status} />
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+                        <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Connection</p>
+                        <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.connection_label || configuredLabel(service.configured)}</p>
+                      </div>
+                      <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+                        <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Usage source</p>
+                        <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.source_label || titleCase(service.source)}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+                      <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>What this means</p>
+                      <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>{service.meaning || service.health_summary || service.health_detail}</p>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+                        <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Usage this period</p>
+                        <SmallMetricList items={serviceUsage(service)} emptyText="No usage signal available." />
+                      </div>
+                      <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+                        <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Problems this period</p>
+                        <SmallMetricList items={serviceProblems(service)} emptyText="No problem signal available." />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Cost this period</p>
+                          <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{costLabel(cost)}</p>
+                        </div>
+                        <p className="text-xs font-semibold" style={mutedTextStyle}>{cost.source_label || cost.source || "Not available"}</p>
+                      </div>
+                      {cost.help && <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>{cost.help}</p>}
+                    </div>
+
+                    {service.troubleshooting_note && (
+                      <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/25">
+                        {service.troubleshooting_note}
+                      </p>
+                    )}
+
+                    <p className="mt-3 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(service.last_checked)}</p>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
@@ -427,8 +512,8 @@ export default function AdminMetricsPage() {
                     <tr key={row.service} className="border-t" style={dividerStyle}>
                       <td className="px-4 py-3 font-black" style={primaryTextStyle}>{row.service}</td>
                       <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{configuredLabel(row.configured)}</td>
-                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{row.live_usage_connected ? "Connected" : "Not connected"}</td>
-                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{titleCase(row.event_source)}</td>
+                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{row.live_usage_connected ? "Connected" : "Live API not connected"}</td>
+                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{row.event_source || "Not connected yet"}</td>
                       <td className="px-4 py-3 text-xs font-semibold max-w-lg" style={mutedTextStyle}>{row.notes || service?.health_detail || "No notes"}</td>
                     </tr>
                   );
