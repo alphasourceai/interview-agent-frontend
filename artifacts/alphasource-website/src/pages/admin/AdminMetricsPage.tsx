@@ -1,174 +1,73 @@
-import { useCallback, useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
-import {
-  AlertTriangle,
-  Briefcase,
-  Building2,
-  CheckCircle2,
-  Clock3,
-  MailWarning,
-  RefreshCw,
-  ShieldCheck,
-  Users,
-  Video,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshCw, ShieldCheck } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
-import { useAdminClient } from "@/context/AdminClientContext";
-import {
-  buildEntityFilterOptions,
-  entityFilterQueryValue,
-  type EntityFilterValue,
-} from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
-interface MetricsOverview {
-  active_clients?: number;
-  active_roles?: number;
-  candidates_in_range?: number;
-  interviews_started?: number;
-  interviews_completed?: number;
-  reports_generated?: number;
-  automation_pending_approvals?: number;
-  email_delivery_failures?: number;
-}
-
-interface FunnelRow {
-  key: string;
-  label: string;
-  count: number;
-}
-
-interface MetricsAutomation {
-  rule_status_counts?: Record<string, number>;
-  evaluation_status_counts?: Record<string, number>;
-  action_state_counts?: Record<string, number>;
-  digest_status_counts?: Record<string, number>;
-  approval_links?: {
-    active?: number;
-    expired?: number;
-    action?: Record<string, number>;
-    digest?: Record<string, number>;
-  };
-  pending_approvals?: number;
-  approved_actions?: number;
-  rejected_actions?: number;
-  sent_actions?: number;
-  failed_actions?: number;
-}
-
-interface MetricsEmail {
-  normalized_counts?: Record<string, number>;
-  event_type_counts?: Record<string, number>;
-  recent_problem_events?: Array<{
-    id?: string | null;
-    event_at?: string | null;
-    event_type?: string | null;
-    category?: string | null;
-    detail?: string | null;
-  }>;
-  scope?: string;
-}
-
-interface MetricsReadiness {
-  recording_ready?: number;
-  recording_pending?: number;
-  recording_problem?: number;
-  recording_deleted?: number;
-  report_generated?: number;
-  missing_report_after_complete?: number;
-  perception_event_received?: number;
-  perception_missing_after_video_completion?: number;
-  transcript_ready?: number;
-}
-
-interface EntityOpsRow {
-  client_id?: string | null;
-  client_name?: string | null;
-  entity_name?: string | null;
-  child_entity_count?: number;
-  archived_child_entity_count?: number;
-  member_count?: number;
-  role_count?: number;
-  candidate_count?: number;
-  archived?: boolean;
-}
-
-interface MetricsEntityOperations {
-  parent_client_count?: number;
-  child_entity_count?: number;
-  archived_child_entity_count?: number;
-  member_count?: number;
-  rows?: EntityOpsRow[];
-  by_entity?: EntityOpsRow[];
-}
-
-interface AttentionItem {
-  type?: string | null;
-  client_name?: string | null;
-  entity_name?: string | null;
-  role_title?: string | null;
-  candidate_name?: string | null;
-  status?: string | null;
-  age?: string | null;
-  detail?: string | null;
-  suggested_action?: string | null;
-}
-
+const timeframes = ["7d", "30d", "MTD", "6m", "YTD", "1y"] as const;
+type Timeframe = (typeof timeframes)[number];
 type HealthStatus = "healthy" | "warning" | "problem" | "unknown" | "not_configured";
 
-interface HealthSummaryItem {
-  key?: string;
-  label?: string;
-  status?: HealthStatus;
-  detail?: string;
-  source?: string;
-  last_checked?: string | null;
+interface MetricItem {
+  label: string;
+  value: unknown;
 }
 
-interface VendorUsageService {
-  key?: string;
-  name?: string;
-  status?: HealthStatus;
-  configured?: boolean | "unknown";
-  source?: string;
-  current_period?: Record<string, unknown>;
-  estimated_cost?: number | string | null;
-  notes?: string[];
-  last_checked?: string | null;
+interface CostSummary {
+  estimated?: number | string | null;
+  currency?: string | null;
+  source?: string | null;
+  note?: string | null;
+}
+
+interface PlatformService {
+  key: string;
+  name: string;
+  status: HealthStatus;
+  configured: boolean | "unknown";
+  source: string;
+  usage: MetricItem[];
+  errors: MetricItem[];
+  cost: CostSummary;
+  health_detail: string;
+  last_checked: string | null;
+}
+
+interface StatusCard {
+  key: string;
+  label: string;
+  status: HealthStatus;
+  detail: string;
+  source: string;
+  last_checked: string | null;
+}
+
+interface ReadinessRow {
+  service: string;
+  configured: boolean | "unknown";
+  live_usage_connected: boolean;
+  event_source: string;
+  notes: string;
 }
 
 interface MetricsPayload {
-  ok?: boolean;
   generated_at?: string;
   filters?: {
-    selected_client_id?: string | null;
-    entity_filter?: string | null;
-    role_id?: string | null;
-    date_from_display?: string | null;
-    date_to_display?: string | null;
+    date_range?: string;
+    date_from_display?: string;
+    date_to_display?: string;
   };
-  overview?: MetricsOverview;
-  interview_funnel?: FunnelRow[];
-  automation?: MetricsAutomation;
-  email?: MetricsEmail;
-  readiness?: MetricsReadiness;
-  entity_operations?: MetricsEntityOperations;
-  attention?: {
-    items?: AttentionItem[];
-    thresholds?: Record<string, number>;
+  summary?: {
+    overall_status?: HealthStatus;
+    healthy_count?: number;
+    warning_count?: number;
+    problem_count?: number;
+    unknown_count?: number;
+    last_checked?: string | null;
   };
-  health_summary?: HealthSummaryItem[];
-  vendor_usage?: {
-    period?: {
-      date_from_display?: string | null;
-      date_to_display?: string | null;
-    } | null;
-    services?: VendorUsageService[];
-  };
-  sources?: {
-    row_counts?: Record<string, number>;
-    warnings?: Array<{ table?: string; code?: string; detail?: string }>;
-    scope_notes?: string[];
-  };
+  status_cards?: StatusCard[];
+  services?: PlatformService[];
+  integration_readiness?: ReadinessRow[];
+  source_notes?: string[];
   request_id?: string | null;
 }
 
@@ -200,22 +99,19 @@ const surfaceCardStyle = {
   border: "1px solid var(--as-border)",
   boxShadow: "var(--as-shadow)",
 };
+const compactSurfaceStyle = {
+  backgroundColor: "var(--as-surface)",
+  border: "1px solid var(--as-border)",
+  boxShadow: "var(--as-shadow)",
+};
 const mutedPanelStyle = {
   backgroundColor: "color-mix(in srgb, var(--as-text) 4%, transparent)",
   borderColor: "var(--as-border)",
-};
-const inputClass =
-  "w-full h-10 rounded-xl border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#A380F6]/30";
-const inputStyle = {
-  backgroundColor: "var(--as-surface)",
-  borderColor: "var(--as-border)",
-  color: "var(--as-text)",
 };
 const primaryTextStyle = { color: "var(--as-text)" };
 const mutedTextStyle = { color: "var(--as-text-muted)" };
 const subtleTextStyle = { color: "var(--as-text-subtle)" };
 const dividerStyle = { borderColor: "var(--as-border)" };
-const DATE_OPTIONS = [7, 30, 90] as const;
 
 function parseJsonSafe(text: string): unknown {
   if (!text) return null;
@@ -239,21 +135,6 @@ function errorMessageFromResponse(text: string, fallback: string): string {
   return text || fallback;
 }
 
-function dateOnly(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function dateFromDays(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - Math.max(0, days - 1));
-  return dateOnly(date);
-}
-
-function formatNumber(value: unknown): string {
-  const parsed = Number(value || 0);
-  return Number.isFinite(parsed) ? parsed.toLocaleString() : "0";
-}
-
 function formatDateTime(value: unknown): string {
   const raw = String(value || "").trim();
   if (!raw) return "Never";
@@ -271,218 +152,70 @@ function titleCase(value: unknown): string {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-function formatMetricLabel(value: string): string {
-  return titleCase(value.replace(/_count$/, "").replace(/_/g, " "));
-}
-
-function formatMetricValue(value: unknown): string {
+function formatValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "Not available";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "number") return Number.isFinite(value) ? value.toLocaleString() : "Not available";
   return String(value);
 }
 
-function countValue(source: Record<string, number> | undefined, key: string): number {
-  return Number(source?.[key] || 0);
+function summarizeItems(items: MetricItem[] | undefined, max = 2): string {
+  const rows = (items || []).slice(0, max);
+  if (rows.length === 0) return "Not available";
+  return rows.map((item) => `${item.label}: ${formatValue(item.value)}`).join(" · ");
 }
 
-function statusTone(status: unknown): "neutral" | "attention" | "good" | "warning" {
+function statusClass(status: unknown): string {
   const normalized = String(status || "").toLowerCase();
-  if (normalized === "healthy") return "good";
-  if (normalized === "warning" || normalized === "unknown" || normalized === "not_configured") return "warning";
-  if (normalized === "problem") return "attention";
-  return "neutral";
+  if (normalized === "healthy") return "bg-[#02D99D]/10 text-[#00886A]";
+  if (normalized === "problem") return "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300";
+  if (normalized === "warning") return "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300";
+  if (normalized === "not_configured") return "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/70";
+  return "bg-[#A380F6]/10 text-[#7C5FCC]";
 }
 
-function statusColor(status: unknown): string {
-  const tone = statusTone(status);
-  if (tone === "good") return "#009E73";
-  if (tone === "attention") return "#C94040";
-  if (tone === "warning") return "#C07800";
-  return "#A380F6";
-}
-
-function MetricCard({
-  label,
-  value,
-  detail,
-  icon: Icon,
-  tone = "neutral",
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: ElementType;
-  tone?: "neutral" | "attention" | "good";
-}) {
-  const iconColor = tone === "attention" ? "#C94040" : tone === "good" ? "#009E73" : "#A380F6";
+function StatusBadge({ status }: { status: unknown }) {
   return (
-    <div className="rounded-2xl p-4" style={surfaceCardStyle}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>{label}</p>
-        <Icon className="w-4 h-4" style={{ color: iconColor }} />
-      </div>
-      <p className="mt-3 text-2xl font-black" style={primaryTextStyle}>{value}</p>
-      <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{detail}</p>
-    </div>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>{text}</div>;
-}
-
-function SectionCard({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-2xl overflow-hidden" style={surfaceCardStyle}>
-      <div className="px-4 py-3 border-b" style={dividerStyle}>
-        <h3 className="text-sm font-black" style={primaryTextStyle}>{title}</h3>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function ProgressRow({ label, count, max }: { label: string; count: number; max: number }) {
-  const width = max > 0 ? Math.max(4, Math.min(100, Math.round((count / max) * 100))) : 0;
-  return (
-    <div className="py-3 border-b last:border-b-0" style={dividerStyle}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-bold" style={primaryTextStyle}>{label}</p>
-        <p className="text-xs font-black" style={primaryTextStyle}>{formatNumber(count)}</p>
-      </div>
-      <div className="mt-2 h-2 rounded-full overflow-hidden" style={{ backgroundColor: "color-mix(in srgb, var(--as-text) 8%, transparent)" }}>
-        <div className="h-full rounded-full bg-[#A380F6]" style={{ width: `${width}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function CountGrid({ rows }: { rows: Array<{ label: string; value: number; tone?: "neutral" | "attention" | "good" }> }) {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4">
-      {rows.map((row) => {
-        const color = row.tone === "attention" ? "#C94040" : row.tone === "good" ? "#009E73" : "var(--as-text)";
-        return (
-          <div key={row.label} className="rounded-xl border p-3" style={mutedPanelStyle}>
-            <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>{row.label}</p>
-            <p className="mt-2 text-xl font-black" style={{ color }}>{formatNumber(row.value)}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function StatusBadge({ value, attention = false }: { value: unknown; attention?: boolean }) {
-  const status = String(value || "").toLowerCase();
-  const isAttention = attention || status === "problem";
-  const isWarning = status === "warning" || status === "unknown" || status === "not_configured";
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black ${
-        isAttention
-          ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300"
-          : isWarning
-            ? "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
-          : "bg-[#A380F6]/10 text-[#7C5FCC]"
-      }`}
-    >
-      {titleCase(value)}
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black ${statusClass(status)}`}>
+      {titleCase(status)}
     </span>
   );
 }
 
-function HealthCard({ item }: { item: HealthSummaryItem }) {
-  const status = item.status || "unknown";
+function SummaryCountBadge({ count, label, status }: { count: number | undefined; label: string; status: HealthStatus }) {
   return (
-    <div className="rounded-2xl p-4" style={surfaceCardStyle}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-black" style={primaryTextStyle}>{item.label || "Service"}</p>
-          <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>{item.detail || "No detail available."}</p>
-        </div>
-        <ShieldCheck className="w-4 h-4 flex-shrink-0" style={{ color: statusColor(status) }} />
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <StatusBadge value={status} />
-        <span className="text-[11px] font-semibold" style={subtleTextStyle}>{item.source || "unknown source"}</span>
-      </div>
-      <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(item.last_checked)}</p>
-    </div>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black ${statusClass(status)}`}>
+      {Number(count || 0).toLocaleString()} {label}
+    </span>
   );
 }
 
-function VendorCard({ service }: { service: VendorUsageService }) {
-  const usageEntries = Object.entries(service.current_period || {}).slice(0, 6);
-  const configuredLabel = service.configured === "unknown" ? "Unknown" : service.configured ? "Configured" : "Not configured";
-  return (
-    <div className="rounded-2xl p-4" style={surfaceCardStyle}>
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <p className="text-sm font-black" style={primaryTextStyle}>{service.name || "Vendor"}</p>
-          <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>Source: {titleCase(service.source || "not_available")}</p>
-        </div>
-        <StatusBadge value={service.status || "unknown"} />
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
-          <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Configured</p>
-          <p className="mt-1 text-xs font-black" style={primaryTextStyle}>{configuredLabel}</p>
-        </div>
-        <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
-          <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Cost estimate</p>
-          <p className="mt-1 text-xs font-black" style={primaryTextStyle}>{formatMetricValue(service.estimated_cost)}</p>
-        </div>
-      </div>
-      {usageEntries.length > 0 ? (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {usageEntries.map(([key, value]) => (
-            <div key={key} className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
-              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>{formatMetricLabel(key)}</p>
-              <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{formatMetricValue(value)}</p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
-          No live usage source configured.
-        </p>
-      )}
-      {(service.notes || []).slice(0, 2).map((note, index) => (
-        <p key={index} className="mt-2 text-xs font-semibold" style={mutedTextStyle}>{note}</p>
-      ))}
-      <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(service.last_checked)}</p>
-    </div>
-  );
+function timeframeButtonStyle(active: boolean) {
+  return active
+    ? { backgroundColor: "var(--as-text)", color: "var(--as-surface)" }
+    : mutedTextStyle;
+}
+
+function configuredLabel(value: boolean | "unknown" | undefined): string {
+  if (value === "unknown" || value === undefined) return "Unknown";
+  return value ? "Configured" : "Not configured";
+}
+
+function costLabel(cost: CostSummary | undefined): string {
+  if (!cost) return "Not available";
+  if (typeof cost.estimated === "number") {
+    return `${cost.currency || "USD"} ${cost.estimated.toLocaleString()}`;
+  }
+  if (cost.estimated) return String(cost.estimated);
+  return "Not available";
 }
 
 export default function AdminMetricsPage() {
-  const { selectedClient, selectedClientId, clients } = useAdminClient();
   const [payload, setPayload] = useState<MetricsPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [rangeDays, setRangeDays] = useState<(typeof DATE_OPTIONS)[number]>(30);
-  const [entityFilter, setEntityFilter] = useState<EntityFilterValue>("all");
-  const [roleId, setRoleId] = useState("");
+  const [timeframe, setTimeframe] = useState<Timeframe>("30d");
   const [reloadNonce, setReloadNonce] = useState(0);
-
-  const entityOptions = useMemo(() => {
-    if (!selectedClientId || selectedClientId === "all") return [];
-    return buildEntityFilterOptions(clients, selectedClientId, { useParentNameLabel: true });
-  }, [clients, selectedClientId]);
-
-  useEffect(() => {
-    if (entityOptions.length === 0) {
-      setEntityFilter("all");
-      return;
-    }
-    const selectedIsChild = selectedClient.is_child_client === true || Boolean(selectedClient.parent_client_id);
-    const preferred = selectedIsChild && entityOptions.some((option) => option.value === selectedClientId)
-      ? selectedClientId
-      : "all";
-    setEntityFilter((current) => entityOptions.some((option) => option.value === current) ? current : preferred);
-  }, [entityOptions, selectedClient, selectedClientId]);
 
   const getToken = useCallback(async (): Promise<string> => {
     const {
@@ -504,16 +237,7 @@ export default function AdminMetricsPage() {
     setError("");
     try {
       const token = await getToken();
-      const params = new URLSearchParams();
-      params.set("date_from", dateFromDays(rangeDays));
-      params.set("date_to", dateOnly(new Date()));
-      if (selectedClientId && selectedClientId !== "all") params.set("client_id", selectedClientId);
-      if (selectedClientId && selectedClientId !== "all" && entityOptions.length > 0) {
-        params.set("entity_filter", entityFilterQueryValue(entityFilter));
-      }
-      const trimmedRoleId = roleId.trim();
-      if (trimmedRoleId) params.set("role_id", trimmedRoleId);
-
+      const params = new URLSearchParams({ date_range: timeframe });
       const response = await fetch(`${backendBase}/admin/metrics?${params.toString()}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
@@ -528,353 +252,202 @@ export default function AdminMetricsPage() {
     } finally {
       setLoading(false);
     }
-  }, [entityFilter, entityOptions.length, getToken, rangeDays, roleId, selectedClientId]);
+  }, [getToken, timeframe]);
 
   useEffect(() => {
     void loadMetrics();
   }, [loadMetrics, reloadNonce]);
 
-  const overview = payload?.overview || {};
-  const automation = payload?.automation || {};
-  const email = payload?.email || {};
-  const readiness = payload?.readiness || {};
-  const entityOperations = payload?.entity_operations || {};
-  const funnelRows = payload?.interview_funnel || [];
-  const maxFunnel = Math.max(1, ...funnelRows.map((row) => Number(row.count || 0)));
-  const attentionItems = payload?.attention?.items || [];
-  const healthSummary = payload?.health_summary || [];
-  const vendorServices = payload?.vendor_usage?.services || [];
-  const problemCount = Number(overview.email_delivery_failures || 0) + Number(readiness.recording_problem || 0) + Number(readiness.missing_report_after_complete || 0);
+  const services = payload?.services || [];
+  const statusCards = payload?.status_cards || [];
+  const readinessRows = payload?.integration_readiness || [];
+  const sourceNotes = payload?.source_notes || [];
+  const lastRefreshed = payload?.summary?.last_checked || payload?.generated_at || null;
   const dateLabel = payload?.filters?.date_from_display && payload?.filters?.date_to_display
     ? `${payload.filters.date_from_display} to ${payload.filters.date_to_display}`
-    : `Last ${rangeDays} days`;
+    : timeframe;
+  const serviceByKey = useMemo(() => Object.fromEntries(services.map((service) => [service.key, service])), [services]);
 
   return (
     <AdminLayout title="Metrics">
       <div className="flex flex-col gap-5">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-black" style={primaryTextStyle}>Platform Health & Metrics</h2>
+            <h2 className="text-2xl font-black" style={primaryTextStyle}>Platform Health & Usage</h2>
             <p className="text-sm font-semibold mt-1" style={mutedTextStyle}>
-              Go-live visibility for platform health, vendor usage, interviews, automation, and delivery.
+              Infrastructure, vendor API, usage, error, and cost visibility across alphaScreen.
+            </p>
+            <p className="text-xs font-semibold mt-2" style={subtleTextStyle}>
+              {dateLabel} · Last refreshed {formatDateTime(lastRefreshed)}
             </p>
           </div>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => setReloadNonce((value) => value + 1)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            style={{ backgroundColor: "#A380F6" }}
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-0.5 rounded-full p-1" style={compactSurfaceStyle} aria-label="Date range">
+              {timeframes.map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => setTimeframe(tf)}
+                  className="px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-200"
+                  style={timeframeButtonStyle(timeframe === tf)}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => setReloadNonce((value) => value + 1)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              style={{ backgroundColor: "#A380F6" }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {error && (
           <div
-            className="flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
+            className="rounded-xl px-4 py-3 text-sm font-semibold text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
             role="status"
             aria-live="polite"
           >
-            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             {error}
           </div>
         )}
 
-        <div className="rounded-2xl px-4 py-3 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr_250px_180px] gap-3 items-end" style={surfaceCardStyle}>
-          <div>
-            <p className="text-xs font-black" style={primaryTextStyle}>Client scope</p>
-            <p className="text-[11px] font-semibold mt-1" style={subtleTextStyle}>
-              {selectedClientId === "all" ? "All clients" : selectedClient.name}. Change this in the admin client picker.
-            </p>
+        <section>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Platform Status Summary</h3>
+              <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>
+                Overall status: <span className="font-black">{titleCase(payload?.summary?.overall_status || "unknown")}</span>
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <SummaryCountBadge count={payload?.summary?.healthy_count} label="healthy" status="healthy" />
+              <SummaryCountBadge count={payload?.summary?.warning_count} label="warning" status="warning" />
+              <SummaryCountBadge count={payload?.summary?.problem_count} label="problem" status="problem" />
+              <SummaryCountBadge count={payload?.summary?.unknown_count} label="unknown" status="unknown" />
+            </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>Entity</label>
-            <select
-              value={entityFilterQueryValue(entityFilter)}
-              disabled={entityOptions.length === 0}
-              onChange={(event) => setEntityFilter(event.target.value as EntityFilterValue)}
-              className={inputClass}
-              style={inputStyle}
-            >
-              {entityOptions.length === 0 ? (
-                <option value="all">All entities</option>
-              ) : entityOptions.map((option) => (
-                <option key={String(option.value)} value={entityFilterQueryValue(option.value)}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>Date range</label>
-            <div className="grid grid-cols-3 gap-1 rounded-xl border p-1" style={inputStyle}>
-              {DATE_OPTIONS.map((days) => (
-                <button
-                  key={days}
-                  type="button"
-                  onClick={() => setRangeDays(days)}
-                  className={`h-8 rounded-lg text-xs font-black transition-colors ${
-                    rangeDays === days ? "text-white" : "text-[var(--as-text-muted)] hover:bg-[#A380F6]/10"
-                  }`}
-                  style={rangeDays === days ? { backgroundColor: "#A380F6" } : undefined}
-                >
-                  {days}d
-                </button>
+          {loading && statusCards.length === 0 ? (
+            <div className="rounded-2xl" style={surfaceCardStyle}>
+              <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading platform status...</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+              {statusCards.map((card) => (
+                <div key={card.key} className="rounded-2xl p-3" style={surfaceCardStyle}>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-black" style={primaryTextStyle}>{card.label}</p>
+                    <StatusBadge status={card.status} />
+                  </div>
+                  <p className="mt-2 text-xs font-semibold truncate" style={mutedTextStyle} title={card.detail}>{card.detail}</p>
+                  <div className="mt-2 flex items-center justify-between gap-2 text-[11px] font-semibold" style={subtleTextStyle}>
+                    <span>{titleCase(card.source)}</span>
+                    <span>{formatDateTime(card.last_checked)}</span>
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest mb-1.5" style={mutedTextStyle}>Role ID</label>
-            <input
-              value={roleId}
-              onChange={(event) => setRoleId(event.target.value)}
-              placeholder="Optional"
-              className={inputClass}
-              style={inputStyle}
-            />
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-3">
-            <h3 className="text-base font-black" style={primaryTextStyle}>Go-live Health Summary</h3>
-            <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>Compact readiness signals from the current request, database, and configured integrations.</p>
-          </div>
-          {loading && healthSummary.length === 0 ? (
-            <div className="rounded-2xl" style={surfaceCardStyle}><EmptyState text="Loading health summary..." /></div>
-          ) : healthSummary.length === 0 ? (
-            <div className="rounded-2xl" style={surfaceCardStyle}><EmptyState text="No health summary available." /></div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-              {healthSummary.map((item) => <HealthCard key={item.key || item.label} item={item} />)}
-            </div>
           )}
-        </div>
+        </section>
 
-        <SectionCard title="Vendor/API Usage And Readiness">
-          {loading && vendorServices.length === 0 ? (
-            <EmptyState text="Loading vendor usage..." />
-          ) : vendorServices.length === 0 ? (
-            <EmptyState text="No vendor usage framework returned." />
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-3 p-4">
-              {vendorServices.map((service) => <VendorCard key={service.key || service.name} service={service} />)}
+        <section className="rounded-2xl overflow-hidden" style={surfaceCardStyle}>
+          <div className="px-4 py-3 border-b flex items-center justify-between gap-3" style={dividerStyle}>
+            <div>
+              <h3 className="text-sm font-black" style={primaryTextStyle}>Vendor Usage And Health</h3>
+              <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>One row per core dependency. Usage and problems are summaries, not raw event logs.</p>
             </div>
-          )}
-        </SectionCard>
-
-        <div>
-          <h3 className="text-base font-black" style={primaryTextStyle}>Interview Pipeline Health</h3>
-          <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>DB-backed usage and readiness proxies for candidates, interviews, reports, recordings, transcripts, and perception events.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-          <MetricCard label="Active roles" value={formatNumber(overview.active_roles)} detail={`${formatNumber(overview.active_clients)} active parent clients`} icon={Briefcase} />
-          <MetricCard label="Candidates" value={formatNumber(overview.candidates_in_range)} detail={dateLabel} icon={Users} />
-          <MetricCard label="Completed interviews" value={formatNumber(overview.interviews_completed)} detail={`${formatNumber(overview.interviews_started)} started`} icon={Video} tone="good" />
-          <MetricCard label="Reports generated" value={formatNumber(overview.reports_generated)} detail={`${formatNumber(readiness.missing_report_after_complete)} missing after threshold`} icon={CheckCircle2} tone={readiness.missing_report_after_complete ? "attention" : "good"} />
-          <MetricCard label="Pending approvals" value={formatNumber(overview.automation_pending_approvals)} detail={`${formatNumber(automation.approval_links?.active)} active approval links`} icon={Clock3} tone={overview.automation_pending_approvals ? "attention" : "neutral"} />
-          <MetricCard label="Delivery problems" value={formatNumber(overview.email_delivery_failures)} detail="Email event problems in range" icon={MailWarning} tone={overview.email_delivery_failures ? "attention" : "neutral"} />
-          <MetricCard label="Readiness problems" value={formatNumber(problemCount)} detail="Recordings, reports, delivery" icon={AlertTriangle} tone={problemCount ? "attention" : "good"} />
-          <MetricCard label="Child entities" value={formatNumber(entityOperations.child_entity_count)} detail={`${formatNumber(entityOperations.archived_child_entity_count)} archived`} icon={Building2} />
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-          <SectionCard title="Interview Funnel">
-            {loading ? (
-              <EmptyState text="Loading funnel..." />
-            ) : funnelRows.length === 0 ? (
-              <EmptyState text="No interview activity in the selected range." />
-            ) : (
-              <div className="px-4">
-                {funnelRows.map((row) => (
-                  <ProgressRow key={row.key} label={row.label} count={Number(row.count || 0)} max={maxFunnel} />
-                ))}
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard title="Recording And Report Readiness">
-            <CountGrid
-              rows={[
-                { label: "Recording ready", value: Number(readiness.recording_ready || 0), tone: "good" },
-                { label: "Pending", value: Number(readiness.recording_pending || 0), tone: readiness.recording_pending ? "attention" : "neutral" },
-                { label: "Problem", value: Number(readiness.recording_problem || 0), tone: readiness.recording_problem ? "attention" : "neutral" },
-                { label: "Deleted", value: Number(readiness.recording_deleted || 0) },
-                { label: "Reports", value: Number(readiness.report_generated || 0), tone: "good" },
-                { label: "Missing report", value: Number(readiness.missing_report_after_complete || 0), tone: readiness.missing_report_after_complete ? "attention" : "neutral" },
-                { label: "Perception events", value: Number(readiness.perception_event_received || 0) },
-                { label: "Perception missing", value: Number(readiness.perception_missing_after_video_completion || 0), tone: readiness.perception_missing_after_video_completion ? "attention" : "neutral" },
-                { label: "Transcript ready", value: Number(readiness.transcript_ready || 0), tone: "good" },
-              ]}
-            />
-          </SectionCard>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-          <SectionCard title="Automation Health">
-            <CountGrid
-              rows={[
-                { label: "Rules enabled", value: countValue(automation.rule_status_counts, "enabled"), tone: "good" },
-                { label: "Rules paused", value: countValue(automation.rule_status_counts, "paused") },
-                { label: "Rules archived", value: countValue(automation.rule_status_counts, "archived") },
-                { label: "Pending approvals", value: Number(automation.pending_approvals || 0), tone: automation.pending_approvals ? "attention" : "neutral" },
-                { label: "Approved", value: Number(automation.approved_actions || 0), tone: "good" },
-                { label: "Rejected", value: Number(automation.rejected_actions || 0) },
-                { label: "Sent", value: Number(automation.sent_actions || 0), tone: "good" },
-                { label: "Failed", value: Number(automation.failed_actions || 0), tone: automation.failed_actions ? "attention" : "neutral" },
-                { label: "Digest sent", value: countValue(automation.digest_status_counts, "sent"), tone: "good" },
-                { label: "Digest failed", value: countValue(automation.digest_status_counts, "failed"), tone: countValue(automation.digest_status_counts, "failed") ? "attention" : "neutral" },
-                { label: "Links active", value: Number(automation.approval_links?.active || 0) },
-                { label: "Links expired", value: Number(automation.approval_links?.expired || 0), tone: automation.approval_links?.expired ? "attention" : "neutral" },
-              ]}
-            />
-          </SectionCard>
-
-          <SectionCard title="Email Delivery Health">
-            <p className="px-4 pt-4 text-xs font-semibold" style={mutedTextStyle}>
-              Platform-wide by selected date range; email delivery events are not client-scoped in the current schema.
-            </p>
-            <CountGrid
-              rows={[
-                { label: "Sent/delivered", value: countValue(email.normalized_counts, "sent_delivered"), tone: "good" },
-                { label: "Engagement", value: countValue(email.normalized_counts, "engagement") },
-                { label: "Problem", value: countValue(email.normalized_counts, "problem"), tone: countValue(email.normalized_counts, "problem") ? "attention" : "neutral" },
-                { label: "Unknown", value: countValue(email.normalized_counts, "unknown") },
-              ]}
-            />
-            {(email.recent_problem_events || []).length === 0 ? (
-              <EmptyState text={loading ? "Loading email events..." : "No email problem events in the selected range."} />
-            ) : (
-              <div className="overflow-x-auto border-t" style={dividerStyle}>
-                <table className="w-full text-sm">
-                  <thead style={mutedPanelStyle}>
-                    <tr className="text-left text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
-                      <th className="px-4 py-2">Event</th>
-                      <th className="px-4 py-2">Category</th>
-                      <th className="px-4 py-2">Detail</th>
-                      <th className="px-4 py-2">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(email.recent_problem_events || []).map((event, index) => (
-                      <tr key={event.id || index} className="border-t" style={dividerStyle}>
-                        <td className="px-4 py-3"><StatusBadge value={event.event_type || "problem"} attention /></td>
-                        <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{event.category || "unknown"}</td>
-                        <td className="px-4 py-3 text-xs font-semibold max-w-md" style={mutedTextStyle}>{event.detail || "No detail"}</td>
-                        <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap" style={mutedTextStyle}>{formatDateTime(event.event_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </SectionCard>
-        </div>
-
-        <SectionCard title="Attention Needed">
-          {loading ? (
-            <EmptyState text="Loading attention list..." />
-          ) : attentionItems.length === 0 ? (
-            <EmptyState text="No attention items for the selected filters." />
+            <ShieldCheck className="w-4 h-4 text-[#A380F6]" />
+          </div>
+          {loading && services.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading vendors...</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead style={mutedPanelStyle}>
-                  <tr className="text-left text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
-                    <th className="px-4 py-2">Type</th>
-                    <th className="px-4 py-2">Client / Entity</th>
-                    <th className="px-4 py-2">Role / Candidate</th>
-                    <th className="px-4 py-2">Status</th>
-                    <th className="px-4 py-2">Age</th>
-                    <th className="px-4 py-2">Suggested action</th>
+                  <tr className="text-left text-[10px] font-black" style={subtleTextStyle}>
+                    <th className="px-4 py-3">Service</th>
+                    <th className="px-4 py-3">Health</th>
+                    <th className="px-4 py-3">Usage</th>
+                    <th className="px-4 py-3">Problems</th>
+                    <th className="px-4 py-3">Cost</th>
+                    <th className="px-4 py-3">Source</th>
+                    <th className="px-4 py-3">Last checked</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {attentionItems.map((item, index) => (
-                    <tr key={`${item.type || "item"}-${index}`} className="border-t" style={dividerStyle}>
-                      <td className="px-4 py-3"><StatusBadge value={item.type || "attention"} attention /></td>
-                      <td className="px-4 py-3">
-                        <p className="text-xs font-bold" style={primaryTextStyle}>{item.client_name || "Platform"}</p>
-                        <p className="text-[11px] font-semibold" style={mutedTextStyle}>{item.entity_name || "All entities"}</p>
+                  {services.map((service) => (
+                    <tr key={service.key} className="border-t align-top" style={dividerStyle}>
+                      <td className="px-4 py-3 min-w-[150px]">
+                        <p className="font-black" style={primaryTextStyle}>{service.name}</p>
+                        <p className="text-[11px] font-semibold mt-1" style={mutedTextStyle}>{service.health_detail}</p>
                       </td>
-                      <td className="px-4 py-3">
-                        <p className="text-xs font-bold" style={primaryTextStyle}>{item.role_title || "No role"}</p>
-                        <p className="text-[11px] font-semibold" style={mutedTextStyle}>{item.candidate_name || item.detail || "No candidate"}</p>
+                      <td className="px-4 py-3"><StatusBadge status={service.status} /></td>
+                      <td className="px-4 py-3 min-w-[220px] text-xs font-semibold" style={mutedTextStyle}>{summarizeItems(service.usage, 3)}</td>
+                      <td className="px-4 py-3 min-w-[220px] text-xs font-semibold" style={mutedTextStyle}>{summarizeItems(service.errors, 3)}</td>
+                      <td className="px-4 py-3 min-w-[150px]">
+                        <p className="text-xs font-black" style={primaryTextStyle}>{costLabel(service.cost)}</p>
+                        <p className="text-[11px] font-semibold mt-1" style={subtleTextStyle}>{service.cost?.source ? titleCase(service.cost.source) : "Not available"}</p>
                       </td>
-                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{titleCase(item.status)}</td>
-                      <td className="px-4 py-3 text-xs font-black whitespace-nowrap" style={primaryTextStyle}>{item.age || "unknown"}</td>
-                      <td className="px-4 py-3 text-xs font-semibold max-w-md" style={mutedTextStyle}>{item.suggested_action || "Review in admin tools."}</td>
+                      <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap" style={mutedTextStyle}>{titleCase(service.source)}</td>
+                      <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap" style={mutedTextStyle}>{formatDateTime(service.last_checked)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </SectionCard>
+        </section>
 
-        <SectionCard title="Entity And Client Operations">
-          <CountGrid
-            rows={[
-              { label: "Parent clients", value: Number(entityOperations.parent_client_count || 0) },
-              { label: "Child entities", value: Number(entityOperations.child_entity_count || 0) },
-              { label: "Archived entities", value: Number(entityOperations.archived_child_entity_count || 0), tone: entityOperations.archived_child_entity_count ? "attention" : "neutral" },
-              { label: "Members", value: Number(entityOperations.member_count || 0) },
-            ]}
-          />
-          {(entityOperations.by_entity || []).length === 0 ? (
-            <EmptyState text={loading ? "Loading entity operations..." : "No entity operations rows for this scope."} />
-          ) : (
-            <div className="overflow-x-auto border-t" style={dividerStyle}>
-              <table className="w-full text-sm">
-                <thead style={mutedPanelStyle}>
-                  <tr className="text-left text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
-                    <th className="px-4 py-2">Client</th>
-                    <th className="px-4 py-2">Entity</th>
-                    <th className="px-4 py-2">Roles</th>
-                    <th className="px-4 py-2">Candidates</th>
-                    <th className="px-4 py-2">Members</th>
-                    <th className="px-4 py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(entityOperations.by_entity || []).slice(0, 20).map((row, index) => (
-                    <tr key={row.client_id || index} className="border-t" style={dividerStyle}>
-                      <td className="px-4 py-3 text-xs font-bold" style={primaryTextStyle}>{row.client_name || "Unknown client"}</td>
-                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{row.entity_name || "Parent"}</td>
-                      <td className="px-4 py-3 text-xs font-black" style={primaryTextStyle}>{formatNumber(row.role_count)}</td>
-                      <td className="px-4 py-3 text-xs font-black" style={primaryTextStyle}>{formatNumber(row.candidate_count)}</td>
-                      <td className="px-4 py-3 text-xs font-black" style={primaryTextStyle}>{formatNumber(row.member_count)}</td>
-                      <td className="px-4 py-3"><StatusBadge value={row.archived ? "archived" : "active"} attention={row.archived === true} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </SectionCard>
-
-        <div className="rounded-2xl p-4" style={surfaceCardStyle}>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#A380F6]" />
-              <p className="text-sm font-black" style={primaryTextStyle}>Safe read-only metrics</p>
-            </div>
-            <p className="text-xs font-semibold" style={mutedTextStyle}>Generated {formatDateTime(payload?.generated_at)}</p>
+        <section className="rounded-2xl overflow-hidden" style={surfaceCardStyle}>
+          <div className="px-4 py-3 border-b" style={dividerStyle}>
+            <h3 className="text-sm font-black" style={primaryTextStyle}>Integration Readiness</h3>
           </div>
-          <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {(payload?.sources?.scope_notes || []).map((note, index) => (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead style={mutedPanelStyle}>
+                <tr className="text-left text-[10px] font-black" style={subtleTextStyle}>
+                  <th className="px-4 py-3">Service</th>
+                  <th className="px-4 py-3">Configured</th>
+                  <th className="px-4 py-3">Live usage connected</th>
+                  <th className="px-4 py-3">Webhook/event source</th>
+                  <th className="px-4 py-3">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {readinessRows.map((row) => {
+                  const serviceKey = services.find((service) => service.name === row.service)?.key || row.service;
+                  const service = serviceByKey[serviceKey];
+                  return (
+                    <tr key={row.service} className="border-t" style={dividerStyle}>
+                      <td className="px-4 py-3 font-black" style={primaryTextStyle}>{row.service}</td>
+                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{configuredLabel(row.configured)}</td>
+                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{row.live_usage_connected ? "Connected" : "Not connected"}</td>
+                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{titleCase(row.event_source)}</td>
+                      <td className="px-4 py-3 text-xs font-semibold max-w-lg" style={mutedTextStyle}>{row.notes || service?.health_detail || "No notes"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-2xl p-4" style={surfaceCardStyle}>
+          <h3 className="text-sm font-black" style={primaryTextStyle}>Source And Limitations</h3>
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+            {sourceNotes.map((note, index) => (
               <p key={index} className="rounded-xl border px-3 py-2 text-xs font-semibold" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
                 {note}
               </p>
             ))}
-            {(payload?.sources?.warnings || []).map((warning, index) => (
-              <p key={`warning-${index}`} className="rounded-xl border px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/25">
-                {warning.table || "Source"}: {warning.detail || warning.code || "Unavailable"}
-              </p>
-            ))}
           </div>
-        </div>
+        </section>
       </div>
     </AdminLayout>
   );
