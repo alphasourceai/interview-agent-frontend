@@ -235,7 +235,7 @@ export default function AdminRolesPage() {
     [adminClients],
   );
   const entityOptions = useMemo(
-    () => buildEntityFilterOptions(hierarchyClients, selectedClientId),
+    () => buildEntityFilterOptions(hierarchyClients, selectedClientId, { useParentNameLabel: true }),
     [hierarchyClients, selectedClientId],
   );
   const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions), [entityOptions]);

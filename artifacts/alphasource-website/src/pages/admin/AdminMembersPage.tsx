@@ -201,7 +201,7 @@ export default function AdminMembersPage() {
     [adminClients],
   );
   const entityOptions = useMemo(
-    () => buildEntityFilterOptions(hierarchyClients, activeClientId),
+    () => buildEntityFilterOptions(hierarchyClients, activeClientId, { useParentNameLabel: true }),
     [hierarchyClients, activeClientId],
   );
   const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions, "members"), [entityOptions]);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  ChevronRight, Trash2, RefreshCw, ChevronUp, ChevronDown, Plus,
+  ChevronRight, Trash2, RefreshCw, ChevronUp, ChevronDown, Plus, Pencil,
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/lib/supabaseClient";
@@ -343,6 +343,10 @@ export default function AdminClientsPage() {
   const [entityModalParent, setEntityModalParent] = useState<Client | null>(null);
   const [entityCreateBusy, setEntityCreateBusy] = useState(false);
   const [entityForm, setEntityForm] = useState({ name: "", entityLabel: "" });
+  const [entityEditTarget, setEntityEditTarget] = useState<{ parent: Client; entity: Client } | null>(null);
+  const [entityEditBusy, setEntityEditBusy] = useState(false);
+  const [entityEditForm, setEntityEditForm] = useState({ name: "", entityLabel: "" });
+  const [entityEditNotice, setEntityEditNotice] = useState("");
 
   /* form state */
   const [form, setForm] = useState({
@@ -450,6 +454,24 @@ export default function AdminClientsPage() {
     setEntityForm({ name: "", entityLabel: "" });
   };
 
+  const openEntityEditModal = (parent: Client, entity: Client) => {
+    if (isChildEntity(parent)) return;
+    if (!isChildEntity(entity) || String(entity.parent_client_id || "").trim() !== String(parent.id || "").trim()) return;
+    setEntityEditTarget({ parent, entity });
+    setEntityEditForm({
+      name: String(entity.name || "").trim(),
+      entityLabel: String(entity.entity_label || "").trim(),
+    });
+    setEntityEditNotice("");
+  };
+
+  const closeEntityEditModal = () => {
+    if (entityEditBusy) return;
+    setEntityEditTarget(null);
+    setEntityEditForm({ name: "", entityLabel: "" });
+    setEntityEditNotice("");
+  };
+
   const createChildEntity = async () => {
     const parent = entityModalParent;
     const name = entityForm.name.trim();
@@ -500,6 +522,91 @@ export default function AdminClientsPage() {
       });
     } finally {
       setEntityCreateBusy(false);
+    }
+  };
+
+  const saveChildEntityEdit = async () => {
+    const target = entityEditTarget;
+    const parent = target?.parent || null;
+    const entity = target?.entity || null;
+    const parentId = String(parent?.id || "").trim();
+    const entityId = String(entity?.id || "").trim();
+    const name = entityEditForm.name.trim();
+    const entity_label = entityEditForm.entityLabel.trim();
+
+    if (!parentId || !entityId || !parent || !entity) {
+      setEntityEditNotice("Parent client and entity are required.");
+      return;
+    }
+    if (isChildEntity(parent) || !isChildEntity(entity) || String(entity.parent_client_id || "").trim() !== parentId) {
+      setEntityEditNotice("Only child entities under the selected parent can be edited here.");
+      return;
+    }
+    if (!name) {
+      setEntityEditNotice("Entity name is required.");
+      return;
+    }
+
+    const normalizedName = name.toLowerCase();
+    const duplicateSibling = clients.some((client) =>
+      client.id !== entityId &&
+      String(client.parent_client_id || "").trim() === parentId &&
+      String(client.name || "").trim().toLowerCase() === normalizedName,
+    );
+    if (duplicateSibling) {
+      setEntityEditNotice("A sibling entity with this name already exists.");
+      return;
+    }
+
+    setEntityEditBusy(true);
+    setEntityEditNotice("");
+    setActionNotice(null);
+    try {
+      if (!backendBase) throw new Error("Missing backend base URL configuration.");
+      const token = await getSessionToken();
+      const response = await fetch(`${backendBase}/admin/clients/${encodeURIComponent(parentId)}/entities/${encodeURIComponent(entityId)}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "omit",
+        body: JSON.stringify({
+          name,
+          entity_label: entity_label || null,
+        }),
+      });
+
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text, "Could not update entity."));
+      const payload = parseJsonSafe(text) as { item?: Record<string, unknown> } | null;
+      const updated = payload?.item && typeof payload.item === "object" ? payload.item : {};
+      const updatedName = String(updated.name || name).trim() || name;
+      const updatedEntityLabel = optionalText(updated.entity_label) ?? null;
+      const updatedParentId = optionalText(updated.parent_client_id) ?? parentId;
+      const updatedParentName = optionalText(updated.parent_client_name) ?? entity.parent_client_name ?? parent.name;
+
+      setClients((prev) =>
+        prev.map((client) =>
+          client.id === entityId
+            ? {
+                ...client,
+                name: updatedName,
+                entity_label: updatedEntityLabel,
+                parent_client_id: updatedParentId,
+                parent_client_name: updatedParentName,
+              }
+            : client,
+        ),
+      );
+      setEntityEditTarget(null);
+      setEntityEditForm({ name: "", entityLabel: "" });
+      setActionNotice({ tone: "success", text: "Entity updated." });
+      requestReload();
+    } catch (error) {
+      setEntityEditNotice(error instanceof Error ? error.message : "Could not update entity.");
+    } finally {
+      setEntityEditBusy(false);
     }
   };
 
@@ -1448,13 +1555,14 @@ export default function AdminClientsPage() {
                         </p>
                       </div>
                       <div
-                        className="hidden lg:grid grid-cols-[1fr_120px_140px_220px_44px] gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest"
+                        className="hidden lg:grid grid-cols-[1fr_120px_130px_200px_52px_52px] gap-3 px-4 py-2 text-[10px] font-black uppercase tracking-widest"
                         style={{ ...mutedPanelStyle, ...subtleTextStyle }}
                       >
                         <span>Name</span>
                         <span>Label</span>
                         <span>Billing</span>
                         <span>Access override</span>
+                        <span>Edit</span>
                         <span>Remove</span>
                       </div>
                       <div>
@@ -1463,7 +1571,7 @@ export default function AdminClientsPage() {
                           return (
                             <div
                               key={child.id}
-                              className="grid grid-cols-1 lg:grid-cols-[1fr_120px_140px_220px_44px] gap-3 items-center px-4 py-3 border-b last:border-b-0 as-shell-dropdown-item transition-colors"
+                              className="grid grid-cols-1 lg:grid-cols-[1fr_120px_130px_200px_52px_52px] gap-3 items-center px-4 py-3 border-b last:border-b-0 as-shell-dropdown-item transition-colors"
                               style={dividerStyle}
                             >
                               <div className="min-w-0">
@@ -1499,6 +1607,20 @@ export default function AdminClientsPage() {
                                   <option>Force Inactive</option>
                                 </select>
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
+                              </div>
+                              <div className="flex items-center lg:justify-center">
+                                <button
+                                  type="button"
+                                  className="p-1.5 rounded-lg text-[#0A1547]/35 dark:text-slate-400/60 hover:text-[#A380F6] hover:bg-[#A380F6]/10 transition-all"
+                                  title={`Edit ${child.name}`}
+                                  aria-label={`Edit ${child.name}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEntityEditModal(client, child);
+                                  }}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
                               </div>
                               <div className="flex items-center lg:justify-center">
                                 <button
@@ -1574,6 +1696,69 @@ export default function AdminClientsPage() {
                 }}
               >
                 {entityCreateBusy ? "Creating..." : "Create entity"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {entityEditTarget && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center px-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#0A1547]/35"
+            aria-label="Close entity editing"
+            onClick={closeEntityEditModal}
+          />
+          <div
+            className="relative w-full max-w-md rounded-2xl p-5"
+            style={modalSurfaceStyle}
+          >
+            <h3 className="text-base font-black" style={primaryTextStyle}>Edit entity</h3>
+            <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>
+              Under {entityEditTarget.parent.name}
+            </p>
+            {entityEditNotice && (
+              <div
+                className="mt-4 rounded-xl px-3.5 py-2 text-xs font-semibold text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
+                role="status"
+                aria-live="polite"
+              >
+                {entityEditNotice}
+              </div>
+            )}
+            <div className="mt-4 space-y-3">
+              <input
+                className={inputCls}
+                placeholder="Entity name"
+                value={entityEditForm.name}
+                onChange={(e) => setEntityEditForm((prev) => ({ ...prev, name: e.target.value }))}
+              />
+              <input
+                className={inputCls}
+                placeholder="Entity label/type (Office, Location, Region)"
+                value={entityEditForm.entityLabel}
+                onChange={(e) => setEntityEditForm((prev) => ({ ...prev, entityLabel: e.target.value }))}
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={entityEditBusy}
+                className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/70 dark:text-slate-300/80 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+                onClick={closeEntityEditModal}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={entityEditBusy}
+                className="px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: "#A380F6" }}
+                onClick={() => {
+                  void saveChildEntityEdit();
+                }}
+              >
+                {entityEditBusy ? "Saving..." : "Save"}
               </button>
             </div>
           </div>
