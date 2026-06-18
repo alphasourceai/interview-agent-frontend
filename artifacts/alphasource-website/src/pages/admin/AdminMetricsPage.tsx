@@ -441,14 +441,14 @@ export default function AdminMetricsPage() {
           {loading && services.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading vendors...</div>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 p-4">
+            <div className="columns-1 xl:columns-2 gap-3 p-4">
               {services.map((service) => {
                 const cost = serviceCost(service);
                 const expanded = expandedServices.has(service.key);
                 const detailsId = serviceDetailsId(service.key);
                 const summary = service.health_summary || service.health_detail || "No health summary available.";
                 return (
-                  <article key={service.key} className="rounded-2xl border overflow-hidden" style={mutedPanelStyle}>
+                  <article key={service.key} className="mb-3 inline-block w-full break-inside-avoid rounded-2xl border overflow-hidden" style={mutedPanelStyle}>
                     <button
                       type="button"
                       className="w-full px-4 py-3 text-left transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
