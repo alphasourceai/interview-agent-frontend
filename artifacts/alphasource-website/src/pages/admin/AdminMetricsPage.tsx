@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { ChevronDown, RefreshCw, ShieldCheck } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -247,6 +247,10 @@ function serviceCost(service: PlatformService): CostSummary {
   return service.cost_summary || service.cost || {};
 }
 
+function serviceDetailsId(serviceKey: string): string {
+  return `vendor-service-details-${serviceKey.replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+}
+
 function SmallMetricList({ items, emptyText }: { items: MetricItem[]; emptyText: string }) {
   const rows = items.slice(0, 5);
   if (rows.length === 0) {
@@ -270,6 +274,7 @@ export default function AdminMetricsPage() {
   const [error, setError] = useState("");
   const [timeframe, setTimeframe] = useState<Timeframe>("30d");
   const [reloadNonce, setReloadNonce] = useState(0);
+  const [expandedServices, setExpandedServices] = useState<Set<string>>(() => new Set());
 
   const getToken = useCallback(async (): Promise<string> => {
     const {
@@ -311,6 +316,18 @@ export default function AdminMetricsPage() {
   useEffect(() => {
     void loadMetrics();
   }, [loadMetrics, reloadNonce]);
+
+  const toggleServiceCard = useCallback((serviceKey: string) => {
+    setExpandedServices((current) => {
+      const next = new Set(current);
+      if (next.has(serviceKey)) {
+        next.delete(serviceKey);
+      } else {
+        next.add(serviceKey);
+      }
+      return next;
+    });
+  }, []);
 
   const services = payload?.services || [];
   const statusCards = payload?.status_cards || [];
@@ -427,61 +444,81 @@ export default function AdminMetricsPage() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 p-4">
               {services.map((service) => {
                 const cost = serviceCost(service);
+                const expanded = expandedServices.has(service.key);
+                const detailsId = serviceDetailsId(service.key);
+                const summary = service.health_summary || service.health_detail || "No health summary available.";
                 return (
-                  <article key={service.key} className="rounded-2xl border p-4" style={mutedPanelStyle}>
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                      <div>
-                        <p className="text-base font-black" style={primaryTextStyle}>{service.name}</p>
-                        <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{service.health_summary || service.health_detail}</p>
-                      </div>
-                      <StatusBadge status={service.status} />
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
-                        <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Connection</p>
-                        <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.connection_label || configuredLabel(service.configured)}</p>
-                      </div>
-                      <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
-                        <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Usage source</p>
-                        <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.source_label || titleCase(service.source)}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
-                      <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>What this means</p>
-                      <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>{service.meaning || service.health_summary || service.health_detail}</p>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
-                        <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Usage this period</p>
-                        <SmallMetricList items={serviceUsage(service)} emptyText="No usage signal available." />
-                      </div>
-                      <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
-                        <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Problems this period</p>
-                        <SmallMetricList items={serviceProblems(service)} emptyText="No problem signal available." />
-                      </div>
-                    </div>
-
-                    <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <div>
-                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Cost this period</p>
-                          <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{costLabel(cost)}</p>
+                  <article key={service.key} className="rounded-2xl border overflow-hidden" style={mutedPanelStyle}>
+                    <button
+                      type="button"
+                      className="w-full px-4 py-3 text-left transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
+                      onClick={() => toggleServiceCard(service.key)}
+                      aria-expanded={expanded}
+                      aria-controls={detailsId}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base font-black" style={primaryTextStyle}>{service.name}</p>
+                          <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{summary}</p>
                         </div>
-                        <p className="text-xs font-semibold" style={mutedTextStyle}>{cost.source_label || cost.source || "Not available"}</p>
+                        <div className="flex flex-shrink-0 items-center gap-2">
+                          <StatusBadge status={service.status} />
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                            style={mutedTextStyle}
+                            aria-hidden="true"
+                          />
+                        </div>
                       </div>
-                      {cost.help && <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>{cost.help}</p>}
+                    </button>
+
+                    <div id={detailsId} hidden={!expanded} className="px-4 pb-4">
+                      <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Connection</p>
+                          <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.connection_label || configuredLabel(service.configured)}</p>
+                        </div>
+                        <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Usage source</p>
+                          <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.source_label || titleCase(service.source)}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+                        <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>What this means</p>
+                        <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>{service.meaning || service.health_summary || service.health_detail}</p>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+                          <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Usage this period</p>
+                          <SmallMetricList items={serviceUsage(service)} emptyText="No usage signal available." />
+                        </div>
+                        <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+                          <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Problems this period</p>
+                          <SmallMetricList items={serviceProblems(service)} emptyText="No problem signal available." />
+                        </div>
+                      </div>
+
+                      <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div>
+                            <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Cost this period</p>
+                            <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{costLabel(cost)}</p>
+                          </div>
+                          <p className="text-xs font-semibold" style={mutedTextStyle}>{cost.source_label || cost.source || "Not available"}</p>
+                        </div>
+                        {cost.help && <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>{cost.help}</p>}
+                      </div>
+
+                      {service.troubleshooting_note && (
+                        <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/25">
+                          {service.troubleshooting_note}
+                        </p>
+                      )}
+
+                      <p className="mt-3 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(service.last_checked)}</p>
                     </div>
-
-                    {service.troubleshooting_note && (
-                      <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/25">
-                        {service.troubleshooting_note}
-                      </p>
-                    )}
-
-                    <p className="mt-3 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(service.last_checked)}</p>
                   </article>
                 );
               })}
