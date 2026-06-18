@@ -37,6 +37,8 @@ export default function InfoTooltip({
     <span
       ref={triggerRef}
       className="inline-flex items-center cursor-default"
+      tabIndex={0}
+      aria-label={content}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
