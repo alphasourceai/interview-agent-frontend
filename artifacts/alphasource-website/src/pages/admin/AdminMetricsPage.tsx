@@ -113,6 +113,29 @@ interface AttentionItem {
   suggested_action?: string | null;
 }
 
+type HealthStatus = "healthy" | "warning" | "problem" | "unknown" | "not_configured";
+
+interface HealthSummaryItem {
+  key?: string;
+  label?: string;
+  status?: HealthStatus;
+  detail?: string;
+  source?: string;
+  last_checked?: string | null;
+}
+
+interface VendorUsageService {
+  key?: string;
+  name?: string;
+  status?: HealthStatus;
+  configured?: boolean | "unknown";
+  source?: string;
+  current_period?: Record<string, unknown>;
+  estimated_cost?: number | string | null;
+  notes?: string[];
+  last_checked?: string | null;
+}
+
 interface MetricsPayload {
   ok?: boolean;
   generated_at?: string;
@@ -132,6 +155,14 @@ interface MetricsPayload {
   attention?: {
     items?: AttentionItem[];
     thresholds?: Record<string, number>;
+  };
+  health_summary?: HealthSummaryItem[];
+  vendor_usage?: {
+    period?: {
+      date_from_display?: string | null;
+      date_to_display?: string | null;
+    } | null;
+    services?: VendorUsageService[];
   };
   sources?: {
     row_counts?: Record<string, number>;
@@ -240,8 +271,35 @@ function titleCase(value: unknown): string {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
+function formatMetricLabel(value: string): string {
+  return titleCase(value.replace(/_count$/, "").replace(/_/g, " "));
+}
+
+function formatMetricValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "Not available";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number") return Number.isFinite(value) ? value.toLocaleString() : "Not available";
+  return String(value);
+}
+
 function countValue(source: Record<string, number> | undefined, key: string): number {
   return Number(source?.[key] || 0);
+}
+
+function statusTone(status: unknown): "neutral" | "attention" | "good" | "warning" {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "healthy") return "good";
+  if (normalized === "warning" || normalized === "unknown" || normalized === "not_configured") return "warning";
+  if (normalized === "problem") return "attention";
+  return "neutral";
+}
+
+function statusColor(status: unknown): string {
+  const tone = statusTone(status);
+  if (tone === "good") return "#009E73";
+  if (tone === "attention") return "#C94040";
+  if (tone === "warning") return "#C07800";
+  return "#A380F6";
 }
 
 function MetricCard({
@@ -317,16 +375,85 @@ function CountGrid({ rows }: { rows: Array<{ label: string; value: number; tone?
 }
 
 function StatusBadge({ value, attention = false }: { value: unknown; attention?: boolean }) {
+  const status = String(value || "").toLowerCase();
+  const isAttention = attention || status === "problem";
+  const isWarning = status === "warning" || status === "unknown" || status === "not_configured";
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black ${
-        attention
+        isAttention
           ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300"
+          : isWarning
+            ? "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
           : "bg-[#A380F6]/10 text-[#7C5FCC]"
       }`}
     >
       {titleCase(value)}
     </span>
+  );
+}
+
+function HealthCard({ item }: { item: HealthSummaryItem }) {
+  const status = item.status || "unknown";
+  return (
+    <div className="rounded-2xl p-4" style={surfaceCardStyle}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-black" style={primaryTextStyle}>{item.label || "Service"}</p>
+          <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>{item.detail || "No detail available."}</p>
+        </div>
+        <ShieldCheck className="w-4 h-4 flex-shrink-0" style={{ color: statusColor(status) }} />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <StatusBadge value={status} />
+        <span className="text-[11px] font-semibold" style={subtleTextStyle}>{item.source || "unknown source"}</span>
+      </div>
+      <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(item.last_checked)}</p>
+    </div>
+  );
+}
+
+function VendorCard({ service }: { service: VendorUsageService }) {
+  const usageEntries = Object.entries(service.current_period || {}).slice(0, 6);
+  const configuredLabel = service.configured === "unknown" ? "Unknown" : service.configured ? "Configured" : "Not configured";
+  return (
+    <div className="rounded-2xl p-4" style={surfaceCardStyle}>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <p className="text-sm font-black" style={primaryTextStyle}>{service.name || "Vendor"}</p>
+          <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>Source: {titleCase(service.source || "not_available")}</p>
+        </div>
+        <StatusBadge value={service.status || "unknown"} />
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Configured</p>
+          <p className="mt-1 text-xs font-black" style={primaryTextStyle}>{configuredLabel}</p>
+        </div>
+        <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
+          <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Cost estimate</p>
+          <p className="mt-1 text-xs font-black" style={primaryTextStyle}>{formatMetricValue(service.estimated_cost)}</p>
+        </div>
+      </div>
+      {usageEntries.length > 0 ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {usageEntries.map(([key, value]) => (
+            <div key={key} className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
+              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>{formatMetricLabel(key)}</p>
+              <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{formatMetricValue(value)}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
+          No live usage source configured.
+        </p>
+      )}
+      {(service.notes || []).slice(0, 2).map((note, index) => (
+        <p key={index} className="mt-2 text-xs font-semibold" style={mutedTextStyle}>{note}</p>
+      ))}
+      <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(service.last_checked)}</p>
+    </div>
   );
 }
 
@@ -415,6 +542,8 @@ export default function AdminMetricsPage() {
   const funnelRows = payload?.interview_funnel || [];
   const maxFunnel = Math.max(1, ...funnelRows.map((row) => Number(row.count || 0)));
   const attentionItems = payload?.attention?.items || [];
+  const healthSummary = payload?.health_summary || [];
+  const vendorServices = payload?.vendor_usage?.services || [];
   const problemCount = Number(overview.email_delivery_failures || 0) + Number(readiness.recording_problem || 0) + Number(readiness.missing_report_after_complete || 0);
   const dateLabel = payload?.filters?.date_from_display && payload?.filters?.date_to_display
     ? `${payload.filters.date_from_display} to ${payload.filters.date_to_display}`
@@ -425,9 +554,9 @@ export default function AdminMetricsPage() {
       <div className="flex flex-col gap-5">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-black" style={primaryTextStyle}>Platform Metrics</h2>
+            <h2 className="text-2xl font-black" style={primaryTextStyle}>Platform Health & Metrics</h2>
             <p className="text-sm font-semibold mt-1" style={mutedTextStyle}>
-              Operational visibility for interviews, automation, delivery, and go-live readiness.
+              Go-live visibility for platform health, vendor usage, interviews, automation, and delivery.
             </p>
           </div>
           <button
@@ -506,6 +635,39 @@ export default function AdminMetricsPage() {
           </div>
         </div>
 
+        <div>
+          <div className="mb-3">
+            <h3 className="text-base font-black" style={primaryTextStyle}>Go-live Health Summary</h3>
+            <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>Compact readiness signals from the current request, database, and configured integrations.</p>
+          </div>
+          {loading && healthSummary.length === 0 ? (
+            <div className="rounded-2xl" style={surfaceCardStyle}><EmptyState text="Loading health summary..." /></div>
+          ) : healthSummary.length === 0 ? (
+            <div className="rounded-2xl" style={surfaceCardStyle}><EmptyState text="No health summary available." /></div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              {healthSummary.map((item) => <HealthCard key={item.key || item.label} item={item} />)}
+            </div>
+          )}
+        </div>
+
+        <SectionCard title="Vendor/API Usage And Readiness">
+          {loading && vendorServices.length === 0 ? (
+            <EmptyState text="Loading vendor usage..." />
+          ) : vendorServices.length === 0 ? (
+            <EmptyState text="No vendor usage framework returned." />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-3 p-4">
+              {vendorServices.map((service) => <VendorCard key={service.key || service.name} service={service} />)}
+            </div>
+          )}
+        </SectionCard>
+
+        <div>
+          <h3 className="text-base font-black" style={primaryTextStyle}>Interview Pipeline Health</h3>
+          <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>DB-backed usage and readiness proxies for candidates, interviews, reports, recordings, transcripts, and perception events.</p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <MetricCard label="Active roles" value={formatNumber(overview.active_roles)} detail={`${formatNumber(overview.active_clients)} active parent clients`} icon={Briefcase} />
           <MetricCard label="Candidates" value={formatNumber(overview.candidates_in_range)} detail={dateLabel} icon={Users} />
@@ -550,7 +712,7 @@ export default function AdminMetricsPage() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-          <SectionCard title="Automation">
+          <SectionCard title="Automation Health">
             <CountGrid
               rows={[
                 { label: "Rules enabled", value: countValue(automation.rule_status_counts, "enabled"), tone: "good" },
@@ -569,7 +731,10 @@ export default function AdminMetricsPage() {
             />
           </SectionCard>
 
-          <SectionCard title="Email Delivery">
+          <SectionCard title="Email Delivery Health">
+            <p className="px-4 pt-4 text-xs font-semibold" style={mutedTextStyle}>
+              Platform-wide by selected date range; email delivery events are not client-scoped in the current schema.
+            </p>
             <CountGrid
               rows={[
                 { label: "Sent/delivered", value: countValue(email.normalized_counts, "sent_delivered"), tone: "good" },
