@@ -19,6 +19,7 @@ import {
   Check,
   Search,
   Bot,
+  BarChart3,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAppearance } from "@/context/AppearanceContext";
@@ -33,6 +34,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Overview",              href: "/admin",                      icon: LayoutDashboard },
+  { label: "Metrics",               href: "/admin/metrics",              icon: BarChart3 },
   { label: "Clients",               href: "/admin/clients",              icon: Building2 },
   { label: "Roles",                 href: "/admin/roles",                icon: Briefcase },
   { label: "Candidates",            href: "/admin/candidates",           icon: Users },
