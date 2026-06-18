@@ -4,7 +4,7 @@ import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useClient, type Client, type ClientMembership } from "@/context/ClientContext";
-import { buildEntityFilterOptionsFromRows, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 type MemberRole = "Manager" | "Member";
@@ -257,13 +257,10 @@ export default function MembersPage() {
   const [actionNotice, setActionNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [membersReloadKey, setMembersReloadKey] = useState(0);
   const entityOptions = useMemo(
-    () => buildEntityFilterOptionsFromRows(clients, selectedClientId, members.map((member) => ({
-      clientId: member.entityId,
-      entityName: member.entityName,
-    }))),
-    [clients, selectedClientId, members],
+    () => buildEntityFilterOptions(clients, selectedClientId, { useParentNameLabel: true }),
+    [clients, selectedClientId],
   );
-  const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions), [entityOptions]);
+  const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions, "members"), [entityOptions]);
 
   const nameErr  = submitted && name.trim() === "";
   const emailErr = submitted && !isValidEmail(email);

@@ -14,6 +14,12 @@ export interface EntityFilterOption {
   label: string;
 }
 
+export interface EntityFilterOptionsConfig {
+  useParentNameLabel?: boolean;
+}
+
+export type EntityFilterHelpMode = "records" | "members";
+
 function cleanText(value: unknown): string {
   return String(value || "").trim();
 }
@@ -70,6 +76,7 @@ export function defaultEntityFilterValue(
 export function buildEntityFilterOptions(
   clients: EntityClientLike[],
   selectedClientId: string,
+  config: EntityFilterOptionsConfig = {},
 ): EntityFilterOption[] {
   const parent = findHierarchyParent(clients, selectedClientId);
   if (!parent?.id) return [];
@@ -78,8 +85,9 @@ export function buildEntityFilterOptions(
   if (children.length === 0) return [];
 
   const labelSource = children.find((child) => cleanText(child.entity_label))?.entity_label || parent.entity_label;
+  const parentLabel = config.useParentNameLabel ? displayEntityName(parent.name, "Parent") : "Parent";
   return [
-    { value: "parent", label: "Parent" },
+    { value: "parent", label: parentLabel },
     { value: "all", label: `All ${pluralizeEntityLabel(labelSource)}` },
     ...children.map((child) => ({
       value: child.id,
@@ -92,7 +100,15 @@ export function entityFilterQueryValue(value: EntityFilterValue): string {
   return cleanText(value);
 }
 
-export function entityFilterHelpText(options: EntityFilterOption[]): string {
+export function entityFilterHelpText(
+  options: EntityFilterOption[],
+  mode: EntityFilterHelpMode = "records",
+): string {
   const allLabel = options.find((option) => option.value === "all")?.label || "All entities";
-  return `The Parent option shows records assigned directly to the parent. The ${allLabel} option shows parent plus child entity records. A specific entity option shows records assigned directly to that entity. The Entity column shows which entity each row belongs to.`;
+  const parentLabel = options.find((option) => option.value === "parent")?.label || "Parent";
+  const parentSubject = parentLabel === "Parent" ? "The parent option" : parentLabel;
+  if (mode === "members") {
+    return `${parentSubject} shows members assigned directly to the parent. The ${allLabel} option shows parent plus child entity member assignments. A specific entity option shows members assigned directly to that entity; inherited or effective access is not included. The Entity column shows which entity each row belongs to.`;
+  }
+  return `${parentSubject} shows records assigned directly to the parent. The ${allLabel} option shows parent plus child entity records. A specific entity option shows records assigned directly to that entity. The Entity column shows which entity each row belongs to.`;
 }

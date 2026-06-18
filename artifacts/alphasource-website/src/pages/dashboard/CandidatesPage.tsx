@@ -15,7 +15,7 @@ import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useClient } from "@/context/ClientContext";
-import { buildEntityFilterOptionsFromRows, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ──────────────────────────────────────────── */
@@ -50,7 +50,6 @@ interface InterviewAnalysisV2 {
 
 interface Candidate {
   id: string | number;
-  clientId?: string;
   candidateId?: string;
   roleId?: string;
   interviewId?: string;
@@ -448,7 +447,6 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
 
   return {
     id,
-    clientId: String(item.entity_id || item.client_id || "").trim(),
     candidateId,
     roleId,
     interviewId,
@@ -1155,11 +1153,8 @@ export default function CandidatesPage() {
 
   const minScoreNum = minScore === "" ? null : parseInt(minScore, 10);
   const entityOptions = useMemo(
-    () => buildEntityFilterOptionsFromRows(clients, selectedClientId, candidates.map((candidate) => ({
-      clientId: candidate.clientId,
-      entityName: candidate.entityName,
-    }))),
-    [clients, selectedClientId, candidates],
+    () => buildEntityFilterOptions(clients, selectedClientId, { useParentNameLabel: true }),
+    [clients, selectedClientId],
   );
   const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions), [entityOptions]);
 
