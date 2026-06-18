@@ -12,11 +12,11 @@ const faqSections = [
     items: [
       {
         question: "What is alphaScreen?",
-        answer: "alphaScreen is an AI-powered screening platform that helps your team create roles, invite candidates, conduct structured AI interviews, and review candidate reports in one dashboard.",
+        answer: "alphaScreen is an AI-powered screening platform that helps your team create roles, invite candidates, conduct structured screening interviews, and review candidate reports in one dashboard.",
       },
       {
         question: "What should I do first?",
-        answer: "Start by confirming your client profile, team access, billing status, and active roles. Then create or review a role before sending candidates into the interview flow.",
+        answer: "Start by confirming your client profile, team access, billing status, and active roles. Then create or review a role before sending candidates into the screening interview flow.",
       },
       {
         question: "Who should have dashboard access?",
@@ -33,27 +33,35 @@ const faqSections = [
       },
       {
         question: "What are child entities?",
-        answer: "Child entities are operational scopes under the parent client, such as offices, locations, branches, companies, employers, or contractors. They help your team organize roles, candidates, interviews, and reports by the part of the organization doing the hiring.",
+        answer: "Child entities are operational scopes under the parent client, such as offices, locations, branches, companies, employers, or contractors. They help your team organize roles, candidates, screening interviews, and reports by the part of the organization doing the hiring.",
       },
       {
         question: "Who can see or manage entities?",
-        answer: "Super Admins can see the parent client and its child entities. Managers and Members see only the scopes assigned to them. Super Admins can add child entities and edit child entity names and labels from the Entities page.",
+        answer: "Super Admins can see the parent client and its child entities. Managers and Members see only the scopes assigned to them. Super Admins can add child entities, import child entities from CSV, update child entity names and labels, and archive child entities that are no longer active.",
       },
       {
-        question: "Where do roles, candidates, interviews, and reports belong?",
-        answer: "Roles, candidates, interviews, and reports belong to the selected client or entity scope. Use the client selector to choose the parent client or child entity before managing roles or reviewing candidates.",
+        question: "Where do roles, candidates, screening interviews, and reports belong?",
+        answer: "Roles, candidates, screening interviews, and reports belong to the selected client or entity scope. Use the available client or entity selector before managing roles, reviewing candidates, or checking membership assignments.",
       },
       {
         question: "How does Entity filtering work on Roles, Candidates, and Members?",
-        answer: "For parent/child entity clients, Roles, Candidates, and Members include an Entity selector. The Parent option shows records assigned directly to the parent organization. The All offices, All locations, or All entities option shows parent plus child entity records. A specific entity option shows records assigned directly to that entity. The Entity column shows which entity each row belongs to. On Members, filtering shows direct assignments for the selected entity, not inherited or effective access.",
+        answer: "For parent/child entity clients, Roles, Candidates, and Members include an Entity selector. The parent/client-name option shows records assigned directly to the parent organization. All offices, All locations, or All entities shows parent plus child entity records. A specific entity option shows records assigned directly to that entity. The Entity column shows which entity each row belongs to. On Members, filtering shows direct assignments for the selected entity; inherited or effective access is not the same as direct assignment.",
       },
       {
-        question: "Can I delete or archive an entity?",
-        answer: "No. Entity delete and archive actions are not available yet. If an entity was created by mistake or needs to be removed, contact alphaSource support.",
+        question: "How does entity CSV import work?",
+        answer: "Use the CSV template from the Entities page when you need to create multiple child entities at once. Required columns currently include Name, Location type, Location user name, Location user email, and Manager/Member designation. Imported users are assigned directly to the child entity listed in their row. The import does not automatically send emails to imported members, and existing direct member assignments may be skipped instead of duplicated. Review imported member access after import.",
+      },
+      {
+        question: "How should temporary credentials from import be handled?",
+        answer: "If temporary credentials are generated during CSV import, they are shown only in the import results after submission. Download or store them securely right away, handle them according to your internal handoff process, and avoid re-importing large files before support has reviewed any mistakes.",
+      },
+      {
+        question: "Can I archive an entity?",
+        answer: "Child entities can be archived when they are no longer active. Archiving hides the child entity from normal active selectors and lists, but it does not delete historical roles, candidates, members, reports, billing, or agreements. Archived entity names may still appear on historical records. Contact support if an archived child entity needs to be restored.",
       },
       {
         question: "How do team members get access to entities?",
-        answer: "Use the Members page to assign Managers or Members to the parent client or specific child entities. Entity management is handled on the Entities page, but member assignment is handled separately on the Members page.",
+        answer: "Use the Members page to assign Managers or Members to the parent client or specific child entities. Entity management is handled on the Entities page, but member assignment is handled separately on the Members page. If member access looks wrong after an import, verify the entity assignment and role first, then contact support if it still does not look right.",
       },
     ],
   },
@@ -62,7 +70,7 @@ const faqSections = [
     items: [
       {
         question: "How do I create a role?",
-        answer: "Go to Roles, choose Create Role, and enter the role details requested by the form. The better the role description and requirements, the stronger the interview structure and report quality will be.",
+        answer: "Go to Roles, choose Create Role, and enter the role details requested by the form. The better the role description and requirements, the stronger the screening interview structure and report quality will be.",
       },
       {
         question: "What information should I include in a role?",
@@ -70,11 +78,11 @@ const faqSections = [
       },
       {
         question: "Can I edit a role after it is created?",
-        answer: "If role editing is available in your dashboard, use it carefully. Changes may affect future candidates. Avoid changing core requirements after candidates have already started interviewing unless your hiring team understands the impact.",
+        answer: "If role editing is available in your dashboard, use it carefully. Changes may affect future candidates. Avoid changing core requirements after candidates have already started screening interviews unless your hiring team understands the impact.",
       },
       {
-        question: "What happens when a role reaches its interview capacity?",
-        answer: "Candidate access may be limited until additional interview capacity is available or the role/client plan is updated. If a candidate cannot start because of capacity, check billing, role settings, or contact support.",
+        question: "What happens when a role reaches its screening interview capacity?",
+        answer: "Candidate access may be limited until additional screening interview capacity is available or the role/client plan is updated. If a candidate cannot start because of capacity, check billing, role settings, or contact support.",
       },
     ],
   },
@@ -82,20 +90,20 @@ const faqSections = [
     title: "Candidates",
     items: [
       {
-        question: "How do candidates start an interview?",
-        answer: "Candidates use the interview link or flow provided for the role. They submit their information, verify access when prompted, and then start the AI interview.",
+        question: "How do candidates start a screening interview?",
+        answer: "Candidates use the screening interview link or flow provided for the role. They submit their information, verify access when prompted, and then start the AI screening interview.",
       },
       {
         question: "What if a candidate says they did not receive an OTP or verification email?",
-        answer: "Ask them to check spam or junk first. If they still cannot access the interview, verify the email address and try the available resend or support process. If the issue continues, contact support with the candidate name, email, and role.",
+        answer: "Ask them to check spam or junk first. If they still cannot access the screening interview, verify the email address and try the available resend or support process. If the issue continues, contact support with the candidate name, email, and role.",
       },
       {
-        question: "Can a candidate retake an interview?",
+        question: "Can a candidate retake a screening interview?",
         answer: "Retakes should be handled carefully and consistently. If your dashboard supports retakes or re-invites, follow your company's policy. If not, contact support.",
       },
       {
-        question: "What should candidates know before interviewing?",
-        answer: "Candidates should be in a quiet place, use a stable internet connection, allow camera and microphone permissions, and answer naturally. They should not rely on outside help during the interview.",
+        question: "What should candidates know before a screening interview?",
+        answer: "Candidates should be in a quiet place, use a stable internet connection, allow camera and microphone permissions, and answer naturally. They should not rely on outside help during the screening interview.",
       },
     ],
   },
@@ -104,19 +112,23 @@ const faqSections = [
     items: [
       {
         question: "What does Candidate Automation do?",
-        answer: "Candidate Automation helps your team identify candidates who meet configured thresholds and prepare them for second-round review. It organizes candidates for client admin review and does not make final hiring decisions.",
+        answer: "Candidate Automation helps your team identify candidates who match configured criteria and prepare them for second-round review. It organizes candidates for client admin review and does not make final hiring decisions.",
       },
       {
-        question: "Does automation email candidates when a digest is created?",
-        answer: "No. Creating a digest does not automatically email candidates. The client admin receives one Review Candidates digest link, and the review page shows candidates awaiting approval.",
+        question: "Does automation email candidates before approval?",
+        answer: "No. Automation does not automatically send candidate-facing scheduling emails without approval. Reviewers receive a Review Candidates link, and scheduling link delivery occurs only after the approved workflow.",
       },
       {
         question: "What happens when we approve, reject, or do not approve a candidate?",
-        answer: "Approving a candidate sends the configured scheduling link immediately. Rejecting a candidate or leaving them unapproved sends no candidate email.",
+        answer: "Approving a candidate sends the configured scheduling link. Rejecting a candidate or leaving them unapproved sends no candidate email.",
       },
       {
         question: "Where does the scheduling link come from?",
-        answer: "The scheduling link comes from the Automation page configuration for that role. Client admins can turn automation off or edit the thresholds, reviewers, digest schedule, and scheduling link.",
+        answer: "The scheduling link comes from the Automation page configuration for that role. Client admins can use the standard configuration controls for thresholds, reviewers, digest schedule, and scheduling link where available.",
+      },
+      {
+        question: "What if an automation rule needs correction?",
+        answer: "If a rule was created incorrectly or criteria need refinement, contact support. The alphaSource team can help update, pause, or remove a problematic rule when deeper corrections are needed.",
       },
     ],
   },
@@ -125,15 +137,15 @@ const faqSections = [
     items: [
       {
         question: "What does the AI interviewer do?",
-        answer: "The AI interviewer asks structured questions for the role, keeps the interview on track, and collects responses for review. The goal is consistency, not replacing the hiring manager.",
+        answer: "The AI interviewer asks structured questions for the role, keeps the screening interview on track, and collects responses for review. The goal is consistency, not replacing the hiring manager.",
       },
       {
-        question: "What if the candidate has technical issues during the interview?",
-        answer: "Ask the candidate to refresh, check camera and microphone permissions, confirm internet stability, and try again if appropriate. If the issue continues, contact support with the candidate, role, time of issue, and any error message.",
+        question: "What if the candidate has technical issues during the screening interview?",
+        answer: "Ask the candidate to refresh, check camera and microphone permissions, confirm internet stability, and try again if appropriate. If the issue continues, contact support with the candidate, role, screening interview time, and any error message.",
       },
       {
-        question: "What if the interview ends early?",
-        answer: "Review the candidate record to see whether a transcript or report was generated. If the interview did not complete or the report is missing, contact support.",
+        question: "What if the screening interview ends early?",
+        answer: "Review the candidate record to see whether a transcript or report was generated. If the screening interview did not complete or the report is missing, contact support.",
       },
       {
         question: "What if the candidate asks a question the AI cannot answer?",
@@ -146,11 +158,11 @@ const faqSections = [
     items: [
       {
         question: "What does the candidate report include?",
-        answer: "Reports may include resume analysis, interview analysis, transcript-based scoring, perception-related signals, summary notes, and structured recommendations for review.",
+        answer: "Reports may include resume analysis, screening interview analysis, transcript-based scoring, perception-related signals, summary notes, and structured recommendations for review.",
       },
       {
         question: "What do the scores mean?",
-        answer: "Scores are decision-support signals. They help your team compare candidate responses more consistently, but they should be reviewed alongside the resume, interview context, role requirements, and your hiring judgment.",
+        answer: "Scores are decision-support signals. They help your team compare candidate responses more consistently, but they should be reviewed alongside the resume, screening interview context, role requirements, and your hiring judgment.",
       },
       {
         question: "Does alphaScreen automatically reject candidates?",
@@ -158,7 +170,7 @@ const faqSections = [
       },
       {
         question: "What should I do if a report seems incomplete?",
-        answer: "Check whether the interview completed recently. Reports may take a short time to process. If the report remains incomplete, contact support with the candidate name, role, and interview time.",
+        answer: "Check whether the screening interview completed recently. Reports may take a short time to process. If the report remains incomplete, contact support with the candidate name, role, and screening interview time.",
       },
       {
         question: "Can I download or share reports?",
@@ -171,11 +183,11 @@ const faqSections = [
     items: [
       {
         question: "Where do I see my plan or membership status?",
-        answer: "Use the Billing or Account area of the dashboard if available. It may show your current plan, role capacity, interview usage, and available options.",
+        answer: "Use the Billing or Account area of the dashboard if available. It may show your current plan, role capacity, screening interview usage, and available options.",
       },
       {
-        question: "What happens if we need more interviews?",
-        answer: "Depending on your plan, you may be able to purchase additional interview capacity or update your membership. If you do not see the option you need, contact support.",
+        question: "What happens if we need more screening interviews?",
+        answer: "Depending on your plan, you may be able to purchase additional screening interview capacity or update your membership. If you do not see the option you need, contact support.",
       },
       {
         question: "Why can't a candidate start even though the role is active?",
@@ -201,7 +213,7 @@ const faqSections = [
     items: [
       {
         question: "How do we get better candidate reports?",
-        answer: "Start with a clear role description, use consistent requirements, avoid vague qualifications, and make sure candidates understand the interview expectations.",
+        answer: "Start with a clear role description, use consistent requirements, avoid vague qualifications, and make sure candidates understand the screening interview expectations.",
       },
       {
         question: "How should hiring managers use alphaScreen?",
@@ -222,7 +234,11 @@ const faqSections = [
       },
       {
         question: "What information should I include when reporting a problem?",
-        answer: "Include your company name, role name, candidate name and email if relevant, approximate time of the issue, what the user was trying to do, and any error message.",
+        answer: "Include your company name, role name, candidate name and email if relevant, approximate time of the issue, what the user was trying to do, and any error message. For entity import mistakes, include the CSV filename, affected entity names, and whether member assignments were created.",
+      },
+      {
+        question: "When should I contact support before trying again?",
+        answer: "Contact support before re-importing large entity files, when an archived entity needs restoration, when automation criteria need correction, or when member assignment problems remain after you have checked the selected entity and role.",
       },
       {
         question: "What happens after I leave a support message?",
@@ -235,32 +251,32 @@ const faqSections = [
 const guidanceCards = [
   {
     title: "Getting started",
-    body: "Confirm your profile, team access, billing status, and active roles before sending candidates into the interview flow.",
+    body: "Confirm your profile, team access, billing status, and active roles before sending candidates into the screening interview flow.",
   },
   {
-    title: "Roles and candidates",
-    body: "Create clear role requirements, invite candidates consistently, and review candidate details from the selected client or entity scope.",
+    title: "Roles, candidates, and entities",
+    body: "Create clear role requirements, invite candidates consistently, and use entity filters to review records from the correct parent or child entity scope.",
   },
   {
     title: "Automation and approvals",
-    body: "Use Candidate Automation to gather qualified candidates for client admin review before any configured scheduling link is sent.",
+    body: "Use Candidate Automation to gather matching candidates for client admin review before any configured scheduling link is sent.",
   },
   {
     title: "Reports and scoring",
-    body: "Use reports and scores as structured decision-support signals alongside the resume, interview context, role requirements, and hiring judgment.",
+    body: "Use reports and scores as structured decision-support signals alongside the resume, screening interview context, role requirements, and hiring judgment.",
   },
   {
     title: "Billing, capacity, and team access",
-    body: "Review membership status, interview capacity, and team permissions so the right users can support the hiring workflow.",
+    body: "Review membership status, screening interview capacity, and team permissions so the right users can support the hiring workflow.",
   },
 ];
 
 const dataPracticeSections = [
   {
     title: "Data Retention and Deletion",
-    body: "AlphaSource AI generally retains client and candidate records only as needed for the service, operations, legal obligations, security, and account administration.",
+    body: "alphaSource generally retains client and candidate records only as needed for the service, operations, legal obligations, security, and account administration.",
     bullets: [
-      "Candidate records, interview media, transcripts, analysis, reports, and related hiring records may be retained for up to 24 months after candidate completion, role closure, or client relationship termination unless a different contractual, operational, or legal requirement applies.",
+      "Candidate records, screening interview media, transcripts, analysis, reports, and related hiring records may be retained for up to 24 months after candidate completion, role closure, or client relationship termination unless a different contractual, operational, or legal requirement applies.",
       "Billing, agreement, tax, payment, and account records may be retained for up to 7 years or as required for legal or accounting obligations.",
       "Operational, audit, security, access, delivery, and diagnostic logs are normally retained for 12-24 months unless needed longer for security, legal, compliance, dispute, or abuse-prevention purposes.",
       "Clients may request deletion or export of eligible records. Verified deletion requests are targeted for completion within 30 days where practical and legally permitted.",
@@ -269,10 +285,10 @@ const dataPracticeSections = [
   },
   {
     title: "Incident Response and Client Notification",
-    body: "AlphaSource AI maintains an incident response process for suspected security or privacy incidents.",
+    body: "alphaSource maintains an incident response process for suspected security or privacy incidents.",
     bullets: [
       "The process includes severity triage, containment, investigation, remediation, and post-incident review.",
-      "If AlphaSource AI confirms an incident that materially affects client data, affected clients will be notified without undue delay and, where required or practical, targeted within 72 hours after confirmation.",
+      "If alphaSource confirms an incident that materially affects client data, affected clients will be notified without undue delay and, where required or practical, targeted within 72 hours after confirmation.",
       "Notice may include the nature of the incident, data types involved, mitigation steps, actions taken, recommended client steps, and contact information.",
       "Some details may be limited during an active investigation or where disclosure would increase security risk.",
       "For security or privacy questions, contact support at info@alphasourceai.com.",
@@ -282,13 +298,24 @@ const dataPracticeSections = [
 
 const productUpdates = [
   {
+    version: "alphaScreen v1.7",
+    title: "Entity Import and Archive Support",
+    summary: "Expanded client entity tools and support guidance for multi-location teams.",
+    bullets: [
+      "Entities page supports CSV import for child entities and direct member assignments",
+      "Imported members are not emailed automatically",
+      "Temporary credentials appear only in import results and should be handled securely",
+      "Child entities can be archived without deleting historical records",
+    ],
+  },
+  {
     version: "alphaScreen v1.6",
     title: "Candidate Automation and Entity Filtering",
     summary: "Added client admin approval workflow guidance and clearer organization filtering support.",
     bullets: [
       "Candidate Automation gathers threshold-matching candidates for review",
       "Review Candidates digest link supports controlled approval before candidate outreach",
-      "Roles, Candidates, and Members include parent, all-entity, and specific-entity filtering",
+      "Roles, Candidates, and Members include parent/client-name, all-entity, and specific-entity filtering",
       "Members filtering clarifies direct assignments by selected entity",
     ],
   },
@@ -317,23 +344,23 @@ const productUpdates = [
   },
   {
     version: "alphaScreen v1.3",
-    title: "Role Lifecycle and Interview Records",
-    summary: "Added stronger role lifecycle controls and authorized interview record access.",
+    title: "Role Lifecycle and Screening Interview Records",
+    summary: "Added stronger role lifecycle controls and authorized screening interview record access.",
     bullets: [
       "Role close and reopen controls",
       "Clear inactive-role indicators",
-      "Authorized interview record access where available",
+      "Authorized screening interview record access where available",
       "Clearer availability and retention messaging",
     ],
   },
   {
     version: "alphaScreen v1.2",
     title: "Membership and Capacity Workflows",
-    summary: "Added account, membership, and interview-capacity workflow support.",
+    summary: "Added account, membership, and screening interview capacity workflow support.",
     bullets: [
       "Membership and agreement guidance",
       "Billing visibility for authorized users",
-      "Additional interview capacity workflow",
+      "Additional screening interview capacity workflow",
       "Improved account and team access management",
     ],
   },
@@ -354,8 +381,8 @@ const productUpdates = [
     summary: "Initial client dashboard platform for structured candidate screening.",
     bullets: [
       "Role setup and candidate invitations",
-      "Structured interview workflow",
-      "Resume and interview review support",
+      "Structured screening interview workflow",
+      "Resume and screening interview review support",
       "Candidate dashboard and report review tools",
     ],
   },
@@ -398,7 +425,7 @@ export default function DashboardFaqPage() {
         style={{ backgroundColor: "rgba(163,128,246,0.10)", border: "1px solid rgba(163,128,246,0.20)" }}
       >
         <p className="text-sm font-semibold text-[#0A1547]/70 leading-relaxed" style={{ color: "var(--as-text)", opacity: 0.7 }}>
-          alphaScreen supports your hiring process with structured screening and interview insight. It does not replace your hiring judgment or make final employment decisions.
+          alphaScreen supports your hiring process with structured screening interview insight. It does not replace your hiring judgment or make final employment decisions.
         </p>
       </div>
 

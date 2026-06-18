@@ -264,7 +264,7 @@ function downloadCsvTemplate() {
 
 function downloadTemporaryCredentialsCsv(credentials: ImportTemporaryCredential[]) {
   const rows = [
-    ["Row", "Entity", "Member name", "Member email", "Role", "Temporary password", "Force reset supported", "Reset metadata flag set"],
+    ["Row", "Entity", "Member name", "Member email", "Role", "Temporary password", "Handoff note"],
     ...credentials.map((credential) => [
       credential.row_number ?? "",
       credential.entity_name ?? "",
@@ -272,8 +272,7 @@ function downloadTemporaryCredentialsCsv(credentials: ImportTemporaryCredential[
       credential.email ?? "",
       displayImportRole(String(credential.role || "")),
       credential.temporary_password ?? "",
-      credential.force_reset_supported ? "Yes" : "No",
-      credential.force_reset_metadata_set ? "Yes" : "No",
+      "Handle securely and follow your internal handoff process",
     ]),
   ];
   const blob = new Blob([rows.map((row) => row.map(csvEscape).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
@@ -432,8 +431,8 @@ function assignmentSummary(assignment?: ImportAssignmentResult | null): string {
   if (!assignment) return "No member assignment requested.";
   if (assignment.status === "created") {
     return assignment.auth_user_created
-      ? "Member assigned. New auth user created with a temporary password. No email sent."
-      : "Member assigned to an existing auth user. No email sent.";
+      ? "Member assigned. New dashboard user created with a temporary password. No email sent."
+      : "Member assigned to an existing dashboard user. No email sent.";
   }
   if (assignment.status === "skipped") return assignment.detail || "Member assignment skipped.";
   if (assignment.status === "failed") return assignment.detail || "Member assignment failed.";
@@ -1395,7 +1394,7 @@ export default function EntitiesPage() {
                       <div className="space-y-1 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
                         <p>Imports create child entities only. Billing, agreements, subscriptions, and payment settings stay with the parent client.</p>
                         <p>Location type is saved as the entity label when provided. If all member fields are supplied, the user is added directly to that imported entity as Manager or Member.</p>
-                        <p>No automatic emails are sent. Temporary passwords for newly created users are shown only after import and should be shared securely. Imported users should reset or change the password on first login.</p>
+                        <p>No automatic emails are sent. Temporary credentials for newly created users are shown only after import. Handle them securely and follow your internal handoff process.</p>
                       </div>
                     </div>
                   </div>
@@ -1547,9 +1546,9 @@ export default function EntitiesPage() {
                     <div className="rounded-xl border border-amber-300 bg-amber-50/70 p-4 space-y-3 dark:bg-amber-500/10 dark:border-amber-400/30">
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
-                          <p className="text-sm font-black text-amber-800 dark:text-amber-200">Sensitive temporary passwords</p>
+                          <p className="text-sm font-black text-amber-800 dark:text-amber-200">Temporary credentials</p>
                           <p className="text-xs font-semibold mt-1 leading-relaxed text-amber-800/80 dark:text-amber-100/80">
-                            These passwords are shown only in this import result for newly created auth users. Share them securely and instruct users to reset or change the password on first login.
+                            These credentials are shown only in this import result for newly created dashboard users. Download or store them securely right away and follow your internal handoff process.
                           </p>
                         </div>
                         <button
@@ -1569,7 +1568,7 @@ export default function EntitiesPage() {
                               <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Name</th>
                               <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Email</th>
                               <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Temporary password</th>
-                              <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Reset</th>
+                              <th className="px-3 py-2 text-left font-black uppercase tracking-widest text-amber-900 dark:text-amber-100">Handoff</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1580,7 +1579,7 @@ export default function EntitiesPage() {
                                 <td className="px-3 py-2 font-semibold text-amber-900 dark:text-amber-100">{credential.email || "—"}</td>
                                 <td className="px-3 py-2 font-mono text-[11px] text-amber-950 dark:text-amber-50">{credential.temporary_password}</td>
                                 <td className="px-3 py-2 font-semibold text-amber-900 dark:text-amber-100">
-                                  {credential.force_reset_supported ? "Forced" : credential.force_reset_metadata_set ? "Metadata flag only" : "Not supported"}
+                                  Handle securely
                                 </td>
                               </tr>
                             ))}
@@ -1634,7 +1633,7 @@ export default function EntitiesPage() {
                       disabled={importSubmitting || importRows.length === 0 || importErrorCount > 0 || Boolean(importParseError)}
                       className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A380F6] focus:ring-[#A380F6]"
                     />
-                    I reviewed the preview. Create ready entities and direct member assignments under the selected parent client. No automatic emails will be sent; any temporary passwords shown after import must be shared securely, and users should reset or change them on first login.
+                    I reviewed the preview. Create ready entities and direct member assignments under the selected parent client. No automatic emails will be sent; any temporary credentials shown after import must be stored securely and handled through our internal handoff process.
                   </label>
                   <div className="flex items-center justify-end gap-3">
                     <button

@@ -87,7 +87,7 @@ const TOUR_STEPS_BY_HREF: Record<string, TourStep> = {
   },
   "/dashboard/roles": {
     href: "/dashboard/roles", title: "Roles", emoji: "💼",
-    desc: "Create and manage open positions. Parent and child-entity clients can use the Entity selector to review roles assigned directly to the parent, all entities, or one specific entity.",
+    desc: "Create and manage open positions. Parent and child-entity clients can use the Entity selector to review roles assigned directly to the parent/client, all entities, or one specific entity.",
     bullets: ["Create & publish new roles", "Track open vs. closed roles", "Use the Entity column to confirm role scope"],
   },
   "/dashboard/automation": {
@@ -97,12 +97,12 @@ const TOUR_STEPS_BY_HREF: Record<string, TourStep> = {
   },
   "/dashboard/candidates": {
     href: "/dashboard/candidates", title: "Candidates", emoji: "👥",
-    desc: "Review every applicant. Parent and child-entity clients can filter candidates by parent, all entities, or one specific entity and confirm ownership in the Entity column.",
-    bullets: ["Resume & interview AI analysis", "Sort, filter, and export results", "Review the Entity column before sharing records"],
+    desc: "Review every applicant. Parent and child-entity clients can filter candidates by parent/client, all entities, or one specific entity and confirm ownership in the Entity column.",
+    bullets: ["Resume & screening interview analysis", "Sort, filter, and export results", "Review the Entity column before sharing records"],
   },
   "/dashboard/members": {
     href: "/dashboard/members", title: "Members", emoji: "🛡️",
-    desc: "Control who can access your AlphaSource dashboard. Entity filtering shows direct member assignments for the selected scope, not inherited or effective access.",
+    desc: "Control who can access your alphaSource dashboard. Entity filtering shows direct member assignments for the selected scope, not inherited or effective access.",
     bullets: ["Invite team members by email", "Assign team access by client/entity scope", "Use Entity filtering to review direct assignments"],
   },
   "/dashboard/billing": {
@@ -113,7 +113,7 @@ const TOUR_STEPS_BY_HREF: Record<string, TourStep> = {
   "/dashboard/entities": {
     href: "/dashboard/entities", title: "Entities", emoji: "🏢",
     desc: "Manage parent-client and child-entity structure when your organization has multiple operating scopes.",
-    bullets: ["View parent and child entities", "Add or edit entity names and labels", "Keep roles, candidates, and reports organized by scope"],
+    bullets: ["View parent and child entities", "Import child entities from CSV", "Archive inactive child entities without deleting history"],
   },
   "/dashboard/support": {
     href: "/dashboard/support", title: "Support", emoji: "❓",
