@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { Trash2, ChevronDown, ChevronUp, Key } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
+import InfoTooltip from "@/components/InfoTooltip";
 import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
-import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -203,6 +204,7 @@ export default function AdminMembersPage() {
     () => buildEntityFilterOptions(hierarchyClients, activeClientId),
     [hierarchyClients, activeClientId],
   );
+  const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions, "members"), [entityOptions]);
 
   useEffect(() => {
     setMemberSearch("");
@@ -773,17 +775,23 @@ export default function AdminMembersPage() {
 
         <div className="px-5 py-3.5 border-b flex flex-wrap items-center gap-3" style={dividerStyle}>
           {entityOptions.length > 0 && (
-            <div className="relative w-48">
-              <select
-                value={entityFilter}
-                onChange={(event) => setEntityFilter(event.target.value)}
-                className={inputCls + " appearance-none pr-8 cursor-pointer"}
-              >
-                {entityOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Entity</label>
+                <InfoTooltip content={entityHelpText} side="bottom" iconClassName="w-3 h-3 text-[#0A1547]/35 dark:text-white/45" />
+              </div>
+              <div className="relative w-48">
+                <select
+                  value={entityFilter}
+                  onChange={(event) => setEntityFilter(event.target.value)}
+                  className={inputCls + " appearance-none pr-8 cursor-pointer"}
+                >
+                  {entityOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
+              </div>
             </div>
           )}
           <input

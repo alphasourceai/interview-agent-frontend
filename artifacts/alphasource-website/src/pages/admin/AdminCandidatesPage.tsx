@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, ChevronRight, RefreshCw, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
+import InfoTooltip from "@/components/InfoTooltip";
 import { useAdminClient } from "@/context/AdminClientContext";
-import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -237,6 +238,7 @@ export default function AdminCandidatesPage() {
     () => buildEntityFilterOptions(hierarchyClients, selectedClientId),
     [hierarchyClients, selectedClientId],
   );
+  const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions), [entityOptions]);
 
   const toggle = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
 
@@ -764,21 +766,27 @@ export default function AdminCandidatesPage() {
         style={surfaceCardStyle}
       >
         {entityOptions.length > 0 && (
-          <div className="relative flex-1 min-w-48 max-w-64">
-            <select
-              className={selectCls + " w-full pr-8"}
-              style={fieldSurfaceStyle}
-              value={entityFilter}
-              onChange={(e) => {
-                setEntityFilter(e.target.value);
-                setExpandedId(null);
-              }}
-            >
-              {entityOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
+          <div className="flex flex-1 min-w-64 max-w-[22rem] items-center gap-2">
+            <div className="flex flex-shrink-0 items-center gap-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Entity</label>
+              <InfoTooltip content={entityHelpText} side="bottom" iconClassName="w-3 h-3 text-[#0A1547]/35 dark:text-white/45" />
+            </div>
+            <div className="relative flex-1 min-w-0">
+              <select
+                className={selectCls + " w-full pr-8"}
+                style={fieldSurfaceStyle}
+                value={entityFilter}
+                onChange={(e) => {
+                  setEntityFilter(e.target.value);
+                  setExpandedId(null);
+                }}
+              >
+                {entityOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
+            </div>
           </div>
         )}
 

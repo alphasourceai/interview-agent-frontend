@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, FileText, Copy, Trash2, Upload } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
+import InfoTooltip from "@/components/InfoTooltip";
 import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
-import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -237,6 +238,7 @@ export default function AdminRolesPage() {
     () => buildEntityFilterOptions(hierarchyClients, selectedClientId),
     [hierarchyClients, selectedClientId],
   );
+  const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions), [entityOptions]);
 
   const clientById = useMemo<Record<string, AdminClient>>(
     () =>
@@ -869,7 +871,10 @@ export default function AdminRolesPage() {
         </div>
         {entityOptions.length > 0 && (
           <div className="flex items-center gap-2">
-            <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Entity</label>
+            <div className="flex items-center gap-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Entity</label>
+              <InfoTooltip content={entityHelpText} side="bottom" iconClassName="w-3 h-3 text-[#0A1547]/35 dark:text-white/45" />
+            </div>
             <div className="relative">
               <select
                 value={entityFilter}
