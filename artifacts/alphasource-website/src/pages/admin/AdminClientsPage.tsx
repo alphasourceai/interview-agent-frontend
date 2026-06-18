@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import {
-  Archive, ChevronRight, Trash2, RefreshCw, ChevronUp, ChevronDown, Plus, Pencil,
+  Archive, ChevronRight, Trash2, RefreshCw, ChevronUp, ChevronDown, Plus, Pencil, RotateCcw,
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
+import { useAdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -321,6 +322,7 @@ const selectCls =
 
 /* ── Main component ──────────────────────────────────────────── */
 export default function AdminClientsPage() {
+  const { refreshClients } = useAdminClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -356,6 +358,9 @@ export default function AdminClientsPage() {
   const [entityArchiveTarget, setEntityArchiveTarget] = useState<{ parent: Client; entity: Client } | null>(null);
   const [entityArchiveBusy, setEntityArchiveBusy] = useState(false);
   const [entityArchiveNotice, setEntityArchiveNotice] = useState("");
+  const [entityRestoreTarget, setEntityRestoreTarget] = useState<{ parent: Client; entity: Client } | null>(null);
+  const [entityRestoreBusy, setEntityRestoreBusy] = useState(false);
+  const [entityRestoreNotice, setEntityRestoreNotice] = useState("");
 
   /* form state */
   const [form, setForm] = useState({
@@ -494,6 +499,21 @@ export default function AdminClientsPage() {
     if (entityArchiveBusy) return;
     setEntityArchiveTarget(null);
     setEntityArchiveNotice("");
+  };
+
+  const openEntityRestoreModal = (parent: Client, entity: Client) => {
+    if (isChildEntity(parent)) return;
+    if (!isChildEntity(entity) || String(entity.parent_client_id || "").trim() !== String(parent.id || "").trim()) return;
+    if (!isArchivedEntity(entity)) return;
+    setEntityRestoreTarget({ parent, entity });
+    setEntityRestoreNotice("");
+    setActionNotice(null);
+  };
+
+  const closeEntityRestoreModal = () => {
+    if (entityRestoreBusy) return;
+    setEntityRestoreTarget(null);
+    setEntityRestoreNotice("");
   };
 
   const createChildEntity = async () => {
@@ -680,11 +700,65 @@ export default function AdminClientsPage() {
       );
       setEntityArchiveTarget(null);
       setActionNotice({ tone: "success", text: "Entity archived." });
+      void refreshClients().catch(() => {});
       requestReload();
     } catch (error) {
       setEntityArchiveNotice(error instanceof Error ? error.message : "Could not archive entity.");
     } finally {
       setEntityArchiveBusy(false);
+    }
+  };
+
+  const restoreChildEntity = async () => {
+    const target = entityRestoreTarget;
+    const parent = target?.parent || null;
+    const entity = target?.entity || null;
+    const parentId = String(parent?.id || "").trim();
+    const entityId = String(entity?.id || "").trim();
+
+    if (!parentId || !entityId || !parent || !entity) {
+      setEntityRestoreNotice("Parent client and entity are required.");
+      return;
+    }
+    if (isChildEntity(parent) || !isChildEntity(entity) || String(entity.parent_client_id || "").trim() !== parentId) {
+      setEntityRestoreNotice("Only archived child entities under the selected parent can be restored here.");
+      return;
+    }
+
+    setEntityRestoreBusy(true);
+    setEntityRestoreNotice("");
+    setActionNotice(null);
+    try {
+      if (!backendBase) throw new Error("Missing backend base URL configuration.");
+      const token = await getSessionToken();
+      const response = await fetch(`${backendBase}/admin/clients/${encodeURIComponent(parentId)}/entities/${encodeURIComponent(entityId)}/restore`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "omit",
+        body: JSON.stringify({}),
+      });
+
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text, "Could not restore entity."));
+
+      setClients((prev) =>
+        prev.map((client) =>
+          client.id === entityId
+            ? { ...client, archived_at: null }
+            : client,
+        ),
+      );
+      setEntityRestoreTarget(null);
+      setActionNotice({ tone: "success", text: "Entity restored." });
+      void refreshClients().catch(() => {});
+      requestReload();
+    } catch (error) {
+      setEntityRestoreNotice(error instanceof Error ? error.message : "Could not restore entity.");
+    } finally {
+      setEntityRestoreBusy(false);
     }
   };
 
@@ -1703,19 +1777,33 @@ export default function AdminClientsPage() {
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
                               </div>
                               <div className="flex items-center lg:justify-center">
-                                <button
-                                  type="button"
-                                  disabled={isArchivedEntity(child)}
-                                  className="p-1.5 rounded-lg text-[#0A1547]/35 dark:text-slate-400/60 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#0A1547]/35"
-                                  title={isArchivedEntity(child) ? `${child.name} is archived` : `Archive ${child.name}`}
-                                  aria-label={isArchivedEntity(child) ? `${child.name} is archived` : `Archive ${child.name}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openEntityArchiveModal(client, child);
-                                  }}
-                                >
-                                  <Archive className="w-4 h-4" />
-                                </button>
+                                {isArchivedEntity(child) ? (
+                                  <button
+                                    type="button"
+                                    className="p-1.5 rounded-lg text-[#0A1547]/35 dark:text-slate-400/60 hover:text-[#02D99D] hover:bg-[#02D99D]/10 transition-all"
+                                    title={`Restore ${child.name}`}
+                                    aria-label={`Restore ${child.name}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEntityRestoreModal(client, child);
+                                    }}
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="p-1.5 rounded-lg text-[#0A1547]/35 dark:text-slate-400/60 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                                    title={`Archive ${child.name}`}
+                                    aria-label={`Archive ${child.name}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEntityArchiveModal(client, child);
+                                    }}
+                                  >
+                                    <Archive className="w-4 h-4" />
+                                  </button>
+                                )}
                               </div>
                               <div className="flex items-center lg:justify-center">
                                 <button
@@ -1920,6 +2008,59 @@ export default function AdminClientsPage() {
               >
                 <Archive className="w-3.5 h-3.5" />
                 {entityArchiveBusy ? "Archiving..." : "Archive entity"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {entityRestoreTarget && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center px-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#0A1547]/35"
+            aria-label="Close restore confirmation"
+            onClick={closeEntityRestoreModal}
+          />
+          <div
+            className="relative w-full max-w-md rounded-2xl p-5"
+            style={modalSurfaceStyle}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Restore entity"
+          >
+            <h3 className="text-base font-black" style={primaryTextStyle}>Restore entity</h3>
+            <p className="mt-2 text-sm font-semibold leading-relaxed" style={mutedTextStyle}>
+              This returns the entity to active selectors and normal entity lists. Existing roles, candidates, members, and history remain unchanged.
+            </p>
+            {entityRestoreNotice && (
+              <div
+                className="mt-4 rounded-xl px-3.5 py-2 text-xs font-semibold text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
+                role="status"
+                aria-live="polite"
+              >
+                {entityRestoreNotice}
+              </div>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={entityRestoreBusy}
+                className="px-4 py-2 rounded-full text-sm font-bold text-[#0A1547]/70 dark:text-slate-300/80 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+                onClick={closeEntityRestoreModal}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={entityRestoreBusy}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: "#02D99D" }}
+                onClick={() => {
+                  void restoreChildEntity();
+                }}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                {entityRestoreBusy ? "Restoring..." : "Restore entity"}
               </button>
             </div>
           </div>
