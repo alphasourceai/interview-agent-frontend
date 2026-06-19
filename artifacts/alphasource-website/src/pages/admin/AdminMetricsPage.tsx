@@ -31,6 +31,21 @@ interface ReadinessItem {
   help?: string;
 }
 
+interface RecentIssue {
+  project?: string | null;
+  title?: string | null;
+  culprit?: string | null;
+  level?: string | null;
+  status?: string | null;
+  count?: number | string | null;
+  user_count?: number | string | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+  permalink?: string | null;
+  platform?: string | null;
+  environment?: string | null;
+}
+
 interface PlatformService {
   key: string;
   name: string;
@@ -52,6 +67,8 @@ interface PlatformService {
   cost_summary?: CostSummary;
   health_detail: string;
   readiness_items?: ReadinessItem[];
+  recent_issues?: RecentIssue[];
+  recentIssues?: RecentIssue[];
   troubleshooting_note?: string | null;
   notes?: string[];
   last_checked: string | null;
@@ -247,8 +264,18 @@ function serviceCost(service: PlatformService): CostSummary {
   return service.cost_summary || service.cost || {};
 }
 
+function serviceRecentIssues(service: PlatformService): RecentIssue[] {
+  return service.recent_issues || service.recentIssues || [];
+}
+
 function serviceDetailsId(serviceKey: string): string {
   return `vendor-service-details-${serviceKey.replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+}
+
+function issueMetaParts(issue: RecentIssue): string[] {
+  return [issue.project, issue.level, issue.status, issue.environment, issue.platform]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
 }
 
 function SmallMetricList({ items, emptyText }: { items: MetricItem[]; emptyText: string }) {
@@ -264,6 +291,55 @@ function SmallMetricList({ items, emptyText }: { items: MetricItem[]; emptyText:
           <span className="font-black text-right" style={primaryTextStyle}>{formatValue(item.value)}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function RecentIssuesPanel({ service, issues }: { service: PlatformService; issues: RecentIssue[] }) {
+  const connected = service.live_api_connected === true || service.live_connected === true;
+  const visibleIssues = issues.slice(0, 5);
+
+  return (
+    <div className="mt-3 rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+      <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Recent issues</p>
+      {visibleIssues.length === 0 ? (
+        <p className="text-xs font-semibold" style={mutedTextStyle}>
+          {connected ? "No recent unresolved issues found." : "Recent issue details are unavailable until the Sentry issue API is connected."}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {visibleIssues.map((issue, index) => {
+            const meta = issueMetaParts(issue);
+            return (
+              <div key={`${issue.project || "sentry"}-${issue.last_seen || issue.first_seen || index}`} className="rounded-lg border px-3 py-2" style={mutedPanelStyle}>
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black" style={primaryTextStyle}>{formatValue(issue.title)}</p>
+                    {meta.length > 0 && <p className="mt-1 text-[11px] font-semibold" style={subtleTextStyle}>{meta.join(" · ")}</p>}
+                    {issue.culprit && <p className="mt-1 text-xs font-semibold truncate" style={mutedTextStyle} title={String(issue.culprit)}>{issue.culprit}</p>}
+                  </div>
+                  {issue.permalink && (
+                    <a
+                      href={String(issue.permalink)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-black text-[#7C5FCC] hover:underline whitespace-nowrap"
+                    >
+                      Open in Sentry
+                    </a>
+                  )}
+                </div>
+                <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] font-semibold" style={subtleTextStyle}>
+                  <span>Events: <span className="font-black" style={primaryTextStyle}>{formatValue(issue.count)}</span></span>
+                  <span>Users: <span className="font-black" style={primaryTextStyle}>{formatValue(issue.user_count)}</span></span>
+                  <span>First: <span className="font-black" style={primaryTextStyle}>{formatDateTime(issue.first_seen)}</span></span>
+                  <span>Last: <span className="font-black" style={primaryTextStyle}>{formatDateTime(issue.last_seen)}</span></span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -338,6 +414,96 @@ export default function AdminMetricsPage() {
     ? `${payload.filters.date_from_display} to ${payload.filters.date_to_display}`
     : timeframe;
   const serviceByKey = useMemo(() => Object.fromEntries(services.map((service) => [service.key, service])), [services]);
+  const vendorServices = services.filter((service) => service.key !== "sentry");
+  const sentryService = services.find((service) => service.key === "sentry") || null;
+  const renderServiceCard = (service: PlatformService, fullWidth = false) => {
+    const cost = serviceCost(service);
+    const expanded = expandedServices.has(service.key);
+    const detailsId = serviceDetailsId(service.key);
+    const summary = service.health_summary || service.health_detail || "No health summary available.";
+    const recentIssues = serviceRecentIssues(service);
+
+    return (
+      <article
+        key={service.key}
+        className={`${fullWidth ? "w-full" : "mb-3 inline-block w-full break-inside-avoid"} rounded-2xl border overflow-hidden`}
+        style={mutedPanelStyle}
+      >
+        <button
+          type="button"
+          className="w-full px-4 py-3 text-left transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
+          onClick={() => toggleServiceCard(service.key)}
+          aria-expanded={expanded}
+          aria-controls={detailsId}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-black" style={primaryTextStyle}>{service.name}</p>
+              <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{summary}</p>
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <StatusBadge status={service.status} />
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                style={mutedTextStyle}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+        </button>
+
+        <div id={detailsId} hidden={!expanded} className="px-4 pb-4">
+          <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+              <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Connection</p>
+              <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.connection_label || configuredLabel(service.configured)}</p>
+            </div>
+            <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+              <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Usage source</p>
+              <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.source_label || titleCase(service.source)}</p>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+            <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>What this means</p>
+            <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>{service.meaning || service.health_summary || service.health_detail}</p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+              <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Usage this period</p>
+              <SmallMetricList items={serviceUsage(service)} emptyText="No usage signal available." />
+            </div>
+            <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+              <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Problems this period</p>
+              <SmallMetricList items={serviceProblems(service)} emptyText="No problem signal available." />
+            </div>
+          </div>
+
+          {service.key === "sentry" && <RecentIssuesPanel service={service} issues={recentIssues} />}
+
+          <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Cost this period</p>
+                <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{costLabel(cost)}</p>
+              </div>
+              <p className="text-xs font-semibold" style={mutedTextStyle}>{cost.source_label || cost.source || "Not available"}</p>
+            </div>
+            {cost.help && <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>{cost.help}</p>}
+          </div>
+
+          {service.troubleshooting_note && (
+            <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/25">
+              {service.troubleshooting_note}
+            </p>
+          )}
+
+          <p className="mt-3 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(service.last_checked)}</p>
+        </div>
+      </article>
+    );
+  };
 
   return (
     <AdminLayout title="Metrics">
@@ -441,87 +607,15 @@ export default function AdminMetricsPage() {
           {loading && services.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading vendors...</div>
           ) : (
-            <div className="columns-1 xl:columns-2 gap-3 p-4">
-              {services.map((service) => {
-                const cost = serviceCost(service);
-                const expanded = expandedServices.has(service.key);
-                const detailsId = serviceDetailsId(service.key);
-                const summary = service.health_summary || service.health_detail || "No health summary available.";
-                return (
-                  <article key={service.key} className="mb-3 inline-block w-full break-inside-avoid rounded-2xl border overflow-hidden" style={mutedPanelStyle}>
-                    <button
-                      type="button"
-                      className="w-full px-4 py-3 text-left transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
-                      onClick={() => toggleServiceCard(service.key)}
-                      aria-expanded={expanded}
-                      aria-controls={detailsId}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-base font-black" style={primaryTextStyle}>{service.name}</p>
-                          <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{summary}</p>
-                        </div>
-                        <div className="flex flex-shrink-0 items-center gap-2">
-                          <StatusBadge status={service.status} />
-                          <ChevronDown
-                            className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`}
-                            style={mutedTextStyle}
-                            aria-hidden="true"
-                          />
-                        </div>
-                      </div>
-                    </button>
-
-                    <div id={detailsId} hidden={!expanded} className="px-4 pb-4">
-                      <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
-                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Connection</p>
-                          <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.connection_label || configuredLabel(service.configured)}</p>
-                        </div>
-                        <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
-                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Usage source</p>
-                          <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.source_label || titleCase(service.source)}</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
-                        <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>What this means</p>
-                        <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>{service.meaning || service.health_summary || service.health_detail}</p>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
-                          <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Usage this period</p>
-                          <SmallMetricList items={serviceUsage(service)} emptyText="No usage signal available." />
-                        </div>
-                        <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
-                          <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Problems this period</p>
-                          <SmallMetricList items={serviceProblems(service)} emptyText="No problem signal available." />
-                        </div>
-                      </div>
-
-                      <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div>
-                            <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Cost this period</p>
-                            <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{costLabel(cost)}</p>
-                          </div>
-                          <p className="text-xs font-semibold" style={mutedTextStyle}>{cost.source_label || cost.source || "Not available"}</p>
-                        </div>
-                        {cost.help && <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>{cost.help}</p>}
-                      </div>
-
-                      {service.troubleshooting_note && (
-                        <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/25">
-                          {service.troubleshooting_note}
-                        </p>
-                      )}
-
-                      <p className="mt-3 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(service.last_checked)}</p>
-                    </div>
-                  </article>
-                );
-              })}
+            <div className="p-4">
+              <div className="columns-1 xl:columns-2 gap-3">
+                {vendorServices.map((service) => renderServiceCard(service))}
+              </div>
+              {sentryService && (
+                <div className={vendorServices.length ? "mt-3" : ""}>
+                  {renderServiceCard(sentryService, true)}
+                </div>
+              )}
             </div>
           )}
         </section>
