@@ -1083,11 +1083,11 @@ export default function AutomationPage() {
 
   const safetyItems = [
     "Candidate Automation identifies candidates who meet your configured thresholds and prepares them for second-round review.",
-    "Saving this automation or creating a digest does not email candidates.",
+    "Saving automation settings stores the configured rule; candidate-facing scheduling outreach remains controlled by the review and approval workflow.",
     "Your client admin reviewers receive one Review Candidates digest link.",
     "The review page shows candidates awaiting approval.",
-    "Approving a candidate sends the configured scheduling link immediately.",
-    "Rejecting or not approving a candidate sends no candidate email.",
+    "Approving a candidate may send or prepare the configured scheduling link through the approved workflow.",
+    "Rejecting or not approving a candidate does not approve candidate-facing outreach.",
     "The scheduling link comes from this Automation page configuration.",
     "Client admins can turn automation off or edit these settings.",
     "Scores help organize the review, but hiring decisions stay with your team.",
@@ -1110,7 +1110,7 @@ export default function AutomationPage() {
           <span className="min-w-0">
             <span className="flex items-center gap-1 text-xs font-black" style={primaryTextStyle}>
               Automation on/off
-              <InfoTooltip content="Turns review automation on for the selected role. Saving settings here does not email candidates." side="bottom" />
+              <InfoTooltip content="Turns review automation on for the selected role. Candidate-facing outreach remains governed by the configured review and approval workflow." side="bottom" />
             </span>
             <span className="block text-[11px] font-semibold mt-0.5" style={subtleTextStyle}>
               {ruleEnabled ? "On for this role" : "Off for this role"}

@@ -92,8 +92,8 @@ const TOUR_STEPS_BY_HREF: Record<string, TourStep> = {
   },
   "/dashboard/automation": {
     href: "/dashboard/automation", title: "Automation", emoji: "⚙️",
-    desc: "Configure Candidate Automation to gather candidates who meet thresholds into one Review Candidates digest for client admin approval before any scheduling email is sent.",
-    bullets: ["Set score thresholds and reviewers", "Review candidates awaiting approval", "Approving sends the configured scheduling link"],
+    desc: "Configure Candidate Automation to gather candidates who meet thresholds into one Review Candidates digest for client admin review and approved next-step workflow actions.",
+    bullets: ["Set score thresholds and reviewers", "Review candidates awaiting approval", "Approving controls configured next-step outreach"],
   },
   "/dashboard/candidates": {
     href: "/dashboard/candidates", title: "Candidates", emoji: "👥",

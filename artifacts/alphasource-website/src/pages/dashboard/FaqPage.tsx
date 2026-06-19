@@ -112,15 +112,15 @@ const faqSections = [
     items: [
       {
         question: "What does Candidate Automation do?",
-        answer: "Candidate Automation helps your team identify candidates who match configured criteria and prepare them for second-round review. It organizes candidates for client admin review and does not make final hiring decisions.",
+        answer: "Candidate Automation helps your team identify candidates who match configured criteria and prepare review items or next-step workflow actions for authorized users. It organizes candidates for client admin review and does not make final hiring decisions.",
       },
       {
         question: "Does automation email candidates before approval?",
-        answer: "No. Automation does not automatically send candidate-facing scheduling emails without approval. Reviewers receive a Review Candidates link, and scheduling link delivery occurs only after the approved workflow.",
+        answer: "Candidate-facing scheduling emails or next-step communications remain governed by the configured review and approval workflow. Reviewers receive a Review Candidates link, and candidate outreach occurs only through the applicable approved workflow.",
       },
       {
         question: "What happens when we approve, reject, or do not approve a candidate?",
-        answer: "Approving a candidate sends the configured scheduling link. Rejecting a candidate or leaving them unapproved sends no candidate email.",
+        answer: "Approving a candidate may send or prepare the configured scheduling link according to the workflow settings. Rejecting a candidate or leaving them unapproved does not approve candidate-facing outreach.",
       },
       {
         question: "Where does the scheduling link come from?",
@@ -230,7 +230,7 @@ const faqSections = [
     items: [
       {
         question: "How do I contact support?",
-        answer: "Contact alphaSource at info@alphasourceai.com. Include the role, candidate, email address, and a short description of the issue.",
+        answer: "Contact alphaSource support through the support process provided to your organization. Include the role, candidate, email address, and a short description of the issue.",
       },
       {
         question: "What information should I include when reporting a problem?",
@@ -259,7 +259,7 @@ const guidanceCards = [
   },
   {
     title: "Automation and approvals",
-    body: "Use Candidate Automation to gather matching candidates for client admin review before any configured scheduling link is sent.",
+    body: "Use Candidate Automation to gather matching candidates for client admin review through configured approval and next-step workflow controls.",
   },
   {
     title: "Reports and scoring",
@@ -274,24 +274,28 @@ const guidanceCards = [
 const dataPracticeSections = [
   {
     title: "Data Retention and Deletion",
-    body: "alphaSource generally retains client and candidate records only as needed for the service, operations, legal obligations, security, and account administration.",
+    body: "alphaSource generally retains client, candidate, hiring workflow, media, report, operational, billing, and account records only as needed to provide and support the service, maintain security and auditability, administer client accounts, comply with legal or contractual obligations, resolve disputes, and preserve business records where appropriate.",
     bullets: [
-      "Candidate records, screening interview media, transcripts, analysis, reports, and related hiring records may be retained for up to 24 months after candidate completion, role closure, or client relationship termination unless a different contractual, operational, or legal requirement applies.",
-      "Billing, agreement, tax, payment, and account records may be retained for up to 7 years or as required for legal or accounting obligations.",
-      "Operational, audit, security, access, delivery, and diagnostic logs are normally retained for 12-24 months unless needed longer for security, legal, compliance, dispute, or abuse-prevention purposes.",
-      "Clients may request deletion or export of eligible records. Verified deletion requests are targeted for completion within 30 days where practical and legally permitted.",
-      "Some records may be retained when required for legal, contractual, security, financial, backup, or abuse-prevention reasons. Deleted data may persist in backups for a limited period before normal backup expiration.",
+      "Candidate, screening interview media, transcripts, analysis, reports, and related hiring records are handled under alphaSource's retention and deletion procedures.",
+      "Retention periods may vary based on client agreement, service configuration, legal requirements, operational needs, security needs, backup lifecycle, dispute preservation, and account administration.",
+      "Billing, agreement, tax, payment, and account records may be retained where needed for legal, accounting, contractual, or business recordkeeping purposes.",
+      "Operational, audit, access, delivery, diagnostic, and security logs may be retained as needed for security, reliability, troubleshooting, auditability, abuse prevention, and compliance support.",
+      "Clients may request deletion or export of eligible records through support or the agreed administrative process.",
+      "Deletion and export requests are reviewed for authorization, scope, legal or contractual exceptions, security obligations, backup lifecycle, and operational feasibility.",
+      "Some information may be retained where required or appropriate for legal, contractual, financial, backup, security, abuse-prevention, or dispute-related reasons.",
+      "Deleted data may persist for a period in backups or disaster recovery systems until normal backup lifecycle processes complete.",
     ],
   },
   {
     title: "Incident Response and Client Notification",
-    body: "alphaSource maintains an incident response process for suspected security or privacy incidents.",
+    body: "alphaSource maintains incident response procedures for identifying, escalating, investigating, containing, remediating, and reviewing suspected security or privacy incidents.",
     bullets: [
-      "The process includes severity triage, containment, investigation, remediation, and post-incident review.",
-      "If alphaSource confirms an incident that materially affects client data, affected clients will be notified without undue delay and, where required or practical, targeted within 72 hours after confirmation.",
-      "Notice may include the nature of the incident, data types involved, mitigation steps, actions taken, recommended client steps, and contact information.",
-      "Some details may be limited during an active investigation or where disclosure would increase security risk.",
-      "For security or privacy questions, contact support at info@alphasourceai.com.",
+      "Incidents are assessed based on severity, affected systems, data involved, client impact, legal or contractual obligations, and remediation needs.",
+      "Where alphaSource confirms an incident that materially affects client or candidate data, affected clients are notified as appropriate and in accordance with applicable legal, contractual, and operational requirements.",
+      "Notice timing and content may vary based on investigation status, scope, legal requirements, security considerations, and available facts.",
+      "Communications may include relevant information about affected systems or data categories, mitigation steps, recommended client actions, and support contact information where appropriate.",
+      "Details may be limited during an active investigation or where disclosure could increase security risk.",
+      "For security or privacy questions, contact support at the designated alphaSource support channel.",
     ],
   },
 ];
