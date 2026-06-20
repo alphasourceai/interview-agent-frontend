@@ -667,7 +667,7 @@ function AboutSnippetSection() {
                 Your talent. Our tech. Practical AI built around the real work your team does and the decisions people still need to make.
               </blockquote>
               <div className="border-t border-white/10 pt-5">
-                <div className="text-sm font-semibold text-white/80">AlphaSource AI</div>
+                <div className="text-sm font-semibold text-white/80">alphaSource AI</div>
               </div>
             </div>
           </motion.div>

@@ -56,7 +56,7 @@ export default function Seo({ location }: SeoProps) {
     upsertMeta('meta[name="description"]', { name: "description" }, config.description);
     upsertMeta('meta[name="robots"]', { name: "robots" }, config.robots);
     upsertMeta('meta[property="og:type"]', { property: "og:type" }, config.type);
-    upsertMeta('meta[property="og:site_name"]', { property: "og:site_name" }, "AlphaSource AI");
+    upsertMeta('meta[property="og:site_name"]', { property: "og:site_name" }, "alphaSource AI");
     upsertMeta('meta[property="og:title"]', { property: "og:title" }, config.title);
     upsertMeta('meta[property="og:description"]', { property: "og:description" }, config.description);
     upsertMeta('meta[property="og:image"]', { property: "og:image" }, image);

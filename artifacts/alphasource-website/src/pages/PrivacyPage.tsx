@@ -31,12 +31,12 @@ export default function PrivacyPage() {
           style={{ color: "#0A1547" }}
         >
           <p className="text-[#0A1547]/70 leading-relaxed mb-8">
-            This Privacy Policy explains how alphaSource Network, LLC, doing business as AlphaSource AI, collects and uses limited information through the public website, alphaScreen, and related product workflows. It focuses on public website analytics, contact and demo form behavior, and high-level product data practices.
+            This Privacy Policy explains how alphaSource Network, LLC, doing business as alphaSource AI, collects and uses limited information through the public website, alphaScreen, and related product workflows. It focuses on public website analytics, contact and demo form behavior, and high-level product data practices.
           </p>
 
           <Section number="1" title="OVERVIEW">
             <p>
-              AlphaSource AI collects limited information to operate the public website, respond to inquiries, understand interest in alphaScreen, support product workflows, and improve our services. The information collected depends on how a visitor or customer interacts with the website or product.
+              alphaSource AI collects limited information to operate the public website, respond to inquiries, understand interest in alphaScreen, support product workflows, and improve our services. The information collected depends on how a visitor or customer interacts with the website or product.
             </p>
             <p>
               Public website activity is separate from authenticated dashboard, client, candidate, and account activity. Product and account data is handled according to applicable agreements, product controls, and customer configuration.
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
 
           <Section number="4" title="LEAD DRAFT AND ABANDONED FORM CAPTURE">
             <p>
-              If a visitor begins completing a public contact, demo, or inquiry form and enters usable business contact information, AlphaSource AI may save a partial business-contact lead record even if the visitor does not complete the form.
+              If a visitor begins completing a public contact, demo, or inquiry form and enters usable business contact information, alphaSource AI may save a partial business-contact lead record even if the visitor does not complete the form.
             </p>
             <p>
               Message or freeform inquiry text is saved only when the visitor intentionally submits the form. Partial lead draft capture is used for business follow-up, assisting with inquiries, spam prevention, and service improvement.
@@ -96,13 +96,13 @@ export default function PrivacyPage() {
               Candidate, interview, and report data is used to provide screening and hiring workflow services requested by the client or employer. This may include information submitted by the candidate, interview responses, resume materials, transcripts, recordings where used, reports, and related workflow information.
             </p>
             <p>
-              Final hiring decisions remain with the employer or hiring team. AlphaSource AI does not sell candidate information or use candidate information for unrelated marketing purposes.
+              Final hiring decisions remain with the employer or hiring team. alphaSource AI does not sell candidate information or use candidate information for unrelated marketing purposes.
             </p>
           </Section>
 
           <Section number="8" title="SERVICE PROVIDERS AND DATA SHARING">
             <p>
-              AlphaSource AI uses service providers for hosting, analytics infrastructure, email, database and storage, payment, AI and video services, error monitoring, support, security, and related operations. These providers help us operate the website and services.
+              alphaSource AI uses service providers for hosting, analytics infrastructure, email, database and storage, payment, AI and video services, error monitoring, support, security, and related operations. These providers help us operate the website and services.
             </p>
             <p>
               We may share information when needed to provide services, support customers, comply with legal obligations, protect rights and security, or complete normal business operations.

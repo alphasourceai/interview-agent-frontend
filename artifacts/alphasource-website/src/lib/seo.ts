@@ -14,15 +14,15 @@ export type SeoConfig = {
 
 const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "type">> = {
   "/": {
-    title: "AlphaSource AI | AI Candidate Screening and Workflow Automation",
+    title: "alphaSource AI | AI Candidate Screening and Workflow Automation",
     description:
-      "AlphaSource AI builds practical AI tools, including alphaScreen for structured candidate screening, interview analysis, and hiring workflow support.",
+      "alphaSource AI builds practical AI tools, including alphaScreen for structured candidate screening, interview analysis, and hiring workflow support.",
     path: "/",
     jsonLd: [
       {
         "@context": "https://schema.org",
         "@type": "Organization",
-        name: "AlphaSource AI",
+        name: "alphaSource AI",
         url: "https://www.alphasourceai.com/",
         logo: "https://www.alphasourceai.com/alpha-symbol.png",
         sameAs: [
@@ -33,7 +33,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        name: "AlphaSource AI",
+        name: "alphaSource AI",
         url: "https://www.alphasourceai.com/",
       },
     ],
@@ -54,46 +54,46 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
         "AI-assisted candidate screening software for structured interviews, resume analysis, candidate reports, and hiring workflow support.",
       publisher: {
         "@type": "Organization",
-        name: "AlphaSource AI",
+        name: "alphaSource AI",
         url: "https://www.alphasourceai.com/",
       },
     },
   },
   "/about": {
-    title: "About AlphaSource AI | Practical AI Built Around Human Judgment",
+    title: "About alphaSource AI | Practical AI Built Around Human Judgment",
     description:
-      "Meet AlphaSource AI, the team building practical AI tools that help leaders reclaim time, improve decisions, and keep people in control.",
+      "Meet alphaSource AI, the team building practical AI tools that help leaders reclaim time, improve decisions, and keep people in control.",
     path: "/about",
   },
   "/support": {
-    title: "AlphaSource AI Support | alphaScreen FAQ and Release Notes",
+    title: "alphaSource AI Support | alphaScreen FAQ and Release Notes",
     description:
-      "Find public support information, alphaScreen FAQs, release notes, and guidance for getting started with AlphaSource AI.",
+      "Find public support information, alphaScreen FAQs, release notes, and guidance for getting started with alphaSource AI.",
     path: "/support",
   },
   "/faq": {
-    title: "AlphaSource AI FAQ | alphaScreen Questions and Support",
+    title: "alphaSource AI FAQ | alphaScreen Questions and Support",
     description:
-      "Answers to common questions about AlphaSource AI, alphaScreen, candidate screening workflows, and getting started.",
+      "Answers to common questions about alphaSource AI, alphaScreen, candidate screening workflows, and getting started.",
     path: "/faq",
   },
   "/terms": {
-    title: "Terms and Conditions | AlphaSource AI",
+    title: "Terms and Conditions | alphaSource AI",
     description:
-      "Review AlphaSource AI terms for AI-assisted interviewing, candidate data, human review, accommodations, and responsible use.",
+      "Review alphaSource AI terms for AI-assisted interviewing, candidate data, human review, accommodations, and responsible use.",
     path: "/terms",
   },
   "/privacy": {
-    title: "Privacy Policy | AlphaSource AI",
+    title: "Privacy Policy | alphaSource AI",
     description:
-      "Learn how AlphaSource AI handles public website analytics, contact and demo form lead capture, alphaScreen product data, and privacy requests.",
+      "Learn how alphaSource AI handles public website analytics, contact and demo form lead capture, alphaScreen product data, and privacy requests.",
     path: "/privacy",
   },
 };
 
 const DEFAULT_NO_INDEX: SeoConfig = {
-  title: "AlphaSource AI",
-  description: "AlphaSource AI application page.",
+  title: "alphaSource AI",
+  description: "alphaSource AI application page.",
   robots: "noindex,nofollow,noarchive",
   imagePath: "/opengraph.jpg",
   type: "website",

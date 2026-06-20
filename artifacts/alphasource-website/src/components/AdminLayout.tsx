@@ -154,7 +154,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             <>
               <div className="flex flex-col min-w-0">
                 <Link href="/" onClick={() => setMobileOpen(false)}>
-                  <img src={sidebarLogoSrc} alt="AlphaSource AI" className="h-8 w-auto" />
+                  <img src={sidebarLogoSrc} alt="alphaSource AI" className="h-8 w-auto" />
                 </Link>
                 <span
                   className="text-[9px] font-black uppercase tracking-widest mt-0.5"

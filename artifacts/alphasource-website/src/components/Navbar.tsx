@@ -112,7 +112,7 @@ export default function Navbar() {
           <Link href="/" className="flex items-center gap-0" data-testid="nav-logo">
             <img
               src="/logo-dark-text-clear.png"
-              alt="AlphaSource AI"
+              alt="alphaSource AI"
               className="h-8 w-auto"
             />
           </Link>

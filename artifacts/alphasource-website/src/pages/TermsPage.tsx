@@ -33,7 +33,7 @@ export default function TermsPage() {
           style={{ color: "#0A1547" }}
         >
           <p className="text-[#0A1547]/70 leading-relaxed mb-8">
-            These Terms &amp; Conditions ("Terms") govern your use of the AI Interviewer platform and related services ("Service") provided by AlphaSource AI, LLC ("Company," "we," "our"). By accessing or using the Service—whether as a client/employer or as a candidate—you agree to these Terms. If you do not agree, do not use the Service.
+            These Terms &amp; Conditions ("Terms") govern your use of the AI Interviewer platform and related services ("Service") provided by alphaSource AI, LLC ("Company," "we," "our"). By accessing or using the Service—whether as a client/employer or as a candidate—you agree to these Terms. If you do not agree, do not use the Service.
           </p>
 
           <Section number="1" title="PURPOSE OF THE SERVICE">
@@ -103,7 +103,7 @@ export default function TermsPage() {
             </ul>
             <p>The Company is NOT responsible for any compliance failures by clients/employers.</p>
             <p className="font-semibold mt-4">Accessibility &amp; Accommodations (ADA)</p>
-            <p>AlphaSource AI is committed to providing reasonable accommodations to qualified individuals with disabilities so they can participate in the interview process. If you need an accommodation to complete your interview (for example, a text-based alternative to a video interview, additional time, or another adjustment), please request one using the "Need an accommodation?" link on this page.</p>
+            <p>alphaSource AI is committed to providing reasonable accommodations to qualified individuals with disabilities so they can participate in the interview process. If you need an accommodation to complete your interview (for example, a text-based alternative to a video interview, additional time, or another adjustment), please request one using the "Need an accommodation?" link on this page.</p>
             <p>Accommodation requests are reviewed by the hiring team and/or their designated representative. If approved, we will provide an alternate interview option or other reasonable adjustment. We may ask for information needed to evaluate and implement the request, but we do not require disclosure of confidential medical details.</p>
             <p>Requests should be submitted as soon as possible. We will respond within 48 business hours. If you have immediate accessibility issues, contact <a href="mailto:info@alphasourceai.com" className="text-[#A380F6] hover:underline">info@alphasourceai.com</a>.</p>
             <p>Submitting an accommodation request will not negatively impact your candidacy.</p>

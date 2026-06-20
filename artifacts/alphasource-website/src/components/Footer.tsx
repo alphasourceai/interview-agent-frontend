@@ -85,7 +85,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-2">
             <div className="mb-4">
-              <img src="/alpha-symbol.png" alt="AlphaSource AI" className="h-10 w-auto" />
+              <img src="/alpha-symbol.png" alt="alphaSource AI" className="h-10 w-auto" />
             </div>
             <p className="text-white/60 text-sm leading-relaxed max-w-xs">
               Agentic AI that enhances human judgment — helping teams reclaim time and spot potential in every talent interaction.
@@ -168,7 +168,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-white/10 mt-12 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-white/40 text-sm">
-            &copy; {new Date().getFullYear()} AlphaSource AI. All rights reserved.
+            &copy; {new Date().getFullYear()} alphaSource AI. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <a href="/privacy" className="text-white/40 text-sm hover:text-white/70 transition-colors">
@@ -212,7 +212,7 @@ export default function Footer() {
                         Admin
                       </span>
                     </div>
-                    <p className="text-[10px] text-[#0A1547]/45">Access the AlphaSource admin dashboard</p>
+                    <p className="text-[10px] text-[#0A1547]/45">Access the alphaSource admin dashboard</p>
                   </div>
 
                   <form onSubmit={handleAdminSignIn} className="space-y-2.5">
