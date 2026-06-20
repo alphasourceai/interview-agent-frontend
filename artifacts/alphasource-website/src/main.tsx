@@ -1,6 +1,10 @@
 import { createRoot } from "react-dom/client";
+import * as Sentry from "@sentry/react";
 import App from "./App";
+import { initSentry, isSentryEnabled } from "./lib/sentry";
 import "./index.css";
+
+initSentry();
 
 if (import.meta.env.DEV && typeof window !== "undefined") {
   const prevOnError = window.onerror;
@@ -54,4 +58,12 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
   };
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+const app = isSentryEnabled() ? (
+  <Sentry.ErrorBoundary showDialog={false} fallback={<></>}>
+    <App />
+  </Sentry.ErrorBoundary>
+) : (
+  <App />
+);
+
+createRoot(document.getElementById("root")!).render(app);

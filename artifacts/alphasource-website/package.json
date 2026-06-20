@@ -76,6 +76,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@sentry/react": "^10.59.0",
     "@supabase/supabase-js": "^2.103.0"
   }
 }
