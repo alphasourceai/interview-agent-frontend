@@ -16,7 +16,7 @@ function firstBase(...values: unknown[]): string {
   return "";
 }
 
-const canonicalFrontendBase = firstBase(
+export const canonicalFrontendBase = firstBase(
   (env as Record<string, unknown>).VITE_CLIENT_APP_BASE,
   (env as Record<string, unknown>).VITE_PUBLIC_SITE_BASE,
   (env as Record<string, unknown>).VITE_FRONTEND_BASE,
@@ -25,7 +25,22 @@ const canonicalFrontendBase = firstBase(
   (env as Record<string, unknown>).VITE_SITE_URL,
 );
 
-function resolveWindowOrigin(): string {
+export const publicSiteBase = firstBase(
+  (env as Record<string, unknown>).VITE_PUBLIC_SITE_BASE,
+  (env as Record<string, unknown>).VITE_SITE_URL,
+  (env as Record<string, unknown>).VITE_FRONTEND_URL,
+  (env as Record<string, unknown>).VITE_APP_BASE_URL,
+);
+
+export const publicBackendBase = firstBase(
+  (env as Record<string, unknown>).VITE_BACKEND_URL,
+  (env as Record<string, unknown>).VITE_API_URL,
+  (env as Record<string, unknown>).VITE_PUBLIC_BACKEND_URL,
+  (env as Record<string, unknown>).PUBLIC_BACKEND_URL,
+  (env as Record<string, unknown>).BACKEND_URL,
+);
+
+export function resolveWindowOrigin(): string {
   if (typeof window === "undefined" || !window.location) return "";
   return trimTrailingSlashes(window.location.origin);
 }
@@ -43,9 +58,24 @@ function serializeQuery(query?: QueryInput): string {
   return params.toString();
 }
 
-function appendQuery(url: string, query?: QueryInput): string {
+export function appendQuery(url: string, query?: QueryInput): string {
   const serialized = serializeQuery(query);
   return serialized ? `${url}?${serialized}` : url;
+}
+
+export function joinUrl(base: string, path: string): string {
+  const cleanBase = trimTrailingSlashes(base);
+  if (!cleanBase) return path.startsWith("/") ? path : `/${path}`;
+  if (path.startsWith("/")) return `${cleanBase}${path}`;
+  return `${cleanBase}/${path}`;
+}
+
+export function getPublicSiteBase(): string {
+  return firstBase(publicSiteBase, canonicalFrontendBase, resolveWindowOrigin());
+}
+
+export function getPublicBackendBase(): string {
+  return firstBase(publicBackendBase, resolveWindowOrigin());
 }
 
 export function buildPwResetUrl(

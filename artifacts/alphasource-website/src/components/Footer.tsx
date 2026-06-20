@@ -128,7 +128,12 @@ export default function Footer() {
                 { label: "Support",      href: "/support" },
               ].map((link) => (
                 <li key={link.label}>
-                  <a href={link.href} className="text-sm text-white/60 hover:text-[#A380F6] transition-colors">
+                  <a
+                    href={link.href}
+                    className="text-sm text-white/60 hover:text-[#A380F6] transition-colors"
+                    data-analytics-cta={link.label}
+                    data-analytics-placement="footer"
+                  >
                     {link.label}
                   </a>
                 </li>
@@ -146,7 +151,13 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/#contact" className="text-sm font-semibold transition-colors hover:text-white" style={{ color: "#A380F6" }}>
+                <a
+                  href="/#contact"
+                  className="text-sm font-semibold transition-colors hover:text-white"
+                  style={{ color: "#A380F6" }}
+                  data-analytics-cta="Request a Demo"
+                  data-analytics-placement="footer-contact"
+                >
                   Request a Demo →
                 </a>
               </li>

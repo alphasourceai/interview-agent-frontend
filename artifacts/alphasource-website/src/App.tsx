@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,6 +9,8 @@ import { ClientProvider } from "@/context/ClientContext";
 import { AdminClientProvider } from "@/context/AdminClientContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Seo from "@/components/Seo";
+import PageAnalytics from "@/components/PageAnalytics";
 
 /* Public pages */
 import HomePage from "@/pages/HomePage";
@@ -403,43 +405,50 @@ function Router() {
     location === "/interview-cvi" ||
     location === "/interview-complete";
 
-  if (isDashboard) return <DashboardGuard />;
-  if (isAdmin)     return <AdminGuard />;
-  if (isAutomationDigestApproval) return (
-    <Switch>
-      <Route path="/automation/digest-approval/:token" component={AutomationDigestApprovalPage} />
-      <Route path="/automation/digest-approval" component={AutomationDigestApprovalPage} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-  if (isAutomationApproval) return (
-    <Switch>
-      <Route path="/automation/approval/:token" component={AutomationApprovalPage} />
-      <Route path="/automation/approval" component={AutomationApprovalPage} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-  if (isInterview) return (
-    <Switch>
-      <Route path="/accommodation-request/:role_token" component={AccommodationRequestPage} />
-      <Route path="/accommodation-request" component={AccommodationRequestPage} />
-      <Route path="/interview-access/:role_token" component={InterviewTokenAlias} />
-      <Route path="/interview-host/:role_token" component={InterviewTokenAlias} />
-      <Route path="/text-interview/:token" component={TextInterviewPage} />
-      <Route path="/membership-agreement/sign/:token" component={MembershipAgreementSignerPage} />
-      <Route path="/interview/terms" component={CandidateTermsPage} />
-      <Route path="/pwreset" component={PwResetPage} />
-      <Route path="/interview-access" component={InterviewPage} />
-      <Route path="/interview-cvi" component={InterviewCviPage} />
-      <Route path="/interview-complete" component={InterviewCompletePage} />
-      <Route path="/interview/live" component={InterviewCviPage} />
-      <Route path="/interview/complete" component={InterviewCompletePage} />
-      <Route path="/interview/:role_token" component={InterviewPage} />
-      <Route path="/interview" component={InterviewPage} />
-    </Switch>
-  );
+  let content: ReactNode;
 
-  return (
+  if (isDashboard) {
+    content = <DashboardGuard />;
+  } else if (isAdmin) {
+    content = <AdminGuard />;
+  } else if (isAutomationDigestApproval) {
+    content = (
+      <Switch>
+        <Route path="/automation/digest-approval/:token" component={AutomationDigestApprovalPage} />
+        <Route path="/automation/digest-approval" component={AutomationDigestApprovalPage} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  } else if (isAutomationApproval) {
+    content = (
+      <Switch>
+        <Route path="/automation/approval/:token" component={AutomationApprovalPage} />
+        <Route path="/automation/approval" component={AutomationApprovalPage} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  } else if (isInterview) {
+    content = (
+      <Switch>
+        <Route path="/accommodation-request/:role_token" component={AccommodationRequestPage} />
+        <Route path="/accommodation-request" component={AccommodationRequestPage} />
+        <Route path="/interview-access/:role_token" component={InterviewTokenAlias} />
+        <Route path="/interview-host/:role_token" component={InterviewTokenAlias} />
+        <Route path="/text-interview/:token" component={TextInterviewPage} />
+        <Route path="/membership-agreement/sign/:token" component={MembershipAgreementSignerPage} />
+        <Route path="/interview/terms" component={CandidateTermsPage} />
+        <Route path="/pwreset" component={PwResetPage} />
+        <Route path="/interview-access" component={InterviewPage} />
+        <Route path="/interview-cvi" component={InterviewCviPage} />
+        <Route path="/interview-complete" component={InterviewCompletePage} />
+        <Route path="/interview/live" component={InterviewCviPage} />
+        <Route path="/interview/complete" component={InterviewCompletePage} />
+        <Route path="/interview/:role_token" component={InterviewPage} />
+        <Route path="/interview" component={InterviewPage} />
+      </Switch>
+    );
+  } else {
+    content = (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-1">
@@ -455,6 +464,15 @@ function Router() {
       </main>
       <Footer />
     </div>
+    );
+  }
+
+  return (
+    <>
+      <Seo location={location} />
+      <PageAnalytics location={location} />
+      {content}
+    </>
   );
 }
 

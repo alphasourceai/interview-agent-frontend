@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle, Target, Sprout, Clock, Scale } from "lucide-react";
+import LeadCaptureForm from "@/components/LeadCaptureForm";
 
 const EASE_OUT = "easeOut" as const;
 
@@ -96,6 +96,8 @@ function HeroSection() {
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white rounded-full transition-all hover:opacity-90 hover:shadow-lg active:scale-95"
                 style={{ backgroundColor: "#A380F6" }}
                 data-testid="hero-cta-primary"
+                data-analytics-cta="Get in Touch"
+                data-analytics-placement="home-hero"
               >
                 Get in Touch
                 <ArrowRight className="w-4 h-4" />
@@ -104,6 +106,8 @@ function HeroSection() {
                 href="/alphascreen"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-[#0A1547] bg-white border border-[#0A1547]/10 rounded-full transition-all hover:border-[#A380F6] hover:text-[#A380F6] hover:shadow-md active:scale-95"
                 data-testid="hero-cta-secondary"
+                data-analytics-cta="Explore alphaScreen"
+                data-analytics-placement="home-hero"
               >
                 Explore alphaScreen
               </a>
@@ -515,6 +519,8 @@ function AlphaScreenFeatureSection() {
               className="inline-flex items-center gap-1.5 text-base font-semibold transition-all hover:gap-2.5"
               style={{ color: "#A380F6" }}
               data-testid="alphascreen-section-cta"
+              data-analytics-cta="See alphaScreen"
+              data-analytics-placement="home-alphascreen-section"
             >
               See alphaScreen <ArrowRight className="w-4 h-4" />
             </a>
@@ -634,6 +640,8 @@ function AboutSnippetSection() {
               className="inline-flex items-center gap-2 text-sm font-semibold"
               style={{ color: "#A380F6" }}
               data-testid="about-snippet-link"
+              data-analytics-cta="Meet the team"
+              data-analytics-placement="home-about-section"
             >
               Meet the team <ArrowRight className="w-3.5 h-3.5" />
             </a>
@@ -670,18 +678,6 @@ function AboutSnippetSection() {
 }
 
 function CTASection() {
-  const [submitted, setSubmitted] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [message, setMessage] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-  };
-
   return (
     <section id="contact" className="py-24 bg-[#F8F9FD]">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
@@ -723,91 +719,14 @@ function CTASection() {
 
           {/* Right — white form panel */}
           <div className="flex-1 bg-white p-10">
-            {submitted ? (
-              <div className="h-full flex flex-col items-center justify-center text-center py-8">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "#02D99D18" }}>
-                  <CheckCircle className="w-7 h-7" style={{ color: "#02D99D" }} />
-                </div>
-                <h3 className="text-xl font-bold text-[#0A1547] mb-2">Thanks! We'll be in touch.</h3>
-                <p className="text-[#0A1547]/60 text-sm">
-                  Our team will reach out to schedule a demo with you.
-                </p>
-              </div>
-            ) : (
-              <>
-                <h3 className="text-xl font-bold text-[#0A1547] mb-6">Request a Demo</h3>
-                <form onSubmit={handleSubmit} className="space-y-4" data-testid="contact-form">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-[#0A1547] mb-1.5">First Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        placeholder="Jane"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
-                        data-testid="input-first-name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#0A1547] mb-1.5">Last Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder="Smith"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
-                        data-testid="input-last-name"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#0A1547] mb-1.5">Email</label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="jane@company.com"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
-                      data-testid="input-email"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#0A1547] mb-1.5">Phone</label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+1 (555) 000-0000"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
-                      data-testid="input-phone"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#0A1547] mb-1.5">How can we help?</label>
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      rows={3}
-                      placeholder="Let us know how we can help..."
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all resize-none"
-                      data-testid="input-message"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 text-sm font-semibold text-white rounded-full transition-all hover:opacity-90 hover:shadow-md active:scale-[0.99]"
-                    style={{ backgroundColor: "#A380F6" }}
-                    data-testid="button-submit"
-                  >
-                    Submit
-                  </button>
-                </form>
-              </>
-            )}
+            <LeadCaptureForm
+              formId="home-contact"
+              formType="contact"
+              formTestId="contact-form"
+              productInterest="general-ai-workflows"
+              successTitle="Thanks! We'll be in touch."
+              successBody="Our team will reach out to schedule a demo with you."
+            />
           </div>
         </motion.div>
       </div>

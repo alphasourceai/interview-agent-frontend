@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
+import LeadCaptureForm from "@/components/LeadCaptureForm";
 
 const EASE_OUT = "easeOut" as const;
 
@@ -87,6 +87,8 @@ function HeroSection() {
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white rounded-full transition-all hover:opacity-90 hover:shadow-lg active:scale-95"
                 style={{ backgroundColor: "#A380F6" }}
                 data-testid="alphascreen-hero-cta"
+                data-analytics-cta="Request a Demo"
+                data-analytics-placement="alphascreen-hero"
               >
                 Request a Demo
                 <ArrowRight className="w-4 h-4" />
@@ -95,6 +97,8 @@ function HeroSection() {
                 href="#how-it-works"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-[#0A1547] bg-white border border-[#0A1547]/10 rounded-full transition-all hover:border-[#A380F6] hover:text-[#A380F6] hover:shadow-md active:scale-95"
                 data-testid="alphascreen-how-it-works"
+                data-analytics-cta="See How It Works"
+                data-analytics-placement="alphascreen-hero"
               >
                 See How It Works
               </a>
@@ -416,18 +420,6 @@ function HowItWorksSection() {
 }
 
 function DemoSection() {
-  const [submitted, setSubmitted] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [message, setMessage] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-  };
-
   return (
     <section id="request-demo" className="py-24 bg-white">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
@@ -467,91 +459,14 @@ function DemoSection() {
           </div>
 
           <div className="flex-1 bg-white p-10">
-            {submitted ? (
-              <div className="h-full flex flex-col items-center justify-center text-center py-8">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "#02D99D18" }}>
-                  <CheckCircle className="w-7 h-7" style={{ color: "#02D99D" }} />
-                </div>
-                <h3 className="text-xl font-bold text-[#0A1547] mb-2">We'll be in touch!</h3>
-                <p className="text-[#0A1547]/60 text-sm">
-                  Our team will reach out to schedule your alphaScreen demo.
-                </p>
-              </div>
-            ) : (
-              <>
-                <h3 className="text-xl font-bold text-[#0A1547] mb-6">Request a Demo</h3>
-                <form onSubmit={handleSubmit} className="space-y-4" data-testid="demo-form">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-[#0A1547] mb-1.5">First Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        placeholder="Jane"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
-                        data-testid="input-first-name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#0A1547] mb-1.5">Last Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder="Smith"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
-                        data-testid="input-last-name"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#0A1547] mb-1.5">Email</label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="jane@company.com"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
-                      data-testid="input-email"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#0A1547] mb-1.5">Phone</label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+1 (555) 000-0000"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
-                      data-testid="input-phone"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#0A1547] mb-1.5">How can we help?</label>
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      rows={3}
-                      placeholder="Let us know how we can help..."
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all resize-none"
-                      data-testid="input-message"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 text-sm font-semibold text-white rounded-full transition-all hover:opacity-90 hover:shadow-md active:scale-[0.99]"
-                    style={{ backgroundColor: "#A380F6" }}
-                    data-testid="button-submit"
-                  >
-                    Submit
-                  </button>
-                </form>
-              </>
-            )}
+            <LeadCaptureForm
+              formId="alphascreen-demo"
+              formType="demo"
+              formTestId="demo-form"
+              productInterest="alphascreen"
+              successTitle="We'll be in touch!"
+              successBody="Our team will reach out to schedule your alphaScreen demo."
+            />
           </div>
         </motion.div>
       </div>

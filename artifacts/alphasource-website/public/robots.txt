@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /interview
+Disallow: /interview/
+Disallow: /interview-access
+Disallow: /interview-access/
+Disallow: /interview-host
+Disallow: /interview-host/
+Disallow: /text-interview
+Disallow: /text-interview/
+Disallow: /membership-agreement
+Disallow: /membership-agreement/
+Disallow: /automation/approval
+Disallow: /automation/approval/
+Disallow: /automation/digest-approval
+Disallow: /automation/digest-approval/
+Disallow: /accommodation-request
+Disallow: /accommodation-request/
+Disallow: /pwreset
+
+Sitemap: https://www.alphasourceai.com/sitemap.xml
