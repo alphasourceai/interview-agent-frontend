@@ -83,6 +83,12 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
       "Review AlphaSource AI terms for AI-assisted interviewing, candidate data, human review, accommodations, and responsible use.",
     path: "/terms",
   },
+  "/privacy": {
+    title: "Privacy Policy | AlphaSource AI",
+    description:
+      "Learn how AlphaSource AI handles public website analytics, contact and demo form lead capture, alphaScreen product data, and privacy requests.",
+    path: "/privacy",
+  },
 };
 
 const DEFAULT_NO_INDEX: SeoConfig = {

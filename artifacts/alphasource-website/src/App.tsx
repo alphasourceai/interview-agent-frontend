@@ -18,6 +18,7 @@ import AlphaScreenPage from "@/pages/AlphaScreenPage";
 import AboutPage from "@/pages/AboutPage";
 import PublicSupportPage from "@/pages/FaqPage";
 import TermsPage from "@/pages/TermsPage";
+import PrivacyPage from "@/pages/PrivacyPage";
 import CandidateTermsPage from "@/pages/CandidateTermsPage";
 import InterviewPage from "@/pages/InterviewPage";
 import InterviewCviPage from "@/pages/InterviewCviPage";
@@ -458,6 +459,7 @@ function Router() {
           <Route path="/about"       component={AboutPage} />
           <Route path="/support"     component={PublicSupportPage} />
           <Route path="/faq"         component={PublicSupportPage} />
+          <Route path="/privacy"     component={PrivacyPage} />
           <Route path="/terms"       component={TermsPage} />
           <Route component={NotFound} />
         </Switch>

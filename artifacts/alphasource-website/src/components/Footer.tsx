@@ -171,6 +171,9 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} AlphaSource AI. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
+            <a href="/privacy" className="text-white/40 text-sm hover:text-white/70 transition-colors">
+              Privacy Policy
+            </a>
             <a href="/terms" className="text-white/40 text-sm hover:text-white/70 transition-colors">
               Terms &amp; Conditions
             </a>
