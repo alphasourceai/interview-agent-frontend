@@ -3,6 +3,7 @@ import {
   Activity,
   AlertCircle,
   Clock3,
+  Download,
   FileText,
   Filter,
   Mail,
@@ -210,6 +211,13 @@ function extractErrorMessage(text: string, fallback: string): string {
   return fallback;
 }
 
+function filenameFromDisposition(value: string | null): string {
+  const raw = String(value || "");
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(raw);
+  const filename = match ? decodeURIComponent(match[1] || "").trim() : "";
+  return filename || "public-leads.csv";
+}
+
 function formatDateTime(value: unknown): string {
   const raw = String(value || "").trim();
   if (!raw) return "Not available";
@@ -380,6 +388,8 @@ export default function AdminPublicAnalyticsPage() {
   const [payload, setPayload] = useState<PublicAnalyticsPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [csvExporting, setCsvExporting] = useState(false);
+  const [csvExportError, setCsvExportError] = useState("");
   const [days, setDays] = useState<DaysFilter>("30");
   const [status, setStatus] = useState<LeadStatus>("all");
   const [eventName, setEventName] = useState("");
@@ -442,6 +452,43 @@ export default function AdminPublicAnalyticsPage() {
     setLeadPage(1);
     setEventPage(1);
   }, []);
+
+  const exportLeadsCsv = useCallback(async () => {
+    if (!backendBase) {
+      setCsvExportError("Missing backend base URL configuration.");
+      return;
+    }
+    setCsvExporting(true);
+    setCsvExportError("");
+    try {
+      const token = await getToken();
+      const params = new URLSearchParams({ days });
+      if (status !== "all") params.set("status", status);
+      if (pathFilter.trim()) params.set("path", pathFilter.trim());
+      const response = await fetch(`${backendBase}/admin/public-analytics/leads.csv?${params.toString()}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "omit",
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(extractErrorMessage(text, "Could not export lead captures."));
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filenameFromDisposition(response.headers.get("Content-Disposition"));
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (exportError) {
+      setCsvExportError(exportError instanceof Error ? exportError.message : "Could not export lead captures.");
+    } finally {
+      setCsvExporting(false);
+    }
+  }, [days, getToken, pathFilter, status]);
 
   const leads = payload?.leads?.items || [];
   const events = payload?.events?.items || [];
@@ -593,6 +640,85 @@ export default function AdminPublicAnalyticsPage() {
           </div>
         )}
 
+        <section className="rounded-2xl border overflow-hidden" style={surfaceCardStyle}>
+          <div className="border-b px-5 py-4" style={dividerStyle}>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h2 className="text-lg font-black" style={primaryTextStyle}>Recent lead captures</h2>
+                <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Submitted leads and contact-ready partial leads stay visible for review. Message content is preview-only and submitted-only.</p>
+                <p className="mt-1 text-[11px] font-bold" style={subtleTextStyle}>{dateLabel}</p>
+              </div>
+              <button
+                type="button"
+                onClick={exportLeadsCsv}
+                disabled={csvExporting || !backendBase}
+                className="inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-black transition-colors hover:bg-[var(--as-hover)] disabled:cursor-not-allowed disabled:opacity-55"
+                style={fieldStyle}
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                {csvExporting ? "Exporting..." : "Export leads CSV"}
+              </button>
+            </div>
+          </div>
+          {csvExportError && (
+            <div className="border-b px-5 py-3 text-xs font-semibold text-red-600 dark:text-red-300" style={dividerStyle}>
+              {csvExportError}
+            </div>
+          )}
+          <div className="divide-y" style={dividerStyle}>
+            {loading && leads.length === 0 ? (
+              <div className="px-5 py-6 text-sm font-semibold" style={mutedTextStyle}>Loading lead captures...</div>
+            ) : leads.length === 0 ? (
+              <div className="p-5">
+                <EmptyState title="No lead captures match these filters" detail="Try a wider date range or remove the status/page filters." />
+              </div>
+            ) : (
+              leads.map((lead) => {
+                const submitted = String(lead.status || "").toLowerCase() === "submitted";
+                return (
+                <article key={lead.id} className={`px-5 py-4 ${submitted ? "bg-[#02D99D]/[0.035]" : ""}`}>
+                  <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge status={lead.status} />
+                        <span className="text-sm font-black" style={primaryTextStyle}>
+                          {lead.contact?.full_name || lead.contact?.email || lead.contact?.phone || "Contact saved"}
+                        </span>
+                        {lead.product_interest && (
+                          <span className="rounded-full border px-2 py-0.5 text-[11px] font-bold" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
+                            {lead.product_interest}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold" style={mutedTextStyle}>
+                        {lead.contact?.email && <span><Mail className="mr-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />{lead.contact.email}</span>}
+                        {lead.contact?.phone && <span>{lead.contact.phone}</span>}
+                        <span>{pageLabel(lead.source?.path)} · {pathLabel(lead.source?.path)}</span>
+                        <span>Updated {formatDateTime(lead.updated_at)}</span>
+                      </div>
+                      {lead.message_preview && (
+                        <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold leading-relaxed" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
+                          {lead.message_preview}
+                        </p>
+                      )}
+                    </div>
+                    <div className="grid min-w-[220px] grid-cols-2 gap-2 text-[11px] font-semibold xl:text-right">
+                      <span style={subtleTextStyle}>Fields</span>
+                      <span className="font-black" style={primaryTextStyle}>{lead.progress?.fields_completed_count || 0}</span>
+                      <span style={subtleTextStyle}>CTA</span>
+                      <span className="truncate font-black" style={primaryTextStyle} title={lead.source?.cta || "Not available"}>{lead.source?.cta || "Not available"}</span>
+                      <span style={subtleTextStyle}>Submitted</span>
+                      <span className="font-black" style={primaryTextStyle}>{formatDateTime(lead.submitted_at)}</span>
+                    </div>
+                  </div>
+                </article>
+              );
+              })
+            )}
+          </div>
+          <PaginationControls pagination={payload?.leads?.pagination} onPageChange={setLeadPage} />
+        </section>
+
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <InsightPanel
             title="Page activity summary"
@@ -708,70 +834,6 @@ export default function AdminPublicAnalyticsPage() {
               </article>
             ))}
           </InsightPanel>
-        </section>
-
-        <section className="rounded-2xl border overflow-hidden" style={surfaceCardStyle}>
-          <div className="border-b px-5 py-4" style={dividerStyle}>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-lg font-black" style={primaryTextStyle}>Recent lead captures</h2>
-                <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Submitted leads and contact-ready partial leads stay visible for review. Message content is preview-only and submitted-only.</p>
-              </div>
-              <p className="text-[11px] font-bold" style={subtleTextStyle}>{dateLabel}</p>
-            </div>
-          </div>
-          <div className="divide-y" style={dividerStyle}>
-            {loading && leads.length === 0 ? (
-              <div className="px-5 py-6 text-sm font-semibold" style={mutedTextStyle}>Loading lead captures...</div>
-            ) : leads.length === 0 ? (
-              <div className="p-5">
-                <EmptyState title="No lead captures match these filters" detail="Try a wider date range or remove the status/page filters." />
-              </div>
-            ) : (
-              leads.map((lead) => {
-                const submitted = String(lead.status || "").toLowerCase() === "submitted";
-                return (
-                <article key={lead.id} className={`px-5 py-4 ${submitted ? "bg-[#02D99D]/[0.035]" : ""}`}>
-                  <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <StatusBadge status={lead.status} />
-                        <span className="text-sm font-black" style={primaryTextStyle}>
-                          {lead.contact?.full_name || lead.contact?.email || lead.contact?.phone || "Contact saved"}
-                        </span>
-                        {lead.product_interest && (
-                          <span className="rounded-full border px-2 py-0.5 text-[11px] font-bold" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
-                            {lead.product_interest}
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold" style={mutedTextStyle}>
-                        {lead.contact?.email && <span><Mail className="mr-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />{lead.contact.email}</span>}
-                        {lead.contact?.phone && <span>{lead.contact.phone}</span>}
-                        <span>{pageLabel(lead.source?.path)} · {pathLabel(lead.source?.path)}</span>
-                        <span>Updated {formatDateTime(lead.updated_at)}</span>
-                      </div>
-                      {lead.message_preview && (
-                        <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold leading-relaxed" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
-                          {lead.message_preview}
-                        </p>
-                      )}
-                    </div>
-                    <div className="grid min-w-[220px] grid-cols-2 gap-2 text-[11px] font-semibold xl:text-right">
-                      <span style={subtleTextStyle}>Fields</span>
-                      <span className="font-black" style={primaryTextStyle}>{lead.progress?.fields_completed_count || 0}</span>
-                      <span style={subtleTextStyle}>CTA</span>
-                      <span className="truncate font-black" style={primaryTextStyle} title={lead.source?.cta || "Not available"}>{lead.source?.cta || "Not available"}</span>
-                      <span style={subtleTextStyle}>Submitted</span>
-                      <span className="font-black" style={primaryTextStyle}>{formatDateTime(lead.submitted_at)}</span>
-                    </div>
-                  </div>
-                </article>
-              );
-              })
-            )}
-          </div>
-          <PaginationControls pagination={payload?.leads?.pagination} onPageChange={setLeadPage} />
         </section>
 
         <details className="rounded-2xl border overflow-hidden" style={surfaceCardStyle}>
