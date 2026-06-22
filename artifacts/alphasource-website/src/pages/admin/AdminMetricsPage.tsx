@@ -725,16 +725,17 @@ export default function AdminMetricsPage() {
           aria-controls={detailsId}
           aria-label={`${expanded ? "Collapse" : "Expand"} ${service.name} metrics details`}
         >
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(260px,0.9fr)_minmax(280px,1.1fr)_minmax(220px,auto)] xl:items-center">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(260px,0.86fr)_minmax(96px,auto)_minmax(280px,1.08fr)_minmax(220px,auto)] xl:items-center">
             <div className="min-w-0 flex items-start gap-3 xl:items-center">
               <OutlineIcon icon={Icon} toneClass={serviceIconToneClass(service)} />
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-base font-black" style={primaryTextStyle} title={service.name}>{service.name}</p>
-                  <StatusBadge status={service.status} />
-                </div>
+                <p className="truncate text-base font-black" style={primaryTextStyle} title={service.name}>{service.name}</p>
                 <p className="mt-1 truncate text-xs font-semibold" style={mutedTextStyle} title={summary}>{summary}</p>
               </div>
+            </div>
+
+            <div className="flex pl-12 xl:pl-0 xl:justify-start">
+              <StatusBadge status={service.status} />
             </div>
 
             <div className="flex min-w-0 flex-wrap gap-2">
@@ -752,8 +753,8 @@ export default function AdminMetricsPage() {
 
             <div className="flex min-w-0 items-center justify-between gap-3 xl:justify-end">
               <p className="min-w-0 truncate text-[11px] font-semibold" style={subtleTextStyle}>
-              <Clock3 className="mr-1.5 inline h-3 w-3 align-[-2px]" aria-hidden="true" />
-              Last checked {formatDateTime(service.last_checked)}
+                <Clock3 className="mr-1.5 inline h-3 w-3 align-[-2px]" aria-hidden="true" />
+                Last checked {formatDateTime(service.last_checked)}
               </p>
               <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-black" style={mutedTextStyle}>
                 {expanded ? "Hide details" : "View details"}
