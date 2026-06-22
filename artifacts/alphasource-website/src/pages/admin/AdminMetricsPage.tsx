@@ -1,5 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, RefreshCw, ShieldCheck } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Bot,
+  CheckCircle2,
+  ChevronDown,
+  CircleHelp,
+  Clock3,
+  Cloud,
+  CreditCard,
+  Database,
+  HardDrive,
+  Mail,
+  RefreshCw,
+  Server,
+  ShieldCheck,
+  Video,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -211,6 +230,27 @@ function statusClass(status: unknown): string {
   return "bg-[#A380F6]/10 text-[#7C5FCC]";
 }
 
+function iconToneClass(status: unknown): string {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "healthy") return "border-[#02D99D]/30 bg-[#02D99D]/5 text-[#00886A]";
+  if (normalized === "problem") return "border-red-200 bg-red-50 text-red-600 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300";
+  if (normalized === "warning") return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300";
+  if (normalized === "not_configured") return "border-slate-200 bg-slate-50 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/70";
+  return "border-[#A380F6]/25 bg-[#A380F6]/5 text-[#7C5FCC]";
+}
+
+function OutlineIcon({ icon: Icon, status, label }: { icon: LucideIcon; status?: unknown; label?: string }) {
+  return (
+    <span
+      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${iconToneClass(status)}`}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+    >
+      <Icon className="h-4 w-4" strokeWidth={2} />
+    </span>
+  );
+}
+
 function StatusBadge({ status }: { status: unknown }) {
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black ${statusClass(status)}`}>
@@ -236,6 +276,12 @@ function timeframeButtonStyle(active: boolean) {
 function configuredLabel(value: boolean | "unknown" | undefined): string {
   if (value === "unknown" || value === undefined) return "Unknown";
   return value ? "Configured" : "Not configured";
+}
+
+function liveConnectionLabel(service: PlatformService): string {
+  if (service.live_api_connected === true || service.live_connected === true) return "Live API connected";
+  if (service.connection_label) return service.connection_label;
+  return configuredLabel(service.configured);
 }
 
 function costLabel(cost: CostSummary | undefined): string {
@@ -270,6 +316,70 @@ function serviceRecentIssues(service: PlatformService): RecentIssue[] {
 
 function serviceDetailsId(serviceKey: string): string {
   return `vendor-service-details-${serviceKey.replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+}
+
+function statusDetailsId(statusKey: string): string {
+  return `platform-status-details-${statusKey.replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+}
+
+function serviceIcon(service: PlatformService): LucideIcon {
+  const key = `${service.key} ${service.name}`.toLowerCase();
+  if (key.includes("openai")) return Bot;
+  if (key.includes("tavus")) return Video;
+  if (key.includes("supabase")) return Database;
+  if (key.includes("sendgrid")) return Mail;
+  if (key.includes("render")) return Cloud;
+  if (key.includes("sentry")) return ShieldCheck;
+  if (key.includes("aws") || key.includes("s3") || key.includes("storage")) return HardDrive;
+  if (key.includes("stripe")) return CreditCard;
+  return Server;
+}
+
+function statusIcon(card: StatusCard): LucideIcon {
+  const key = `${card.key} ${card.label} ${card.source}`.toLowerCase();
+  if (key.includes("database") || key.includes("supabase") || key.includes("db")) return Database;
+  if (key.includes("backend") || key.includes("api") || key.includes("server")) return Server;
+  if (key.includes("storage") || key.includes("aws") || key.includes("s3")) return HardDrive;
+  if (key.includes("vendor") || key.includes("platform") || key.includes("render")) return Cloud;
+  if (card.status === "problem" || card.status === "warning") return AlertTriangle;
+  if (card.status === "healthy") return CheckCircle2;
+  return Activity;
+}
+
+function uniqueValues(values: string[]): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const value of values) {
+    const normalized = value.trim();
+    if (!normalized || seen.has(normalized.toLowerCase())) continue;
+    seen.add(normalized.toLowerCase());
+    unique.push(normalized);
+  }
+  return unique;
+}
+
+function metricSignal(item: MetricItem | undefined): string {
+  if (!item) return "";
+  return `${item.label}: ${formatValue(item.value)}`;
+}
+
+function serviceKeySignals(service: PlatformService): string[] {
+  const usage = serviceUsage(service);
+  const problems = serviceProblems(service);
+  const cost = serviceCost(service);
+  const costValue = costLabel(cost);
+  const problemSignal = problems.find((item) => {
+    const value = formatValue(item.value).toLowerCase();
+    return value && value !== "not available" && value !== "0" && value !== "none";
+  });
+  const signals = [
+    liveConnectionLabel(service),
+    service.status === "warning" || service.status === "problem" ? metricSignal(problemSignal) : "",
+    metricSignal(usage[0]),
+    costValue !== "Not available" ? `Cost: ${costValue}` : "",
+    service.source_label || titleCase(service.source),
+  ];
+  return uniqueValues(signals).slice(0, 2);
 }
 
 function issueMetaParts(issue: RecentIssue): string[] {
@@ -414,32 +524,94 @@ export default function AdminMetricsPage() {
     ? `${payload.filters.date_from_display} to ${payload.filters.date_to_display}`
     : timeframe;
   const serviceByKey = useMemo(() => Object.fromEntries(services.map((service) => [service.key, service])), [services]);
-  const vendorServices = services.filter((service) => service.key !== "sentry");
-  const sentryService = services.find((service) => service.key === "sentry") || null;
-  const renderServiceCard = (service: PlatformService, fullWidth = false) => {
+  const overallStatus = payload?.summary?.overall_status || "unknown";
+  const warningCount = Number(payload?.summary?.warning_count || 0);
+  const problemCount = Number(payload?.summary?.problem_count || 0);
+  const platformAttentionText = problemCount > 0
+    ? `${problemCount.toLocaleString()} problem${problemCount === 1 ? "" : "s"} need attention.`
+    : warningCount > 0
+      ? `${warningCount.toLocaleString()} warning${warningCount === 1 ? "" : "s"} need review.`
+      : "No active platform problems reported.";
+
+  const renderStatusCard = (card: StatusCard) => {
+    const Icon = statusIcon(card);
+    const detailsId = statusDetailsId(card.key);
+    return (
+      <details key={card.key} className="group rounded-2xl border overflow-hidden" style={surfaceCardStyle}>
+        <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+          <div className="flex items-start justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--as-hover)]">
+            <div className="min-w-0 flex items-start gap-3">
+              <OutlineIcon icon={Icon} status={card.status} />
+              <div className="min-w-0">
+                <p className="text-sm font-black" style={primaryTextStyle}>{card.label}</p>
+                <p className="mt-1 text-xs font-semibold truncate" style={mutedTextStyle} title={card.detail}>{card.detail}</p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <StatusBadge status={card.status} />
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" style={mutedTextStyle} aria-hidden="true" />
+            </div>
+          </div>
+        </summary>
+        <div id={detailsId} className="border-t px-4 py-3" style={dividerStyle}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
+              <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Check source</p>
+              <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{titleCase(card.source)}</p>
+            </div>
+            <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
+              <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Last checked</p>
+              <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{formatDateTime(card.last_checked)}</p>
+            </div>
+          </div>
+          <p className="mt-3 text-xs font-semibold" style={mutedTextStyle}>{card.detail}</p>
+        </div>
+      </details>
+    );
+  };
+
+  const renderServiceCard = (service: PlatformService) => {
     const cost = serviceCost(service);
     const expanded = expandedServices.has(service.key);
     const detailsId = serviceDetailsId(service.key);
     const summary = service.health_summary || service.health_detail || "No health summary available.";
     const recentIssues = serviceRecentIssues(service);
+    const keySignals = serviceKeySignals(service);
+    const Icon = serviceIcon(service);
 
     return (
       <article
         key={service.key}
-        className={`${fullWidth ? "w-full" : "mb-3 inline-block w-full break-inside-avoid"} rounded-2xl border overflow-hidden`}
-        style={mutedPanelStyle}
+        className="mb-3 inline-block w-full break-inside-avoid rounded-2xl border overflow-hidden align-top"
+        style={surfaceCardStyle}
       >
         <button
           type="button"
-          className="w-full px-4 py-3 text-left transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
+          className="w-full px-4 py-4 text-left transition-colors hover:bg-[var(--as-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
           onClick={() => toggleServiceCard(service.key)}
           aria-expanded={expanded}
           aria-controls={detailsId}
+          aria-label={`${expanded ? "Collapse" : "Expand"} ${service.name} metrics details`}
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-base font-black" style={primaryTextStyle}>{service.name}</p>
-              <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{summary}</p>
+            <div className="min-w-0 flex items-start gap-3">
+              <OutlineIcon icon={Icon} status={service.status} />
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-black" style={primaryTextStyle}>{service.name}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {keySignals.map((signal) => (
+                    <span key={signal} className="rounded-full border px-2 py-1 text-[11px] font-black" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
+                      {signal}
+                    </span>
+                  ))}
+                </div>
+                {service.last_checked && (
+                  <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold" style={subtleTextStyle}>
+                    <Clock3 className="h-3 w-3" aria-hidden="true" />
+                    Last checked {formatDateTime(service.last_checked)}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="flex flex-shrink-0 items-center gap-2">
               <StatusBadge status={service.status} />
@@ -452,29 +624,30 @@ export default function AdminMetricsPage() {
           </div>
         </button>
 
-        <div id={detailsId} hidden={!expanded} className="px-4 pb-4">
-          <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+        <div id={detailsId} hidden={!expanded} className="border-t px-4 pb-4 pt-4" style={dividerStyle}>
+          <p className="mb-3 text-xs font-semibold" style={mutedTextStyle}>{summary}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
               <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Connection</p>
               <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.connection_label || configuredLabel(service.configured)}</p>
             </div>
-            <div className="rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+            <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
               <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Usage source</p>
               <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.source_label || titleCase(service.source)}</p>
             </div>
           </div>
 
-          <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+          <div className="mt-3 rounded-xl border px-3 py-2" style={mutedPanelStyle}>
             <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>What this means</p>
             <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>{service.meaning || service.health_summary || service.health_detail}</p>
           </div>
 
           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+            <div className="rounded-xl border px-3 py-3" style={mutedPanelStyle}>
               <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Usage this period</p>
               <SmallMetricList items={serviceUsage(service)} emptyText="No usage signal available." />
             </div>
-            <div className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+            <div className="rounded-xl border px-3 py-3" style={mutedPanelStyle}>
               <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Problems this period</p>
               <SmallMetricList items={serviceProblems(service)} emptyText="No problem signal available." />
             </div>
@@ -482,7 +655,7 @@ export default function AdminMetricsPage() {
 
           {service.key === "sentry" && <RecentIssuesPanel service={service} issues={recentIssues} />}
 
-          <div className="mt-3 rounded-xl border px-3 py-2" style={surfaceCardStyle}>
+          <div className="mt-3 rounded-xl border px-3 py-2" style={mutedPanelStyle}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Cost this period</p>
@@ -490,8 +663,30 @@ export default function AdminMetricsPage() {
               </div>
               <p className="text-xs font-semibold" style={mutedTextStyle}>{cost.source_label || cost.source || "Not available"}</p>
             </div>
+            {cost.note && <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>{cost.note}</p>}
             {cost.help && <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>{cost.help}</p>}
           </div>
+
+          {service.readiness_items && service.readiness_items.length > 0 && (
+            <div className="mt-3 rounded-xl border px-3 py-3" style={mutedPanelStyle}>
+              <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Readiness and configuration</p>
+              <SmallMetricList
+                items={service.readiness_items.map((item) => ({ label: item.label, value: item.status, help: item.help }))}
+                emptyText="No readiness details returned."
+              />
+            </div>
+          )}
+
+          {service.notes && service.notes.length > 0 && (
+            <div className="mt-3 rounded-xl border px-3 py-3" style={mutedPanelStyle}>
+              <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Notes and limitations</p>
+              <div className="space-y-2">
+                {service.notes.map((note, index) => (
+                  <p key={index} className="text-xs font-semibold" style={mutedTextStyle}>{note}</p>
+                ))}
+              </div>
+            </div>
+          )}
 
           {service.troubleshooting_note && (
             <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/25">
@@ -508,7 +703,7 @@ export default function AdminMetricsPage() {
   return (
     <AdminLayout title="Metrics">
       <div className="flex flex-col gap-5">
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-black" style={primaryTextStyle}>Platform Health & Usage</h2>
             <p className="text-sm font-semibold mt-1" style={mutedTextStyle}>
@@ -518,34 +713,19 @@ export default function AdminMetricsPage() {
               This page checks the services alphaScreen depends on. Some rows use live vendor APIs; others use alphaScreen records until a live usage connection is available.
             </p>
             <p className="text-xs font-semibold mt-2" style={subtleTextStyle}>
-              {dateLabel} · Last refreshed {formatDateTime(lastRefreshed)}
+              Last refreshed {formatDateTime(lastRefreshed)}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-0.5 rounded-full p-1" style={compactSurfaceStyle} aria-label="Date range">
-              {timeframes.map((tf) => (
-                <button
-                  key={tf}
-                  type="button"
-                  onClick={() => setTimeframe(tf)}
-                  className="px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-200"
-                  style={timeframeButtonStyle(timeframe === tf)}
-                >
-                  {tf}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => setReloadNonce((value) => value + 1)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-              style={{ backgroundColor: "#A380F6" }}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => setReloadNonce((value) => value + 1)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            style={{ backgroundColor: "#A380F6" }}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
         </div>
 
         {error && (
@@ -558,112 +738,175 @@ export default function AdminMetricsPage() {
           </div>
         )}
 
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-black" style={primaryTextStyle}>Platform Status Summary</h3>
-              <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>
-                Overall status: <span className="font-black">{titleCase(payload?.summary?.overall_status || "unknown")}</span>
-              </p>
+        <section className="rounded-2xl overflow-hidden" style={surfaceCardStyle}>
+          <div className="px-4 py-3 border-b flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3" style={dividerStyle}>
+            <div className="flex items-start gap-3">
+              <OutlineIcon icon={Activity} status={overallStatus} />
+              <div>
+                <h3 className="text-base font-black" style={primaryTextStyle}>Current Platform Status</h3>
+                <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>
+                  Current reachability and configuration checks. The date range below does not apply to this section.
+                </p>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <SummaryCountBadge count={payload?.summary?.healthy_count} label="healthy" status="healthy" />
-              <SummaryCountBadge count={payload?.summary?.warning_count} label="warning" status="warning" />
-              <SummaryCountBadge count={payload?.summary?.problem_count} label="problem" status="problem" />
-              <SummaryCountBadge count={payload?.summary?.unknown_count} label="unknown" status="unknown" />
+            <StatusBadge status={overallStatus} />
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.15fr)] gap-3">
+              <div className="rounded-2xl border p-4" style={mutedPanelStyle}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Overall platform health</p>
+                    <p className="mt-2 text-2xl font-black" style={primaryTextStyle}>{titleCase(overallStatus)}</p>
+                    <p className="mt-2 text-xs font-semibold" style={mutedTextStyle}>{platformAttentionText}</p>
+                  </div>
+                  <OutlineIcon icon={overallStatus === "healthy" ? CheckCircle2 : overallStatus === "problem" ? AlertTriangle : CircleHelp} status={overallStatus} />
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <SummaryCountBadge count={payload?.summary?.healthy_count} label="healthy" status="healthy" />
+                  <SummaryCountBadge count={payload?.summary?.warning_count} label="warning" status="warning" />
+                  <SummaryCountBadge count={payload?.summary?.problem_count} label="problem" status="problem" />
+                  <SummaryCountBadge count={payload?.summary?.unknown_count} label="unknown" status="unknown" />
+                </div>
+                <p className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold" style={subtleTextStyle}>
+                  <Clock3 className="h-3 w-3" aria-hidden="true" />
+                  Last refreshed {formatDateTime(lastRefreshed)}
+                </p>
+              </div>
+
+              {loading && statusCards.length === 0 ? (
+                <div className="rounded-2xl border" style={mutedPanelStyle}>
+                  <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading platform status...</div>
+                </div>
+              ) : statusCards.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {statusCards.map((card) => renderStatusCard(card))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border" style={mutedPanelStyle}>
+                  <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>No platform status checks returned.</div>
+                </div>
+              )}
             </div>
           </div>
-          {loading && statusCards.length === 0 ? (
-            <div className="rounded-2xl" style={surfaceCardStyle}>
-              <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading platform status...</div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-              {statusCards.map((card) => (
-                <div key={card.key} className="rounded-2xl p-3" style={surfaceCardStyle}>
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-black" style={primaryTextStyle}>{card.label}</p>
-                    <StatusBadge status={card.status} />
-                  </div>
-                  <p className="mt-2 text-xs font-semibold truncate" style={mutedTextStyle} title={card.detail}>{card.detail}</p>
-                  <div className="mt-2 flex items-center justify-between gap-2 text-[11px] font-semibold" style={subtleTextStyle}>
-                    <span>{titleCase(card.source)}</span>
-                    <span>{formatDateTime(card.last_checked)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </section>
 
         <section className="rounded-2xl overflow-hidden" style={surfaceCardStyle}>
-          <div className="px-4 py-3 border-b flex items-center justify-between gap-3" style={dividerStyle}>
-            <div>
-              <h3 className="text-sm font-black" style={primaryTextStyle}>Vendor Usage And Health</h3>
-              <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>One card per core dependency. Usage and problems are summaries, not raw event logs.</p>
+          <div className="px-4 py-3 border-b flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-3" style={dividerStyle}>
+            <div className="flex items-start gap-3">
+              <OutlineIcon icon={Zap} status="unknown" />
+              <div>
+                <h3 className="text-base font-black" style={primaryTextStyle}>Vendor Usage and Health</h3>
+                <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>
+                  Period-based usage, problem, and cost signals. Selected range: <span className="font-black">{dateLabel}</span>.
+                </p>
+              </div>
             </div>
-            <ShieldCheck className="w-4 h-4 text-[#A380F6]" />
+            <div className="flex items-center gap-0.5 rounded-full p-1 overflow-x-auto" style={compactSurfaceStyle} aria-label="Vendor usage date range">
+              {timeframes.map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => setTimeframe(tf)}
+                  className="px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-200"
+                  style={timeframeButtonStyle(timeframe === tf)}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
           </div>
           {loading && services.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading vendors...</div>
           ) : (
             <div className="p-4">
-              <div className="columns-1 xl:columns-2 gap-3">
-                {vendorServices.map((service) => renderServiceCard(service))}
+              <div className="columns-1 md:columns-2 2xl:columns-3 gap-3">
+                {services.map((service) => renderServiceCard(service))}
               </div>
-              {sentryService && (
-                <div className={vendorServices.length ? "mt-3" : ""}>
-                  {renderServiceCard(sentryService, true)}
-                </div>
-              )}
             </div>
           )}
         </section>
 
-        <section className="rounded-2xl overflow-hidden" style={surfaceCardStyle}>
-          <div className="px-4 py-3 border-b" style={dividerStyle}>
-            <h3 className="text-sm font-black" style={primaryTextStyle}>Integration Readiness</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead style={mutedPanelStyle}>
-                <tr className="text-left text-[10px] font-black" style={subtleTextStyle}>
-                  <th className="px-4 py-3">Service</th>
-                  <th className="px-4 py-3">Configured</th>
-                  <th className="px-4 py-3">Live usage connected</th>
-                  <th className="px-4 py-3">Webhook/event source</th>
-                  <th className="px-4 py-3">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
+        <details className="group rounded-2xl overflow-hidden" style={surfaceCardStyle}>
+          <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+            <div className="px-4 py-3 flex items-start justify-between gap-3 transition-colors hover:bg-[var(--as-hover)]">
+              <div className="flex items-start gap-3">
+                <OutlineIcon icon={ShieldCheck} status="unknown" />
+                <div>
+                  <h3 className="text-sm font-black" style={primaryTextStyle}>Integration Readiness</h3>
+                  <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>Configuration, live usage connection, event source, and operational notes are hidden by default.</p>
+                </div>
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" style={mutedTextStyle} aria-hidden="true" />
+            </div>
+          </summary>
+          <div className="border-t p-4" style={dividerStyle}>
+            {readinessRows.length === 0 ? (
+              <p className="text-sm font-semibold" style={mutedTextStyle}>No integration readiness rows returned.</p>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {readinessRows.map((row) => {
                   const serviceKey = services.find((service) => service.name === row.service)?.key || row.service;
                   const service = serviceByKey[serviceKey];
                   return (
-                    <tr key={row.service} className="border-t" style={dividerStyle}>
-                      <td className="px-4 py-3 font-black" style={primaryTextStyle}>{row.service}</td>
-                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{configuredLabel(row.configured)}</td>
-                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{row.live_usage_connected ? "Connected" : "Live API not connected"}</td>
-                      <td className="px-4 py-3 text-xs font-semibold" style={mutedTextStyle}>{row.event_source || "Not connected yet"}</td>
-                      <td className="px-4 py-3 text-xs font-semibold max-w-lg" style={mutedTextStyle}>{row.notes || service?.health_detail || "No notes"}</td>
-                    </tr>
+                    <div key={row.service} className="rounded-xl border px-3 py-3" style={mutedPanelStyle}>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-black" style={primaryTextStyle}>{row.service}</p>
+                        <StatusBadge status={row.live_usage_connected ? "healthy" : "unknown"} />
+                      </div>
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Configured</p>
+                          <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{configuredLabel(row.configured)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Live usage connected</p>
+                          <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{row.live_usage_connected ? "Connected" : "Live API not connected"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Webhook/event source</p>
+                          <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{row.event_source || "Not connected yet"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Notes</p>
+                          <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{row.notes || service?.health_detail || "No notes"}</p>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
-        </section>
+        </details>
 
-        <section className="rounded-2xl p-4" style={surfaceCardStyle}>
-          <h3 className="text-sm font-black" style={primaryTextStyle}>Source And Limitations</h3>
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-            {sourceNotes.map((note, index) => (
-              <p key={index} className="rounded-xl border px-3 py-2 text-xs font-semibold" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
-                {note}
-              </p>
-            ))}
+        <details className="group rounded-2xl overflow-hidden" style={surfaceCardStyle}>
+          <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+            <div className="px-4 py-3 flex items-start justify-between gap-3 transition-colors hover:bg-[var(--as-hover)]">
+              <div className="flex items-start gap-3">
+                <OutlineIcon icon={CircleHelp} status="unknown" />
+                <div>
+                  <h3 className="text-sm font-black" style={primaryTextStyle}>Source and Limitations</h3>
+                  <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>Data source notes remain available for troubleshooting and handoff, but are not always visible.</p>
+                </div>
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" style={mutedTextStyle} aria-hidden="true" />
+            </div>
+          </summary>
+          <div className="border-t p-4" style={dividerStyle}>
+            {sourceNotes.length === 0 ? (
+              <p className="text-sm font-semibold" style={mutedTextStyle}>No source limitations returned.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {sourceNotes.map((note, index) => (
+                  <p key={index} className="rounded-xl border px-3 py-2 text-xs font-semibold" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
+                    {note}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
-        </section>
+        </details>
       </div>
     </AdminLayout>
   );
