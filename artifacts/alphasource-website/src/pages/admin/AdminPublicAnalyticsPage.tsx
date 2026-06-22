@@ -10,7 +10,6 @@ import {
   Mail,
   MousePointerClick,
   RefreshCw,
-  Undo2,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -398,7 +397,8 @@ export default function AdminPublicAnalyticsPage() {
   const [csvExporting, setCsvExporting] = useState(false);
   const [csvExportError, setCsvExportError] = useState("");
   const [archiveActionError, setArchiveActionError] = useState("");
-  const [archiveActionId, setArchiveActionId] = useState("");
+  const [archiveActionLoading, setArchiveActionLoading] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [days, setDays] = useState<DaysFilter>("30");
   const [status, setStatus] = useState<LeadStatus>("all");
   const [archiveStatus, setArchiveStatus] = useState<ArchiveStatus>("active");
@@ -502,47 +502,48 @@ export default function AdminPublicAnalyticsPage() {
     }
   }, [archiveStatus, days, getToken, pathFilter, status]);
 
-  const updateLeadArchiveState = useCallback(async (lead: LeadItem, action: "archive" | "unarchive") => {
-    const leadId = String(lead.id || "").trim();
-    if (!leadId) return;
+  const updateSelectedLeadArchiveState = useCallback(async (action: "archive" | "unarchive") => {
+    const leadIds = selectedLeadIds.map((id) => id.trim()).filter(Boolean);
+    if (leadIds.length === 0) return;
     if (!backendBase) {
       setArchiveActionError("Missing backend base URL configuration.");
       return;
     }
     const confirmed = window.confirm(
       action === "archive"
-        ? "Archive lead capture?\n\nThis hides the lead capture from the default Active view. The record remains available in Archived view."
-        : "Unarchive lead capture?\n\nThis restores the lead capture to the default Active view.",
+        ? `Archive selected lead captures?\n\nThis hides ${leadIds.length} selected lead capture${leadIds.length === 1 ? "" : "s"} from the default Active view. The records remain available in Archived view and are not deleted.`
+        : `Unarchive selected lead captures?\n\nThis restores ${leadIds.length} selected lead capture${leadIds.length === 1 ? "" : "s"} to the default Active view.`,
     );
     if (!confirmed) return;
 
-    setArchiveActionId(leadId);
+    setArchiveActionLoading(true);
     setArchiveActionError("");
     try {
       const token = await getToken();
-      const body = action === "archive"
-        ? JSON.stringify({ reason: "Manual admin archive" })
-        : undefined;
-      const response = await fetch(`${backendBase}/admin/public-analytics/leads/${encodeURIComponent(leadId)}/${action}`, {
+      const response = await fetch(`${backendBase}/admin/public-analytics/leads/${action}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          ...(body ? { "Content-Type": "application/json" } : {}),
+          "Content-Type": "application/json",
         },
         credentials: "omit",
-        body,
+        body: JSON.stringify({
+          lead_ids: leadIds,
+          ...(action === "archive" ? { reason: "Manual admin archive" } : {}),
+        }),
       });
       const text = await response.text();
       if (!response.ok) {
         throw new Error(extractErrorMessage(text, action === "archive" ? "Could not archive lead capture." : "Could not unarchive lead capture."));
       }
+      setSelectedLeadIds([]);
       setReloadNonce((value) => value + 1);
     } catch (archiveError) {
       setArchiveActionError(archiveError instanceof Error ? archiveError.message : "Could not update lead capture.");
     } finally {
-      setArchiveActionId("");
+      setArchiveActionLoading(false);
     }
-  }, [getToken]);
+  }, [getToken, selectedLeadIds]);
 
   const leads = payload?.leads?.items || [];
   const events = payload?.events?.items || [];
@@ -552,6 +553,43 @@ export default function AdminPublicAnalyticsPage() {
   const eventTypes = insights.event_types || [];
   const ctaActivity = insights.cta_activity || [];
   const formActivity = insights.form_activity || [];
+  const visibleLeadIds = useMemo(
+    () => leads.map((lead) => String(lead.id || "").trim()).filter(Boolean),
+    [leads],
+  );
+  const selectedVisibleLeads = useMemo(
+    () => leads.filter((lead) => selectedLeadIds.includes(String(lead.id || "").trim())),
+    [leads, selectedLeadIds],
+  );
+  const selectedCount = selectedVisibleLeads.length;
+  const allVisibleSelected = visibleLeadIds.length > 0 && visibleLeadIds.every((id) => selectedLeadIds.includes(id));
+  const selectedArchivedCount = selectedVisibleLeads.filter((lead) => lead.archived === true || Boolean(lead.archived_at)).length;
+  const selectedActiveCount = selectedCount - selectedArchivedCount;
+  const selectedArchiveAction: "archive" | "unarchive" | null =
+    selectedCount === 0
+      ? null
+      : archiveStatus === "active"
+        ? "archive"
+        : archiveStatus === "archived"
+          ? "unarchive"
+          : selectedArchivedCount === selectedCount
+            ? "unarchive"
+            : selectedActiveCount === selectedCount
+              ? "archive"
+              : null;
+  const selectedActionLabel = selectedArchiveAction === "unarchive" ? "Unarchive selected" : "Archive selected";
+  const selectedActionDisabled = archiveActionLoading || selectedCount === 0 || !selectedArchiveAction;
+
+  useEffect(() => {
+    setSelectedLeadIds((ids) => {
+      const next = ids.filter((id) => visibleLeadIds.includes(id));
+      return next.length === ids.length ? ids : next;
+    });
+  }, [visibleLeadIds]);
+
+  useEffect(() => {
+    setSelectedLeadIds([]);
+  }, [archiveStatus, days, eventName, pathFilter, status]);
   const dateLabel = payload?.filters?.date_from_display && payload?.filters?.date_to_display
     ? `${payload.filters.date_from_display} to ${payload.filters.date_to_display}`
     : `${days} days`;
@@ -715,17 +753,48 @@ export default function AdminPublicAnalyticsPage() {
                 <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Submitted leads and contact-ready partial leads stay visible for review. Archived captures are hidden from the default Active view.</p>
                 <p className="mt-1 text-[11px] font-bold" style={subtleTextStyle}>{dateLabel} · {titleCase(archiveStatus)} view</p>
               </div>
-              <button
-                type="button"
-                onClick={exportLeadsCsv}
-                disabled={csvExporting || !backendBase}
-                className="inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-black transition-colors hover:bg-[var(--as-hover)] disabled:cursor-not-allowed disabled:opacity-55"
-                style={fieldStyle}
-              >
-                <Download className="h-4 w-4" aria-hidden="true" />
-                {csvExporting ? "Exporting..." : "Export leads CSV"}
-              </button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={exportLeadsCsv}
+                  disabled={csvExporting || !backendBase}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-black transition-colors hover:bg-[var(--as-hover)] disabled:cursor-not-allowed disabled:opacity-55"
+                  style={fieldStyle}
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  {csvExporting ? "Exporting..." : "Export leads CSV"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectedArchiveAction && void updateSelectedLeadArchiveState(selectedArchiveAction)}
+                  disabled={selectedActionDisabled}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-black transition-colors hover:bg-[var(--as-hover)] disabled:cursor-not-allowed disabled:opacity-55"
+                  style={fieldStyle}
+                >
+                  <Archive className="h-4 w-4" aria-hidden="true" />
+                  {archiveActionLoading ? "Updating..." : `${selectedActionLabel}${selectedCount ? ` (${selectedCount})` : ""}`}
+                </button>
+              </div>
             </div>
+            {archiveStatus === "all" && selectedCount > 0 && !selectedArchiveAction && (
+              <p className="mt-3 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                Select only active leads or only archived leads before using the bulk archive action.
+              </p>
+            )}
+            {visibleLeadIds.length > 0 && (
+              <label className="mt-4 inline-flex items-center gap-2 text-xs font-black" style={mutedTextStyle}>
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={(event) => {
+                    setSelectedLeadIds(event.target.checked ? visibleLeadIds : []);
+                    setArchiveActionError("");
+                  }}
+                  className="h-4 w-4 rounded border"
+                />
+                Select all visible
+              </label>
+            )}
           </div>
           {csvExportError && (
             <div className="border-b px-5 py-3 text-xs font-semibold text-red-600 dark:text-red-300" style={dividerStyle}>
@@ -748,10 +817,25 @@ export default function AdminPublicAnalyticsPage() {
               leads.map((lead) => {
                 const submitted = String(lead.status || "").toLowerCase() === "submitted";
                 const archived = lead.archived === true || Boolean(lead.archived_at);
-                const actionDisabled = archiveActionId === lead.id;
                 return (
                 <article key={lead.id} className={`px-5 py-4 ${submitted ? "bg-[#02D99D]/[0.035]" : ""}`}>
-                  <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="flex gap-3">
+                    <label className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedLeadIds.includes(lead.id)}
+                        onChange={(event) => {
+                          setArchiveActionError("");
+                          setSelectedLeadIds((ids) => {
+                            if (event.target.checked) return Array.from(new Set([...ids, lead.id]));
+                            return ids.filter((id) => id !== lead.id);
+                          });
+                        }}
+                        className="h-4 w-4 rounded border"
+                        aria-label={`Select lead capture ${lead.contact?.full_name || lead.contact?.email || lead.contact?.phone || lead.id}`}
+                      />
+                    </label>
+                    <div className="flex min-w-0 flex-1 flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <StatusBadge status={lead.status} />
@@ -791,31 +875,7 @@ export default function AdminPublicAnalyticsPage() {
                         <span style={subtleTextStyle}>Submitted</span>
                         <span className="font-black" style={primaryTextStyle}>{formatDateTime(lead.submitted_at)}</span>
                       </div>
-                      <div className="flex justify-start xl:justify-end">
-                        {archived ? (
-                          <button
-                            type="button"
-                            onClick={() => void updateLeadArchiveState(lead, "unarchive")}
-                            disabled={actionDisabled}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-black transition-colors hover:bg-[var(--as-hover)] disabled:cursor-not-allowed disabled:opacity-55"
-                            style={fieldStyle}
-                          >
-                            <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
-                            {actionDisabled ? "Updating..." : "Unarchive"}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => void updateLeadArchiveState(lead, "archive")}
-                            disabled={actionDisabled}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-black transition-colors hover:bg-[var(--as-hover)] disabled:cursor-not-allowed disabled:opacity-55"
-                            style={fieldStyle}
-                          >
-                            <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-                            {actionDisabled ? "Updating..." : "Archive"}
-                          </button>
-                        )}
-                      </div>
+                    </div>
                     </div>
                   </div>
                 </article>
