@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertCircle,
+  Archive,
   Clock3,
   Download,
   FileText,
@@ -9,6 +10,7 @@ import {
   Mail,
   MousePointerClick,
   RefreshCw,
+  Undo2,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -16,6 +18,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/lib/supabaseClient";
 
 type LeadStatus = "all" | "submitted" | "partial" | "abandoned";
+type ArchiveStatus = "active" | "archived" | "all";
 type DaysFilter = "7" | "30" | "90";
 
 interface SummaryEntry {
@@ -49,6 +52,9 @@ interface LeadItem {
   };
   message_preview?: string | null;
   message_character_count?: number;
+  archived?: boolean;
+  archived_at?: string | null;
+  archive_reason?: string | null;
   submitted_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -79,6 +85,7 @@ interface PublicAnalyticsPayload {
     date_range?: string;
     date_from_display?: string;
     date_to_display?: string;
+    archive_status?: ArchiveStatus;
   };
   summary?: {
     submitted_leads?: number;
@@ -390,8 +397,11 @@ export default function AdminPublicAnalyticsPage() {
   const [error, setError] = useState("");
   const [csvExporting, setCsvExporting] = useState(false);
   const [csvExportError, setCsvExportError] = useState("");
+  const [archiveActionError, setArchiveActionError] = useState("");
+  const [archiveActionId, setArchiveActionId] = useState("");
   const [days, setDays] = useState<DaysFilter>("30");
   const [status, setStatus] = useState<LeadStatus>("all");
+  const [archiveStatus, setArchiveStatus] = useState<ArchiveStatus>("active");
   const [eventName, setEventName] = useState("");
   const [pathFilter, setPathFilter] = useState("");
   const [leadPage, setLeadPage] = useState(1);
@@ -426,6 +436,7 @@ export default function AdminPublicAnalyticsPage() {
         event_limit: "25",
       });
       if (status !== "all") params.set("status", status);
+      params.set("archive_status", archiveStatus);
       if (eventName.trim()) params.set("event_name", eventName.trim().toLowerCase());
       if (pathFilter.trim()) params.set("path", pathFilter.trim());
       const response = await fetch(`${backendBase}/admin/public-analytics?${params.toString()}`, {
@@ -442,7 +453,7 @@ export default function AdminPublicAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [days, eventName, eventPage, getToken, leadPage, pathFilter, status]);
+  }, [archiveStatus, days, eventName, eventPage, getToken, leadPage, pathFilter, status]);
 
   useEffect(() => {
     void loadPublicAnalytics();
@@ -464,6 +475,7 @@ export default function AdminPublicAnalyticsPage() {
       const token = await getToken();
       const params = new URLSearchParams({ days });
       if (status !== "all") params.set("status", status);
+      params.set("archive_status", archiveStatus);
       if (pathFilter.trim()) params.set("path", pathFilter.trim());
       const response = await fetch(`${backendBase}/admin/public-analytics/leads.csv?${params.toString()}`, {
         method: "GET",
@@ -488,7 +500,49 @@ export default function AdminPublicAnalyticsPage() {
     } finally {
       setCsvExporting(false);
     }
-  }, [days, getToken, pathFilter, status]);
+  }, [archiveStatus, days, getToken, pathFilter, status]);
+
+  const updateLeadArchiveState = useCallback(async (lead: LeadItem, action: "archive" | "unarchive") => {
+    const leadId = String(lead.id || "").trim();
+    if (!leadId) return;
+    if (!backendBase) {
+      setArchiveActionError("Missing backend base URL configuration.");
+      return;
+    }
+    const confirmed = window.confirm(
+      action === "archive"
+        ? "Archive lead capture?\n\nThis hides the lead capture from the default Active view. The record remains available in Archived view."
+        : "Unarchive lead capture?\n\nThis restores the lead capture to the default Active view.",
+    );
+    if (!confirmed) return;
+
+    setArchiveActionId(leadId);
+    setArchiveActionError("");
+    try {
+      const token = await getToken();
+      const body = action === "archive"
+        ? JSON.stringify({ reason: "Manual admin archive" })
+        : undefined;
+      const response = await fetch(`${backendBase}/admin/public-analytics/leads/${encodeURIComponent(leadId)}/${action}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(body ? { "Content-Type": "application/json" } : {}),
+        },
+        credentials: "omit",
+        body,
+      });
+      const text = await response.text();
+      if (!response.ok) {
+        throw new Error(extractErrorMessage(text, action === "archive" ? "Could not archive lead capture." : "Could not unarchive lead capture."));
+      }
+      setReloadNonce((value) => value + 1);
+    } catch (archiveError) {
+      setArchiveActionError(archiveError instanceof Error ? archiveError.message : "Could not update lead capture.");
+    } finally {
+      setArchiveActionId("");
+    }
+  }, [getToken]);
 
   const leads = payload?.leads?.items || [];
   const events = payload?.events?.items || [];
@@ -524,7 +578,7 @@ export default function AdminPublicAnalyticsPage() {
             <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={subtleTextStyle}>Admin only</p>
             <h1 className="mt-2 text-2xl font-black sm:text-3xl" style={primaryTextStyle}>Leads & Public Analytics</h1>
             <p className="mt-2 text-sm font-semibold leading-relaxed" style={mutedTextStyle}>
-              Read-only review of public site lead captures and public-page activity signals. Summaries use the current filters and show sanitized counts, not raw payload dumps.
+              Review public site lead captures and public-page activity signals. Summaries use the current filters and show sanitized counts, not raw payload dumps.
             </p>
           </div>
           <button
@@ -575,7 +629,7 @@ export default function AdminPublicAnalyticsPage() {
             <Filter className="h-4 w-4" style={subtleTextStyle} aria-hidden="true" />
             <h2 className="text-sm font-black" style={primaryTextStyle}>Filters</h2>
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
             <label className="space-y-1.5">
               <span className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Date range</span>
               <select
@@ -601,6 +655,19 @@ export default function AdminPublicAnalyticsPage() {
                 <option value="submitted">Submitted</option>
                 <option value="partial">Partial</option>
                 <option value="abandoned">Abandoned</option>
+              </select>
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Archive view</span>
+              <select
+                value={archiveStatus}
+                onChange={(event) => { resetPages(); setArchiveStatus(event.target.value as ArchiveStatus); }}
+                className="w-full rounded-xl border px-3 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#A380F6]"
+                style={fieldStyle}
+              >
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+                <option value="all">All</option>
               </select>
             </label>
             <label className="space-y-1.5">
@@ -645,8 +712,8 @@ export default function AdminPublicAnalyticsPage() {
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h2 className="text-lg font-black" style={primaryTextStyle}>Recent lead captures</h2>
-                <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Submitted leads and contact-ready partial leads stay visible for review. Message content is preview-only and submitted-only.</p>
-                <p className="mt-1 text-[11px] font-bold" style={subtleTextStyle}>{dateLabel}</p>
+                <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Submitted leads and contact-ready partial leads stay visible for review. Archived captures are hidden from the default Active view.</p>
+                <p className="mt-1 text-[11px] font-bold" style={subtleTextStyle}>{dateLabel} · {titleCase(archiveStatus)} view</p>
               </div>
               <button
                 type="button"
@@ -665,16 +732,23 @@ export default function AdminPublicAnalyticsPage() {
               {csvExportError}
             </div>
           )}
+          {archiveActionError && (
+            <div className="border-b px-5 py-3 text-xs font-semibold text-red-600 dark:text-red-300" style={dividerStyle}>
+              {archiveActionError}
+            </div>
+          )}
           <div className="divide-y" style={dividerStyle}>
             {loading && leads.length === 0 ? (
               <div className="px-5 py-6 text-sm font-semibold" style={mutedTextStyle}>Loading lead captures...</div>
             ) : leads.length === 0 ? (
               <div className="p-5">
-                <EmptyState title="No lead captures match these filters" detail="Try a wider date range or remove the status/page filters." />
+                <EmptyState title="No lead captures match these filters" detail="Try a wider date range or adjust the status, archive, or page filters." />
               </div>
             ) : (
               leads.map((lead) => {
                 const submitted = String(lead.status || "").toLowerCase() === "submitted";
+                const archived = lead.archived === true || Boolean(lead.archived_at);
+                const actionDisabled = archiveActionId === lead.id;
                 return (
                 <article key={lead.id} className={`px-5 py-4 ${submitted ? "bg-[#02D99D]/[0.035]" : ""}`}>
                   <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
@@ -689,12 +763,18 @@ export default function AdminPublicAnalyticsPage() {
                             {lead.product_interest}
                           </span>
                         )}
+                        {archived && (
+                          <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-black text-slate-600 dark:border-white/15 dark:bg-white/10 dark:text-white/70">
+                            Archived
+                          </span>
+                        )}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold" style={mutedTextStyle}>
                         {lead.contact?.email && <span><Mail className="mr-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />{lead.contact.email}</span>}
                         {lead.contact?.phone && <span>{lead.contact.phone}</span>}
                         <span>{pageLabel(lead.source?.path)} · {pathLabel(lead.source?.path)}</span>
                         <span>Updated {formatDateTime(lead.updated_at)}</span>
+                        {archived && <span>Archived {formatDateTime(lead.archived_at)}</span>}
                       </div>
                       {lead.message_preview && (
                         <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold leading-relaxed" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
@@ -702,13 +782,40 @@ export default function AdminPublicAnalyticsPage() {
                         </p>
                       )}
                     </div>
-                    <div className="grid min-w-[220px] grid-cols-2 gap-2 text-[11px] font-semibold xl:text-right">
-                      <span style={subtleTextStyle}>Fields</span>
-                      <span className="font-black" style={primaryTextStyle}>{lead.progress?.fields_completed_count || 0}</span>
-                      <span style={subtleTextStyle}>CTA</span>
-                      <span className="truncate font-black" style={primaryTextStyle} title={lead.source?.cta || "Not available"}>{lead.source?.cta || "Not available"}</span>
-                      <span style={subtleTextStyle}>Submitted</span>
-                      <span className="font-black" style={primaryTextStyle}>{formatDateTime(lead.submitted_at)}</span>
+                    <div className="min-w-[220px] space-y-3 xl:text-right">
+                      <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold">
+                        <span style={subtleTextStyle}>Fields</span>
+                        <span className="font-black" style={primaryTextStyle}>{lead.progress?.fields_completed_count || 0}</span>
+                        <span style={subtleTextStyle}>CTA</span>
+                        <span className="truncate font-black" style={primaryTextStyle} title={lead.source?.cta || "Not available"}>{lead.source?.cta || "Not available"}</span>
+                        <span style={subtleTextStyle}>Submitted</span>
+                        <span className="font-black" style={primaryTextStyle}>{formatDateTime(lead.submitted_at)}</span>
+                      </div>
+                      <div className="flex justify-start xl:justify-end">
+                        {archived ? (
+                          <button
+                            type="button"
+                            onClick={() => void updateLeadArchiveState(lead, "unarchive")}
+                            disabled={actionDisabled}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-black transition-colors hover:bg-[var(--as-hover)] disabled:cursor-not-allowed disabled:opacity-55"
+                            style={fieldStyle}
+                          >
+                            <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
+                            {actionDisabled ? "Updating..." : "Unarchive"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void updateLeadArchiveState(lead, "archive")}
+                            disabled={actionDisabled}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-black transition-colors hover:bg-[var(--as-hover)] disabled:cursor-not-allowed disabled:opacity-55"
+                            style={fieldStyle}
+                          >
+                            <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                            {actionDisabled ? "Updating..." : "Archive"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </article>
