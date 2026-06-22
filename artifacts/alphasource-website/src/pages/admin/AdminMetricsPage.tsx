@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -440,28 +440,73 @@ function SmallMetricList({ items, emptyText }: { items: MetricItem[]; emptyText:
   );
 }
 
+function DetailSection({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
+  return (
+    <section className={`min-w-0 ${className}`}>
+      <h4 className="text-[10px] font-black uppercase" style={subtleTextStyle}>{title}</h4>
+      <div className="mt-2 space-y-0">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function DetailRow({ label, value, help }: { label: string; value: unknown; help?: string | null }) {
+  return (
+    <div className="grid grid-cols-1 gap-1 border-t py-2 first:border-t-0 sm:grid-cols-[minmax(140px,0.38fr)_minmax(0,0.62fr)]" style={dividerStyle}>
+      <span className="text-xs font-semibold" style={subtleTextStyle} title={help || undefined}>{label}</span>
+      <span className="min-w-0 break-words text-xs font-black sm:text-right" style={primaryTextStyle}>{formatValue(value)}</span>
+    </div>
+  );
+}
+
+function DetailMetricRows({ items, emptyText }: { items: MetricItem[]; emptyText: string }) {
+  const rows = items.slice(0, 6);
+  if (rows.length === 0) {
+    return <p className="border-t py-2 text-xs font-semibold" style={{ ...dividerStyle, ...mutedTextStyle }}>{emptyText}</p>;
+  }
+  return (
+    <>
+      {rows.map((item, index) => (
+        <DetailRow key={`${item.label}-${index}`} label={item.label} value={item.value} help={item.help} />
+      ))}
+    </>
+  );
+}
+
+function NotesRows({ notes }: { notes: string[] }) {
+  return (
+    <>
+      {notes.map((note, index) => (
+        <p key={index} className="border-t py-2 text-xs font-semibold first:border-t-0" style={{ ...dividerStyle, ...mutedTextStyle }}>
+          {note}
+        </p>
+      ))}
+    </>
+  );
+}
+
 function RecentIssuesPanel({ service, issues }: { service: PlatformService; issues: RecentIssue[] }) {
   const connected = service.live_api_connected === true || service.live_connected === true;
   const visibleIssues = issues.slice(0, 5);
 
   return (
-    <div className="mt-3 rounded-xl border px-3 py-3" style={surfaceCardStyle}>
-      <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Recent issues</p>
+    <DetailSection title="Recent issues" className="xl:col-span-2">
       {visibleIssues.length === 0 ? (
-        <p className="text-xs font-semibold" style={mutedTextStyle}>
+        <p className="border-t py-2 text-xs font-semibold" style={{ ...dividerStyle, ...mutedTextStyle }}>
           {connected ? "No recent unresolved issues found." : "Recent issue details are unavailable until the Sentry issue API is connected."}
         </p>
       ) : (
-        <div className="space-y-2">
+        <div>
           {visibleIssues.map((issue, index) => {
             const meta = issueMetaParts(issue);
             return (
-              <div key={`${issue.project || "sentry"}-${issue.last_seen || issue.first_seen || index}`} className="rounded-lg border px-3 py-2" style={mutedPanelStyle}>
+              <div key={`${issue.project || "sentry"}-${issue.last_seen || issue.first_seen || index}`} className="border-t py-3 first:border-t-0" style={dividerStyle}>
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-black" style={primaryTextStyle}>{formatValue(issue.title)}</p>
                     {meta.length > 0 && <p className="mt-1 text-[11px] font-semibold" style={subtleTextStyle}>{meta.join(" · ")}</p>}
-                    {issue.culprit && <p className="mt-1 text-xs font-semibold truncate" style={mutedTextStyle} title={String(issue.culprit)}>{issue.culprit}</p>}
+                    {issue.culprit && <p className="mt-1 break-words text-xs font-semibold" style={mutedTextStyle}>{issue.culprit}</p>}
                   </div>
                   {issue.permalink && (
                     <a
@@ -485,7 +530,7 @@ function RecentIssuesPanel({ service, issues }: { service: PlatformService; issu
           })}
         </div>
       )}
-    </div>
+    </DetailSection>
   );
 }
 
@@ -669,132 +714,108 @@ export default function AdminMetricsPage() {
     return (
       <article
         key={service.key}
-        className="w-full self-start rounded-2xl border overflow-hidden"
+        className="w-full rounded-2xl border overflow-hidden"
         style={surfaceCardStyle}
       >
         <button
           type="button"
-          className="flex min-h-[190px] w-full flex-col px-4 py-4 text-left transition-colors hover:bg-[var(--as-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
+          className="w-full px-4 py-3 text-left transition-colors hover:bg-[var(--as-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
           onClick={() => toggleServiceCard(service.key)}
           aria-expanded={expanded}
           aria-controls={detailsId}
           aria-label={`${expanded ? "Collapse" : "Expand"} ${service.name} metrics details`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex items-start gap-3">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(260px,0.9fr)_minmax(280px,1.1fr)_minmax(220px,auto)] xl:items-center">
+            <div className="min-w-0 flex items-start gap-3 xl:items-center">
               <OutlineIcon icon={Icon} toneClass={serviceIconToneClass(service)} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-black" style={primaryTextStyle} title={service.name}>{service.name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-base font-black" style={primaryTextStyle} title={service.name}>{service.name}</p>
+                  <StatusBadge status={service.status} />
+                </div>
                 <p className="mt-1 truncate text-xs font-semibold" style={mutedTextStyle} title={summary}>{summary}</p>
               </div>
             </div>
-            <StatusBadge status={service.status} />
-          </div>
 
-          <div className="mt-4 grid min-h-[76px] grid-cols-1 gap-2">
-            {[0, 1].map((index) => {
-              const signal = keySignals[index];
-              return signal ? (
+            <div className="flex min-w-0 flex-wrap gap-2">
+              {keySignals.map((signal) => (
                 <span
                   key={signal}
-                  className="block truncate rounded-xl border px-2.5 py-2 text-[11px] font-black"
+                  className="max-w-full truncate rounded-full border px-2.5 py-1 text-[11px] font-black"
                   style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}
                   title={signal}
                 >
                   {signal}
                 </span>
-              ) : (
-                <span key={`empty-${index}`} className="min-h-[34px] rounded-xl border border-transparent px-2.5 py-2" aria-hidden="true" />
-              );
-            })}
-          </div>
+              ))}
+            </div>
 
-          <div className="mt-auto flex items-center justify-between gap-3 border-t pt-3" style={dividerStyle}>
-            <p className="min-w-0 truncate text-[11px] font-semibold" style={subtleTextStyle}>
+            <div className="flex min-w-0 items-center justify-between gap-3 xl:justify-end">
+              <p className="min-w-0 truncate text-[11px] font-semibold" style={subtleTextStyle}>
               <Clock3 className="mr-1.5 inline h-3 w-3 align-[-2px]" aria-hidden="true" />
               Last checked {formatDateTime(service.last_checked)}
-            </p>
-            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-black" style={mutedTextStyle}>
-              {expanded ? "Hide details" : "View details"}
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
-                aria-hidden="true"
-              />
-            </span>
+              </p>
+              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-black" style={mutedTextStyle}>
+                {expanded ? "Hide details" : "View details"}
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                  aria-hidden="true"
+                />
+              </span>
+            </div>
           </div>
         </button>
 
-        <div id={detailsId} hidden={!expanded} className="border-t px-4 pb-4 pt-4" style={dividerStyle}>
-          <p className="mb-3 text-xs font-semibold" style={mutedTextStyle}>{summary}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
-              <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Connection</p>
-              <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.connection_label || configuredLabel(service.configured)}</p>
-            </div>
-            <div className="rounded-xl border px-3 py-2" style={mutedPanelStyle}>
-              <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Usage source</p>
-              <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{service.source_label || titleCase(service.source)}</p>
-            </div>
+        <div id={detailsId} hidden={!expanded} className="border-t px-4 py-4" style={dividerStyle}>
+          <p className="mb-5 max-w-4xl text-xs font-semibold" style={mutedTextStyle}>{summary}</p>
+          <div className="grid grid-cols-1 gap-x-10 gap-y-6 xl:grid-cols-2">
+            <DetailSection title="Connection">
+              <DetailRow label="Connection" value={service.connection_label || configuredLabel(service.configured)} />
+              <DetailRow label="Usage source" value={service.source_label || titleCase(service.source)} />
+              <DetailRow label="What this means" value={service.meaning || service.health_summary || service.health_detail} />
+              <DetailRow label="Last checked" value={formatDateTime(service.last_checked)} />
+            </DetailSection>
+
+            <DetailSection title="Usage this period">
+              <DetailMetricRows items={serviceUsage(service)} emptyText="No usage signal available." />
+            </DetailSection>
+
+            <DetailSection title="Problems this period">
+              <DetailMetricRows items={serviceProblems(service)} emptyText="No problem signal available." />
+            </DetailSection>
+
+            <DetailSection title="Cost this period">
+              <DetailRow label="Cost" value={costLabel(cost)} />
+              <DetailRow label="Source" value={cost.source_label || cost.source || "Not available"} />
+              {cost.note && <DetailRow label="Note" value={cost.note} />}
+              {cost.help && <DetailRow label="Help" value={cost.help} />}
+            </DetailSection>
+
+            {service.readiness_items && service.readiness_items.length > 0 && (
+              <DetailSection title="Readiness and configuration">
+                <DetailMetricRows
+                  items={service.readiness_items.map((item) => ({ label: item.label, value: item.status, help: item.help }))}
+                  emptyText="No readiness details returned."
+                />
+              </DetailSection>
+            )}
+
+            {service.notes && service.notes.length > 0 && (
+              <DetailSection title="Notes and limitations">
+                <NotesRows notes={service.notes} />
+              </DetailSection>
+            )}
+
+            {service.troubleshooting_note && (
+              <DetailSection title="Troubleshooting" className="xl:col-span-2">
+                <p className="border-t py-2 text-xs font-semibold text-amber-700 dark:text-amber-300" style={dividerStyle}>
+                  {service.troubleshooting_note}
+                </p>
+              </DetailSection>
+            )}
+
+            {service.key === "sentry" && <RecentIssuesPanel service={service} issues={recentIssues} />}
           </div>
-
-          <div className="mt-3 rounded-xl border px-3 py-2" style={mutedPanelStyle}>
-            <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>What this means</p>
-            <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>{service.meaning || service.health_summary || service.health_detail}</p>
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="rounded-xl border px-3 py-3" style={mutedPanelStyle}>
-              <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Usage this period</p>
-              <SmallMetricList items={serviceUsage(service)} emptyText="No usage signal available." />
-            </div>
-            <div className="rounded-xl border px-3 py-3" style={mutedPanelStyle}>
-              <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Problems this period</p>
-              <SmallMetricList items={serviceProblems(service)} emptyText="No problem signal available." />
-            </div>
-          </div>
-
-          {service.key === "sentry" && <RecentIssuesPanel service={service} issues={recentIssues} />}
-
-          <div className="mt-3 rounded-xl border px-3 py-2" style={mutedPanelStyle}>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Cost this period</p>
-                <p className="mt-1 text-sm font-black" style={primaryTextStyle}>{costLabel(cost)}</p>
-              </div>
-              <p className="text-xs font-semibold" style={mutedTextStyle}>{cost.source_label || cost.source || "Not available"}</p>
-            </div>
-            {cost.note && <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>{cost.note}</p>}
-            {cost.help && <p className="mt-2 text-[11px] font-semibold" style={subtleTextStyle}>{cost.help}</p>}
-          </div>
-
-          {service.readiness_items && service.readiness_items.length > 0 && (
-            <div className="mt-3 rounded-xl border px-3 py-3" style={mutedPanelStyle}>
-              <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Readiness and configuration</p>
-              <SmallMetricList
-                items={service.readiness_items.map((item) => ({ label: item.label, value: item.status, help: item.help }))}
-                emptyText="No readiness details returned."
-              />
-            </div>
-          )}
-
-          {service.notes && service.notes.length > 0 && (
-            <div className="mt-3 rounded-xl border px-3 py-3" style={mutedPanelStyle}>
-              <p className="mb-2 text-[10px] font-black uppercase" style={subtleTextStyle}>Notes and limitations</p>
-              <div className="space-y-2">
-                {service.notes.map((note, index) => (
-                  <p key={index} className="text-xs font-semibold" style={mutedTextStyle}>{note}</p>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {service.troubleshooting_note && (
-            <p className="mt-3 rounded-xl border px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-500/25">
-              {service.troubleshooting_note}
-            </p>
-          )}
-
-          <p className="mt-3 text-[11px] font-semibold" style={subtleTextStyle}>Last checked {formatDateTime(service.last_checked)}</p>
         </div>
       </article>
     );
@@ -954,7 +975,7 @@ export default function AdminMetricsPage() {
             <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading vendors...</div>
           ) : (
             <div className="p-4">
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 items-start">
+              <div className="space-y-2">
                 {services.map((service) => renderServiceCard(service))}
               </div>
             </div>
