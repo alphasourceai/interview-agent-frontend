@@ -30,19 +30,28 @@ function upsertCanonical(href: string | null) {
 }
 
 function upsertJsonLd(data: unknown) {
-  const id = "alphasource-route-jsonld";
-  let element = document.getElementById(id) as HTMLScriptElement | null;
-  if (!data) {
-    element?.remove();
+  const idPrefix = "alphasource-route-jsonld";
+  const existing = Array.from(document.querySelectorAll<HTMLScriptElement>(`script[id^="${idPrefix}"]`));
+  const entries = Array.isArray(data) ? data : data ? [data] : [];
+  if (entries.length === 0) {
+    existing.forEach((element) => element.remove());
     return;
   }
-  if (!element) {
-    element = document.createElement("script");
-    element.id = id;
+
+  entries.forEach((entry, index) => {
+    const id = index === 0 ? idPrefix : `${idPrefix}-${index}`;
+    let element = document.getElementById(id) as HTMLScriptElement | null;
+    if (!element) {
+      element = document.createElement("script");
+      element.id = id;
+      element.type = "application/ld+json";
+      document.head.appendChild(element);
+    }
     element.type = "application/ld+json";
-    document.head.appendChild(element);
-  }
-  element.textContent = JSON.stringify(data);
+    element.textContent = JSON.stringify(entry);
+  });
+
+  existing.slice(entries.length).forEach((element) => element.remove());
 }
 
 export default function Seo({ location }: SeoProps) {
