@@ -83,9 +83,15 @@ interface PublicAnalyticsPayload {
     submitted_leads?: number;
     draft_or_partial_leads?: number;
     public_analytics_events?: number;
-    most_active_page?: { path?: string | null; count?: number | null } | null;
+    most_active_page?: { path?: string | null; display_name?: string | null; count?: number | null } | null;
     recent_activity_at?: string | null;
     sampled?: boolean;
+  };
+  insights?: {
+    page_activity?: PageActivityItem[];
+    event_types?: EventTypeItem[];
+    cta_activity?: CtaActivityItem[];
+    form_activity?: FormActivityItem[];
   };
   leads?: {
     items?: LeadItem[];
@@ -95,6 +101,49 @@ interface PublicAnalyticsPayload {
     items?: EventItem[];
     pagination?: PaginationInfo;
   };
+}
+
+interface PageActivityItem {
+  path: string;
+  display_name?: string | null;
+  event_count?: number;
+  page_views?: number;
+  cta_clicks?: number;
+  form_activity?: number;
+  lead_count?: number;
+  submitted_leads?: number;
+  draft_or_partial_leads?: number;
+  last_activity_at?: string | null;
+}
+
+interface EventTypeItem {
+  event_name: string;
+  display_name?: string | null;
+  count?: number;
+}
+
+interface CtaActivityItem {
+  label: string;
+  placement?: string | null;
+  target_path?: string | null;
+  count?: number;
+  last_clicked_at?: string | null;
+}
+
+interface FormActivityItem {
+  form_id: string;
+  form_type?: string | null;
+  product_interest?: string | null;
+  event_count?: number;
+  viewed?: number;
+  started?: number;
+  submitted_events?: number;
+  abandoned_events?: number;
+  draft_saved_events?: number;
+  lead_count?: number;
+  submitted_leads?: number;
+  draft_or_partial_leads?: number;
+  last_activity_at?: string | null;
 }
 
 const env =
@@ -178,6 +227,18 @@ function titleCase(value: unknown): string {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
+function pageLabel(path?: string | null, displayName?: string | null): string {
+  const label = String(displayName || "").trim();
+  if (label) return label;
+  const clean = String(path || "/").trim() || "/";
+  if (clean === "/") return "Homepage";
+  return clean;
+}
+
+function pathLabel(path?: string | null): string {
+  return String(path || "/").trim() || "/";
+}
+
 function formatCount(value: unknown): string {
   const numeric = Number(value || 0);
   return Number.isFinite(numeric) ? numeric.toLocaleString() : "0";
@@ -224,6 +285,28 @@ function SummaryCard({
         </div>
       </div>
       <p className="mt-3 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>{detail}</p>
+    </section>
+  );
+}
+
+function InsightPanel({
+  title,
+  detail,
+  children,
+}: {
+  title: string;
+  detail: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border overflow-hidden" style={surfaceCardStyle}>
+      <div className="border-b px-5 py-4" style={dividerStyle}>
+        <h2 className="text-sm font-black" style={primaryTextStyle}>{title}</h2>
+        <p className="mt-1 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>{detail}</p>
+      </div>
+      <div className="divide-y" style={dividerStyle}>
+        {children}
+      </div>
     </section>
   );
 }
@@ -363,17 +446,28 @@ export default function AdminPublicAnalyticsPage() {
   const leads = payload?.leads?.items || [];
   const events = payload?.events?.items || [];
   const summary = payload?.summary || {};
+  const insights = payload?.insights || {};
+  const pageActivity = insights.page_activity || [];
+  const eventTypes = insights.event_types || [];
+  const ctaActivity = insights.cta_activity || [];
+  const formActivity = insights.form_activity || [];
   const dateLabel = payload?.filters?.date_from_display && payload?.filters?.date_to_display
     ? `${payload.filters.date_from_display} to ${payload.filters.date_to_display}`
     : `${days} days`;
   const mostActivePage = summary.most_active_page?.path
-    ? `${summary.most_active_page.path} (${formatCount(summary.most_active_page.count)} events)`
+    ? pageLabel(summary.most_active_page.path, summary.most_active_page.display_name)
     : "Not available";
+  const mostActivePageDetail = summary.most_active_page?.path
+    ? `${formatCount(summary.most_active_page.count)} matching public events. Includes page views, CTA clicks, and form activity.`
+    : "Based on matching public events in the selected date range.";
 
   const eventNameOptions = useMemo(() => {
-    const names = Array.from(new Set(events.map((event) => String(event.event_name || "").trim()).filter(Boolean)));
+    const names = Array.from(new Set([
+      ...eventTypes.map((event) => String(event.event_name || "").trim()).filter(Boolean),
+      ...events.map((event) => String(event.event_name || "").trim()).filter(Boolean),
+    ]));
     return names.slice(0, 8);
-  }, [events]);
+  }, [eventTypes, events]);
 
   return (
     <AdminLayout title="Leads & Public Analytics">
@@ -383,7 +477,7 @@ export default function AdminPublicAnalyticsPage() {
             <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={subtleTextStyle}>Admin only</p>
             <h1 className="mt-2 text-2xl font-black sm:text-3xl" style={primaryTextStyle}>Leads & Public Analytics</h1>
             <p className="mt-2 text-sm font-semibold leading-relaxed" style={mutedTextStyle}>
-              Read-only view of public site lead captures and public-page activity signals. Broad lists show sanitized summaries, not raw payload dumps.
+              Read-only review of public site lead captures and public-page activity signals. Summaries use the current filters and show sanitized counts, not raw payload dumps.
             </p>
           </div>
           <button
@@ -424,7 +518,7 @@ export default function AdminPublicAnalyticsPage() {
             icon={Activity}
             label="Most active page"
             value={mostActivePage}
-            detail={`Most recent activity: ${formatDateTime(summary.recent_activity_at)}`}
+            detail={mostActivePageDetail}
             tone="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
           />
         </section>
@@ -487,6 +581,9 @@ export default function AdminPublicAnalyticsPage() {
               />
             </label>
           </div>
+          <p className="mt-3 text-[11px] font-semibold" style={subtleTextStyle}>
+            Summary cards, insight sections, lead captures, and the troubleshooting event log are based on these filters.
+          </p>
         </section>
 
         {error && (
@@ -496,12 +593,129 @@ export default function AdminPublicAnalyticsPage() {
           </div>
         )}
 
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <InsightPanel
+            title="Page activity summary"
+            detail="Public page performance in the selected range, grouped by page instead of raw event order."
+          >
+            {loading && pageActivity.length === 0 ? (
+              <div className="px-5 py-6 text-sm font-semibold" style={mutedTextStyle}>Loading page activity...</div>
+            ) : pageActivity.length === 0 ? (
+              <div className="p-5">
+                <EmptyState title="No page activity yet" detail="Try a wider date range or remove the page filter." />
+              </div>
+            ) : pageActivity.map((page) => (
+              <article key={page.path} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black" style={primaryTextStyle}>{pageLabel(page.path, page.display_name)}</p>
+                    <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{pathLabel(page.path)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black" style={primaryTextStyle}>{formatCount((page.event_count || 0) + (page.lead_count || 0))}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>signals</p>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-semibold sm:grid-cols-4" style={mutedTextStyle}>
+                  <span>{formatCount(page.page_views)} page views</span>
+                  <span>{formatCount(page.cta_clicks)} CTA clicks</span>
+                  <span>{formatCount(page.form_activity)} form events</span>
+                  <span>{formatCount(page.lead_count)} leads</span>
+                </div>
+              </article>
+            ))}
+          </InsightPanel>
+
+          <InsightPanel
+            title="CTA activity summary"
+            detail="Public calls to action ranked by matching click events."
+          >
+            {loading && ctaActivity.length === 0 ? (
+              <div className="px-5 py-6 text-sm font-semibold" style={mutedTextStyle}>Loading CTA activity...</div>
+            ) : ctaActivity.length === 0 ? (
+              <div className="p-5">
+                <EmptyState title="No CTA clicks match these filters" detail="CTA clicks will appear here after public visitors interact with tracked links." />
+              </div>
+            ) : ctaActivity.map((cta) => (
+              <article key={`${cta.label}:${cta.placement}:${cta.target_path}`} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black" style={primaryTextStyle}>{cta.label || "Unknown CTA"}</p>
+                    <p className="mt-1 truncate text-xs font-semibold" style={mutedTextStyle}>
+                      {cta.placement || "Unknown placement"} · {cta.target_path || "Unknown target"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black" style={primaryTextStyle}>{formatCount(cta.count)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>clicks</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </InsightPanel>
+
+          <InsightPanel
+            title="Form activity summary"
+            detail="Lead form progress and saved lead records, grouped by form."
+          >
+            {loading && formActivity.length === 0 ? (
+              <div className="px-5 py-6 text-sm font-semibold" style={mutedTextStyle}>Loading form activity...</div>
+            ) : formActivity.length === 0 ? (
+              <div className="p-5">
+                <EmptyState title="No form activity match these filters" detail="Form views, starts, saved drafts, and submitted leads will summarize here." />
+              </div>
+            ) : formActivity.map((form) => (
+              <article key={`${form.form_id}:${form.form_type}:${form.product_interest || ""}`} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black" style={primaryTextStyle}>{form.product_interest || titleCase(form.form_id)}</p>
+                    <p className="mt-1 truncate text-xs font-semibold" style={mutedTextStyle}>
+                      {form.form_id} · {titleCase(form.form_type)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black" style={primaryTextStyle}>{formatCount(form.submitted_leads)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>submitted</p>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-semibold sm:grid-cols-4" style={mutedTextStyle}>
+                  <span>{formatCount(form.viewed)} views</span>
+                  <span>{formatCount(form.started)} starts</span>
+                  <span>{formatCount(form.draft_saved_events)} saved drafts</span>
+                  <span>{formatCount(form.draft_or_partial_leads)} partial leads</span>
+                </div>
+              </article>
+            ))}
+          </InsightPanel>
+
+          <InsightPanel
+            title="Event type summary"
+            detail="High-level event mix for the selected range."
+          >
+            {loading && eventTypes.length === 0 ? (
+              <div className="px-5 py-6 text-sm font-semibold" style={mutedTextStyle}>Loading event mix...</div>
+            ) : eventTypes.length === 0 ? (
+              <div className="p-5">
+                <EmptyState title="No event types match these filters" detail="Public analytics event categories will appear here." />
+              </div>
+            ) : eventTypes.map((event) => (
+              <article key={event.event_name} className="flex items-center justify-between gap-4 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black" style={primaryTextStyle}>{event.display_name || titleCase(event.event_name)}</p>
+                  <p className="mt-1 truncate text-xs font-semibold" style={mutedTextStyle}>{event.event_name}</p>
+                </div>
+                <p className="text-lg font-black" style={primaryTextStyle}>{formatCount(event.count)}</p>
+              </article>
+            ))}
+          </InsightPanel>
+        </section>
+
         <section className="rounded-2xl border overflow-hidden" style={surfaceCardStyle}>
           <div className="border-b px-5 py-4" style={dividerStyle}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-black" style={primaryTextStyle}>Recent lead captures</h2>
-                <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Contact fields are shown for admin review. Message content is preview-only and submitted-only.</p>
+                <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Submitted leads and contact-ready partial leads stay visible for review. Message content is preview-only and submitted-only.</p>
               </div>
               <p className="text-[11px] font-bold" style={subtleTextStyle}>{dateLabel}</p>
             </div>
@@ -514,8 +728,10 @@ export default function AdminPublicAnalyticsPage() {
                 <EmptyState title="No lead captures match these filters" detail="Try a wider date range or remove the status/page filters." />
               </div>
             ) : (
-              leads.map((lead) => (
-                <article key={lead.id} className="px-5 py-4">
+              leads.map((lead) => {
+                const submitted = String(lead.status || "").toLowerCase() === "submitted";
+                return (
+                <article key={lead.id} className={`px-5 py-4 ${submitted ? "bg-[#02D99D]/[0.035]" : ""}`}>
                   <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -532,7 +748,7 @@ export default function AdminPublicAnalyticsPage() {
                       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold" style={mutedTextStyle}>
                         {lead.contact?.email && <span><Mail className="mr-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />{lead.contact.email}</span>}
                         {lead.contact?.phone && <span>{lead.contact.phone}</span>}
-                        <span>{lead.source?.path || "/"}</span>
+                        <span>{pageLabel(lead.source?.path)} · {pathLabel(lead.source?.path)}</span>
                         <span>Updated {formatDateTime(lead.updated_at)}</span>
                       </div>
                       {lead.message_preview && (
@@ -551,22 +767,23 @@ export default function AdminPublicAnalyticsPage() {
                     </div>
                   </div>
                 </article>
-              ))
+              );
+              })
             )}
           </div>
           <PaginationControls pagination={payload?.leads?.pagination} onPageChange={setLeadPage} />
         </section>
 
-        <section className="rounded-2xl border overflow-hidden" style={surfaceCardStyle}>
-          <div className="border-b px-5 py-4" style={dividerStyle}>
+        <details className="rounded-2xl border overflow-hidden" style={surfaceCardStyle}>
+          <summary className="cursor-pointer list-none border-b px-5 py-4 transition-colors hover:bg-[var(--as-hover)]" style={dividerStyle}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-black" style={primaryTextStyle}>Recent public analytics events</h2>
-                <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Shows public-page activity with safe metadata summaries only.</p>
+                <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Troubleshooting event log. Open only when you need recent sanitized event details.</p>
               </div>
               <p className="text-[11px] font-bold" style={subtleTextStyle}>Generated {formatDateTime(payload?.generated_at)}</p>
             </div>
-          </div>
+          </summary>
           <div className="divide-y" style={dividerStyle}>
             {loading && events.length === 0 ? (
               <div className="px-5 py-6 text-sm font-semibold" style={mutedTextStyle}>Loading public analytics events...</div>
@@ -600,7 +817,7 @@ export default function AdminPublicAnalyticsPage() {
             )}
           </div>
           <PaginationControls pagination={payload?.events?.pagination} onPageChange={setEventPage} />
-        </section>
+        </details>
       </div>
     </AdminLayout>
   );
