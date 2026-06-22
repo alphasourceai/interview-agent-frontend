@@ -239,10 +239,27 @@ function iconToneClass(status: unknown): string {
   return "border-[#A380F6]/25 bg-[#A380F6]/5 text-[#7C5FCC]";
 }
 
-function OutlineIcon({ icon: Icon, status, label }: { icon: LucideIcon; status?: unknown; label?: string }) {
+function serviceIconToneClass(service: PlatformService): string {
+  const key = `${service.key} ${service.name}`.toLowerCase();
+  if (key.includes("openai")) return "border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-400/25 dark:bg-indigo-500/10 dark:text-indigo-300";
+  if (key.includes("sendgrid")) return "border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-400/25 dark:bg-blue-500/10 dark:text-blue-300";
+  if (key.includes("aws") || key.includes("s3") || key.includes("storage")) return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-300";
+  if (key.includes("tavus")) return "border-purple-200 bg-purple-50 text-purple-600 dark:border-purple-400/25 dark:bg-purple-500/10 dark:text-purple-300";
+  if (key.includes("render")) return "border-slate-200 bg-slate-50 text-slate-700 dark:border-sky-400/25 dark:bg-sky-500/10 dark:text-sky-300";
+  if (key.includes("stripe")) return "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-400/25 dark:bg-indigo-500/10 dark:text-indigo-300";
+  if (key.includes("supabase")) return "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-400/25 dark:bg-teal-500/10 dark:text-teal-300";
+  if (key.includes("sentry")) return "border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-300";
+  return "border-[#A380F6]/25 bg-[#A380F6]/5 text-[#7C5FCC]";
+}
+
+function neutralIconToneClass(): string {
+  return "border-slate-200 bg-slate-50 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/70";
+}
+
+function OutlineIcon({ icon: Icon, status, label, toneClass }: { icon: LucideIcon; status?: unknown; label?: string; toneClass?: string }) {
   return (
     <span
-      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${iconToneClass(status)}`}
+      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${toneClass || iconToneClass(status)}`}
       aria-label={label}
       aria-hidden={label ? undefined : true}
     >
@@ -261,8 +278,9 @@ function StatusBadge({ status }: { status: unknown }) {
 
 function SummaryCountBadge({ count, label, status }: { count: number | undefined; label: string; status: HealthStatus }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black ${statusClass(status)}`}>
-      {Number(count || 0).toLocaleString()} {label}
+    <span className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-[11px] font-black ${statusClass(status)}`}>
+      <span className="uppercase">{label}</span>
+      <span>{Number(count || 0).toLocaleString()}</span>
     </span>
   );
 }
@@ -344,6 +362,23 @@ function statusIcon(card: StatusCard): LucideIcon {
   if (card.status === "problem" || card.status === "warning") return AlertTriangle;
   if (card.status === "healthy") return CheckCircle2;
   return Activity;
+}
+
+function statusSearchText(card: StatusCard): string {
+  return `${card.key} ${card.label} ${card.source} ${card.detail}`.toLowerCase();
+}
+
+function findStatusCard(cards: StatusCard[], terms: string[]): StatusCard | null {
+  return cards.find((card) => {
+    const searchable = statusSearchText(card);
+    return terms.some((term) => searchable.includes(term));
+  }) || null;
+}
+
+function attentionStatus(problemCount: number, warningCount: number): HealthStatus {
+  if (problemCount > 0) return "problem";
+  if (warningCount > 0) return "warning";
+  return "healthy";
 }
 
 function uniqueValues(values: string[]): string[] {
@@ -525,13 +560,65 @@ export default function AdminMetricsPage() {
     : timeframe;
   const serviceByKey = useMemo(() => Object.fromEntries(services.map((service) => [service.key, service])), [services]);
   const overallStatus = payload?.summary?.overall_status || "unknown";
+  const healthyCount = Number(payload?.summary?.healthy_count || 0);
   const warningCount = Number(payload?.summary?.warning_count || 0);
   const problemCount = Number(payload?.summary?.problem_count || 0);
+  const unknownCount = Number(payload?.summary?.unknown_count || 0);
   const platformAttentionText = problemCount > 0
     ? `${problemCount.toLocaleString()} problem${problemCount === 1 ? "" : "s"} need attention.`
     : warningCount > 0
       ? `${warningCount.toLocaleString()} warning${warningCount === 1 ? "" : "s"} need review.`
       : "No active platform problems reported.";
+  const backendStatusCard = findStatusCard(statusCards, ["backend", "api", "server"]);
+  const databaseStatusCard = findStatusCard(statusCards, ["database", "db", "supabase"]);
+  const attentionCards = statusCards.filter((card) => card.status === "problem" || card.status === "warning");
+  const attentionSummary = attentionCards.length > 0
+    ? `${attentionCards.slice(0, 2).map((card) => card.label).join(", ")}${attentionCards.length > 2 ? ` and ${attentionCards.length - 2} more` : ""} ${problemCount > 0 ? "need attention." : "need review."}`
+    : platformAttentionText;
+  const attentionSignalStatus = attentionStatus(problemCount, warningCount);
+  const platformSignals: Array<{
+    key: string;
+    label: string;
+    value: string;
+    detail: string;
+    icon: LucideIcon;
+    status: HealthStatus;
+    toneClass?: string;
+  }> = [
+    {
+      key: "backend-api",
+      label: "Backend/API",
+      value: backendStatusCard ? titleCase(backendStatusCard.status) : "Unknown",
+      detail: backendStatusCard?.detail || "No backend/API check returned.",
+      icon: Server,
+      status: backendStatusCard?.status || "unknown",
+    },
+    {
+      key: "database",
+      label: "Database",
+      value: databaseStatusCard ? titleCase(databaseStatusCard.status) : "Unknown",
+      detail: databaseStatusCard?.detail || "No database check returned.",
+      icon: Database,
+      status: databaseStatusCard?.status || "unknown",
+    },
+    {
+      key: "attention",
+      label: "Needs attention",
+      value: problemCount + warningCount > 0 ? `${(problemCount + warningCount).toLocaleString()} checks` : "None reported",
+      detail: attentionSummary,
+      icon: AlertTriangle,
+      status: attentionSignalStatus,
+    },
+    {
+      key: "last-refreshed",
+      label: "Last refreshed",
+      value: formatDateTime(lastRefreshed),
+      detail: "Current status only. Vendor usage has its own date range.",
+      icon: RefreshCw,
+      status: "unknown",
+      toneClass: neutralIconToneClass(),
+    },
+  ];
 
   const renderStatusCard = (card: StatusCard) => {
     const Icon = statusIcon(card);
@@ -582,12 +669,12 @@ export default function AdminMetricsPage() {
     return (
       <article
         key={service.key}
-        className="mb-3 inline-block w-full break-inside-avoid rounded-2xl border overflow-hidden align-top"
+        className="w-full self-start rounded-2xl border overflow-hidden"
         style={surfaceCardStyle}
       >
         <button
           type="button"
-          className="w-full px-4 py-4 text-left transition-colors hover:bg-[var(--as-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
+          className="flex min-h-[190px] w-full flex-col px-4 py-4 text-left transition-colors hover:bg-[var(--as-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6] focus-visible:ring-inset"
           onClick={() => toggleServiceCard(service.key)}
           aria-expanded={expanded}
           aria-controls={detailsId}
@@ -595,32 +682,45 @@ export default function AdminMetricsPage() {
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex items-start gap-3">
-              <OutlineIcon icon={Icon} status={service.status} />
+              <OutlineIcon icon={Icon} toneClass={serviceIconToneClass(service)} />
               <div className="min-w-0 flex-1">
-                <p className="text-base font-black" style={primaryTextStyle}>{service.name}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {keySignals.map((signal) => (
-                    <span key={signal} className="rounded-full border px-2 py-1 text-[11px] font-black" style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}>
-                      {signal}
-                    </span>
-                  ))}
-                </div>
-                {service.last_checked && (
-                  <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold" style={subtleTextStyle}>
-                    <Clock3 className="h-3 w-3" aria-hidden="true" />
-                    Last checked {formatDateTime(service.last_checked)}
-                  </p>
-                )}
+                <p className="truncate text-base font-black" style={primaryTextStyle} title={service.name}>{service.name}</p>
+                <p className="mt-1 truncate text-xs font-semibold" style={mutedTextStyle} title={summary}>{summary}</p>
               </div>
             </div>
-            <div className="flex flex-shrink-0 items-center gap-2">
-              <StatusBadge status={service.status} />
+            <StatusBadge status={service.status} />
+          </div>
+
+          <div className="mt-4 grid min-h-[76px] grid-cols-1 gap-2">
+            {[0, 1].map((index) => {
+              const signal = keySignals[index];
+              return signal ? (
+                <span
+                  key={signal}
+                  className="block truncate rounded-xl border px-2.5 py-2 text-[11px] font-black"
+                  style={{ ...mutedPanelStyle, color: "var(--as-text-muted)" }}
+                  title={signal}
+                >
+                  {signal}
+                </span>
+              ) : (
+                <span key={`empty-${index}`} className="min-h-[34px] rounded-xl border border-transparent px-2.5 py-2" aria-hidden="true" />
+              );
+            })}
+          </div>
+
+          <div className="mt-auto flex items-center justify-between gap-3 border-t pt-3" style={dividerStyle}>
+            <p className="min-w-0 truncate text-[11px] font-semibold" style={subtleTextStyle}>
+              <Clock3 className="mr-1.5 inline h-3 w-3 align-[-2px]" aria-hidden="true" />
+              Last checked {formatDateTime(service.last_checked)}
+            </p>
+            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-black" style={mutedTextStyle}>
+              {expanded ? "Hide details" : "View details"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`}
-                style={mutedTextStyle}
+                className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
                 aria-hidden="true"
               />
-            </div>
+            </span>
           </div>
         </button>
 
@@ -751,43 +851,77 @@ export default function AdminMetricsPage() {
             </div>
             <StatusBadge status={overallStatus} />
           </div>
-          <div className="p-4">
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.15fr)] gap-3">
-              <div className="rounded-2xl border p-4" style={mutedPanelStyle}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Overall platform health</p>
-                    <p className="mt-2 text-2xl font-black" style={primaryTextStyle}>{titleCase(overallStatus)}</p>
-                    <p className="mt-2 text-xs font-semibold" style={mutedTextStyle}>{platformAttentionText}</p>
+          <div className="p-4 space-y-3">
+            <div className="rounded-2xl border p-4" style={mutedPanelStyle}>
+              <div className="grid grid-cols-1 2xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)] gap-4">
+                <div className="flex flex-col justify-between gap-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>Overall platform health</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <p className="text-2xl font-black" style={primaryTextStyle}>{titleCase(overallStatus)}</p>
+                        <StatusBadge status={overallStatus} />
+                      </div>
+                      <p className="mt-2 text-sm font-semibold" style={mutedTextStyle}>{attentionSummary}</p>
+                    </div>
+                    <OutlineIcon
+                      icon={overallStatus === "problem" ? AlertTriangle : overallStatus === "healthy" ? Activity : CircleHelp}
+                      status={overallStatus}
+                    />
                   </div>
-                  <OutlineIcon icon={overallStatus === "healthy" ? CheckCircle2 : overallStatus === "problem" ? AlertTriangle : CircleHelp} status={overallStatus} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <SummaryCountBadge count={healthyCount} label="healthy" status="healthy" />
+                    <SummaryCountBadge count={warningCount} label="warning" status="warning" />
+                    <SummaryCountBadge count={problemCount} label="problem" status="problem" />
+                    <SummaryCountBadge count={unknownCount} label="unknown" status="unknown" />
+                  </div>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <SummaryCountBadge count={payload?.summary?.healthy_count} label="healthy" status="healthy" />
-                  <SummaryCountBadge count={payload?.summary?.warning_count} label="warning" status="warning" />
-                  <SummaryCountBadge count={payload?.summary?.problem_count} label="problem" status="problem" />
-                  <SummaryCountBadge count={payload?.summary?.unknown_count} label="unknown" status="unknown" />
-                </div>
-                <p className="mt-4 flex items-center gap-1.5 text-[11px] font-semibold" style={subtleTextStyle}>
-                  <Clock3 className="h-3 w-3" aria-hidden="true" />
-                  Last refreshed {formatDateTime(lastRefreshed)}
-                </p>
-              </div>
-
-              {loading && statusCards.length === 0 ? (
-                <div className="rounded-2xl border" style={mutedPanelStyle}>
-                  <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading platform status...</div>
-                </div>
-              ) : statusCards.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {statusCards.map((card) => renderStatusCard(card))}
+                  {platformSignals.map((signal) => (
+                    <div key={signal.key} className="rounded-xl border px-3 py-3" style={surfaceCardStyle}>
+                      <div className="flex items-start gap-3">
+                        <OutlineIcon icon={signal.icon} status={signal.status} toneClass={signal.toneClass} />
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black uppercase" style={subtleTextStyle}>{signal.label}</p>
+                          <p className="mt-1 truncate text-sm font-black" style={primaryTextStyle} title={signal.value}>{signal.value}</p>
+                          <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>{signal.detail}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="rounded-2xl border" style={mutedPanelStyle}>
-                  <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>No platform status checks returned.</div>
-                </div>
-              )}
+              </div>
             </div>
+
+            <details className="group rounded-2xl border overflow-hidden" style={surfaceCardStyle}>
+              <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                <div className="px-4 py-3 flex items-start justify-between gap-3 transition-colors hover:bg-[var(--as-hover)]">
+                  <div className="flex items-start gap-3">
+                    <OutlineIcon icon={CircleHelp} toneClass={neutralIconToneClass()} />
+                    <div>
+                      <h4 className="text-sm font-black" style={primaryTextStyle}>View configuration checks</h4>
+                      <p className="text-xs font-semibold mt-1" style={mutedTextStyle}>Detailed check source, status, and last-checked timestamps are hidden by default.</p>
+                    </div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" style={mutedTextStyle} aria-hidden="true" />
+                </div>
+              </summary>
+              <div className="border-t p-4" style={dividerStyle}>
+                {loading && statusCards.length === 0 ? (
+                  <div className="rounded-2xl border" style={mutedPanelStyle}>
+                    <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading platform status...</div>
+                  </div>
+                ) : statusCards.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {statusCards.map((card) => renderStatusCard(card))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border" style={mutedPanelStyle}>
+                    <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>No platform status checks returned.</div>
+                  </div>
+                )}
+              </div>
+            </details>
           </div>
         </section>
 
@@ -820,7 +954,7 @@ export default function AdminMetricsPage() {
             <div className="px-4 py-8 text-center text-sm font-semibold" style={mutedTextStyle}>Loading vendors...</div>
           ) : (
             <div className="p-4">
-              <div className="columns-1 md:columns-2 2xl:columns-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 items-start">
                 {services.map((service) => renderServiceCard(service))}
               </div>
             </div>
