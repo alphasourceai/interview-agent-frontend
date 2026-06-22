@@ -43,6 +43,7 @@ import DashboardFaqPage from "@/pages/dashboard/FaqPage";
 import AdminOverviewPage from "@/pages/admin/AdminOverviewPage";
 import AdminClientsPage from "@/pages/admin/AdminClientsPage";
 import AdminMetricsPage from "@/pages/admin/AdminMetricsPage";
+import AdminPublicAnalyticsPage from "@/pages/admin/AdminPublicAnalyticsPage";
 import AdminRolesPage from "@/pages/admin/AdminRolesPage";
 import AdminCandidatesPage from "@/pages/admin/AdminCandidatesPage";
 import AdminRoleConfigPage from "@/pages/admin/AdminRoleConfigPage";
@@ -340,6 +341,7 @@ function AdminGuard() {
         <Switch>
           <Route path="/admin"                  component={AdminOverviewPage} />
           <Route path="/admin/metrics"          component={AdminMetricsPage} />
+          <Route path="/admin/public-analytics" component={AdminPublicAnalyticsPage} />
           <Route path="/admin/clients"          component={AdminClientsPage} />
           <Route path="/admin/roles"            component={AdminRolesPage} />
           <Route path="/admin/candidates"       component={AdminCandidatesPage} />
