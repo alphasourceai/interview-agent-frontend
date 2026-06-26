@@ -170,7 +170,7 @@ export function trackEvent(eventName: string, properties: AnalyticsProperties = 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       keepalive: true,
-    });
+    }).catch(() => undefined);
   } catch {
     // Analytics must never block the page.
   }

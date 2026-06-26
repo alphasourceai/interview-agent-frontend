@@ -10,6 +10,7 @@ const SECRET_TOKEN_PATTERN = /\b(?:sk|pk|rk|eyJ)[A-Za-z0-9._-]{12,}\b/g;
 const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const IP_ADDRESS_PATTERN = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g;
 const SENSITIVE_QUERY_PATTERN = /([?&](?:token|auth|authorization|code|secret|session|password|key)=)[^&#\s]+/gi;
+const PUBLIC_ANALYTICS_EVENTS_PATH = "/api/public-analytics/events";
 
 let initialized = false;
 
@@ -48,6 +49,34 @@ function sanitizeValue(value: unknown, depth = 0): unknown {
 }
 
 type SentryException = NonNullable<NonNullable<Sentry.ErrorEvent["exception"]>["values"]>[number];
+
+function textIncludesFailedFetch(value: unknown): boolean {
+  return typeof value === "string" && value.toLowerCase().includes("failed to fetch");
+}
+
+function textIncludesPublicAnalyticsEvents(value: unknown): boolean {
+  return typeof value === "string" && value.includes(PUBLIC_ANALYTICS_EVENTS_PATH);
+}
+
+function isPublicAnalyticsFetchFailure(event: Sentry.ErrorEvent): boolean {
+  const exceptionValues = event.exception?.values || [];
+  const hasFailedFetch =
+    textIncludesFailedFetch(event.message) ||
+    exceptionValues.some((exception) => (
+      textIncludesFailedFetch(exception.value) ||
+      textIncludesFailedFetch(exception.type)
+    ));
+
+  if (!hasFailedFetch) return false;
+
+  return Boolean(
+    textIncludesPublicAnalyticsEvents(event.request?.url) ||
+    event.breadcrumbs?.some((breadcrumb) => (
+      textIncludesPublicAnalyticsEvents(breadcrumb.message) ||
+      Object.values((breadcrumb.data || {}) as Record<string, unknown>).some(textIncludesPublicAnalyticsEvents)
+    )),
+  );
+}
 
 function sanitizeException(exception: SentryException): SentryException {
   return {
@@ -124,7 +153,7 @@ export function initSentry() {
     environment: envText("VITE_SENTRY_ENV") || "qa",
     release: envText("VITE_SENTRY_RELEASE") || undefined,
     sendDefaultPii: false,
-    beforeSend: (event) => sanitizeEvent(event),
+    beforeSend: (event) => (isPublicAnalyticsFetchFailure(event) ? null : sanitizeEvent(event)),
   });
 }
 
