@@ -458,7 +458,7 @@ export function AlphaScreenDentalGroupsPage() {
 export function AlphaScreenRoiPage() {
   const [roles, setRoles] = useState(4);
   const [candidatesPerRole, setCandidatesPerRole] = useState(25);
-  const [minutesPerScreen, setMinutesPerScreen] = useState(20);
+  const [minutesPerScreen, setMinutesPerScreen] = useState(60);
   const [hourlyCost, setHourlyCost] = useState(55);
   const [membership, setMembership] = useState<MembershipKey>("basic");
   const [cadence, setCadence] = useState<CadenceKey>("monthly");
