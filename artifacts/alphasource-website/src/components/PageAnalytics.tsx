@@ -5,7 +5,21 @@ type PageAnalyticsProps = {
   location: string;
 };
 
-const PUBLIC_ANALYTICS_ROUTES = new Set(["/", "/alphascreen", "/about", "/support", "/faq", "/privacy", "/terms"]);
+const PUBLIC_ANALYTICS_ROUTES = new Set([
+  "/",
+  "/alphascreen",
+  "/alphascreen/pricing",
+  "/alphascreen/how-it-works",
+  "/alphascreen/security",
+  "/alphascreen/candidate-experience",
+  "/alphascreen/for-dental-groups",
+  "/alphascreen/roi",
+  "/about",
+  "/support",
+  "/faq",
+  "/privacy",
+  "/terms",
+]);
 
 function normalizePath(path: string): string {
   const clean = String(path || "/").split("?")[0].split("#")[0] || "/";

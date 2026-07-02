@@ -81,6 +81,10 @@ interface Role {
 }
 
 interface RoleCheckoutResponse {
+  ok?: unknown;
+  credit_applied?: unknown;
+  role_id?: unknown;
+  message?: unknown;
   url?: unknown;
   checkout_client_secret?: unknown;
 }
@@ -678,6 +682,19 @@ export default function RolesPage() {
       if (!response.ok) throw new Error(extractErrorMessage(text));
 
       const data = parseJsonSafe(text) as RoleCheckoutResponse | null;
+      if (data?.credit_applied === true) {
+        setRoleTitle("");
+        setInterviewType("Basic");
+        setJdFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        setRolesReloadNonce((value) => value + 1);
+        setActionNotice({
+          tone: "success",
+          text: "First-role prepay credit applied. Your role has been created.",
+        });
+        return;
+      }
+
       const checkoutUrl = typeof data?.url === "string" ? data.url.trim() : "";
       const checkoutClientSecret =
         typeof data?.checkout_client_secret === "string" ? data.checkout_client_secret.trim() : "";
@@ -862,8 +879,8 @@ export default function RolesPage() {
       const data = parseJsonSafe(text) as { url?: unknown } | null;
       const url = typeof data?.url === "string" ? data.url.trim() : "";
       if (!url) throw new Error("Could not open Job Description.");
-      const opened = window.open(url, "_blank", "noopener,noreferrer");
-      if (!opened) throw new Error("Could not open Job Description.");
+      // Some browsers return null even when the new tab opens; signed-url failures above remain hard errors.
+      window.open(url, "_blank", "noopener,noreferrer");
       setActionNotice({ tone: "success", text: "Job description opened." });
     } catch (error) {
       setActionNotice({

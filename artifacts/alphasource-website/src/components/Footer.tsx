@@ -124,8 +124,13 @@ export default function Footer() {
                 { label: "Home",         href: "/" },
                 { label: "About Us",     href: "/about" },
                 { label: "alphaScreen",  href: "/alphascreen" },
-                { label: "How It Works", href: "/#how-it-works" },
-                { label: "Support",      href: "/support" },
+                { label: "alphaScreen Pricing", href: "/alphascreen/pricing" },
+                { label: "How It Works", href: "/alphascreen/how-it-works" },
+                { label: "Security",     href: "/alphascreen/security" },
+                { label: "Candidate Experience", href: "/alphascreen/candidate-experience" },
+                { label: "Dental Groups", href: "/alphascreen/for-dental-groups" },
+                { label: "ROI Estimator", href: "/alphascreen/roi" },
+                { label: "FAQ",          href: "/faq" },
               ].map((link) => (
                 <li key={link.label}>
                   <a

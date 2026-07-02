@@ -34,6 +34,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
+    <div
+      id="public-checkout-static-fallback"
+      style="display:none;min-height:100vh;background:#F8F9FD;color:#0A1547;font-family:Inter,Arial,sans-serif;padding:48px 24px;box-sizing:border-box;"
+    >
+      <div style="max-width:720px;margin:0 auto;background:#fff;border:1px solid rgba(10,21,71,0.1);border-radius:8px;padding:28px;box-shadow:0 8px 26px rgba(10,21,71,0.08);">
+        <p style="margin:0;color:#A380F6;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.16em;">alphaScreen</p>
+        <h1 style="margin:12px 0 0;font-size:26px;line-height:1.2;">Loading membership agreement</h1>
+        <p style="margin:12px 0 0;color:rgba(10,21,71,.65);font-size:15px;line-height:1.6;">
+          We are loading your agreement signing step. If this screen does not update, refresh the page or contact support.
+        </p>
+        <p style="margin:20px 0 0;">
+          <a href="/support/" style="color:#A380F6;font-size:14px;font-weight:700;text-decoration:none;">Contact support →</a>
+        </p>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var fallback = document.getElementById("public-checkout-static-fallback");
+        if (!fallback) return;
+        if (window.location.pathname.indexOf("/membership-agreement/sign/") === 0) {
+          fallback.style.display = "block";
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, RefreshCw, X } from "lucide-react";
 
 interface SignerPageProps {
   params?: {
@@ -21,6 +21,7 @@ interface SignerSession {
   billing_option: string;
   auto_renew: boolean;
   notice_deadline_days: number;
+  first_role_prepay_selected: boolean | null;
   initial_term_start: string;
   initial_renewal_date: string;
   expires_at: string;
@@ -73,6 +74,10 @@ const stripePublishableKey = firstText(
   (env as Record<string, unknown>).VITE_STRIPE_PUBLIC_KEY,
   (env as Record<string, unknown>).STRIPE_PUBLISHABLE_KEY,
 );
+const CHECKOUT_RECOVERY_STORAGE_KEY = "alphascreen:retail_checkout_recovery:v1";
+const CHECKOUT_BACK_LINK_CLASS =
+  "inline-flex text-sm font-semibold text-[#A380F6] transition-colors hover:text-[#0A1547]";
+const AGREEMENT_SLOW_LOAD_MS = 8000;
 
 function openCheckoutUrl(checkoutUrl: string): void {
   const url = String(checkoutUrl || "").trim();
@@ -135,6 +140,65 @@ function toDisplayText(value: unknown): string {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
+function booleanOrNull(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "true" || raw === "1" || raw === "yes") return true;
+  if (raw === "false" || raw === "0" || raw === "no") return false;
+  return null;
+}
+
+function objectOrNull(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? value as Record<string, unknown> : null;
+}
+
+function resolveFirstRolePrepaySelected(source: Record<string, unknown>): boolean | null {
+  const direct = booleanOrNull(source.first_role_prepay_selected);
+  if (direct !== null) return direct;
+  const firstRolePrepay = objectOrNull(source.first_role_prepay);
+  const fromFirstRolePrepay = firstRolePrepay ? booleanOrNull(firstRolePrepay.selected) : null;
+  if (fromFirstRolePrepay !== null) return fromFirstRolePrepay;
+  const selectedPackage = objectOrNull(source.selected_package);
+  const selectedPackagePrepay = selectedPackage ? objectOrNull(selectedPackage.first_role_prepay) : null;
+  const fromSelectedPackage = selectedPackagePrepay ? booleanOrNull(selectedPackagePrepay.selected) : null;
+  if (fromSelectedPackage !== null) return fromSelectedPackage;
+  const packageSnapshot = objectOrNull(source.package_snapshot);
+  const packageSnapshotPrepay = packageSnapshot ? objectOrNull(packageSnapshot.first_role_prepay) : null;
+  const fromPackageSnapshot = packageSnapshotPrepay ? booleanOrNull(packageSnapshotPrepay.selected) : null;
+  if (fromPackageSnapshot !== null) return fromPackageSnapshot;
+  const templateSnapshot = objectOrNull(source.template_snapshot);
+  if (templateSnapshot) return resolveFirstRolePrepaySelected(templateSnapshot);
+  return null;
+}
+
+function firstRolePrepayAgreementCopy(selected: boolean | null): string {
+  if (selected === true) {
+    return "Your first role is prepaid at the discounted website signup rate. You will not be charged again when you open your first role. Additional roles are billed at the standard role fee.";
+  }
+  if (selected === false) {
+    return "You did not prepay your first role. Role fees are charged when roles are opened.";
+  }
+  return "";
+}
+
+function hasAgreementCreatedRecovery(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.sessionStorage.getItem(CHECKOUT_RECOVERY_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return parsed.version === 1 && Boolean(parsed.purchase_result) && Boolean(parsed.agreement_result);
+  } catch (_) {
+    return false;
+  }
+}
+
+function agreementBackHref(): string {
+  return hasAgreementCreatedRecovery()
+    ? "/alphascreen/pricing?checkout_recovery=agreement_created#signup-modal"
+    : "/alphascreen/pricing#pricing-demo";
+}
+
 export default function MembershipAgreementSignerPage({ params }: SignerPageProps) {
   const token = useMemo(() => {
     const raw = String(params?.token || "").trim();
@@ -145,9 +209,14 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
       return raw;
     }
   }, [params?.token]);
+  const checkoutReturnState = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    return String(new URLSearchParams(window.location.search || "").get("checkout") || "").trim().toLowerCase();
+  }, []);
 
   const [session, setSession] = useState<SignerSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [slowLoading, setSlowLoading] = useState(false);
   const [sessionError, setSessionError] = useState("");
 
   const [typedName, setTypedName] = useState("");
@@ -166,6 +235,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
   const [hasSignature, setHasSignature] = useState(false);
   const embeddedCheckoutContainerRef = useRef<HTMLDivElement | null>(null);
   const embeddedCheckoutInstanceRef = useRef<{ unmount?: () => void; destroy?: () => void } | null>(null);
+  const backHref = useMemo(() => agreementBackHref(), []);
 
   const prepareCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -211,6 +281,16 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
     });
     return () => window.cancelAnimationFrame(rafId);
   }, [loading, sessionError, session, prepareCanvas]);
+
+  useEffect(() => {
+    if (!loading) {
+      setSlowLoading(false);
+      return undefined;
+    }
+    if (typeof window === "undefined") return undefined;
+    const timer = window.setTimeout(() => setSlowLoading(true), AGREEMENT_SLOW_LOAD_MS);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
 
   const getPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -283,7 +363,13 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
     }
 
     setLoading(true);
+    setSlowLoading(false);
     setSessionError("");
+    console.info("[agreement-signer] session_load_started", {
+      route_present: true,
+      token_present: Boolean(token),
+      backend_configured: Boolean(backendBase),
+    });
 
     try {
       const response = await fetch(`${backendBase}/membership-agreements/session`, {
@@ -293,6 +379,11 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
         body: JSON.stringify({ token }),
       });
       const text = await response.text();
+      console.info("[agreement-signer] session_load_response", {
+        ok: response.ok,
+        status: response.status,
+        body_present: Boolean(text),
+      });
       if (!response.ok) {
         throw new Error(extractErrorMessage(text, "Could not load agreement session."));
       }
@@ -309,8 +400,12 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
       if (!sessionPayload) throw new Error("Could not load agreement session.");
 
       const resolvedState = String(sessionPayload.state || "").trim();
+      const agreementId = String(sessionPayload.agreement_id || "").trim();
+      if (!agreementId || !resolvedState) {
+        throw new Error("Agreement session response was incomplete. Please refresh or contact support.");
+      }
       setSession({
-        agreement_id: String(sessionPayload.agreement_id || "").trim(),
+        agreement_id: agreementId,
         state: resolvedState,
         status: String(sessionPayload.status || "").trim(),
         is_current: Boolean(sessionPayload.is_current),
@@ -324,6 +419,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
         billing_option: String(sessionPayload.billing_option || "").trim(),
         auto_renew: Boolean(sessionPayload.auto_renew),
         notice_deadline_days: Number(sessionPayload.notice_deadline_days || 0) || 0,
+        first_role_prepay_selected: resolveFirstRolePrepaySelected(sessionPayload),
         initial_term_start: String(sessionPayload.initial_term_start || "").trim(),
         initial_renewal_date: String(sessionPayload.initial_renewal_date || "").trim(),
         expires_at: String(sessionPayload.expires_at || "").trim(),
@@ -347,6 +443,10 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
     } catch (error) {
       setSession(null);
       setSessionError(error instanceof Error ? error.message : "Could not load agreement session.");
+      console.info("[agreement-signer] session_load_failed", {
+        token_present: Boolean(token),
+        error_name: error instanceof Error ? error.name : "unknown",
+      });
     } finally {
       setLoading(false);
     }
@@ -360,6 +460,9 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
   const isSignableSession = sessionState === "signable";
   const isActivationPendingSession = sessionState === "activation_pending";
   const isActivationCompleteSession = sessionState === "activation_complete";
+  const isAgreementSignedPendingPaymentSetupSession = sessionState === "agreement_signed_pending_payment_setup";
+  const checkoutCanceled = checkoutReturnState === "cancel";
+  const firstRolePrepayCopy = firstRolePrepayAgreementCopy(session?.first_role_prepay_selected ?? null);
 
   const handleSubmit = async () => {
     if (submitBusy) return;
@@ -439,7 +542,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "omit",
-        body: JSON.stringify({ token, embedded: true }),
+        body: JSON.stringify({ token }),
       });
       const text = await response.text();
       const payload = parseJsonSafe(text) as {
@@ -609,14 +712,18 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
               ? "Membership Activation"
               : isActivationCompleteSession
                 ? "Membership Activated"
-                : "Membership Agreement Signature"}
+                : isAgreementSignedPendingPaymentSetupSession
+                  ? "Agreement Signed"
+                  : "Membership Agreement Signature"}
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-[#0A1547]/60">
             {isActivationPendingSession
-              ? "Your agreement is signed. Complete checkout to activate your membership."
+              ? "Your agreement is signed. Continue to secure payment to activate billing and account setup."
               : isActivationCompleteSession
                 ? "Checkout is complete. Continue to account setup if needed."
-                : "Review the agreement draft, then type your name, confirm acceptance, and draw your signature."}
+                : isAgreementSignedPendingPaymentSetupSession
+                  ? "Your agreement is signed. Continue to secure payment to activate billing and account setup."
+                  : "Review the agreement draft, then type your name, confirm acceptance, and draw your signature."}
           </p>
         </div>
 
@@ -625,7 +732,28 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
           style={{ border: "1px solid rgba(10,21,71,0.08)", boxShadow: "0 8px 26px rgba(10,21,71,0.08)" }}
         >
           {loading ? (
-            <p className="text-sm font-semibold text-[#0A1547]/55">Loading agreement session...</p>
+            <div className="rounded-xl border border-[#0A1547]/10 bg-[#F8F9FD] px-4 py-3">
+              <p className="text-sm font-semibold text-[#0A1547]/65">Loading agreement session...</p>
+              {slowLoading ? (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                  <p className="text-xs font-semibold leading-relaxed text-amber-700">
+                    Still loading agreement. Refresh this page, or contact support if it does not continue.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void loadSession();
+                      }}
+                      className={CHECKOUT_BACK_LINK_CLASS}
+                    >
+                      Refresh
+                    </button>
+                    <a href="/support/" className={CHECKOUT_BACK_LINK_CLASS}>Contact support</a>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           ) : sessionError ? (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
               <p className="flex items-start gap-2 text-sm font-semibold text-red-600">
@@ -645,12 +773,17 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
             </div>
           ) : !session ? (
             <p className="text-sm font-semibold text-[#0A1547]/55">No agreement session available.</p>
-          ) : isActivationPendingSession ? (
+          ) : isAgreementSignedPendingPaymentSetupSession ? (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4">
               <p className="flex items-start gap-2 text-sm font-semibold text-emerald-700">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                Agreement signed successfully. Continue to checkout to activate your membership.
+                Your agreement is signed. Continue to secure payment to activate billing and account setup.
               </p>
+              {checkoutCanceled ? (
+                <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                  Checkout was canceled. Your signed agreement is saved, and you can resume secure payment when ready.
+                </p>
+              ) : null}
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-emerald-200 bg-white/70 px-3.5 py-3">
                   <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/70">Client</p>
@@ -663,6 +796,11 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                   <p className="text-[11px] text-emerald-800/75">Billing: {toDisplayText(session.billing_option)}</p>
                 </div>
               </div>
+              {firstRolePrepayCopy ? (
+                <p className="mt-3 rounded-xl border border-emerald-200 bg-white/70 px-3.5 py-3 text-xs font-semibold leading-relaxed text-emerald-800">
+                  {firstRolePrepayCopy}
+                </p>
+              ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2.5">
                 <button
                   type="button"
@@ -676,7 +814,63 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                     cursor: checkoutBusy ? "not-allowed" : "pointer",
                   }}
                 >
-                  {checkoutBusy ? "Opening checkout..." : "Continue to checkout"}
+                  {checkoutBusy ? "Opening checkout..." : "Continue to secure checkout"}
+                </button>
+                {session.executed_pdf_url ? (
+                  <a
+                    href={session.executed_pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full border border-emerald-300 bg-white px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100/70"
+                  >
+                    View signed agreement
+                  </a>
+                ) : null}
+                {checkoutError ? <p className="text-xs font-semibold text-red-500">{checkoutError}</p> : null}
+              </div>
+            </div>
+          ) : isActivationPendingSession ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+              <p className="flex items-start gap-2 text-sm font-semibold text-emerald-700">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                Your agreement is signed. Continue to secure payment to activate billing and account setup.
+              </p>
+              {checkoutCanceled ? (
+                <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                  Checkout was canceled. Your signed agreement is saved, and you can resume secure payment when ready.
+                </p>
+              ) : null}
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-emerald-200 bg-white/70 px-3.5 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/70">Client</p>
+                  <p className="mt-1 text-sm font-bold text-emerald-800">{session.client_legal_name || "—"}</p>
+                  <p className="text-[11px] text-emerald-800/75">{session.dba_trade_name || "No DBA"}</p>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-white/70 px-3.5 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/70">Membership</p>
+                  <p className="mt-1 text-sm font-bold text-emerald-800">{toDisplayText(session.membership_tier)}</p>
+                  <p className="text-[11px] text-emerald-800/75">Billing: {toDisplayText(session.billing_option)}</p>
+                </div>
+              </div>
+              {firstRolePrepayCopy ? (
+                <p className="mt-3 rounded-xl border border-emerald-200 bg-white/70 px-3.5 py-3 text-xs font-semibold leading-relaxed text-emerald-800">
+                  {firstRolePrepayCopy}
+                </p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleContinueToCheckout();
+                  }}
+                  disabled={checkoutBusy}
+                  className="rounded-full px-5 py-2.5 text-sm font-bold text-white transition-all"
+                  style={{
+                    backgroundColor: checkoutBusy ? "rgba(10,21,71,0.25)" : "#A380F6",
+                    cursor: checkoutBusy ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {checkoutBusy ? "Opening checkout..." : "Continue to secure checkout"}
                 </button>
                 {session.executed_pdf_url ? (
                   <a
@@ -700,6 +894,11 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
               <p className="mt-2 text-xs text-emerald-700/90">
                 If you are a new user, continue from your set-password email or refresh your login flow.
               </p>
+              {firstRolePrepayCopy ? (
+                <p className="mt-3 rounded-xl border border-emerald-200 bg-white/70 px-3.5 py-3 text-xs font-semibold leading-relaxed text-emerald-800">
+                  {firstRolePrepayCopy}
+                </p>
+              ) : null}
               {session.executed_pdf_url ? (
                 <div className="mt-3">
                   <a
@@ -737,6 +936,11 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                   <p className="text-[11px] text-[#0A1547]/55">Notice deadline: {session.notice_deadline_days || 30} days</p>
                 </div>
               </div>
+              {firstRolePrepayCopy ? (
+                <p className="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-[#0A1547]/65">
+                  {firstRolePrepayCopy}
+                </p>
+              ) : null}
 
               <div>
                 <p className="mb-2 text-xs font-black uppercase tracking-widest text-[#0A1547]/40">Agreement Preview</p>
@@ -821,6 +1025,12 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
           ) : (
             <p className="text-sm font-semibold text-[#0A1547]/55">This agreement is no longer available.</p>
           )}
+        </div>
+        <div className="flex justify-start">
+          <a href={backHref} className={CHECKOUT_BACK_LINK_CLASS}>
+            <ArrowLeft className="mr-1 mt-0.5 h-3.5 w-3.5" />
+            Back
+          </a>
         </div>
         {embeddedCheckout ? (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6">

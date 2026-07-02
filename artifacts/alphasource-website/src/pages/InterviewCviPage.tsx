@@ -67,9 +67,14 @@ const DAILY_SCRIPT_ID = "alphasource-daily-sdk";
 const DAILY_SCRIPT_SRC = "https://unpkg.com/@daily-co/daily-js";
 const LIVE_STATE_KEY = "alphasource_interview_live_state";
 const STARTUP_REMOTE_TIMEOUT_MS = 12000;
-const SOFT_CLOSE_TEXT = "We are approaching our time limit for this interview. Thank you for your time today. Our session will end momentarily.";
-const SOFT_CLOSE_THRESHOLD_SECONDS = 10;
-const SOFT_CLOSE_END_DELAY_MS = 7000;
+const TIME_WARNING_THRESHOLD_SECONDS = 120;
+const GRACEFUL_WRAP_THRESHOLD_SECONDS = 60;
+const FORCE_END_THRESHOLD_SECONDS = 15;
+const GRACEFUL_FORCE_END_DELAY_MS = 15000;
+const TIME_WARNING_NOTICE = "About 2 minutes remaining. The interviewer will begin wrapping up.";
+const GRACEFUL_WRAP_NOTICE = "Less than 1 minute remaining. The interview is wrapping up.";
+const TIME_WARNING_TEXT = "Time warning: about 2 minutes remain. Stop asking new substantive questions soon and begin wrapping up naturally.";
+const GRACEFUL_WRAP_TEXT = "Time limit wrap-up: stop asking new substantive questions now. Use the final closing line and end the interview.";
 const CLOSING_UTTERANCE_END_DELAY_MS = 5500;
 
 const env = (
@@ -199,14 +204,16 @@ export default function InterviewCviPage() {
   const [finishBusy, setFinishBusy] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [timeNotice, setTimeNotice] = useState("");
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [hasLocalVideo, setHasLocalVideo] = useState(false);
 
   const callRef = useRef<DailyCallObject | null>(null);
   const leavingRef = useRef(false);
   const endTriggeredRef = useRef(false);
-  const softCloseSentRef = useRef(false);
-  const softCloseEndTimerRef = useRef<number | null>(null);
+  const timeWarningSentRef = useRef(false);
+  const gracefulWrapSentRef = useRef(false);
+  const gracefulForceEndTimerRef = useRef<number | null>(null);
   const closeEndTimerRef = useRef<number | null>(null);
   const startupRemoteSeenRef = useRef(false);
   const startupRecoveryAttemptedRef = useRef(false);
@@ -225,9 +232,9 @@ export default function InterviewCviPage() {
   }, []);
 
   const clearAutoEndTimers = useCallback(() => {
-    if (softCloseEndTimerRef.current) {
-      window.clearTimeout(softCloseEndTimerRef.current);
-      softCloseEndTimerRef.current = null;
+    if (gracefulForceEndTimerRef.current) {
+      window.clearTimeout(gracefulForceEndTimerRef.current);
+      gracefulForceEndTimerRef.current = null;
     }
     if (closeEndTimerRef.current) {
       window.clearTimeout(closeEndTimerRef.current);
@@ -307,6 +314,7 @@ export default function InterviewCviPage() {
             conversation_id: conversationId,
             interview_id: interviewId,
             role_token: roleToken,
+            reason,
           }),
         });
         if (!response.ok) {
@@ -322,21 +330,37 @@ export default function InterviewCviPage() {
     }
   }, [clearAutoEndTimers, leaveLiveRoute, session]);
 
-  const sendSoftClose = useCallback(() => {
-    if (softCloseSentRef.current || endTriggeredRef.current) return;
-    softCloseSentRef.current = true;
+  const sendTimeLimitMessage = useCallback((text: string) => {
     try {
       callRef.current?.sendAppMessage?.({
         event_type: "conversation.echo",
         eventType: "conversation.echo",
-        properties: { text: SOFT_CLOSE_TEXT },
+        properties: { text },
       }, "*");
     } catch {}
-    softCloseEndTimerRef.current = window.setTimeout(() => {
-      softCloseEndTimerRef.current = null;
-      void endInterview("time_limit_soft_close");
-    }, SOFT_CLOSE_END_DELAY_MS);
-  }, [endInterview]);
+  }, []);
+
+  const sendTimeWarning = useCallback((remaining: number) => {
+    if (timeWarningSentRef.current || endTriggeredRef.current) return;
+    timeWarningSentRef.current = true;
+    setTimeNotice(TIME_WARNING_NOTICE);
+    sendTimeLimitMessage(TIME_WARNING_TEXT);
+    console.log("[InterviewCviPage] time_warning_sent", { remaining_seconds: remaining });
+  }, [sendTimeLimitMessage]);
+
+  const requestGracefulWrap = useCallback((remaining: number) => {
+    if (gracefulWrapSentRef.current || endTriggeredRef.current) return;
+    gracefulWrapSentRef.current = true;
+    setTimeNotice(GRACEFUL_WRAP_NOTICE);
+    sendTimeLimitMessage(GRACEFUL_WRAP_TEXT);
+    console.log("[InterviewCviPage] graceful_wrap_requested", { remaining_seconds: remaining });
+    if (!gracefulForceEndTimerRef.current) {
+      gracefulForceEndTimerRef.current = window.setTimeout(() => {
+        gracefulForceEndTimerRef.current = null;
+        void endInterview("time_limit_graceful_close");
+      }, GRACEFUL_FORCE_END_DELAY_MS);
+    }
+  }, [endInterview, sendTimeLimitMessage]);
 
   useEffect(() => () => clearAutoEndTimers(), [clearAutoEndTimers]);
 
@@ -540,24 +564,44 @@ export default function InterviewCviPage() {
     const maxMinutes = session?.max_interview_minutes;
     if (!maxMinutes || maxMinutes <= 0) {
       setSecondsRemaining(null);
+      setTimeNotice("");
       return;
     }
 
     startMsRef.current = Date.now();
     let timer: number | null = null;
+    const maxSeconds = maxMinutes * 60;
+    const shouldUseTwoMinuteWarning = maxSeconds > TIME_WARNING_THRESHOLD_SECONDS;
+    const gracefulWrapThreshold =
+      maxSeconds > GRACEFUL_WRAP_THRESHOLD_SECONDS
+        ? GRACEFUL_WRAP_THRESHOLD_SECONDS
+        : maxSeconds > FORCE_END_THRESHOLD_SECONDS + 10
+          ? FORCE_END_THRESHOLD_SECONDS + 10
+          : null;
     const tick = () => {
       const elapsed = Math.floor((Date.now() - startMsRef.current) / 1000);
-      const remaining = Math.max(maxMinutes * 60 - elapsed, 0);
+      const remaining = Math.max(maxSeconds - elapsed, 0);
       setSecondsRemaining(remaining);
-      if (remaining > 0 && remaining <= SOFT_CLOSE_THRESHOLD_SECONDS) {
-        sendSoftClose();
-      }
-      if (remaining <= 0) {
+      if (endTriggeredRef.current) {
         if (timer) {
           window.clearInterval(timer);
           timer = null;
         }
-        void endInterview("time_limit");
+        return;
+      }
+      if (shouldUseTwoMinuteWarning && remaining > 0 && remaining <= TIME_WARNING_THRESHOLD_SECONDS) {
+        sendTimeWarning(remaining);
+      }
+      if (gracefulWrapThreshold != null && remaining > 0 && remaining <= gracefulWrapThreshold) {
+        requestGracefulWrap(remaining);
+      }
+      if (remaining <= FORCE_END_THRESHOLD_SECONDS) {
+        if (timer) {
+          window.clearInterval(timer);
+          timer = null;
+        }
+        console.log("[InterviewCviPage] force_close_triggered", { remaining_seconds: remaining });
+        void endInterview("time_limit_force_close");
       }
     };
 
@@ -566,7 +610,7 @@ export default function InterviewCviPage() {
     return () => {
       if (timer) window.clearInterval(timer);
     };
-  }, [endInterview, sendSoftClose, session?.max_interview_minutes]);
+  }, [endInterview, requestGracefulWrap, sendTimeWarning, session?.max_interview_minutes]);
 
   useEffect(() => {
     if (!backendBase || !session?.interview_id || !session?.role_token) return;
@@ -682,6 +726,12 @@ export default function InterviewCviPage() {
             {timerLabel && (
               <div className={`absolute top-3 right-3 px-3 py-1 rounded-full border text-[11px] font-bold tracking-wide ${timerToneClass}`}>
                 {timerLabel}
+              </div>
+            )}
+
+            {timeNotice && (
+              <div className="absolute top-3 left-3 max-w-[calc(100%-8rem)] px-3 py-2 rounded-xl border border-[#F59E0B]/40 bg-[#FFFBEB]/95 text-[#3A2600] text-[11px] sm:text-xs font-bold shadow-sm pointer-events-none">
+                {timeNotice}
               </div>
             )}
           </div>

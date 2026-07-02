@@ -93,9 +93,9 @@ export default function Navbar() {
     { label: "Home", href: "/" },
     { label: "About", href: "/about" },
     { label: "alphaScreen", href: "/alphascreen" },
-    { label: "How It Works", href: "/#how-it-works" },
+    { label: "How It Works", href: "/alphascreen/how-it-works" },
     { label: "Get in Touch", href: "/#contact" },
-    { label: "Support", href: "/support" },
+    { label: "FAQ", href: "/faq" },
   ];
 
   return (

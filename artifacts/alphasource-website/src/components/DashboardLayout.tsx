@@ -28,9 +28,6 @@ import { useAppearance } from "@/context/AppearanceContext";
 import { useClient, type Client } from "@/context/ClientContext";
 import AppearanceSelector from "@/components/AppearanceSelector";
 
-const env =
-  typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
-
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "alphasource:dashboard_sidebar_collapsed";
 
 function readStoredSidebarCollapsed(): boolean {
@@ -397,7 +394,13 @@ function hasMembersNavAccess(client: Client): boolean {
 
 function hasEntitiesNavAccess(client: Client, isGlobalAdmin: boolean): boolean {
   if (isGlobalAdmin) return true;
-  return normalizeClientRole(client.role) === "super_admin";
+  const isParentScope = !(client.is_child_client === true || client.parent_client_id);
+  const inheritedFromParent = client.inherited === true && Boolean(client.inherited_from_client_id || client.parent_client_id);
+  const canReachParentEntityScope = isParentScope || inheritedFromParent;
+  const permission = client.permissions?.can_manage_members;
+  if (permission === true) return canReachParentEntityScope;
+  if (permission === false) return false;
+  return canReachParentEntityScope && ["manager", "admin", "owner", "super_admin"].includes(normalizeClientRole(client.role));
 }
 
 /* ── Main layout ─────────────────────────────────────────────── */

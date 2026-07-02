@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
+import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
 
 const EASE_OUT = "easeOut" as const;
 
@@ -73,7 +74,16 @@ function HeroSection() {
               transition={{ delay: 0.25, duration: 0.6 }}
               className="text-base text-[#0A1547]/50 leading-relaxed mb-8"
             >
-              A subscription-based AI interview agent that lets you create job roles and conduct automated screening interviews with AI avatars. The platform leverages advanced AI to comprehensively evaluate candidates — with flexible scheduling so candidates can interview anytime, day or night.
+              A membership-based AI interview agent that lets you create job roles and conduct automated screening interviews with AI avatars. The platform leverages advanced AI to comprehensively evaluate candidates — with flexible scheduling so candidates can interview anytime, day or night.
+            </motion.p>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.27, duration: 0.6 }}
+              className="mb-8 text-sm font-semibold text-[#0A1547]/42"
+            >
+              Last updated {PUBLIC_CONTENT_LAST_UPDATED}
             </motion.p>
 
             <motion.div
@@ -83,24 +93,15 @@ function HeroSection() {
               className="flex flex-col sm:flex-row gap-4"
             >
               <a
-                href="#request-demo"
+                href="#how-it-works"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white rounded-full transition-all hover:opacity-90 hover:shadow-lg active:scale-95"
                 style={{ backgroundColor: "#A380F6" }}
-                data-testid="alphascreen-hero-cta"
-                data-analytics-cta="Request a Demo"
-                data-analytics-placement="alphascreen-hero"
-              >
-                Request a Demo
-                <ArrowRight className="w-4 h-4" />
-              </a>
-              <a
-                href="#how-it-works"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-[#0A1547] bg-white border border-[#0A1547]/10 rounded-full transition-all hover:border-[#A380F6] hover:text-[#A380F6] hover:shadow-md active:scale-95"
                 data-testid="alphascreen-how-it-works"
                 data-analytics-cta="See How It Works"
                 data-analytics-placement="alphascreen-hero"
               >
                 See How It Works
+                <ArrowRight className="w-4 h-4" />
               </a>
             </motion.div>
           </div>
@@ -133,7 +134,228 @@ function HeroSection() {
                 playsInline
                 className="w-full block"
               />
+              <div className="flex flex-col gap-3 border-t border-[#0A1547]/8 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-semibold leading-relaxed text-[#0A1547]/55">
+                  Want to see it with your hiring workflow?
+                </p>
+                <a
+                  href="#request-demo"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[#0A1547]/10 bg-[#F8F9FD] px-4 py-2.5 text-sm font-black text-[#0A1547] transition-colors hover:border-[#A380F6] hover:text-[#A380F6]"
+                  data-testid="alphascreen-video-demo-cta"
+                  data-analytics-cta="Request a Demo"
+                  data-analytics-placement="alphascreen-video-card"
+                >
+                  Request demo
+                </a>
+              </div>
             </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DirectAnswerSection() {
+  const answers = [
+    {
+      question: "What is AI candidate screening?",
+      answer:
+        "AI candidate screening uses structured software workflows to collect, organize, and summarize early candidate information so hiring teams can review applicants more consistently.",
+    },
+    {
+      question: "How does alphaScreen help hiring teams?",
+      answer:
+        "alphaScreen helps teams create roles, invite candidates, run structured AI avatar interviews, and review resume plus interview information in one organized workflow.",
+    },
+    {
+      question: "How does structured interview scoring work?",
+      answer:
+        "Scores are based on role-specific criteria and structured interview responses. They give hiring teams a consistent review aid, not an automatic employment decision.",
+    },
+    {
+      question: "Why use alphaScreen instead of only resumes or phone screens?",
+      answer:
+        "Resumes and phone screens can miss context and vary by reviewer. alphaScreen gives each candidate a more comparable first-pass screen before the team spends time on later-stage conversations.",
+    },
+    {
+      question: "How does alphaScreen keep humans in control?",
+      answer:
+        "People configure roles, review candidate reports, decide next steps, and manage hiring communication. AI supports consistency, structure, and summarization.",
+    },
+  ];
+  const relatedLinks = [
+    { label: "How alphaScreen works", href: "/alphascreen/how-it-works" },
+    { label: "Security and data", href: "/alphascreen/security" },
+    { label: "Candidate experience", href: "/alphascreen/candidate-experience" },
+    { label: "Dental groups", href: "/alphascreen/for-dental-groups" },
+    { label: "ROI estimator", href: "/alphascreen/roi" },
+  ];
+
+  return (
+    <section className="bg-[#F8F9FD] py-16 lg:py-20">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={fadeUp}
+          className="mb-8 max-w-3xl"
+        >
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#02ABE0]">
+            Direct answers
+          </p>
+          <h2 className="mt-3 text-3xl font-black leading-tight text-[#0A1547] lg:text-4xl">
+            What hiring teams ask about AI screening
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-[#0A1547]/60">
+            alphaScreen is designed to organize early screening signal, support consistent review, and keep hiring decisions with the people responsible for them.
+          </p>
+        </motion.div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {answers.map((item, index) => (
+            <motion.article
+              key={item.question}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.25 }}
+              variants={fadeUp}
+              custom={index * 0.3}
+              className="rounded-lg border border-[#0A1547]/10 bg-white p-5 shadow-sm"
+            >
+              <h3 className="text-base font-black leading-snug text-[#0A1547]">{item.question}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-[#0A1547]/60">{item.answer}</p>
+            </motion.article>
+          ))}
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a
+            href="/alphascreen/pricing"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0A1547] px-5 py-3 text-sm font-black text-white transition-opacity hover:opacity-90"
+            data-analytics-cta="Compare alphaScreen memberships"
+            data-analytics-placement="alphascreen-direct-answers"
+          >
+            Compare memberships
+            <ArrowRight className="h-4 w-4" />
+          </a>
+          <a
+            href="/faq"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-[#0A1547]/12 bg-white px-5 py-3 text-sm font-black text-[#0A1547] transition-colors hover:border-[#A380F6] hover:text-[#A380F6]"
+            data-analytics-cta="Read alphaScreen FAQ"
+            data-analytics-placement="alphascreen-direct-answers"
+          >
+            Read the FAQ
+          </a>
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          {relatedLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="rounded-full border border-[#0A1547]/10 bg-white px-3 py-2 text-xs font-black text-[#0A1547]/65 transition-colors hover:border-[#A380F6]/45 hover:text-[#A380F6]"
+              data-analytics-cta={link.label}
+              data-analytics-placement="alphascreen-direct-answers"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PricingSignupSection() {
+  const memberships = [
+    {
+      name: "Basic",
+      description: "For teams that want consistent screening for focused hiring needs.",
+      details: "20 interviews per role · 10-minute interviews",
+    },
+    {
+      name: "Pro",
+      description: "For teams with more active roles and higher candidate volume.",
+      details: "30 interviews per role · 12-minute interviews",
+    },
+  ];
+
+  return (
+    <section className="bg-white py-16 lg:py-20">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+            variants={fadeUp}
+          >
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#02ABE0]">PRICING AND SIGNUP</p>
+            <h2 className="mt-3 text-3xl lg:text-4xl font-black text-[#0A1547] leading-tight">
+              Choose the membership that best fits your team.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-[#0A1547]/60">
+              Start with Basic or Pro, then complete agreement review and secure checkout when you are ready. Each membership includes structured AI-assisted interviews, candidate scoring, and on-demand reports for your hiring team.
+            </p>
+            <div className="mt-6">
+              <a
+                href="#request-demo"
+                className="inline-flex items-center gap-2 text-sm font-black text-[#0A1547]/65 underline decoration-[#A380F6]/35 underline-offset-4 transition-colors hover:text-[#A380F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#A380F6]"
+                data-analytics-cta="Talk to Sales"
+                data-analytics-placement="alphascreen-pricing-section"
+              >
+                Talk to sales
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
+            variants={fadeUp}
+            custom={1}
+            className="grid gap-4"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              {memberships.map((item) => (
+                <div key={item.name} className="flex h-full flex-col rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#A380F6]">{item.name}</p>
+                      <p className="mt-2 min-h-[3.5rem] text-sm font-semibold leading-relaxed text-[#0A1547]/60">{item.description}</p>
+                    </div>
+                    <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center text-[#02D99D]">
+                      <CheckCircle className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <div className="mt-auto flex items-start gap-2 pt-5 text-sm font-black leading-snug text-[#0A1547]/70">
+                    <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#02D99D]" />
+                    <span>{item.details}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <a
+              href="/alphascreen/pricing"
+              className="alphascreen-membership-cta group mt-1 block rounded-xl px-5 py-4 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#A380F6]"
+              data-testid="alphascreen-signup-pricing-cta"
+              data-analytics-cta="See Memberships and Pricing"
+              data-analytics-placement="alphascreen-pricing-section"
+            >
+              <span className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  <span className="block text-base font-black tracking-normal">See memberships and pricing</span>
+                  <span className="mt-1 block text-sm font-semibold text-white/65">Compare Basic, Pro, and Enterprise options.</span>
+                </span>
+                <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover:bg-white group-hover:text-[#0A1547]">
+                  <ArrowRight className="h-4 w-4" />
+                </span>
+              </span>
+            </a>
           </motion.div>
         </div>
       </div>
@@ -478,8 +700,10 @@ export default function AlphaScreenPage() {
   return (
     <div>
       <HeroSection />
+      <PricingSignupSection />
       <SmartSection />
       <AboutAlphaScreenSection />
+      <DirectAnswerSection />
       <HowItWorksSection />
       <DemoSection />
     </div>

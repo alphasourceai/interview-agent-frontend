@@ -75,10 +75,13 @@ export default function PrivacyPage() {
 
           <Section number="5" title="COOKIES AND SIMILAR TECHNOLOGIES">
             <p>
-              The current public analytics and lead-capture workflow is designed not to require non-essential advertising cookies, ad pixels, retargeting cookies, cross-site tracking pixels, or session replay.
+              Public marketing pages may use analytics and measurement technologies, including an identity/analytics pixel, to understand traffic patterns, attribution, and marketing performance.
             </p>
             <p>
-              If optional analytics, advertising, or similar technologies are added later, we will update disclosures and consent or opt-out controls where required.
+              alphaScreen candidate interview, admin, and client workflow access do not require public marketing pixels to function. We do not use session replay for this public analytics workflow.
+            </p>
+            <p>
+              We will update disclosures and consent or opt-out controls where required as these technologies change.
             </p>
           </Section>
 

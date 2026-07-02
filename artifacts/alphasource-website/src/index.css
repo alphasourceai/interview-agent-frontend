@@ -324,6 +324,65 @@
   background-clip: text;
 }
 
+.alphascreen-membership-cta {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(163, 128, 246, 0.6);
+  background: #0A1547;
+  box-shadow: 0 18px 42px rgba(10, 21, 71, 0.18), 0 0 0 1px rgba(163, 128, 246, 0.16);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.alphascreen-membership-cta::before {
+  content: "";
+  position: absolute;
+  inset: -85%;
+  z-index: 0;
+  background: conic-gradient(
+    from 0deg,
+    rgba(163, 128, 246, 0) 0deg,
+    rgba(163, 128, 246, 0) 74deg,
+    rgba(163, 128, 246, 0.95) 104deg,
+    rgba(210, 188, 255, 0.72) 128deg,
+    rgba(163, 128, 246, 0) 166deg,
+    rgba(163, 128, 246, 0) 360deg
+  );
+  animation: alphascreen-membership-border 7.5s linear infinite;
+  opacity: 0.9;
+}
+
+.alphascreen-membership-cta::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: 1;
+  border-radius: 0.65rem;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(163, 128, 246, 0.2), transparent 38%),
+    linear-gradient(135deg, #0A1547 0%, #101B58 58%, #07103E 100%);
+  pointer-events: none;
+}
+
+.alphascreen-membership-cta:hover,
+.alphascreen-membership-cta:focus-visible {
+  border-color: rgba(210, 188, 255, 0.85);
+  box-shadow: 0 20px 48px rgba(10, 21, 71, 0.24), 0 0 0 1px rgba(163, 128, 246, 0.34);
+}
+
+@keyframes alphascreen-membership-border {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alphascreen-membership-cta::before {
+    animation: none;
+    background: linear-gradient(135deg, rgba(163, 128, 246, 0.95), rgba(210, 188, 255, 0.35), rgba(163, 128, 246, 0.75));
+  }
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;

@@ -6,6 +6,40 @@ import "./index.css";
 
 initSentry();
 
+function removePublicCheckoutStaticFallback() {
+  if (typeof document === "undefined") return;
+  document.getElementById("public-checkout-static-fallback")?.remove();
+}
+
+function AppCrashFallback() {
+  return (
+    <section className="min-h-screen bg-[#F8F9FD] px-6 py-16 text-[#0A1547]">
+      <div className="mx-auto max-w-xl rounded-lg border border-[#0A1547]/10 bg-white p-6 shadow-sm">
+        <p className="text-sm font-black uppercase tracking-[0.18em] text-[#A380F6]">alphaScreen</p>
+        <h1 className="mt-3 text-2xl font-black leading-tight">We could not load this step.</h1>
+        <p className="mt-3 text-sm font-semibold leading-relaxed text-[#0A1547]/60">
+          Please refresh or contact support.
+        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center rounded-full bg-[#0A1547] px-5 py-2.5 text-sm font-black text-white transition-opacity hover:opacity-90"
+          >
+            Refresh
+          </button>
+          <a
+            href="/support/"
+            className="inline-flex items-center justify-center rounded-full border border-[#0A1547]/12 bg-white px-5 py-2.5 text-sm font-black text-[#0A1547] transition-colors hover:border-[#A380F6] hover:text-[#A380F6]"
+          >
+            Contact support
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 if (import.meta.env.DEV && typeof window !== "undefined") {
   const prevOnError = window.onerror;
   const prevOnUnhandledRejection = window.onunhandledrejection;
@@ -59,7 +93,7 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
 }
 
 const app = isSentryEnabled() ? (
-  <Sentry.ErrorBoundary showDialog={false} fallback={<></>}>
+  <Sentry.ErrorBoundary showDialog={false} fallback={<AppCrashFallback />}>
     <App />
   </Sentry.ErrorBoundary>
 ) : (
@@ -67,3 +101,4 @@ const app = isSentryEnabled() ? (
 );
 
 createRoot(document.getElementById("root")!).render(app);
+window.requestAnimationFrame(removePublicCheckoutStaticFallback);

@@ -5,6 +5,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { PUBLIC_CONTENT_LAST_UPDATED, publicFaqSections } from "@/lib/publicContent";
 
 const EASE_OUT = "easeOut" as const;
 
@@ -16,93 +17,6 @@ const fadeUp = {
     transition: { delay: i * 0.08, duration: 0.5, ease: EASE_OUT },
   }),
 };
-
-const faqSections = [
-  {
-    title: "About alphaSource",
-    items: [
-      {
-        question: "What does alphaSource do?",
-        answer: "alphaSource builds practical AI tools and custom AI workflows for companies that want to reduce repetitive work, improve decision-making, and give their teams more time for the work only people can do.",
-      },
-      {
-        question: "Are you only a hiring technology company?",
-        answer: "No. alphaScreen is one of our core products, but alphaSource is broader than hiring. We build AI-powered solutions for screening, operations, analysis, reporting, workflow support, and custom business needs.",
-      },
-      {
-        question: "What makes alphaSource different?",
-        answer: "We build from real operational experience. Our goal is not to replace human judgment. It is to organize the work, surface better signal, and help leaders act with more confidence.",
-      },
-      {
-        question: "What industries do you serve?",
-        answer: "We started with deep experience in dental operations and people-driven businesses, but our AI tools can be adapted for companies that need better workflows, stronger insight, and less manual effort.",
-      },
-      {
-        question: "Do you build custom AI tools?",
-        answer: "Yes. We work with companies to understand their process, identify where time is being wasted, and build AI tools that fit the way their team actually works.",
-      },
-    ],
-  },
-  {
-    title: "Products and services",
-    items: [
-      {
-        question: "What is alphaScreen?",
-        answer: "alphaScreen is an AI-powered interview and candidate screening platform. It helps teams create roles, screen candidates consistently, capture structured interview insights, and give hiring managers more time to focus on the best-fit candidates.",
-      },
-      {
-        question: "Does alphaScreen make hiring decisions?",
-        answer: "No. alphaScreen supports the hiring process with structured information and consistent screening. Final hiring decisions remain with the employer.",
-      },
-      {
-        question: "Do you offer consulting?",
-        answer: "Yes. Our sister company, alphaSource Consulting, provides consulting specifically for dental companies. Visit www.alphasourceconsulting.com to learn more.",
-      },
-    ],
-  },
-  {
-    title: "Working with alphaSource",
-    items: [
-      {
-        question: "How does a custom AI project start?",
-        answer: "It usually starts with a conversation. We learn where your team is losing time, what decisions need better information, and what workflows could be improved with AI.",
-      },
-      {
-        question: "Do we need to know exactly what we want built?",
-        answer: "No. Many clients know the problem before they know the solution. We can help define the opportunity, shape the workflow, and decide what kind of AI tool makes sense.",
-      },
-      {
-        question: "How long does a rollout take?",
-        answer: "It depends on the complexity of the workflow, the information involved, and the level of customization needed. Smaller tools can move quickly. Larger systems require more planning, testing, and rollout support.",
-      },
-      {
-        question: "Can alphaSource connect with our current tools?",
-        answer: "Often, yes. The best approach depends on the tools your team uses, the access available, permissions, and security requirements. We evaluate this during discovery.",
-      },
-      {
-        question: "How do you handle privacy and sensitive information?",
-        answer: "We design AI workflows with privacy, security, and appropriate access controls in mind. The exact approach depends on the project, the information involved, and the systems involved.",
-      },
-    ],
-  },
-  {
-    title: "Getting started",
-    items: [
-      {
-        question: "How do we contact alphaSource?",
-        answer: "You can use the contact form on the website or email info@alphasourceai.com.",
-      },
-      {
-        question: "Can we request a demo?",
-        answer: "Yes. Use the request demo or contact form and tell us what you are interested in. We will follow up to understand your needs and recommend the right next step.",
-      },
-      {
-        question: "What should we include in our message?",
-        answer: "Tell us what kind of problem you are trying to solve, what team or workflow it affects, and whether you are interested in alphaScreen, consulting, analysis tools, or a custom AI solution.",
-      },
-    ],
-  },
-];
 
 const releaseNotes = [
   {
@@ -184,6 +98,17 @@ const releaseNotes = [
 ];
 
 export default function SupportPage() {
+  const resourceLinks = [
+    { label: "Explore alphaScreen", href: "/alphascreen" },
+    { label: "Compare memberships", href: "/alphascreen/pricing" },
+    { label: "How alphaScreen works", href: "/alphascreen/how-it-works" },
+    { label: "Security and data", href: "/alphascreen/security" },
+    { label: "Candidate experience", href: "/alphascreen/candidate-experience" },
+    { label: "ROI estimator", href: "/alphascreen/roi" },
+    { label: "Read the Privacy Policy", href: "/privacy" },
+    { label: "Request a demo", href: "/#contact" },
+  ];
+
   return (
     <div className="min-h-screen bg-[#F8F9FD]">
       <div className="relative pt-32 pb-16 overflow-hidden">
@@ -195,13 +120,16 @@ export default function SupportPage() {
             variants={fadeUp}
           >
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#A380F6]/30 text-sm font-medium text-[#A380F6] mb-5 shadow-sm">
-              Support
+              FAQ
             </div>
             <h1 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight mb-4">
-              Support
+              FAQ and Support
             </h1>
             <p className="text-base lg:text-lg text-[#0A1547]/60 leading-relaxed max-w-3xl">
-              Product guidance, common questions, and public release notes for alphaSource products, starting with alphaScreen.
+              Direct answers, product guidance, and public release notes for alphaSource AI products, starting with alphaScreen.
+            </p>
+            <p className="mt-4 text-sm font-semibold text-[#0A1547]/45">
+              Last updated {PUBLIC_CONTENT_LAST_UPDATED}
             </p>
           </motion.div>
         </div>
@@ -219,22 +147,30 @@ export default function SupportPage() {
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.24em] text-[#A380F6] mb-3">
-                alphaScreen support
+                alphaScreen FAQ
               </p>
               <h2 className="text-2xl font-black text-[#0A1547] mb-3">
-                Help for structured candidate screening
+                Answers for structured candidate screening
               </h2>
               <p className="text-sm text-[#0A1547]/65 leading-relaxed">
-                Use this hub to understand alphaScreen at a high level, review common questions, and follow customer-facing product updates.
+                Use this hub to understand alphaScreen, compare membership options, review candidate workflow basics, and find the public privacy and contact links that support the buying process.
               </p>
             </div>
             <div className="rounded-2xl border border-[#A380F6]/20 bg-[#F8F9FD] p-5">
-              <h3 className="text-sm font-black text-[#0A1547] mb-3">Available here</h3>
-              <ul className="space-y-2 text-sm text-[#0A1547]/65">
-                <li>• Product overview and common questions</li>
-                <li>• Public alphaScreen release history</li>
-                <li>• Visual examples coming soon</li>
-              </ul>
+              <h3 className="text-sm font-black text-[#0A1547] mb-3">Related public pages</h3>
+              <div className="grid gap-2">
+                {resourceLinks.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="rounded-lg border border-[#0A1547]/8 bg-white px-3 py-2 text-sm font-black text-[#0A1547]/70 transition-colors hover:border-[#A380F6]/45 hover:text-[#A380F6]"
+                    data-analytics-cta={link.label}
+                    data-analytics-placement="faq-resource-links"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
         </motion.section>
@@ -251,18 +187,19 @@ export default function SupportPage() {
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[#A380F6] mb-3">
               Common questions
             </p>
-            <h2 className="text-2xl font-black text-[#0A1547] mb-3">Public FAQ</h2>
+            <h2 className="text-2xl font-black text-[#0A1547] mb-3">Public alphaScreen FAQ</h2>
             <p className="text-sm text-[#0A1547]/60 leading-relaxed max-w-3xl">
-              Answers to common questions about alphaSource, alphaScreen, and getting started.
+              Short, extractable answers about alphaScreen, candidate review, memberships, security, and human decision control.
             </p>
           </div>
           <div className="space-y-9">
-            {faqSections.map((section, sectionIndex) => (
+            {publicFaqSections.map((section, sectionIndex) => (
               <section
                 key={section.title}
-                className={sectionIndex === faqSections.length - 1 ? "" : "pb-9 border-b border-gray-100"}
+                className={sectionIndex === publicFaqSections.length - 1 ? "" : "pb-9 border-b border-gray-100"}
               >
                 <h3 className="text-lg font-black text-[#0A1547] mb-4">{section.title}</h3>
+                <p className="mb-4 text-sm leading-relaxed text-[#0A1547]/55">{section.intro}</p>
                 <Accordion type="single" collapsible className="space-y-2">
                   {section.items.map((item) => (
                     <AccordionItem

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Archive, Building2, Check, Download, Edit2, Plus, Save, Upload, X } from "lucide-react";
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useClient } from "@/context/ClientContext";
+import { useClient, type Client } from "@/context/ClientContext";
 import { supabase } from "@/lib/supabaseClient";
 
 interface ClientEntity {
@@ -165,6 +165,17 @@ const backendBase = firstBase(
 function normalizeRole(role: unknown): string {
   const normalized = String(role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   return normalized === "superadmin" ? "super_admin" : normalized;
+}
+
+function canManageEntityScope(client: Client, isGlobalAdmin: boolean): boolean {
+  if (isGlobalAdmin) return true;
+  const isParentScope = !(client.is_child_client === true || client.parent_client_id);
+  const inheritedFromParent = client.inherited === true && Boolean(client.inherited_from_client_id || client.parent_client_id);
+  const canReachParentEntityScope = isParentScope || inheritedFromParent;
+  const permission = client.permissions?.can_manage_members;
+  if (permission === true) return canReachParentEntityScope;
+  if (permission === false) return false;
+  return canReachParentEntityScope && ["manager", "admin", "owner", "super_admin"].includes(normalizeRole(client.role));
 }
 
 function extractErrorMessage(text: string, fallback: string): string {
@@ -449,7 +460,7 @@ export default function EntitiesPage() {
     refreshClients,
   } = useClient();
 
-  const canManageEntities = isGlobalAdmin || normalizeRole(selectedClient.role) === "super_admin";
+  const canManageEntities = canManageEntityScope(selectedClient, isGlobalAdmin);
   const [parent, setParent] = useState<ClientEntity | null>(null);
   const [entities, setEntities] = useState<ClientEntity[]>([]);
   const [loading, setLoading] = useState(false);

@@ -256,6 +256,7 @@ export default function BillingPage() {
   )
     .trim()
     .toLowerCase();
+  const billingClientId = String(selectedClient.billing_client_id || selectedClientId || "").trim();
   const billingPermissions = selectedClient.permissions;
   const hasExplicitBillingPermissions =
     typeof billingPermissions?.can_view_legal_billing === "boolean" ||
@@ -313,7 +314,7 @@ export default function BillingPage() {
         setBillingLoading(false);
         return;
       }
-      if (!selectedClientId) {
+      if (!billingClientId) {
         if (!alive) return;
         setBillingSummary(null);
         setBillingError("");
@@ -340,7 +341,7 @@ export default function BillingPage() {
         if (!token) throw new Error("Missing session token.");
 
         const response = await fetch(
-          `${backendBase}/clients/billing/summary?client_id=${encodeURIComponent(selectedClientId)}`,
+          `${backendBase}/clients/billing/summary?client_id=${encodeURIComponent(billingClientId)}`,
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -395,7 +396,7 @@ export default function BillingPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError, billingReloadNonce, canViewLegalBilling]);
+  }, [billingClientId, clientLoading, clientError, billingReloadNonce, canViewLegalBilling]);
 
   useEffect(() => {
     let alive = true;
@@ -416,7 +417,7 @@ export default function BillingPage() {
         setLatestAgreementLoading(false);
         return;
       }
-      if (!selectedClientId || selectedClientId === "all") {
+      if (!billingClientId || billingClientId === "all") {
         if (!alive) return;
         setLatestAgreement(null);
         setLatestAgreementError("");
@@ -443,7 +444,7 @@ export default function BillingPage() {
         if (!token) throw new Error("Missing session token.");
 
         const response = await fetch(
-          `${backendBase}/membership-agreements/latest-signed?client_id=${encodeURIComponent(selectedClientId)}`,
+          `${backendBase}/membership-agreements/latest-signed?client_id=${encodeURIComponent(billingClientId)}`,
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -492,7 +493,7 @@ export default function BillingPage() {
     return () => {
       alive = false;
     };
-  }, [selectedClientId, clientLoading, clientError, billingReloadNonce, canViewLegalBilling]);
+  }, [billingClientId, clientLoading, clientError, billingReloadNonce, canViewLegalBilling]);
 
   useEffect(() => {
     let alive = true;
@@ -755,7 +756,7 @@ export default function BillingPage() {
   };
 
   const openBillingPortal = async () => {
-    if (!canViewLegalBilling || !selectedClientId || portalBusy) return;
+    if (!canViewLegalBilling || !billingClientId || portalBusy) return;
     setActionNotice(null);
     setPortalBusy(true);
     try {
@@ -769,7 +770,7 @@ export default function BillingPage() {
         },
         credentials: "omit",
         body: JSON.stringify({
-          client_id: selectedClientId,
+          client_id: billingClientId,
           tab: "billing",
         }),
       });
@@ -852,13 +853,13 @@ export default function BillingPage() {
   };
 
   const openLatestSignedAgreement = async () => {
-    if (!canViewLegalBilling || !selectedClientId || selectedClientId === "all") return;
+    if (!canViewLegalBilling || !billingClientId || billingClientId === "all") return;
     try {
       if (!backendBase) throw new Error("Missing backend base URL configuration.");
       setLatestAgreementError("");
       const token = await getSessionToken();
       const response = await fetch(
-        `${backendBase}/membership-agreements/latest-signed-url?client_id=${encodeURIComponent(selectedClientId)}`,
+        `${backendBase}/membership-agreements/latest-signed-url?client_id=${encodeURIComponent(billingClientId)}`,
         {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
@@ -1224,7 +1225,7 @@ export default function BillingPage() {
           <button
             type="button"
             onClick={() => { void openBillingPortal(); }}
-            disabled={!selectedClientId || portalBusy || billingSummary?.has_stripe_customer === false}
+            disabled={!billingClientId || portalBusy || billingSummary?.has_stripe_customer === false}
             className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white rounded-full transition-all hover:opacity-90 active:scale-[0.97] flex-shrink-0"
             style={{ backgroundColor: "#A380F6" }}
           >
