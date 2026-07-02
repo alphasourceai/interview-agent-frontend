@@ -36,6 +36,7 @@ const navLinks = [
   ["For Dental Groups", "/alphascreen/for-dental-groups"],
   ["ROI", "/alphascreen/roi"],
   ["FAQ", "/faq"],
+  ["Support", "/support"],
   ["Pricing / Get Started", "/alphascreen/pricing"],
   ["Contact", "/#contact"],
 ];
@@ -48,6 +49,7 @@ const footerLinks = [
   ["For Dental Groups", "/alphascreen/for-dental-groups"],
   ["ROI", "/alphascreen/roi"],
   ["FAQ", "/faq"],
+  ["Support", "/support"],
   ["Privacy", "/privacy"],
   ["Terms", "/terms"],
 ];
@@ -69,9 +71,14 @@ const faqItems = [
       "alphaScreen is for employers and hiring teams that want a more consistent first-pass screening workflow before later-stage interviews and final hiring decisions.",
   },
   {
-    question: "Is alphaScreen designed for dental groups?",
+    question: "Who makes final hiring decisions?",
     answer:
-      "alphaScreen is built for structured hiring teams broadly and is a strong fit for dental groups, DSOs, and multi-location operators that need consistent screening across practices or entities.",
+      "Employers make final hiring decisions. alphaScreen organizes screening information and reports for review, but it does not make automatic employment decisions.",
+  },
+  {
+    question: "Does alphaScreen replace recruiters or hiring managers?",
+    answer:
+      "No. alphaScreen supports early screening and review, but recruiters and hiring managers remain responsible for communication, accommodations, next steps, and final decisions.",
   },
   {
     question: "How does pricing work?",
@@ -84,29 +91,24 @@ const faqItems = [
       "Basic includes 20 interviews per role with a 10-minute interview cap. Pro includes 30 interviews per role with a 12-minute interview cap. Additional interviews are listed publicly at $30 for Basic and $35 for Pro.",
   },
   {
+    question: "How do billing and role fees work?",
+    answer:
+      "The membership fee covers platform access for the selected cadence. Role fees are charged when paid roles are opened, and additional interviews are billed only when extra interview capacity is needed for a role.",
+  },
+  {
     question: "What is first-role prepay?",
     answer:
       "New self-serve buyers can optionally prepay the first role during signup at a one-time 10% discount. The prepaid first role is used when the first paid role is opened under the same billing account.",
   },
   {
-    question: "Who makes the final hiring decision?",
+    question: "How do I get help during setup?",
     answer:
-      "The employer makes final hiring decisions. alphaScreen organizes screening information and reports for review, but it does not make automatic employment decisions.",
+      "Use the public support page or contact alphaSource at info@alphasourceai.com with the buyer email, company name, and a short description of the setup issue.",
   },
   {
-    question: "How does alphaScreen protect candidate data?",
+    question: "How are candidate links sent and managed?",
     answer:
-      "alphaScreen is designed around authenticated access, role-based permissions, controlled file and report access, and privacy-conscious workflows for candidate and client information.",
-  },
-  {
-    question: "Does alphaScreen support accommodations?",
-    answer:
-      "Accommodation requests remain part of the employer's hiring process. alphaScreen supports controlled workflows and human review so candidate needs can be routed appropriately.",
-  },
-  {
-    question: "Can managers use alphaScreen across multiple locations or entities?",
-    answer:
-      "Authorized parent-level managers can work across assigned client or entity scopes. Access depends on the membership account structure and role permissions configured for that user.",
+      "Hiring teams create roles and invite candidates through role-specific screening links or dashboard workflows. Teams should verify candidate email addresses and manage communication consistently with their hiring process.",
   },
   {
     question: "What happens after a candidate completes an interview?",
@@ -114,19 +116,72 @@ const faqItems = [
       "The hiring team can review the candidate's available resume, interview responses, score context, and report information before choosing the next step.",
   },
   {
-    question: "Does alphaScreen replace recruiters or hiring managers?",
-    answer:
-      "No. alphaScreen helps structure early screening work, but recruiters and hiring managers remain responsible for communication, review, accommodations, and final decisions.",
-  },
-  {
     question: "How are candidate reports used?",
     answer:
       "Candidate reports are review aids for authorized hiring team members. They help organize screening information so teams can compare candidates more consistently.",
   },
   {
+    question: "Does alphaScreen support accommodations?",
+    answer:
+      "Accommodation requests remain part of the employer's hiring process. alphaScreen supports controlled workflows and human review so candidate needs can be routed appropriately.",
+  },
+  {
+    question: "How does alphaScreen protect candidate data?",
+    answer:
+      "alphaScreen is designed around authenticated access, role-based permissions, controlled file and report access, and privacy-conscious workflows for candidate and client information.",
+  },
+  {
     question: "How does alphaScreen handle automation and human review?",
     answer:
       "alphaScreen uses automation to collect, organize, score, and summarize screening information while keeping role setup, candidate review, and hiring decisions with people.",
+  },
+  {
+    question: "Is alphaScreen designed for dental groups?",
+    answer:
+      "alphaScreen is built for structured hiring teams broadly and is a strong fit for dental groups, DSOs, and multi-location operators that need consistent screening across practices or entities.",
+  },
+  {
+    question: "Can managers use alphaScreen across multiple locations or entities?",
+    answer:
+      "Authorized parent-level managers can work across assigned client or entity scopes. Access depends on the membership account structure and role permissions configured for that user.",
+  },
+  {
+    question: "How does alphaScreen evaluate candidates?",
+    answer:
+      "alphaScreen combines role criteria, resume information, structured interview responses, and available interview signals into organized reports and scores. The output is designed to help hiring teams review candidates more consistently, not to make final hiring decisions automatically.",
+  },
+];
+
+const supportQuestions = [
+  {
+    question: "How do I get help during alphaScreen setup?",
+    answer:
+      "Contact alphaSource at info@alphasourceai.com with your company name, buyer email, and a brief description of the setup issue.",
+  },
+  {
+    question: "What should I do if the account or password setup email is missing?",
+    answer:
+      "Check spam or junk first. If it still is not available, contact support with the buyer email and company name so alphaSource can review the setup status.",
+  },
+  {
+    question: "How do I get help with membership or billing questions?",
+    answer:
+      "Use the support contact with your company name and buyer email. Billing and agreement details are handled through authorized account and support workflows.",
+  },
+  {
+    question: "What if first-role prepay does not appear when opening the first role?",
+    answer:
+      "Contact support before opening another paid role. Include the buyer email, company name, and whether first-role prepay was selected during signup.",
+  },
+  {
+    question: "What should I include when reporting candidate link issues?",
+    answer:
+      "Include the role name, candidate email if relevant, what the candidate saw, and whether the candidate checked browser permissions or retried the link.",
+  },
+  {
+    question: "What if the agreement or checkout step gets stuck?",
+    answer:
+      "Refresh once and use the original buyer email flow if available. If the issue continues, contact support with the buyer email and approximate signup time.",
   },
 ];
 
@@ -213,18 +268,39 @@ const pricingSchema = {
   ],
 };
 
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: faqItems.map((item) => ({
-    "@type": "Question",
-    name: item.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: item.answer,
+function faqPageSchema(items) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+}
+
+const faqSchema = faqPageSchema(faqItems);
+const supportFaqSchema = faqPageSchema(supportQuestions);
+
+function publicWebPageSchema(route, name, description) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name,
+    description,
+    url: routeUrl(route),
+    isPartOf: websiteSchema,
+    publisher: {
+      "@type": "Organization",
+      name: "alphaSource AI",
+      url: `${SITE_URL}/`,
     },
-  })),
-};
+  };
+}
 
 const routeContent = {
   "/": {
@@ -292,8 +368,8 @@ const routeContent = {
       ]),
     ],
   },
-  "/faq": faqRoute("FAQ"),
-  "/support": faqRoute("Support"),
+  "/faq": faqRoute(),
+  "/support": supportRoute(),
   "/alphascreen": {
     title: "alphaScreen | AI Candidate Screening and Interview Analysis",
     description:
@@ -567,16 +643,15 @@ writeStaticRoutingFile();
 
 console.log(`Prerendered ${publicRoutes.length} public route HTML snapshots.`);
 
-function faqRoute(label) {
-  const path = label === "Support" ? "/support" : "/faq";
+function faqRoute() {
   return {
-    title: label === "Support" ? "alphaSource AI Support | alphaScreen FAQ and Release Notes" : "alphaSource AI FAQ | alphaScreen Questions and Support",
+    title: "alphaScreen FAQ | Pricing, Security, Candidate Links, and Human Review",
     description:
-      "Answers to common questions about alphaSource AI, alphaScreen, candidate screening workflows, pricing, security, and getting started.",
-    eyebrow: label,
-    h1: label === "Support" ? "alphaScreen FAQ and support." : "alphaScreen frequently asked questions.",
+      "Read common alphaScreen questions about memberships, pricing, first-role prepay, candidate links, candidate reports, security, accommodations, and human hiring decisions.",
+    eyebrow: "alphaScreen FAQ",
+    h1: "alphaScreen frequently asked questions",
     intro:
-      "Direct answers about alphaScreen, candidate screening workflows, dental groups, membership pricing, first-role prepay, security, and human review.",
+      "Clear answers about alphaScreen memberships, pricing, first-role prepay, candidate links, security, human review, and setup support.",
     sections: [
       {
         heading: "Common alphaScreen questions",
@@ -594,15 +669,74 @@ function faqRoute(label) {
       ["/alphascreen/candidate-experience", "Candidate experience"],
       ["/alphascreen/for-dental-groups", "For dental groups"],
       ["/alphascreen/roi", "ROI estimator"],
+      ["/support", "Support"],
     ],
     schemas: [
       organizationSchema,
       websiteSchema,
       faqSchema,
-      webPageSchema(path, label === "Support" ? "alphaSource AI Support" : "alphaSource AI FAQ", "alphaScreen public FAQ and support answers."),
+      publicWebPageSchema("/faq", "alphaScreen Frequently Asked Questions", "Public alphaScreen FAQ covering pricing, memberships, first-role prepay, candidate screening, security, accommodations, and human review."),
       breadcrumbSchema([
         ["Home", "/"],
-        [label, path],
+        ["FAQ", "/faq"],
+      ]),
+    ],
+  };
+}
+
+function supportRoute() {
+  return {
+    title: "alphaScreen Support | Setup, Billing, Candidate Links, and Recovery",
+    description:
+      "Get alphaScreen public support guidance for account setup, memberships, billing, first-role prepay, role creation, candidate links, agreement recovery, and security questions.",
+    eyebrow: "alphaScreen Support",
+    h1: "alphaScreen support and setup help",
+    intro:
+      "Public guidance for setup help, account access, memberships, billing, first-role prepay, role creation, candidate links, agreement recovery, and support contact.",
+    sections: [
+      section("Contact support", [
+        "Email info@alphasourceai.com with your company name, buyer email, role name if relevant, and a short description of the issue. Do not send passwords, setup tokens, or private candidate details unless support specifically requests them through an approved channel.",
+      ]),
+      section("Setup help", [
+        "Use support when the buyer cannot finish account setup, does not know the next step after checkout, or needs help understanding the first role workflow.",
+      ]),
+      section("Account and password setup", [
+        "If a setup email does not arrive, check spam or junk first, then contact alphaSource with the buyer email and company name.",
+      ]),
+      section("Memberships, billing, and first-role prepay", [
+        "Support can help explain membership cadence, role fees, additional interviews, and first-role prepay status. Billing access remains limited to authorized account users.",
+      ]),
+      section("Role creation and candidate links", [
+        "For role setup or candidate link issues, include the role name, candidate email if relevant, and a short description of the problem so support can triage the workflow.",
+      ]),
+      section("Agreement and checkout recovery", [
+        "If agreement signing or checkout is interrupted, return to the original buyer email flow when possible or contact support with the buyer email and approximate signup time.",
+      ]),
+      section("Security and privacy questions", [
+        "Use the public security and privacy pages for high-level review. Specific legal, privacy, or security questions can be routed to alphaSource support before purchase.",
+      ]),
+      {
+        heading: "Common setup and recovery questions",
+        paragraphs: [
+          "These answers are for buyer and account setup support. Product and workflow questions are covered in the main FAQ.",
+        ],
+        qa: supportQuestions,
+      },
+    ],
+    links: [
+      ["/faq", "Read FAQ"],
+      ["/alphascreen/pricing", "Pricing / Get Started"],
+      ["/alphascreen/security", "Security overview"],
+      ["/alphascreen", "alphaScreen overview"],
+    ],
+    schemas: [
+      organizationSchema,
+      websiteSchema,
+      supportFaqSchema,
+      publicWebPageSchema("/support", "alphaScreen Support", "Public alphaScreen support guidance for setup, account access, memberships, billing, candidate links, and agreement recovery."),
+      breadcrumbSchema([
+        ["Home", "/"],
+        ["Support", "/support"],
       ]),
     ],
   };

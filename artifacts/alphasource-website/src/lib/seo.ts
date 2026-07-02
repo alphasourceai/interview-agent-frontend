@@ -1,5 +1,5 @@
 import { getPublicSiteBase } from "@/lib/urlConfig";
-import { publicFaqItems } from "@/lib/publicContent";
+import { publicFaqItems, publicSupportQuestions, type PublicFaqItem } from "@/lib/publicContent";
 
 type JsonLdValue = Record<string, unknown> | Array<Record<string, unknown>>;
 
@@ -194,18 +194,39 @@ const ALPHASCREEN_PRICING_SCHEMA = {
   offers: PRICING_OFFERS,
 };
 
-const FAQ_SCHEMA = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: publicFaqItems.map((item) => ({
-    "@type": "Question",
-    name: item.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: item.answer,
+function faqPageSchema(items: PublicFaqItem[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+}
+
+const FAQ_SCHEMA = faqPageSchema(publicFaqItems);
+const SUPPORT_FAQ_SCHEMA = faqPageSchema(publicSupportQuestions);
+
+function publicWebPageSchema(path: string, name: string, description: string): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name,
+    description,
+    url: routeUrl(path),
+    isPartOf: WEBSITE_SCHEMA,
+    publisher: {
+      "@type": "Organization",
+      name: "alphaSource AI",
+      url: `${SITE_URL}/`,
     },
-  })),
-};
+  };
+}
 
 function alphaScreenWebPageSchema(path: string, name: string, description: string): Record<string, unknown> {
   return {
@@ -362,12 +383,17 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
     path: "/about",
   },
   "/support": {
-    title: "alphaSource AI Support | alphaScreen FAQ and Release Notes",
+    title: "alphaScreen Support | Setup, Billing, Candidate Links, and Recovery",
     description:
-      "Find public support information, alphaScreen FAQs, release notes, and guidance for getting started with alphaSource AI.",
+      "Get alphaScreen public support guidance for account setup, memberships, billing, first-role prepay, role creation, candidate links, agreement recovery, and security questions.",
     path: "/support",
     jsonLd: [
-      FAQ_SCHEMA,
+      SUPPORT_FAQ_SCHEMA,
+      publicWebPageSchema(
+        "/support",
+        "alphaScreen Support",
+        "Public alphaScreen support guidance for setup, account access, memberships, billing, candidate links, and agreement recovery.",
+      ),
       breadcrumbSchema([
         { name: "Home", path: "/" },
         { name: "Support", path: "/support" },
@@ -375,12 +401,17 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
     ],
   },
   "/faq": {
-    title: "alphaSource AI FAQ | alphaScreen Questions and Support",
+    title: "alphaScreen FAQ | Pricing, Security, Candidate Links, and Human Review",
     description:
-      "Answers to common questions about alphaSource AI, alphaScreen, candidate screening workflows, and getting started.",
+      "Read common alphaScreen questions about memberships, pricing, first-role prepay, candidate links, candidate reports, security, accommodations, and human hiring decisions.",
     path: "/faq",
     jsonLd: [
       FAQ_SCHEMA,
+      publicWebPageSchema(
+        "/faq",
+        "alphaScreen Frequently Asked Questions",
+        "Public alphaScreen FAQ covering pricing, memberships, first-role prepay, candidate screening, security, accommodations, and human review.",
+      ),
       breadcrumbSchema([
         { name: "Home", path: "/" },
         { name: "FAQ", path: "/faq" },

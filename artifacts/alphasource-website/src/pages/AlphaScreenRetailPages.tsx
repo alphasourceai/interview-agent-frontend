@@ -37,6 +37,7 @@ const alphaScreenLinks = [
   { label: "Dental groups", href: "/alphascreen/for-dental-groups" },
   { label: "ROI estimator", href: "/alphascreen/roi" },
   { label: "FAQ", href: "/faq" },
+  { label: "Support", href: "/support" },
 ];
 
 const pricing = {

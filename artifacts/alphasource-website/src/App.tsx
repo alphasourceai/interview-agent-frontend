@@ -27,7 +27,8 @@ import {
 import CheckoutSubscriptionSuccessPage from "@/pages/CheckoutSubscriptionSuccessPage";
 import PasswordSetupPreviewPage from "@/pages/PasswordSetupPreviewPage";
 import AboutPage from "@/pages/AboutPage";
-import PublicSupportPage from "@/pages/FaqPage";
+import FaqPage from "@/pages/FaqPage";
+import PublicSupportPage from "@/pages/SupportPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import CandidateTermsPage from "@/pages/CandidateTermsPage";
@@ -588,8 +589,10 @@ function Router() {
           <Route path="/alphascreen/roi" component={AlphaScreenRoiPage} />
           <Route path="/alphascreen" component={AlphaScreenPage} />
           <Route path="/about"       component={AboutPage} />
+          <Route path="/support/"    component={PublicSupportPage} />
           <Route path="/support"     component={PublicSupportPage} />
-          <Route path="/faq"         component={PublicSupportPage} />
+          <Route path="/faq/"        component={FaqPage} />
+          <Route path="/faq"         component={FaqPage} />
           <Route path="/privacy"     component={PrivacyPage} />
           <Route path="/terms"       component={TermsPage} />
           <Route component={NotFound} />

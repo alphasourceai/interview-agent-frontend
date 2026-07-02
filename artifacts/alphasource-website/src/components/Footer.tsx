@@ -131,6 +131,7 @@ export default function Footer() {
                 { label: "Dental Groups", href: "/alphascreen/for-dental-groups" },
                 { label: "ROI Estimator", href: "/alphascreen/roi" },
                 { label: "FAQ",          href: "/faq" },
+                { label: "Support",      href: "/support" },
               ].map((link) => (
                 <li key={link.label}>
                   <a

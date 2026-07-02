@@ -1554,6 +1554,7 @@ export default function AlphaScreenPricingPage() {
               ["Candidate experience", "/alphascreen/candidate-experience"],
               ["Dental groups", "/alphascreen/for-dental-groups"],
               ["ROI estimator", "/alphascreen/roi"],
+              ["Support", "/support"],
             ].map(([label, href]) => (
               <a
                 key={href}
