@@ -93,15 +93,24 @@ function HeroSection() {
               className="flex flex-col sm:flex-row gap-4"
             >
               <a
-                href="#how-it-works"
+                href="/alphascreen/pricing"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white rounded-full transition-all hover:opacity-90 hover:shadow-lg active:scale-95"
                 style={{ backgroundColor: "#A380F6" }}
-                data-testid="alphascreen-how-it-works"
-                data-analytics-cta="See How It Works"
+                data-testid="alphascreen-view-pricing"
+                data-analytics-cta="View Pricing"
                 data-analytics-placement="alphascreen-hero"
               >
-                See How It Works
+                View pricing
                 <ArrowRight className="w-4 h-4" />
+              </a>
+              <a
+                href="#how-it-works"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[#0A1547]/12 bg-white px-6 py-3.5 text-base font-semibold text-[#0A1547] transition-all hover:border-[#A380F6] hover:text-[#A380F6] hover:shadow-sm active:scale-95"
+                data-testid="alphascreen-how-it-works"
+                data-analytics-cta="See how it works"
+                data-analytics-placement="alphascreen-hero"
+              >
+                See how it works
               </a>
             </motion.div>
           </div>

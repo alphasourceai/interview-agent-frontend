@@ -1,6 +1,16 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { Upload, FileText, Trash2, Check, ArrowRight, ChevronRight } from "lucide-react";
+import { Upload, FileText, Trash2, Check, ArrowRight, ChevronRight, ChevronDown } from "lucide-react";
+import {
+  candidatePhoneCountries,
+  getCandidatePhoneError,
+  getCandidatePhoneHelperText,
+  getCandidatePhonePlaceholder,
+  isValidCandidatePhone,
+  normalizeCandidatePhone,
+  normalizeCandidatePhoneCountry,
+  type CandidatePhoneCountry,
+} from "../lib/candidatePhone";
 
 /* ── Checklist copy (verbatim) ───────────────────────────────────── */
 const CHECKLIST = [
@@ -82,9 +92,9 @@ const inputCls =
   "w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm " +
   "placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/20 " +
   "focus:border-[#A380F6] transition-all";
+const selectCls = `${inputCls} h-[42px] appearance-none pr-10 leading-5`;
 
 const errorCls = "text-red-500 text-[10px] mt-1 font-semibold";
-const isValidPhone = (value: string) => /^(\d{10}|\(\d{3}\)\s?\d{3}-\d{4}|\d{3}-\d{3}-\d{4}|\d{3}\.\d{3}\.\d{4})$/.test(String(value || "").trim());
 const isValidResumeFile = (file: File | null | undefined) =>
   Boolean(file && /\.(pdf|doc|docx)$/i.test(String(file.name || "")));
 type DevicePreferences = {
@@ -133,7 +143,7 @@ function readRoleToken(): string {
   if (typeof window === "undefined") return "";
   try {
     const path = String(window.location.pathname || "");
-    const pathMatch = path.match(/^\/interview\/([^/?#]+)/);
+    const pathMatch = path.match(/^\/(?:interview|interview-access|interview-host)\/([^/?#]+)/);
     if (pathMatch?.[1]) return decodeURIComponent(pathMatch[1]).trim();
 
     const url = new URL(window.location.href);
@@ -161,6 +171,7 @@ export default function InterviewPage() {
   const [firstName, setFirstName]     = useState("");
   const [lastName, setLastName]       = useState("");
   const [email, setEmail]             = useState("");
+  const [phoneCountry, setPhoneCountry] = useState<CandidatePhoneCountry>("US");
   const [phone, setPhone]             = useState("");
   const [resumeFile, setResumeFile]   = useState<File | null>(null);
   const [dragging, setDragging]       = useState(false);
@@ -232,7 +243,7 @@ export default function InterviewPage() {
     if (!firstName.trim()) e.firstName = "Required";
     if (!lastName.trim())  e.lastName  = "Required";
     if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) e.email = "A valid email is required";
-    if (!isValidPhone(phone)) e.phone = "Enter a valid phone number: XXXXXXXXXX, (XXX) XXX-XXXX, XXX-XXX-XXXX, or XXX.XXX.XXXX.";
+    if (!isValidCandidatePhone(phone, phoneCountry)) e.phone = getCandidatePhoneError(phoneCountry);
     if (!resumeFile)       e.resume    = "Please upload your resume";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -466,6 +477,12 @@ export default function InterviewPage() {
   async function handleSubmit() {
     if (!validateStep1()) return;
 
+    const normalizedPhone = normalizeCandidatePhone(phone, phoneCountry);
+    if (!normalizedPhone) {
+      setErrors((e) => ({ ...e, phone: getCandidatePhoneError(phoneCountry), submit: "" }));
+      return;
+    }
+
     const roleToken = String(interviewAuth.role_token || "").trim();
     if (!roleToken) {
       setErrors((e) => ({ ...e, submit: "Missing role link. Please use the interview URL you were sent." }));
@@ -485,7 +502,8 @@ export default function InterviewPage() {
       body.append("first_name", firstName.trim());
       body.append("last_name", lastName.trim());
       body.append("email", email.trim());
-      body.append("phone", String(phone || "").replace(/\D/g, ""));
+      body.append("phone", normalizedPhone);
+      body.append("phone_country", phoneCountry);
       body.append("role_token", roleToken);
       if (resumeFile) body.append("resume", resumeFile);
 
@@ -1047,18 +1065,47 @@ export default function InterviewPage() {
               </div>
 
               {/* Phone */}
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 block mb-1.5">
-                  Phone <span className="text-red-400">*</span>
-                </label>
-                  <input
-                    value={phone}
-                    onChange={(e) => { setPhone(e.target.value); setErrors((er) => ({ ...er, phone: "", submit: "" })); }}
-                    placeholder="(555) 123-4567"
-                    type="tel"
-                    className={inputCls}
-                />
-                {errors.phone && <p className={errorCls}>{errors.phone}</p>}
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)] gap-3">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 block mb-1.5">
+                    Country <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={phoneCountry}
+                      onChange={(e) => {
+                        setPhoneCountry(normalizeCandidatePhoneCountry(e.target.value));
+                        setErrors((er) => ({ ...er, phone: "", submit: "" }));
+                      }}
+                      className={selectCls}
+                    >
+                      {candidatePhoneCountries.map((country) => (
+                        <option key={country.value} value={country.value}>{country.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0A1547]/35"
+                      aria-hidden="true"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 block mb-1.5">
+                    Phone <span className="text-red-400">*</span>
+                  </label>
+                    <input
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value); setErrors((er) => ({ ...er, phone: "", submit: "" })); }}
+                      placeholder={getCandidatePhonePlaceholder(phoneCountry)}
+                      type="tel"
+                      className={inputCls}
+                  />
+                  {errors.phone ? (
+                    <p className={errorCls}>{errors.phone}</p>
+                  ) : (
+                    <p className="text-[11px] mt-1 text-[#0A1547]/50">{getCandidatePhoneHelperText(phoneCountry)}</p>
+                  )}
+                </div>
               </div>
 
               {/* Resume upload */}

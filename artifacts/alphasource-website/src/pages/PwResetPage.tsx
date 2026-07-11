@@ -50,6 +50,7 @@ export default function PwResetPage() {
 
   const resetOrigin = useMemo(() => readResetOrigin(), []);
   const signInPath = resetOrigin === "admin" ? "/admin" : "/";
+  const successRedirectPath = resetOrigin === "admin" ? "/admin" : "/?setup=complete";
   const signInLabel = resetOrigin === "admin" ? "Back to Admin Sign In" : "Back to Home";
 
   useEffect(() => {
@@ -154,7 +155,7 @@ export default function PwResetPage() {
 
       await supabase.auth.signOut({ scope: "local" });
       window.setTimeout(() => {
-        window.location.replace(signInPath);
+        window.location.replace(successRedirectPath);
       }, 900);
     } catch {
       setError("Could not update password.");

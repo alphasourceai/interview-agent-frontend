@@ -6,23 +6,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "..");
 const distRoot = path.join(projectRoot, "dist");
 const indexPath = path.join(distRoot, "index.html");
+const routingManifestPath = path.join(projectRoot, "render-routes.json");
 
 const SITE_URL = "https://www.alphasourceai.com";
 const LAST_UPDATED = "June 2026";
 
-const publicRoutes = [
-  "/",
-  "/about",
-  "/faq",
-  "/support",
-  "/alphascreen",
-  "/alphascreen/pricing",
-  "/alphascreen/how-it-works",
-  "/alphascreen/security",
-  "/alphascreen/candidate-experience",
-  "/alphascreen/for-dental-groups",
-  "/alphascreen/roi",
-];
+const routingManifest = JSON.parse(fs.readFileSync(routingManifestPath, "utf8"));
+const publicRoutes = routingManifest.publicRoutes;
 
 const trailingSlashPublicRoutes = new Set(publicRoutes.filter((route) => route !== "/"));
 
@@ -50,8 +40,8 @@ const footerLinks = [
   ["ROI", "/alphascreen/roi"],
   ["FAQ", "/faq"],
   ["Support", "/support"],
-  ["Privacy", "/privacy"],
-  ["Terms", "/terms"],
+  ["Privacy", "/privacy/"],
+  ["Terms", "/terms/"],
 ];
 
 const faqItems = [
@@ -370,6 +360,8 @@ const routeContent = {
   },
   "/faq": faqRoute(),
   "/support": supportRoute(),
+  "/privacy": privacyRoute(),
+  "/terms": termsRoute(),
   "/alphascreen": {
     title: "alphaScreen | AI Candidate Screening and Interview Analysis",
     description:
@@ -503,7 +495,7 @@ const routeContent = {
       ["/faq", "Security FAQ"],
       ["/alphascreen/candidate-experience", "Candidate experience"],
       ["/alphascreen", "alphaScreen overview"],
-      ["/privacy", "Privacy Policy"],
+      ["/privacy/", "Privacy Policy"],
     ],
     schemas: [
       organizationSchema,
@@ -639,6 +631,9 @@ for (const route of publicRoutes) {
   writeRoute(route, renderRouteHtml(baseHtml, route, content));
 }
 
+for (const route of routingManifest.spaShellRoutes) {
+  writeSpaShellRoute(route);
+}
 writeStaticRoutingFile();
 
 console.log(`Prerendered ${publicRoutes.length} public route HTML snapshots.`);
@@ -737,6 +732,92 @@ function supportRoute() {
       breadcrumbSchema([
         ["Home", "/"],
         ["Support", "/support"],
+      ]),
+    ],
+  };
+}
+
+function privacyRoute() {
+  return {
+    title: "Privacy Policy | alphaSource AI",
+    description:
+      "Learn how alphaSource AI handles public website analytics, contact and demo form lead capture, alphaScreen product data, and privacy requests.",
+    eyebrow: "Privacy",
+    h1: "Privacy Policy",
+    intro:
+      "This notice summarizes how alphaSource AI handles public website analytics, lead capture, alphaScreen product data, and privacy contact requests.",
+    sections: [
+      section("Public website analytics", [
+        "alphaSource AI may collect limited public page view and CTA activity to understand site performance, improve product messaging, measure interest, and troubleshoot abuse or spam.",
+        "Public analytics should not include passwords, candidate interview responses, dashboard content, or private customer account data.",
+      ]),
+      section("Lead draft and abandoned form capture", [
+        "If a visitor begins a public contact, demo, or inquiry form and enters usable business contact information, alphaSource AI may save a partial business-contact lead record even if the visitor does not complete the form.",
+        "Message or freeform inquiry text is saved only when the visitor intentionally submits the form.",
+      ]),
+      section("Product and candidate data", [
+        "Authenticated dashboard, client, candidate, and product workflows may involve information that is handled according to applicable agreements, product controls, access permissions, and operational requirements.",
+        "Candidate, interview, and report data is used to provide screening and hiring workflow services requested by the client or employer.",
+      ]),
+      section("Contact", [
+        "Privacy questions, deletion requests, or requests not to be contacted can be sent to info@alphasourceai.com.",
+      ]),
+    ],
+    links: [
+      ["/terms/", "Terms & Conditions"],
+      ["/support", "Support"],
+      ["/faq", "FAQ"],
+    ],
+    schemas: [
+      organizationSchema,
+      websiteSchema,
+      publicWebPageSchema("/privacy", "Privacy Policy", "alphaSource AI public privacy policy."),
+      breadcrumbSchema([
+        ["Home", "/"],
+        ["Privacy Policy", "/privacy"],
+      ]),
+    ],
+  };
+}
+
+function termsRoute() {
+  return {
+    title: "Terms and Conditions | alphaSource AI",
+    description:
+      "Review alphaSource AI terms for AI-assisted interviewing, candidate data, human review, accommodations, and responsible use.",
+    eyebrow: "Legal",
+    h1: "Terms & Conditions",
+    intro:
+      "These terms describe responsible use of alphaSource AI and alphaScreen, including AI-assisted interviewing, candidate data, human review, and account responsibilities.",
+    sections: [
+      section("Purpose of the service", [
+        "alphaSource AI provides AI-assisted interviewing, assessments, analysis, and reporting designed to support human evaluation. Employers remain responsible for hiring decisions.",
+      ]),
+      section("User responsibilities", [
+        "Users agree to provide accurate information, use the service only for lawful purposes, comply with applicable laws, and avoid misuse, disruption, reverse engineering, or unauthorized access attempts.",
+      ]),
+      section("Candidate data and consent", [
+        "Candidate data is used for interview, evaluation, and reporting workflows requested by clients or employers. Candidate data is not sold.",
+      ]),
+      section("AI-generated analysis and limitations", [
+        "AI outputs may contain inaccuracies or omissions and should not be used as the sole basis for hiring decisions.",
+      ]),
+      section("Contact", [
+        "Questions about these terms can be sent to info@alphasourceai.com.",
+      ]),
+    ],
+    links: [
+      ["/privacy/", "Privacy Policy"],
+      ["/support", "Support"],
+      ["/faq", "FAQ"],
+    ],
+    schemas: [
+      organizationSchema,
+      websiteSchema,
+      publicWebPageSchema("/terms", "Terms and Conditions", "alphaSource AI public terms and conditions."),
+      breadcrumbSchema([
+        ["Home", "/"],
+        ["Terms & Conditions", "/terms"],
       ]),
     ],
   };
@@ -978,33 +1059,37 @@ function writeRoute(route, html) {
   fs.writeFileSync(target, html);
 }
 
+function writeSpaShellRoute(route) {
+  const target = path.join(distRoot, ...route.split("/").filter(Boolean), "index.html");
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(indexPath, target);
+}
+
 function writeStaticRoutingFile() {
   const lines = [
-    "# Public prerendered routes. Keep these before the SPA fallback.",
-    ...publicRoutes
-      .filter((route) => route !== "/")
-      .flatMap((route) => [
-        `${route} ${crawlableHref(route)} 301`,
-        `${route}/ ${route}/index.html 200`,
-        `${route}/index.html ${route}/index.html 200`,
-      ]),
+    "# Code-owned Render static routing. Source: render-routes.json.",
+    "# Public bare-route redirects.",
+    ...routingManifest.publicRedirects.map(formatRouteRule),
+    "",
+    "# Public trailing-slash prerender rewrites.",
+    ...routingManifest.publicRewrites.map(formatRouteRule),
+    "",
+    "# Checkout success uses a copied SPA shell to avoid zero-byte static responses.",
+    ...routingManifest.spaShellRewrites.map(formatRouteRule),
     "",
     "# Authenticated and dynamic app routes remain client-rendered SPA routes.",
-    "/dashboard/* /index.html 200",
-    "/admin/* /index.html 200",
-    "/checkout/* /index.html 200",
-    "/membership-agreement/* /index.html 200",
-    "/interview/* /index.html 200",
-    "/interview-access/* /index.html 200",
-    "/interview-host/* /index.html 200",
-    "/text-interview/* /index.html 200",
-    "/automation/* /index.html 200",
-    "/pwreset /index.html 200",
-    "/accommodation-request/* /index.html 200",
-    "/* /index.html 200",
+    ...routingManifest.dynamicSpaRewrites.map(formatRouteRule),
+    formatRouteRule(routingManifest.catchAll),
     "",
   ];
   fs.writeFileSync(path.join(distRoot, "_redirects"), lines.join("\n"));
+}
+
+function formatRouteRule(rule) {
+  if (!rule?.source || !rule?.destination || !rule?.status) {
+    throw new Error(`Invalid routing rule: ${JSON.stringify(rule)}`);
+  }
+  return `${rule.source} ${rule.destination} ${rule.status}`;
 }
 
 function crawlableHref(href) {

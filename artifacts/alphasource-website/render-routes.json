@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "staticPublishPath": "artifacts/alphasource-website/dist",
+  "publicRoutes": [
+    "/",
+    "/about",
+    "/faq",
+    "/support",
+    "/privacy",
+    "/terms",
+    "/alphascreen",
+    "/alphascreen/pricing",
+    "/alphascreen/how-it-works",
+    "/alphascreen/security",
+    "/alphascreen/candidate-experience",
+    "/alphascreen/for-dental-groups",
+    "/alphascreen/roi"
+  ],
+  "publicRedirects": [
+    { "source": "/about", "destination": "/about/", "status": 301 },
+    { "source": "/faq", "destination": "/faq/", "status": 301 },
+    { "source": "/support", "destination": "/support/", "status": 301 },
+    { "source": "/privacy", "destination": "/privacy/", "status": 301 },
+    { "source": "/privacy-policy", "destination": "/privacy/", "status": 301 },
+    { "source": "/privacy-policy/", "destination": "/privacy/", "status": 301 },
+    { "source": "/terms", "destination": "/terms/", "status": 301 },
+    { "source": "/terms-and-conditions", "destination": "/terms/", "status": 301 },
+    { "source": "/terms-and-conditions/", "destination": "/terms/", "status": 301 },
+    { "source": "/alphascreen", "destination": "/alphascreen/", "status": 301 },
+    { "source": "/alphascreen/pricing", "destination": "/alphascreen/pricing/", "status": 301 },
+    { "source": "/alphascreen/how-it-works", "destination": "/alphascreen/how-it-works/", "status": 301 },
+    { "source": "/alphascreen/security", "destination": "/alphascreen/security/", "status": 301 },
+    { "source": "/alphascreen/candidate-experience", "destination": "/alphascreen/candidate-experience/", "status": 301 },
+    { "source": "/alphascreen/for-dental-groups", "destination": "/alphascreen/for-dental-groups/", "status": 301 },
+    { "source": "/alphascreen/roi", "destination": "/alphascreen/roi/", "status": 301 }
+  ],
+  "publicRewrites": [
+    { "source": "/about/", "destination": "/about/index.html", "status": 200 },
+    { "source": "/faq/", "destination": "/faq/index.html", "status": 200 },
+    { "source": "/support/", "destination": "/support/index.html", "status": 200 },
+    { "source": "/privacy/", "destination": "/privacy/index.html", "status": 200 },
+    { "source": "/terms/", "destination": "/terms/index.html", "status": 200 },
+    { "source": "/alphascreen/", "destination": "/alphascreen/index.html", "status": 200 },
+    { "source": "/alphascreen/pricing/", "destination": "/alphascreen/pricing/index.html", "status": 200 },
+    { "source": "/alphascreen/how-it-works/", "destination": "/alphascreen/how-it-works/index.html", "status": 200 },
+    { "source": "/alphascreen/security/", "destination": "/alphascreen/security/index.html", "status": 200 },
+    { "source": "/alphascreen/candidate-experience/", "destination": "/alphascreen/candidate-experience/index.html", "status": 200 },
+    { "source": "/alphascreen/for-dental-groups/", "destination": "/alphascreen/for-dental-groups/index.html", "status": 200 },
+    { "source": "/alphascreen/roi/", "destination": "/alphascreen/roi/index.html", "status": 200 }
+  ],
+  "spaShellRoutes": [
+    "/checkout/subscription-success"
+  ],
+  "spaShellRewrites": [
+    { "source": "/checkout/subscription-success", "destination": "/checkout/subscription-success/index.html", "status": 200 },
+    { "source": "/checkout/subscription-success/", "destination": "/checkout/subscription-success/index.html", "status": 200 },
+    { "source": "/checkout/subscription-success/index.html", "destination": "/checkout/subscription-success/index.html", "status": 200 }
+  ],
+  "dynamicSpaRewrites": [
+    { "source": "/checkout/*", "destination": "/index.html", "status": 200 },
+    { "source": "/membership-agreement/*", "destination": "/index.html", "status": 200 },
+    { "source": "/pwreset", "destination": "/index.html", "status": 200 },
+    { "source": "/pwreset/", "destination": "/index.html", "status": 200 },
+    { "source": "/dashboard/*", "destination": "/index.html", "status": 200 },
+    { "source": "/admin/*", "destination": "/index.html", "status": 200 },
+    { "source": "/interview-access/*", "destination": "/index.html", "status": 200 },
+    { "source": "/interview/*", "destination": "/index.html", "status": 200 },
+    { "source": "/interview-host/*", "destination": "/index.html", "status": 200 },
+    { "source": "/text-interview/*", "destination": "/index.html", "status": 200 },
+    { "source": "/candidate/*", "destination": "/index.html", "status": 200 },
+    { "source": "/automation/*", "destination": "/index.html", "status": 200 },
+    { "source": "/accommodation/*", "destination": "/index.html", "status": 200 },
+    { "source": "/accommodation-request/*", "destination": "/index.html", "status": 200 }
+  ],
+  "catchAll": { "source": "/*", "destination": "/index.html", "status": 200 }
+}

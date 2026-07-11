@@ -39,9 +39,9 @@
       style="display:none;min-height:100vh;background:#F8F9FD;color:#0A1547;font-family:Inter,Arial,sans-serif;padding:48px 24px;box-sizing:border-box;"
     >
       <div style="max-width:720px;margin:0 auto;background:#fff;border:1px solid rgba(10,21,71,0.1);border-radius:8px;padding:28px;box-shadow:0 8px 26px rgba(10,21,71,0.08);">
-        <p style="margin:0;color:#A380F6;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.16em;">alphaScreen</p>
-        <h1 style="margin:12px 0 0;font-size:26px;line-height:1.2;">Loading membership agreement</h1>
-        <p style="margin:12px 0 0;color:rgba(10,21,71,.65);font-size:15px;line-height:1.6;">
+        <p id="public-checkout-static-fallback-eyebrow" style="margin:0;color:#A380F6;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.16em;">alphaScreen</p>
+        <h1 id="public-checkout-static-fallback-title" style="margin:12px 0 0;font-size:26px;line-height:1.2;">Loading membership agreement</h1>
+        <p id="public-checkout-static-fallback-body" style="margin:12px 0 0;color:rgba(10,21,71,.65);font-size:15px;line-height:1.6;">
           We are loading your agreement signing step. If this screen does not update, refresh the page or contact support.
         </p>
         <p style="margin:20px 0 0;">
@@ -53,7 +53,47 @@
       (function () {
         var fallback = document.getElementById("public-checkout-static-fallback");
         if (!fallback) return;
-        if (window.location.pathname.indexOf("/membership-agreement/sign/") === 0) {
+        var title = document.getElementById("public-checkout-static-fallback-title");
+        var body = document.getElementById("public-checkout-static-fallback-body");
+        var path = window.location.pathname || "/";
+        var fallbackCopy = [
+          {
+            test: /^\/membership-agreement(\/|$)/,
+            title: "Loading membership agreement",
+            body: "We are loading your agreement signing step. If this screen does not update, refresh the page or contact support."
+          },
+          {
+            test: /^\/checkout(\/|$)/,
+            title: "Loading checkout status",
+            body: "We are loading your checkout recovery or confirmation step. If this screen does not update, refresh the page or contact support."
+          },
+          {
+            test: /^\/pwreset\/?$/,
+            title: "Loading password setup",
+            body: "We are loading your secure password setup step. If this screen does not update, refresh the page or contact support."
+          },
+          {
+            test: /^\/(interview|interview-access|interview-host|text-interview|candidate|accommodation|accommodation-request)(\/|$)/,
+            title: "Loading interview step",
+            body: "We are loading your interview or candidate support step. If this screen does not update, refresh the page or contact support."
+          },
+          {
+            test: /^\/dashboard(\/|$)/,
+            title: "Loading dashboard",
+            body: "We are loading your secure dashboard. If this screen does not update, refresh the page or contact support."
+          },
+          {
+            test: /^\/admin(\/|$)/,
+            title: "Loading admin dashboard",
+            body: "We are loading the admin dashboard. If this screen does not update, refresh the page or contact support."
+          }
+        ];
+        var match = fallbackCopy.find(function (item) {
+          return item.test.test(path);
+        });
+        if (match) {
+          if (title) title.textContent = match.title;
+          if (body) body.textContent = match.body;
           fallback.style.display = "block";
         }
       })();

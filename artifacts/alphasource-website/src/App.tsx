@@ -495,21 +495,6 @@ function InterviewCompletePage() {
   );
 }
 
-function InterviewTokenAlias({ params }: { params?: { role_token?: string } }) {
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    const roleToken = String(params?.role_token || "").trim();
-    if (!roleToken) {
-      setLocation("/interview");
-      return;
-    }
-    setLocation(`/interview/${encodeURIComponent(roleToken)}`);
-  }, [params?.role_token, setLocation]);
-
-  return null;
-}
-
 /* ── Router ─────────────────────────────────────────────── */
 function Router() {
   const [location] = useLocation();
@@ -522,10 +507,16 @@ function Router() {
     location.startsWith("/interview/") ||
     location === "/interview-access" ||
     location.startsWith("/interview-access/") ||
+    location === "/interview-host" ||
     location.startsWith("/interview-host/") ||
+    location === "/text-interview" ||
     location.startsWith("/text-interview/") ||
+    location === "/membership-agreement/sign" ||
     location.startsWith("/membership-agreement/sign/") ||
     location === "/pwreset" ||
+    location === "/pwreset/" ||
+    location === "/accommodation" ||
+    location.startsWith("/accommodation/") ||
     location === "/accommodation-request" ||
     location.startsWith("/accommodation-request/") ||
     location === "/interview-cvi" ||
@@ -555,14 +546,20 @@ function Router() {
   } else if (isInterview) {
     content = (
       <Switch>
+        <Route path="/accommodation/:role_token" component={AccommodationRequestPage} />
+        <Route path="/accommodation" component={AccommodationRequestPage} />
         <Route path="/accommodation-request/:role_token" component={AccommodationRequestPage} />
         <Route path="/accommodation-request" component={AccommodationRequestPage} />
-        <Route path="/interview-access/:role_token" component={InterviewTokenAlias} />
-        <Route path="/interview-host/:role_token" component={InterviewTokenAlias} />
+        <Route path="/interview-access/:role_token" component={InterviewPage} />
+        <Route path="/interview-host/:role_token" component={InterviewPage} />
+        <Route path="/interview-host" component={InterviewPage} />
         <Route path="/text-interview/:token" component={TextInterviewPage} />
+        <Route path="/text-interview" component={TextInterviewPage} />
         <Route path="/membership-agreement/sign/:token" component={MembershipAgreementSignerRoute} />
+        <Route path="/membership-agreement/sign" component={MembershipAgreementSignerRoute} />
         <Route path="/interview/terms" component={CandidateTermsPage} />
         <Route path="/pwreset" component={PwResetPage} />
+        <Route path="/pwreset/" component={PwResetPage} />
         <Route path="/interview-access" component={InterviewPage} />
         <Route path="/interview-cvi" component={InterviewCviPage} />
         <Route path="/interview-complete" component={InterviewCompletePage} />
@@ -578,22 +575,38 @@ function Router() {
       <Navbar />
       <main className="flex-1">
         <Switch>
+          <Route path="/checkout/password-setup-preview/" component={PasswordSetupPreviewPage} />
           <Route path="/checkout/password-setup-preview" component={PasswordSetupPreviewPage} />
+          <Route path="/checkout/subscription-success/" component={CheckoutSubscriptionSuccessRoute} />
           <Route path="/checkout/subscription-success" component={CheckoutSubscriptionSuccessRoute} />
           <Route path="/"            component={HomePage} />
+          <Route path="/alphascreen/pricing/" component={AlphaScreenPricingRoute} />
           <Route path="/alphascreen/pricing" component={AlphaScreenPricingRoute} />
+          <Route path="/alphascreen/how-it-works/" component={AlphaScreenHowItWorksPage} />
           <Route path="/alphascreen/how-it-works" component={AlphaScreenHowItWorksPage} />
+          <Route path="/alphascreen/security/" component={AlphaScreenSecurityPage} />
           <Route path="/alphascreen/security" component={AlphaScreenSecurityPage} />
+          <Route path="/alphascreen/candidate-experience/" component={AlphaScreenCandidateExperiencePage} />
           <Route path="/alphascreen/candidate-experience" component={AlphaScreenCandidateExperiencePage} />
+          <Route path="/alphascreen/for-dental-groups/" component={AlphaScreenDentalGroupsPage} />
           <Route path="/alphascreen/for-dental-groups" component={AlphaScreenDentalGroupsPage} />
+          <Route path="/alphascreen/roi/" component={AlphaScreenRoiPage} />
           <Route path="/alphascreen/roi" component={AlphaScreenRoiPage} />
+          <Route path="/alphascreen/" component={AlphaScreenPage} />
           <Route path="/alphascreen" component={AlphaScreenPage} />
+          <Route path="/about/"      component={AboutPage} />
           <Route path="/about"       component={AboutPage} />
           <Route path="/support/"    component={PublicSupportPage} />
           <Route path="/support"     component={PublicSupportPage} />
           <Route path="/faq/"        component={FaqPage} />
           <Route path="/faq"         component={FaqPage} />
+          <Route path="/privacy-policy/" component={PrivacyPage} />
+          <Route path="/privacy-policy" component={PrivacyPage} />
+          <Route path="/privacy/"    component={PrivacyPage} />
           <Route path="/privacy"     component={PrivacyPage} />
+          <Route path="/terms-and-conditions/" component={TermsPage} />
+          <Route path="/terms-and-conditions" component={TermsPage} />
+          <Route path="/terms/"      component={TermsPage} />
           <Route path="/terms"       component={TermsPage} />
           <Route component={NotFound} />
         </Switch>
