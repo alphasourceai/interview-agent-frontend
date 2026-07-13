@@ -5,13 +5,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AppearanceProvider } from "@/context/AppearanceContext";
+import { TrackingConsentProvider, useTrackingConsent } from "@/context/TrackingConsentContext";
 import { ClientProvider } from "@/context/ClientContext";
 import { AdminClientProvider } from "@/context/AdminClientContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PublicTawkWidget from "@/components/PublicTawkWidget";
 import Seo from "@/components/Seo";
 import PageAnalytics from "@/components/PageAnalytics";
 import IDPixelLoader from "@/components/IDPixelLoader";
+import TrackingConsentNotice from "@/components/TrackingConsentNotice";
 
 /* Public pages */
 import HomePage from "@/pages/HomePage";
@@ -70,6 +73,9 @@ import AdminAuditLogsPage from "@/pages/admin/AdminAuditLogsPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
+const env =
+  typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
+const PUBLIC_TAWK_ROUTES = new Set(["/", "/about", "/alphascreen", "/support", "/faq"]);
 const PUBLIC_CHECKOUT_FALLBACK_MESSAGE = "We could not load this step. Please refresh or contact support.";
 const DASHBOARD_TAB_ROUTE: Record<string, string> = {
   roles: "/dashboard/roles",
@@ -443,14 +449,31 @@ function DashboardGuard() {
 
 /* ── Admin dashboard guard ──────────────────────────────── */
 function AdminGuard() {
-  const { isAdminLoggedIn, adminAuthReady } = useAuth();
+  const { isAdminLoggedIn, adminAuthReady, resolveAdminAccess } = useAuth();
   const [, setLocation] = useLocation();
+  const [checkingAdminAccess, setCheckingAdminAccess] = useState(true);
 
   useEffect(() => {
-    if (adminAuthReady && !isAdminLoggedIn) setLocation("/");
-  }, [adminAuthReady, isAdminLoggedIn, setLocation]);
+    if (adminAuthReady && isAdminLoggedIn) {
+      setCheckingAdminAccess(false);
+      return;
+    }
 
-  if (!adminAuthReady) return null;
+    let active = true;
+    setCheckingAdminAccess(true);
+    void resolveAdminAccess().finally(() => {
+      if (active) setCheckingAdminAccess(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [adminAuthReady, isAdminLoggedIn, resolveAdminAccess]);
+
+  useEffect(() => {
+    if (!checkingAdminAccess && adminAuthReady && !isAdminLoggedIn) setLocation("/");
+  }, [adminAuthReady, checkingAdminAccess, isAdminLoggedIn, setLocation]);
+
+  if (checkingAdminAccess || !adminAuthReady) return null;
   if (!isAdminLoggedIn) return null;
 
   return (
@@ -498,6 +521,8 @@ function InterviewCompletePage() {
 /* ── Router ─────────────────────────────────────────────── */
 function Router() {
   const [location] = useLocation();
+  const { visitorChatEnabled } = useTrackingConsent();
+  const normalizedLocation = location.length > 1 ? location.replace(/\/+$/, "") : location;
   const isDashboard = location === "/dashboard" || location.startsWith("/dashboard/");
   const isAdmin     = location === "/admin"     || location.startsWith("/admin/");
   const isAutomationDigestApproval = location === "/automation/digest-approval" || location.startsWith("/automation/digest-approval/");
@@ -521,6 +546,8 @@ function Router() {
     location.startsWith("/accommodation-request/") ||
     location === "/interview-cvi" ||
     location === "/interview-complete";
+  const isPublicSite = !isDashboard && !isAdmin && !isAutomationDigestApproval && !isAutomationApproval && !isInterview;
+  const isPublicTawkRoute = PUBLIC_TAWK_ROUTES.has(normalizedLocation);
   let content: ReactNode;
 
   if (isDashboard) {
@@ -612,6 +639,13 @@ function Router() {
         </Switch>
       </main>
       <Footer />
+      {isPublicTawkRoute && (
+        <PublicTawkWidget
+          enabled={visitorChatEnabled && (env as Record<string, unknown>).VITE_TAWK_PUBLIC_ENABLED === "true"}
+          propertyId={String((env as Record<string, unknown>).VITE_TAWK_PUBLIC_PROPERTY_ID || "")}
+          widgetId={String((env as Record<string, unknown>).VITE_TAWK_PUBLIC_WIDGET_ID || "")}
+        />
+      )}
     </div>
     );
   }
@@ -622,6 +656,7 @@ function Router() {
       <PageAnalytics location={location} />
       <IDPixelLoader location={location} />
       {content}
+      <TrackingConsentNotice visible={isPublicSite} />
     </>
   );
 }
@@ -631,9 +666,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AuthProvider>
-            <Router />
-          </AuthProvider>
+          <TrackingConsentProvider>
+            <AuthProvider>
+              <Router />
+            </AuthProvider>
+          </TrackingConsentProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

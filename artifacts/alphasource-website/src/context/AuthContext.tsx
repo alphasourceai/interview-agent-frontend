@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -21,6 +21,7 @@ interface AuthContextType {
   adminLoginError: string;
   login: (email: string, password: string) => Promise<ClientLoginResult>;
   loginAdmin: (email: string, password: string) => Promise<AdminLoginResult>;
+  resolveAdminAccess: () => Promise<boolean>;
   clearAdminLoginError: () => void;
   logout: () => void;
 }
@@ -36,6 +37,7 @@ const AuthContext = createContext<AuthContextType>({
   adminLoginError: "",
   login: async () => ({ error: null }),
   loginAdmin: async () => ({ error: null }),
+  resolveAdminAccess: async () => false,
   clearAdminLoginError: () => {},
   logout: () => {},
 });
@@ -109,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [adminLoginError, setAdminLoginError]       = useState("");
   const adminProbeRef = useRef(0);
 
-  const probeAdminAccess = async (session: Session): Promise<{ ok: true } | { ok: false; error: string }> => {
+  const probeAdminAccess = useCallback(async (session: Session): Promise<{ ok: true } | { ok: false; error: string }> => {
     const token = session?.access_token;
     if (!token) {
       return { ok: false, error: "Missing session token." };
@@ -163,24 +165,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: error instanceof Error ? error.message : "Could not verify admin access.",
       };
     }
-  };
+  }, []);
 
-  const syncAdminFromSession = async (session: Session | null) => {
+  const syncAdminFromSession = useCallback(async (session: Session | null): Promise<boolean> => {
     const probeId = ++adminProbeRef.current;
 
     if (!session) {
       setIsAdminLoggedIn(false);
       setAdminAuthReady(true);
-      return;
+      return false;
     }
 
     setAdminAuthReady(false);
     const probe = await probeAdminAccess(session);
-    if (probeId !== adminProbeRef.current) return;
+    if (probeId !== adminProbeRef.current) return false;
 
     setIsAdminLoggedIn(probe.ok);
     setAdminAuthReady(true);
-  };
+    return probe.ok;
+  }, [probeAdminAccess]);
+
+  const resolveAdminAccess = useCallback(async (): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        adminProbeRef.current += 1;
+        setIsAdminLoggedIn(false);
+        setAdminAuthReady(true);
+        return false;
+      }
+      return syncAdminFromSession(data.session || null);
+    } catch {
+      adminProbeRef.current += 1;
+      setIsAdminLoggedIn(false);
+      setAdminAuthReady(true);
+      return false;
+    }
+  }, [syncAdminFromSession]);
 
   useEffect(() => {
     let mounted = true;
@@ -208,7 +229,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setIsLoggedIn(Boolean(session));
         setClientAuthReady(true);
-        await syncAdminFromSession(session);
       })
       .catch(() => {
         if (!mounted) return;
@@ -232,10 +252,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (!session) clearDashboardActivity();
       setIsLoggedIn(Boolean(session));
-      void syncAdminFromSession(session).catch(() => {
+      if (!session) {
+        adminProbeRef.current += 1;
         setIsAdminLoggedIn(false);
         setAdminAuthReady(true);
-      });
+      } else if (String(event || "") === "SIGNED_IN") {
+        adminProbeRef.current += 1;
+        setIsAdminLoggedIn(false);
+        setAdminAuthReady(true);
+      }
     });
 
     return () => {
@@ -350,6 +375,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     clearDashboardActivity();
+    adminProbeRef.current += 1;
     void supabase.auth.signOut().catch(() => {});
     setIsLoggedIn(false);
     setIsAdminLoggedIn(false);
@@ -373,6 +399,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         adminLoginError,
         login,
         loginAdmin,
+        resolveAdminAccess,
         clearAdminLoginError,
         logout,
       }}

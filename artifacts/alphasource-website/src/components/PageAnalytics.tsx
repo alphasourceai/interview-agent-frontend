@@ -1,40 +1,25 @@
 import { useEffect } from "react";
 import { trackCtaClick, trackPageView } from "@/lib/analytics";
+import {
+  isPublicOptionalTrackingRoute,
+  normalizeTrackingPath,
+  useTrackingConsent,
+} from "@/context/TrackingConsentContext";
 
-type PageAnalyticsProps = {
-  location: string;
-};
-
-const PUBLIC_ANALYTICS_ROUTES = new Set([
-  "/",
-  "/alphascreen",
-  "/alphascreen/pricing",
-  "/alphascreen/how-it-works",
-  "/alphascreen/security",
-  "/alphascreen/candidate-experience",
-  "/alphascreen/for-dental-groups",
-  "/alphascreen/roi",
-  "/about",
-  "/support",
-  "/faq",
-  "/privacy",
-  "/terms",
-]);
-
-function normalizePath(path: string): string {
-  const clean = String(path || "/").split("?")[0].split("#")[0] || "/";
-  return clean.length > 1 ? clean.replace(/\/+$/, "") : "/";
-}
+type PageAnalyticsProps = { location: string };
 
 export default function PageAnalytics({ location }: PageAnalyticsProps) {
-  useEffect(() => {
-    const path = normalizePath(location);
-    if (PUBLIC_ANALYTICS_ROUTES.has(path)) trackPageView(path);
-  }, [location]);
+  const { analyticsEnabled } = useTrackingConsent();
 
   useEffect(() => {
+    const path = normalizeTrackingPath(location);
+    if (analyticsEnabled && isPublicOptionalTrackingRoute(path)) trackPageView(path);
+  }, [analyticsEnabled, location]);
+
+  useEffect(() => {
+    if (!analyticsEnabled) return;
     const onClick = (event: MouseEvent) => {
-      if (!PUBLIC_ANALYTICS_ROUTES.has(normalizePath(window.location.pathname || "/"))) return;
+      if (!isPublicOptionalTrackingRoute(window.location.pathname || "/")) return;
       const target = event.target;
       if (!(target instanceof Element)) return;
       const cta = target.closest<HTMLElement>("[data-analytics-cta]");
@@ -46,7 +31,7 @@ export default function PageAnalytics({ location }: PageAnalyticsProps) {
 
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-  }, []);
+  }, [analyticsEnabled]);
 
   return null;
 }

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
+import { useTrackingConsent } from "@/context/TrackingConsentContext";
 import { supabase } from "@/lib/supabaseClient";
 import { buildPwResetUrl } from "@/lib/urlConfig";
 
@@ -16,6 +17,7 @@ export default function Footer() {
   const [resetSuccess, setResetSuccess]     = useState("");
   const dropdownRef                         = useRef<HTMLDivElement>(null);
   const { loginAdmin, adminLoginLoading, adminLoginError, clearAdminLoginError } = useAuth();
+  const { openTrackingPreferences } = useTrackingConsent();
   const [, setLocation]                     = useLocation();
 
   useEffect(() => {
@@ -180,6 +182,13 @@ export default function Footer() {
             <a href="/privacy" className="text-white/40 text-sm hover:text-white/70 transition-colors">
               Privacy Policy
             </a>
+            <button
+              type="button"
+              onClick={openTrackingPreferences}
+              className="text-white/40 text-sm hover:text-white/70 transition-colors"
+            >
+              Privacy choices
+            </button>
             <a href="/terms" className="text-white/40 text-sm hover:text-white/70 transition-colors">
               Terms &amp; Conditions
             </a>
