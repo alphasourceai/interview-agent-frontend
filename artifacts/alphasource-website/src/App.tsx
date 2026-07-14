@@ -1,5 +1,5 @@
 import { Component, useCallback, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from "react";
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { Redirect, Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -63,7 +63,6 @@ import AdminPublicPurchasesPage from "@/pages/admin/AdminPublicPurchasesPage";
 import AdminPublicPurchasePlaybookPage from "@/pages/admin/AdminPublicPurchasePlaybookPage";
 import AdminRolesPage from "@/pages/admin/AdminRolesPage";
 import AdminCandidatesPage from "@/pages/admin/AdminCandidatesPage";
-import AdminRoleConfigPage from "@/pages/admin/AdminRoleConfigPage";
 import AdminAutomationPage from "@/pages/admin/AdminAutomationPage";
 import AdminMembersPage from "@/pages/admin/AdminMembersPage";
 import AdminAccommodationsPage from "@/pages/admin/AdminAccommodationsPage";
@@ -489,7 +488,7 @@ function AdminGuard() {
           <Route path="/admin/clients"          component={AdminClientsPage} />
           <Route path="/admin/roles"            component={AdminRolesPage} />
           <Route path="/admin/candidates"       component={AdminCandidatesPage} />
-          <Route path="/admin/role-config"      component={AdminRoleConfigPage} />
+          <Route path="/admin/role-config"      component={AdminRoleConfigRedirect} />
           <Route path="/admin/automation"       component={AdminAutomationPage} />
           <Route path="/admin/members"          component={AdminMembersPage} />
           <Route path="/admin/accommodations"   component={AdminAccommodationsPage} />
@@ -500,6 +499,10 @@ function AdminGuard() {
       </AdminClientProvider>
     </AppearanceProvider>
   );
+}
+
+function AdminRoleConfigRedirect() {
+  return <Redirect to="/admin/roles" replace />;
 }
 
 function InterviewCompletePage() {

@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppearance } from "@/context/AppearanceContext";
 import { useClient, type Client } from "@/context/ClientContext";
 import AppearanceSelector from "@/components/AppearanceSelector";
+import DashboardBrand from "@/components/DashboardBrand";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "alphasource:dashboard_sidebar_collapsed";
 
@@ -523,8 +524,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ? clients.filter((client) => clientSearchText(client).includes(clientSearchTerm))
     : clients;
   const clientSearchPlaceholder = getClientSearchPlaceholder(clients);
-  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-dark-mode.png" : "/logo-dark-text.png";
-
   return (
     <div
       className={`as-app-shell min-h-screen flex ${resolvedMode === "dark" ? "dark" : ""}`}
@@ -554,13 +553,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               onClick={() => setCollapsed(false)}
               title="Expand sidebar"
             >
-              <img src="/alpha-symbol.png" alt="αS" className="w-8 h-8 object-contain" />
+              <DashboardBrand mode={resolvedMode} variant="compact" />
               <ChevronsRight className="w-3.5 h-3.5 text-[#A380F6]/50 group-hover:text-[#A380F6] transition-colors" />
             </button>
           ) : (
             <>
               <Link href="/" onClick={() => setMobileOpen(false)}>
-                <img src={sidebarLogoSrc} alt="alphaSource AI" className="h-8 w-auto" />
+                <DashboardBrand mode={resolvedMode} variant="full" />
               </Link>
               <div className="flex items-center gap-1">
                 <button

@@ -99,6 +99,232 @@
       })();
     </script>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script id="alphasource-boot-watchdog">
+      (function () {
+        var DIAGNOSTIC_KEY = "alphasource:last-boot-failure:v1";
+        var RETRY_GUARD_KEY = "alphasource:boot-recovery-attempted:v1";
+        var RETRY_PARAM = "__boot_retry";
+        var WATCHDOG_DELAY_MS = 9000;
+        var boot = window.__ALPHASOURCE_BOOT__ = {
+          htmlLoadedAt: Date.now(),
+          moduleStarted: false,
+          reactCommitted: false,
+          recoveryAttempted: false
+        };
+        var diagnostics = {
+          timestamp: new Date().toISOString(),
+          url: safeDiagnosticUrl(),
+          moduleStarted: false,
+          reactCommitted: false,
+          userAgent: navigator.userAgent || "",
+          online: typeof navigator.onLine === "boolean" ? navigator.onLine : null,
+          resourceErrors: []
+        };
+
+        function readSession(key) {
+          try {
+            return window.sessionStorage.getItem(key);
+          } catch (_error) {
+            return null;
+          }
+        }
+
+        function writeSession(key, value) {
+          try {
+            window.sessionStorage.setItem(key, value);
+          } catch (_error) {
+            // Recovery also uses the URL marker when session storage is unavailable.
+          }
+        }
+
+        function safeDiagnosticUrl() {
+          try {
+            var url = new URL(window.location.href);
+            var hadRetryParam = url.searchParams.has(RETRY_PARAM);
+            url.search = hadRetryParam ? "?" + RETRY_PARAM + "=1" : "";
+            url.hash = "";
+            return url.toString();
+          } catch (_error) {
+            return window.location.pathname || "/";
+          }
+        }
+
+        function scrubText(value) {
+          var text = String(value || "").replace(/\s+/g, " ").trim();
+          text = text.replace(/https?:\/\/[^\s)]+/gi, function (rawUrl) {
+            try {
+              var url = new URL(rawUrl);
+              return url.origin + url.pathname;
+            } catch (_error) {
+              return "[url]";
+            }
+          });
+          text = text.replace(/((?:access[_-]?token|token|secret|password|authorization|api[_-]?key)\s*[=:]\s*)[^\s,;]+/gi, "$1[redacted]");
+          return text.slice(0, 280);
+        }
+
+        function getMainModule() {
+          var script = document.getElementById("alphasource-main-module");
+          if (!script) {
+            script = document.querySelector('script[type="module"][src]');
+          }
+          return script;
+        }
+
+        function isLocalCodeAsset(value) {
+          if (!value) return false;
+          try {
+            var url = new URL(value, window.location.href);
+            return url.origin === window.location.origin && /^\/assets\/.*\.(?:js|css)$/i.test(url.pathname);
+          } catch (_error) {
+            return false;
+          }
+        }
+
+        function captureModuleState() {
+          var module = getMainModule();
+          diagnostics.moduleStarted = Boolean(boot.moduleStarted);
+          diagnostics.reactCommitted = Boolean(boot.reactCommitted);
+          diagnostics.mainModule = {
+            found: Boolean(module),
+            src: module ? module.getAttribute("src") || "" : "",
+            srcEmpty: Boolean(module) && !(module.getAttribute("src") || "").trim(),
+            type: module ? module.getAttribute("type") || "" : ""
+          };
+        }
+
+        function persistFailure(kind, details) {
+          captureModuleState();
+          diagnostics.timestamp = new Date().toISOString();
+          diagnostics.url = safeDiagnosticUrl();
+          diagnostics.failure = kind;
+          if (details) diagnostics.details = details;
+          try {
+            window.sessionStorage.setItem(DIAGNOSTIC_KEY, JSON.stringify(diagnostics).slice(0, 1800));
+          } catch (_error) {
+            // Diagnostics are best-effort and must not interfere with boot recovery.
+          }
+        }
+
+        function recordResourceError(target) {
+          if (!target || !target.tagName) return;
+          var tagName = String(target.tagName).toLowerCase();
+          var resourceUrl = target.getAttribute("src") || target.getAttribute("href") || "";
+          if (!isLocalCodeAsset(resourceUrl)) return;
+          diagnostics.resourceErrors.push({
+            tag: tagName,
+            url: resourceUrl,
+            type: target.getAttribute("type") || "",
+            rel: target.getAttribute("rel") || "",
+            srcEmpty: target.hasAttribute("src") && !(target.getAttribute("src") || "").trim()
+          });
+          diagnostics.resourceErrors = diagnostics.resourceErrors.slice(-3);
+          persistFailure("local_asset_error");
+        }
+
+        window.addEventListener("error", function (event) {
+          var target = event.target;
+          if (target && target !== window) {
+            recordResourceError(target);
+            return;
+          }
+          diagnostics.topLevelError = scrubText(event.message || "Unknown JavaScript error");
+          persistFailure("window_error");
+        }, true);
+
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event && event.reason;
+          diagnostics.unhandledRejection = scrubText(reason && reason.message ? reason.message : reason);
+          persistFailure("unhandled_rejection");
+        });
+
+        function hasRetryMarker() {
+          try {
+            return new URL(window.location.href).searchParams.has(RETRY_PARAM);
+          } catch (_error) {
+            return false;
+          }
+        }
+
+        function buildRetryUrl() {
+          var url = new URL(window.location.href);
+          url.searchParams.set(RETRY_PARAM, String(Date.now()));
+          return url.toString();
+        }
+
+        function navigateForRecovery(kind) {
+          boot.recoveryAttempted = true;
+          writeSession(RETRY_GUARD_KEY, kind + ":" + Date.now());
+          persistFailure(kind);
+          window.location.replace(buildRetryUrl());
+        }
+
+        function showRecoveryPanel() {
+          if (document.getElementById("alphasource-boot-recovery")) return;
+          persistFailure("recovery_exhausted");
+
+          var panel = document.createElement("section");
+          panel.id = "alphasource-boot-recovery";
+          panel.setAttribute("role", "alert");
+          panel.setAttribute("aria-live", "assertive");
+          panel.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;background:#F8F9FD;color:#0A1547;font-family:Inter,Arial,sans-serif;";
+
+          var focusStyle = document.createElement("style");
+          focusStyle.textContent = "#alphasource-boot-recovery :focus{outline:3px solid #A380F6;outline-offset:3px;}";
+          panel.appendChild(focusStyle);
+
+          var content = document.createElement("div");
+          content.style.cssText = "width:min(100%,560px);border:1px solid rgba(10,21,71,.14);border-radius:8px;background:#fff;padding:28px;box-shadow:0 12px 34px rgba(10,21,71,.12);";
+
+          var eyebrow = document.createElement("p");
+          eyebrow.textContent = "alphaSource AI";
+          eyebrow.style.cssText = "margin:0;color:#A380F6;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;";
+
+          var heading = document.createElement("h1");
+          heading.textContent = "The page did not finish loading";
+          heading.style.cssText = "margin:12px 0 0;font-size:26px;line-height:1.2;";
+
+          var body = document.createElement("p");
+          body.textContent = "Refresh the page to try again. If the problem continues, contact alphaSource support.";
+          body.style.cssText = "margin:12px 0 0;color:rgba(10,21,71,.68);font-size:15px;line-height:1.6;";
+
+          var actions = document.createElement("div");
+          actions.style.cssText = "display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;";
+
+          var retry = document.createElement("button");
+          retry.type = "button";
+          retry.textContent = "Try again";
+          retry.style.cssText = "border:0;border-radius:999px;background:#0A1547;color:#fff;cursor:pointer;font:700 14px Inter,Arial,sans-serif;padding:11px 18px;";
+          retry.addEventListener("click", function () {
+            navigateForRecovery("user_retry");
+          });
+
+          var support = document.createElement("a");
+          support.href = "/support/";
+          support.textContent = "Contact support";
+          support.style.cssText = "border:1px solid rgba(10,21,71,.18);border-radius:999px;color:#0A1547;font:700 14px Inter,Arial,sans-serif;padding:10px 17px;text-decoration:none;";
+
+          actions.appendChild(retry);
+          actions.appendChild(support);
+          content.appendChild(eyebrow);
+          content.appendChild(heading);
+          content.appendChild(body);
+          content.appendChild(actions);
+          panel.appendChild(content);
+          document.body.appendChild(panel);
+          retry.focus();
+        }
+
+        window.setTimeout(function () {
+          if (boot.reactCommitted) return;
+          if (!readSession(RETRY_GUARD_KEY) && !hasRetryMarker()) {
+            navigateForRecovery("automatic_retry");
+            return;
+          }
+          showRecoveryPanel();
+        }, WATCHDOG_DELAY_MS);
+      })();
+    </script>
+    <script id="alphasource-main-module" type="module" src="/src/main.tsx"></script>
   </body>
 </html>

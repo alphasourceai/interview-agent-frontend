@@ -5,7 +5,51 @@ import App from "./App";
 import { initSentry, isSentryEnabled } from "./lib/sentry";
 import "./index.css";
 
+type AlphaSourceBootState = {
+  htmlLoadedAt: number;
+  moduleStarted: boolean;
+  reactCommitted: boolean;
+  recoveryAttempted: boolean;
+};
+
+declare global {
+  interface Window {
+    __ALPHASOURCE_BOOT__?: AlphaSourceBootState;
+  }
+}
+
+const BOOT_RECOVERY_GUARD_KEY = "alphasource:boot-recovery-attempted:v1";
+const BOOT_RECOVERY_PARAM = "__boot_retry";
+
+if (typeof window !== "undefined" && window.__ALPHASOURCE_BOOT__) {
+  window.__ALPHASOURCE_BOOT__.moduleStarted = true;
+}
+
 initSentry();
+
+function markReactCommitted() {
+  if (typeof window === "undefined") return;
+
+  if (window.__ALPHASOURCE_BOOT__) {
+    window.__ALPHASOURCE_BOOT__.reactCommitted = true;
+  }
+
+  try {
+    window.sessionStorage.removeItem(BOOT_RECOVERY_GUARD_KEY);
+  } catch {
+    // Storage can be unavailable in privacy-restricted browser contexts.
+  }
+
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has(BOOT_RECOVERY_PARAM)) {
+      url.searchParams.delete(BOOT_RECOVERY_PARAM);
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  } catch {
+    // The app is already running; a failed URL cleanup should not affect it.
+  }
+}
 
 function removePublicCheckoutStaticFallback() {
   if (typeof document === "undefined") return;
@@ -65,6 +109,7 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { hasError: b
 
 function ReactReadyMarker() {
   useEffect(() => {
+    markReactCommitted();
     const frame = window.requestAnimationFrame(removePublicCheckoutStaticFallback);
     return () => window.cancelAnimationFrame(frame);
   }, []);

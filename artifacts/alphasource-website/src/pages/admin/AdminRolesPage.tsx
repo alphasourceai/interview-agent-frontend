@@ -1,9 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, FileText, Copy, Trash2, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronUp, Upload } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import InfoTooltip from "@/components/InfoTooltip";
+import EditRoleRubricModal from "@/components/roles/EditRoleRubricModal";
+import RoleActionsMenu from "@/components/roles/RoleActionsMenu";
+import ReplaceJobDescriptionModal from "@/components/roles/ReplaceJobDescriptionModal";
+import {
+  ROLE_TABLE_ADMIN_GRID_TEMPLATE,
+  roleTableAlignmentClass,
+} from "@/components/roles/roleTableLayout";
 import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { normalizeRoleJdReplacementEligibility, type RoleJdReplacementEligibility } from "@/lib/roleJdReplacementEligibility";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -26,6 +34,8 @@ interface Role {
   createdTs: number;
   type: RoleType;
   hasJD: boolean;
+  jobDescriptionUrl: string;
+  jobDescriptionReplacement: RoleJdReplacementEligibility;
   hasRubric: boolean;
   rubricQuestions: string[];
   includedInterviewsPerRole: number | null;
@@ -211,7 +221,6 @@ export default function AdminRolesPage() {
   } = useAdminClient();
   const [sortKey, setSortKey] = useState<SortKey>("created");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [copied, setCopied] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [rolesLoading, setRolesLoading] = useState<boolean>(false);
   const [rolesError, setRolesError] = useState<string>("");
@@ -228,7 +237,12 @@ export default function AdminRolesPage() {
   const [rubricModal, setRubricModal] = useState<{ roleName: string; questions: string[] } | null>(null);
   const [roleStatusConfirm, setRoleStatusConfirm] = useState<{ role: Role; nextStatus: "active" | "inactive" } | null>(null);
   const [roleDeleteConfirm, setRoleDeleteConfirm] = useState<{ role: Role } | null>(null);
+  const [editingRubricRole, setEditingRubricRole] = useState<Role | null>(null);
+  const [rubricEditorSession, setRubricEditorSession] = useState(0);
+  const [replacementRole, setReplacementRole] = useState<Role | null>(null);
+  const [openRoleActionsId, setOpenRoleActionsId] = useState<string | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const roleActionsTriggerRef = useRef<HTMLButtonElement>(null);
   const [form, setForm] = useState({ title: "", type: "Basic", jdFileName: "" });
   const hierarchyClients = useMemo(
     () => adminClients.filter((client) => client.id !== "all"),
@@ -260,6 +274,9 @@ export default function AdminRolesPage() {
     setRoleSearch("");
     setRoleStatusConfirm(null);
     setRoleDeleteConfirm(null);
+    setEditingRubricRole(null);
+    setReplacementRole(null);
+    setOpenRoleActionsId(null);
   }, [selectedClientId]);
 
   useEffect(() => {
@@ -355,6 +372,8 @@ export default function AdminRolesPage() {
               createdTs: created.ts,
               type: normalizeRoleType(item.interview_type),
               hasJD: Boolean(String(item.job_description_url || "").trim()),
+              jobDescriptionUrl: String(item.job_description_url || "").trim(),
+              jobDescriptionReplacement: normalizeRoleJdReplacementEligibility(item.job_description_replacement),
               hasRubric: rubricQuestions.length > 0,
               rubricQuestions,
               includedInterviewsPerRole: toWholeNonNegative(item.included_interviews_per_role),
@@ -466,8 +485,6 @@ export default function AdminRolesPage() {
       setActionNotice({ tone: "error", text: "Could not copy link." });
       return;
     }
-    setCopied(role.id);
-    setTimeout(() => setCopied(null), 1500);
     setActionNotice({ tone: "success", text: "Link copied." });
   };
 
@@ -767,6 +784,8 @@ export default function AdminRolesPage() {
       </div>
       {actionNotice && (
         <div
+          role="status"
+          aria-live="polite"
           className="mb-4 px-4 py-2.5 rounded-xl text-sm font-semibold"
           style={{
             border: actionNotice.tone === "error" ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(2,217,157,0.25)",
@@ -906,48 +925,59 @@ export default function AdminRolesPage() {
 
       {/* ── Roles table ───────────────────────────────────── */}
       <div
-        className="rounded-2xl overflow-hidden"
+        className="rounded-2xl overflow-x-auto"
         style={surfaceCardStyle}
       >
         {/* Header */}
         <div
-          className="grid grid-cols-[minmax(150px,1fr)_120px_110px_78px_105px_76px_50px_50px_96px_104px] items-center px-5 py-3 border-b"
+          className={`${ROLE_TABLE_ADMIN_GRID_TEMPLATE} py-3 border-b`}
           style={dividerStyle}
         >
-          <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors text-left"
-            style={mutedTextStyle}
-            onClick={() => handleSort("name")}
-          >
-            Role <SortIcon col="name" />
-          </button>
-          <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
-            style={mutedTextStyle}
-            onClick={() => handleSort("entity")}
-          >
-            Entity <SortIcon col="entity" />
-          </button>
-          <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
-            style={mutedTextStyle}
-            onClick={() => handleSort("created")}
-          >
-            Created <SortIcon col="created" />
-          </button>
-          <button
-            className="flex items-center text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
-            style={mutedTextStyle}
-            onClick={() => handleSort("type")}
-          >
-            Type <SortIcon col="type" />
-          </button>
-          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Usage</p>
-          <p className="text-center text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Add’l Int.</p>
-          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Rubric</p>
-          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>JD</p>
-          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Link</p>
-          <p className="text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Actions</p>
+          <div className={roleTableAlignmentClass("role")}>
+            <button
+              className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+              style={mutedTextStyle}
+              onClick={() => handleSort("name")}
+            >
+              Role <SortIcon col="name" />
+            </button>
+          </div>
+          <div className={roleTableAlignmentClass("entity")}>
+            <button
+              className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+              style={mutedTextStyle}
+              onClick={() => handleSort("entity")}
+            >
+              Entity <SortIcon col="entity" />
+            </button>
+          </div>
+          <div className={roleTableAlignmentClass("created")}>
+            <button
+              className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+              style={mutedTextStyle}
+              onClick={() => handleSort("created")}
+            >
+              Created <SortIcon col="created" />
+            </button>
+          </div>
+          <div className={roleTableAlignmentClass("type")}>
+            <button
+              className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest hover:text-[#A380F6] transition-colors"
+              style={mutedTextStyle}
+              onClick={() => handleSort("type")}
+            >
+              Type <SortIcon col="type" />
+            </button>
+          </div>
+          <div className={roleTableAlignmentClass("usage")}>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Usage</span>
+          </div>
+          <div className={roleTableAlignmentClass("usage")}>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Add’l Int.</span>
+          </div>
+          <div className={roleTableAlignmentClass("actions")}>
+            <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Actions</span>
+          </div>
         </div>
 
         {/* Rows */}
@@ -963,137 +993,111 @@ export default function AdminRolesPage() {
           ) : (
             sorted.map((role) => {
               const tc = typeColors[role.type];
-              const isCopied = copied === role.id;
               return (
                 <div
                   key={role.id}
-                  className="grid grid-cols-[minmax(150px,1fr)_120px_110px_78px_105px_76px_50px_50px_96px_104px] items-center px-5 py-3.5 border-b as-shell-dropdown-item transition-colors"
+                  className={`${ROLE_TABLE_ADMIN_GRID_TEMPLATE} py-3.5 border-b as-shell-dropdown-item transition-colors`}
                   style={dividerStyle}
                 >
                   {/* Name + parent */}
-                  <div className="min-w-0 pr-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <p className="text-sm font-bold leading-snug truncate" style={primaryTextStyle}>{role.name}</p>
+                  <div className={roleTableAlignmentClass("role")}>
+                    <div className="min-w-0 w-full">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-sm font-bold leading-snug truncate" style={primaryTextStyle}>{role.name}</p>
+                        {role.isInactive && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black" style={{ backgroundColor: "color-mix(in srgb, var(--as-text) 7%, transparent)", color: "var(--as-text-muted)" }}>
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] mt-0.5 font-semibold truncate" style={subtleTextStyle}>
+                        Parent: {role.parentClientName}
+                      </p>
                       {role.isInactive && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black" style={{ backgroundColor: "color-mix(in srgb, var(--as-text) 7%, transparent)", color: "var(--as-text-muted)" }}>
-                          Inactive
-                        </span>
+                        <p className="text-[10px] mt-0.5 truncate" style={subtleTextStyle}>
+                          Recordings expire 14 days after role closure.
+                        </p>
                       )}
                     </div>
-                    <p className="text-[10px] mt-0.5 font-semibold truncate" style={subtleTextStyle}>
-                      Parent: {role.parentClientName}
-                    </p>
-                    {role.isInactive && (
-                      <p className="text-[10px] mt-0.5 truncate" style={subtleTextStyle}>
-                        Recordings expire 14 days after role closure.
-                      </p>
-                    )}
                   </div>
 
                   {/* Entity */}
-                  <p className="text-xs font-semibold truncate pr-2" style={mutedTextStyle}>
-                    {role.entityName || "—"}
-                  </p>
+                  <div className={roleTableAlignmentClass("entity")}>
+                    <p className="w-full text-xs font-semibold truncate" style={mutedTextStyle}>
+                      {role.entityName || "—"}
+                    </p>
+                  </div>
 
                   {/* Created */}
-                  <div className="pr-2">
-                    <p className="text-xs font-bold leading-snug" style={mutedTextStyle}>{role.createdDate}</p>
-                    <p className="text-[10px] font-semibold mt-0.5" style={subtleTextStyle}>{role.createdTime}</p>
+                  <div className={roleTableAlignmentClass("created")}>
+                    <div className="w-full">
+                      <p className="text-xs font-bold leading-snug" style={mutedTextStyle}>{role.createdDate}</p>
+                      <p className="text-[10px] font-semibold mt-0.5" style={subtleTextStyle}>{role.createdTime}</p>
+                    </div>
                   </div>
 
                   {/* Type badge */}
-                  <span
-                    className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold w-fit"
-                    style={{ backgroundColor: tc.bg, color: tc.text }}
-                  >
-                    {role.type}
-                  </span>
+                  <div className={roleTableAlignmentClass("type")}>
+                    <span
+                      className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold w-fit"
+                      style={{ backgroundColor: tc.bg, color: tc.text }}
+                    >
+                      {role.type}
+                    </span>
+                  </div>
 
                   {/* Usage */}
-                  <p className="text-xs font-bold pr-2" style={mutedTextStyle}>
-                    {role.remainingInterviews == null || role.usedInterviews == null
-                      ? "—"
-                      : `${role.remainingInterviews} left / ${role.usedInterviews} used`}
-                  </p>
+                  <div className={roleTableAlignmentClass("usage")}>
+                    <p className="text-center text-xs font-bold" style={mutedTextStyle}>
+                      {role.remainingInterviews == null || role.usedInterviews == null
+                        ? "—"
+                        : `${role.remainingInterviews} left / ${role.usedInterviews} used`}
+                    </p>
+                  </div>
 
                   {/* Add'l interviews */}
-                  <p className="text-center text-xs font-bold" style={mutedTextStyle}>
-                    {role.purchasedInterviews == null ? "—" : role.purchasedInterviews}
-                  </p>
-
-                  {/* Rubric icon */}
-                  <div className="flex justify-center">
-                    <button
-                      onClick={() => {
-                        void openRoleRubric(role);
-                      }}
-                      disabled={loadingRubric[role.id] === true}
-                      className="p-1.5 rounded-lg text-[#0A1547]/30 dark:text-slate-400/45 hover:text-[#A380F6] hover:bg-[rgba(163,128,246,0.08)] transition-all"
-                      title="View rubric"
-                    >
-                      <FileText className="w-4 h-4" />
-                    </button>
+                  <div className={roleTableAlignmentClass("usage")}>
+                    <p className="text-xs font-bold" style={mutedTextStyle}>
+                      {role.purchasedInterviews == null ? "—" : role.purchasedInterviews}
+                    </p>
                   </div>
-
-                  {/* JD icon */}
-                  <div className="flex justify-center">
-                    {role.hasJD ? (
-                      <button
-                        onClick={() => {
-                          void openRoleJd(role);
-                        }}
-                        disabled={openingJd[role.id] === true}
-                        className="p-1.5 rounded-lg text-[#0A1547]/30 dark:text-slate-400/45 hover:text-[#A380F6] hover:bg-[rgba(163,128,246,0.08)] transition-all"
-                        title="View job description"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <span className="text-sm font-semibold" style={subtleTextStyle}>—</span>
-                    )}
-                  </div>
-
-                  {/* Copy link */}
-                  <button
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 w-fit"
-                    style={{
-                      backgroundColor: role.isInactive ? "var(--as-surface-muted)" : isCopied ? "#02D99D" : "#A380F6",
-                      color: role.isInactive ? "var(--as-text-subtle)" : "#FFFFFF",
-                    }}
-                    onClick={() => {
-                      void handleCopy(role);
-                    }}
-                    disabled={role.isInactive}
-                    title={role.isInactive ? "Inactive roles cannot accept new candidates." : undefined}
-                  >
-                    <Copy className="w-3 h-3" />
-                    {isCopied ? "Copied!" : "Copy link"}
-                  </button>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRoleStatusConfirm({ role, nextStatus: role.isInactive ? "active" : "inactive" })}
-                      disabled={updatingRoleStatus[role.id] === true}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
-                        role.isInactive
-                          ? "text-[#009E73] bg-[#02D99D]/10 hover:bg-[#02D99D]/15"
-                          : "text-[#0A1547]/55 dark:text-slate-300/70 bg-[#0A1547]/5 dark:bg-white/5 hover:bg-[#0A1547]/10 dark:hover:bg-white/10"
-                      }`}
-                    >
-                      {role.isInactive ? "Reopen" : "Close"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setRoleDeleteConfirm({ role });
+                  <div className={roleTableAlignmentClass("actions")}>
+                    <RoleActionsMenu
+                      open={openRoleActionsId === role.id}
+                      onOpenChange={(open) => setOpenRoleActionsId(open ? role.id : null)}
+                      roleTitle={role.name}
+                      canManageRole
+                      canCopyInterviewLink={!role.isInactive && Boolean(role.token)}
+                      copyDisabledReason={role.isInactive ? "Inactive roles cannot accept new candidates." : "Interview link unavailable."}
+                      hasJobDescription={role.hasJD}
+                      hasRubric={role.hasRubric}
+                      openingJobDescription={openingJd[role.id] === true}
+                      loadingRubric={loadingRubric[role.id] === true}
+                      replacementEligibility={role.jobDescriptionReplacement}
+                      updatingStatus={updatingRoleStatus[role.id] === true}
+                      deleting={deletingRoles[role.id] === true}
+                      isInactive={Boolean(role.isInactive)}
+                      onTriggerFocus={(trigger) => { roleActionsTriggerRef.current = trigger; }}
+                      onCopyInterviewLink={() => { void handleCopy(role); }}
+                      onViewJobDescription={() => { void openRoleJd(role); }}
+                      onViewRubric={() => { void openRoleRubric(role); }}
+                      onEditRubricQuestions={() => {
+                        setOpenRoleActionsId(null);
+                        setReplacementRole(null);
+                        setRubricEditorSession((value) => value + 1);
+                        setEditingRubricRole(role);
                       }}
-                      disabled={deletingRoles[role.id] === true}
-                      className="p-1.5 rounded-lg text-[#0A1547]/25 dark:text-slate-400/45 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
-                      title={`Delete ${role.name}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      onReplaceJobDescription={() => {
+                        if (!role.jobDescriptionReplacement.eligible) return;
+                        setOpenRoleActionsId(null);
+                        setEditingRubricRole(null);
+                        setReplacementRole(role);
+                      }}
+                      onToggleRoleStatus={() => setRoleStatusConfirm({ role, nextStatus: role.isInactive ? "active" : "inactive" })}
+                      onDeleteRole={() => setRoleDeleteConfirm({ role })}
+                    />
                   </div>
                 </div>
               );
@@ -1115,6 +1119,43 @@ export default function AdminRolesPage() {
           )}
         </div>
       </div>
+      <EditRoleRubricModal
+        open={Boolean(editingRubricRole)}
+        role={editingRubricRole ? {
+          id: editingRubricRole.id,
+          clientId: editingRubricRole.clientId,
+          title: editingRubricRole.name,
+          entityName: editingRubricRole.entityName,
+          parentClientName: editingRubricRole.parentClientName,
+          status: editingRubricRole.status,
+        } : null}
+        sessionKey={rubricEditorSession}
+        backendBase={backendBase}
+        getSessionToken={getSessionToken}
+        onClose={() => setEditingRubricRole(null)}
+        onSuccess={() => {
+          setRefreshNonce((value) => value + 1);
+          setActionNotice({ tone: "success", text: "Rubric questions updated." });
+        }}
+        getRestoreFocusTarget={() => roleActionsTriggerRef.current}
+      />
+      <ReplaceJobDescriptionModal
+        open={Boolean(replacementRole)}
+        role={replacementRole ? {
+          id: replacementRole.id,
+          clientId: replacementRole.clientId,
+          title: replacementRole.name,
+          status: replacementRole.status,
+          jobDescriptionUrl: replacementRole.jobDescriptionUrl,
+        } : null}
+        getSessionToken={getSessionToken}
+        onClose={() => setReplacementRole(null)}
+        onSuccess={() => {
+          setRefreshNonce((value) => value + 1);
+          setActionNotice({ tone: "success", text: "Job description replaced and role configuration rebuilt." });
+        }}
+        getRestoreFocusTarget={() => roleActionsTriggerRef.current}
+      />
       {roleStatusConfirm && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
           <button

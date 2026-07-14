@@ -3,7 +3,6 @@ import {
   FileText,
   Upload,
   Trash2,
-  Copy,
   X,
   ChevronDown,
   ChevronUp,
@@ -12,8 +11,15 @@ import {
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
+import RoleActionsMenu from "@/components/roles/RoleActionsMenu";
+import ReplaceJobDescriptionModal from "@/components/roles/ReplaceJobDescriptionModal";
+import {
+  ROLE_TABLE_CLIENT_COLUMNS,
+  roleTableAlignmentClass,
+} from "@/components/roles/roleTableLayout";
 import { useClient } from "@/context/ClientContext";
 import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import { normalizeRoleJdReplacementEligibility, type RoleJdReplacementEligibility } from "@/lib/roleJdReplacementEligibility";
 import { supabase } from "@/lib/supabaseClient";
 
 type InterviewType = "Basic" | "Detailed" | "Technical";
@@ -63,7 +69,8 @@ interface Role {
   clientId: string;
   name: string;
   entityName: string;
-  date: string;
+  createdDate: string;
+  createdTime: string;
   type: InterviewType;
   left: number;
   used: number;
@@ -73,10 +80,10 @@ interface Role {
   slugOrToken: string;
   rubric: unknown;
   jobDescriptionUrl: string;
+  jobDescriptionReplacement: RoleJdReplacementEligibility;
   status?: string | null;
   closedAt?: string | null;
   closedBy?: string | null;
-  inactiveReason?: string | null;
   isInactive?: boolean;
 }
 
@@ -162,26 +169,16 @@ function toWholeNonNegative(value: unknown): number {
   return Math.max(0, Math.floor(n));
 }
 
-function formatRoleDate(value: unknown): { text: string; sortDate: number } {
+function formatRoleCreated(value: unknown): { date: string; time: string; sortDate: number } {
   const raw = String(value || "").trim();
-  if (!raw) return { text: "—", sortDate: 0 };
+  if (!raw) return { date: "—", time: "—", sortDate: 0 };
   const parsed = new Date(raw);
-  const time = parsed.getTime();
-  if (Number.isNaN(time)) return { text: "—", sortDate: 0 };
-  const formatted = parsed.toLocaleString("en-US", {
-    timeZone: "America/Chicago",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZoneName: "short",
-  });
-  const normalized = formatted
-    .replace(/\sGMT[+-]\d{1,2}(?::\d{2})?/g, "")
-    .replace(/\b(?:CDT|CST)\b/g, "CST");
-  return { text: normalized.includes("CST") ? normalized : `${normalized} CST`, sortDate: time };
+  if (Number.isNaN(parsed.getTime())) return { date: "—", time: "—", sortDate: 0 };
+  return {
+    date: parsed.toLocaleDateString(),
+    time: parsed.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+    sortDate: parsed.getTime(),
+  };
 }
 
 function extractErrorMessage(text: string): string {
@@ -325,43 +322,20 @@ function UsageBar({ left, used }: { left: number; used: number }) {
   );
 }
 
-function DocButton({
-  has,
-  label,
-  onClick,
-  disabled,
-}: {
-  has: boolean;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  if (!has) return <span className="text-sm" style={subtleTextStyle}>—</span>;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={`View ${label}`}
-      className="p-2 rounded-lg hover:text-[#A380F6] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-      style={mutedTextStyle}
-      aria-label={`View ${label}`}
-    >
-      <FileText className="w-4 h-4" />
-    </button>
-  );
-}
-
 export default function RolesPage() {
   const { clients, selectedClient, selectedClientId, loading: clientLoading, error: clientError, isGlobalAdmin, memberships } = useClient();
-  const selectedMembershipRole = String(
+  const selectedMembershipRoleValue = String(
     memberships.find((membership) => membership.client_id === selectedClientId)?.role ||
       selectedClient.role ||
       "",
   )
     .trim()
-    .toLowerCase();
-  const canManageRoles = isGlobalAdmin || selectedMembershipRole === "manager" || selectedMembershipRole === "admin";
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  const selectedMembershipRole = selectedMembershipRoleValue === "superadmin"
+    ? "super_admin"
+    : selectedMembershipRoleValue;
+  const canManageRoles = isGlobalAdmin || ["manager", "admin", "owner", "super_admin"].includes(selectedMembershipRole);
   const [roleTitle, setRoleTitle] = useState("");
   const [interviewType, setInterviewType] = useState<InterviewType>("Basic");
   const [jdFile, setJdFile] = useState<File | null>(null);
@@ -382,6 +356,8 @@ export default function RolesPage() {
   const [updatingRoleStatus, setUpdatingRoleStatus] = useState<Record<string, boolean>>({});
   const [roleStatusConfirm, setRoleStatusConfirm] = useState<{ role: Role; nextStatus: "active" | "inactive" } | null>(null);
   const [roleDeleteConfirm, setRoleDeleteConfirm] = useState<{ role: Role } | null>(null);
+  const [replacementRole, setReplacementRole] = useState<Role | null>(null);
+  const [openRoleActionsId, setOpenRoleActionsId] = useState<string | null>(null);
   const [rubricModalRole, setRubricModalRole] = useState<Role | null>(null);
   const [rubricQuestions, setRubricQuestions] = useState<string[]>([]);
   const [rubricNotes, setRubricNotes] = useState("");
@@ -394,6 +370,7 @@ export default function RolesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const embeddedCheckoutContainerRef = useRef<HTMLDivElement>(null);
   const embeddedCheckoutInstanceRef = useRef<{ unmount?: () => void; destroy?: () => void } | null>(null);
+  const replacementTriggerRef = useRef<HTMLButtonElement>(null);
   const entityOptions = useMemo(
     () => buildEntityFilterOptions(clients, selectedClientId, { useParentNameLabel: true }),
     [clients, selectedClientId],
@@ -412,6 +389,8 @@ export default function RolesPage() {
     setUpdatingRoleStatus({});
     setRoleStatusConfirm(null);
     setRoleDeleteConfirm(null);
+    setReplacementRole(null);
+    setOpenRoleActionsId(null);
     setRubricModalRole(null);
     setRubricQuestions([]);
     setRubricNotes("");
@@ -790,7 +769,7 @@ export default function RolesPage() {
         const mappedRoles: Role[] = items
           .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
           .map((item) => {
-            const date = formatRoleDate(item.created_at);
+            const created = formatRoleCreated(item.created_at);
             const rubric = item.rubric ?? null;
             const questions = extractRubricQuestions(rubric);
             const jobDescriptionUrl = String(item.job_description_url || "").trim();
@@ -800,20 +779,21 @@ export default function RolesPage() {
               clientId: String(item.client_id || "").trim(),
               name: String(item.title || "").trim() || "Untitled Role",
               entityName: String(item.entity_name || "").trim() || selectedClient.name || "—",
-              date: date.text,
+              createdDate: created.date,
+              createdTime: created.time,
               type: mapInterviewType(item.interview_type),
               left: toWholeNonNegative(item.remaining_interviews),
               used: toWholeNonNegative(item.used_interviews),
               hasRubric: questions.length > 0,
               hasJD: Boolean(jobDescriptionUrl),
-              sortDate: date.sortDate,
+              sortDate: created.sortDate,
               slugOrToken: String(item.slug_or_token || "").trim(),
               rubric,
               jobDescriptionUrl,
+              jobDescriptionReplacement: normalizeRoleJdReplacementEligibility(item.job_description_replacement),
               status,
               closedAt: String(item.closed_at || "").trim() || null,
               closedBy: String(item.closed_by || "").trim() || null,
-              inactiveReason: String(item.inactive_reason || "").trim() || null,
               isInactive: status === "inactive",
             };
           })
@@ -1050,7 +1030,7 @@ export default function RolesPage() {
     }
   };
 
-  const roleTableColumnCount = canManageRoles ? 8 : 7;
+  const roleTableColumnCount = 6;
 
   return (
     <DashboardLayout title="Roles">
@@ -1263,80 +1243,85 @@ export default function RolesPage() {
           </div>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="min-w-[960px] w-full table-fixed text-sm">
+            <colgroup>
+              <col className={ROLE_TABLE_CLIENT_COLUMNS.role.width} />
+              <col className={ROLE_TABLE_CLIENT_COLUMNS.created.width} />
+              <col className={ROLE_TABLE_CLIENT_COLUMNS.entity.width} />
+              <col className={ROLE_TABLE_CLIENT_COLUMNS.type.width} />
+              <col className={ROLE_TABLE_CLIENT_COLUMNS.usage.width} />
+              <col className={ROLE_TABLE_CLIENT_COLUMNS.actions.width} />
+            </colgroup>
             <thead>
               <tr className="border-b" style={dividerStyle}>
                 {/* Role — sortable */}
-                <th className="text-left px-6 py-3.5 whitespace-nowrap">
-                  <button
-                    onClick={() => handleSort("name")}
-                    className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
-                    style={mutedTextStyle}
-                  >
-                    Role
-                    <SortIcon active={sortKey === "name"} dir={sortDir} />
-                  </button>
+                <th className={`${ROLE_TABLE_CLIENT_COLUMNS.role.horizontalPadding} py-3.5 whitespace-nowrap`}>
+                  <div className={roleTableAlignmentClass("role")}>
+                    <button
+                      onClick={() => handleSort("name")}
+                      className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
+                      style={mutedTextStyle}
+                    >
+                      Role
+                      <SortIcon active={sortKey === "name"} dir={sortDir} />
+                    </button>
+                  </div>
                 </th>
-                {/* Type — sortable */}
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">
-                  <button
-                    onClick={() => handleSort("entity")}
-                    className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
-                    style={mutedTextStyle}
-                  >
-                    Entity
-                    <SortIcon active={sortKey === "entity"} dir={sortDir} />
-                  </button>
+                <th className={`${ROLE_TABLE_CLIENT_COLUMNS.created.horizontalPadding} py-3.5 whitespace-nowrap`}>
+                  <div className={roleTableAlignmentClass("created")}>
+                    <button
+                      onClick={() => handleSort("date")}
+                      className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
+                      style={mutedTextStyle}
+                    >
+                      Created
+                      <SortIcon active={sortKey === "date"} dir={sortDir} />
+                    </button>
+                  </div>
                 </th>
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">
-                  <button
-                    onClick={() => handleSort("type")}
-                    className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
-                    style={mutedTextStyle}
-                  >
-                    Type
-                    <SortIcon active={sortKey === "type"} dir={sortDir} />
-                  </button>
+                <th className={`${ROLE_TABLE_CLIENT_COLUMNS.entity.horizontalPadding} py-3.5 whitespace-nowrap`}>
+                  <div className={roleTableAlignmentClass("entity")}>
+                    <button
+                      onClick={() => handleSort("entity")}
+                      className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
+                      style={mutedTextStyle}
+                    >
+                      Entity
+                      <SortIcon active={sortKey === "entity"} dir={sortDir} />
+                    </button>
+                  </div>
+                </th>
+                <th className={`${ROLE_TABLE_CLIENT_COLUMNS.type.horizontalPadding} py-3.5 whitespace-nowrap`}>
+                  <div className={roleTableAlignmentClass("type")}>
+                    <button
+                      onClick={() => handleSort("type")}
+                      className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
+                      style={mutedTextStyle}
+                    >
+                      Type
+                      <SortIcon active={sortKey === "type"} dir={sortDir} />
+                    </button>
+                  </div>
                 </th>
                 {/* Usage — sortable */}
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">
-                  <button
-                    onClick={() => handleSort("left")}
-                    className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
-                    style={mutedTextStyle}
-                  >
-                    Usage
-                    <InfoTooltip content="Interviews used vs. remaining quota for this role" />
-                    <SortIcon active={sortKey === "left"} dir={sortDir} />
-                  </button>
+                <th className={`${ROLE_TABLE_CLIENT_COLUMNS.usage.horizontalPadding} py-3.5 whitespace-nowrap`}>
+                  <div className={roleTableAlignmentClass("usage")}>
+                    <button
+                      onClick={() => handleSort("left")}
+                      className="inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest transition-colors"
+                      style={mutedTextStyle}
+                    >
+                      Usage
+                      <InfoTooltip content="Interviews used vs. remaining quota for this role" />
+                      <SortIcon active={sortKey === "left"} dir={sortDir} />
+                    </button>
+                  </div>
                 </th>
-                {/* Rubric — not sortable (boolean doc) */}
-                <th className="text-center px-4 py-3.5 whitespace-nowrap">
-                  <span className="flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
-                    Rubric
-                    <InfoTooltip content="Role-specific interview question set and scoring rubric generated for this role" />
-                  </span>
+                <th className={`${ROLE_TABLE_CLIENT_COLUMNS.actions.horizontalPadding} py-3.5 whitespace-nowrap`}>
+                  <div className={roleTableAlignmentClass("actions")}>
+                    <span className="inline-flex items-center justify-center text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>Actions</span>
+                  </div>
                 </th>
-                {/* JD — not sortable */}
-                <th className="text-center px-4 py-3.5 whitespace-nowrap">
-                  <span className="flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
-                    JD
-                    <InfoTooltip content="Job description file used as source input to generate this role's rubric" />
-                  </span>
-                </th>
-                {/* Interview Link */}
-                <th className="text-left px-4 py-3.5 whitespace-nowrap">
-                  <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
-                    Interview Link
-                    <InfoTooltip content="Shareable link for candidates to start their AI interview" />
-                  </span>
-                </th>
-                {/* Delete */}
-                {canManageRoles && (
-                  <th className="text-center px-4 py-3.5 pr-6 text-[10px] font-black uppercase tracking-widest whitespace-nowrap" style={mutedTextStyle}>
-                    Actions
-                  </th>
-                )}
               </tr>
             </thead>
             <tbody>
@@ -1369,115 +1354,106 @@ export default function RolesPage() {
                   className="border-b transition-colors as-shell-dropdown-item"
                   style={idx === sortedRoles.length - 1 ? { borderBottom: "none" } : dividerStyle}
                 >
-                  {/* Role name + date */}
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-bold text-sm leading-snug" style={primaryTextStyle}>{role.name}</p>
-                      {role.isInactive && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black" style={{ backgroundColor: "var(--as-surface-muted)", color: "var(--as-text-muted)" }}>
-                          Inactive
-                        </span>
-                      )}
+                  {/* Role */}
+                  <td className={`${ROLE_TABLE_CLIENT_COLUMNS.role.horizontalPadding} py-4`}>
+                    <div className={roleTableAlignmentClass("role")}>
+                      <div className="min-w-0 w-full">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="break-words font-bold text-sm leading-snug" style={primaryTextStyle}>{role.name}</p>
+                          {role.isInactive && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black" style={{ backgroundColor: "var(--as-surface-muted)", color: "var(--as-text-muted)" }}>
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-[11px] mt-0.5" style={subtleTextStyle}>
-                      {role.date}
-                      {role.isInactive && role.inactiveReason ? ` • ${role.inactiveReason}` : ""}
-                    </p>
-                    {role.isInactive && (
-                      <p className="text-[11px] mt-0.5" style={subtleTextStyle}>
-                        Recordings expire 14 days after role closure.
-                      </p>
-                    )}
                   </td>
 
-                  <td className="px-4 py-4">
-                    <span className="text-sm font-semibold" style={mutedTextStyle}>{role.entityName}</span>
+                  {/* Created */}
+                  <td className={`${ROLE_TABLE_CLIENT_COLUMNS.created.horizontalPadding} py-4`}>
+                    <div className={roleTableAlignmentClass("created")}>
+                      <div className="w-full">
+                        <p className="text-xs font-bold leading-snug" style={mutedTextStyle}>{role.createdDate}</p>
+                        <p className="text-[10px] font-semibold mt-0.5" style={subtleTextStyle}>{role.createdTime}</p>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className={`${ROLE_TABLE_CLIENT_COLUMNS.entity.horizontalPadding} py-4`}>
+                    <div className={roleTableAlignmentClass("entity")}>
+                      <span className="block w-full truncate text-sm font-semibold" title={role.entityName} style={mutedTextStyle}>{role.entityName}</span>
+                    </div>
                   </td>
 
                   {/* Type */}
-                  <td className="px-4 py-4">
-                    <TypeBadge type={role.type} />
+                  <td className={`${ROLE_TABLE_CLIENT_COLUMNS.type.horizontalPadding} py-4`}>
+                    <div className={roleTableAlignmentClass("type")}>
+                      <TypeBadge type={role.type} />
+                    </div>
                   </td>
 
                   {/* Usage */}
-                  <td className="px-4 py-4">
-                    <UsageBar left={role.left} used={role.used} />
+                  <td className={`${ROLE_TABLE_CLIENT_COLUMNS.usage.horizontalPadding} py-4`}>
+                    <div className={roleTableAlignmentClass("usage")}>
+                      <UsageBar left={role.left} used={role.used} />
+                    </div>
                   </td>
 
-                  {/* Rubric */}
-                  <td className="px-4 py-4 text-center">
-                    <DocButton
-                      has={role.hasRubric}
-                      label="Rubric"
-                      onClick={() => openRubricModal(role)}
-                    />
+                  <td className={`${ROLE_TABLE_CLIENT_COLUMNS.actions.horizontalPadding} py-4`}>
+                    <div className={roleTableAlignmentClass("actions")}>
+                      <RoleActionsMenu
+                        open={openRoleActionsId === role.id}
+                        onOpenChange={(open) => setOpenRoleActionsId(open ? role.id : null)}
+                        roleTitle={role.name}
+                        canManageRole={canManageRoles}
+                        canCopyInterviewLink={Boolean(role.slugOrToken) && !role.isInactive}
+                        copyDisabledReason={role.isInactive ? "Inactive roles cannot accept new candidates." : "Interview link unavailable."}
+                        hasJobDescription={role.hasJD}
+                        hasRubric={role.hasRubric}
+                        openingJobDescription={Boolean(openingJd[role.id])}
+                        loadingRubric={false}
+                        replacementEligibility={role.jobDescriptionReplacement}
+                        updatingStatus={Boolean(updatingRoleStatus[role.id])}
+                        deleting={Boolean(deletingRoles[role.id])}
+                        isInactive={Boolean(role.isInactive)}
+                        onTriggerFocus={(trigger) => { replacementTriggerRef.current = trigger; }}
+                        onCopyInterviewLink={() => { void copyInterviewLink(role); }}
+                        onViewJobDescription={() => { void openRoleJd(role); }}
+                        onViewRubric={() => openRubricModal(role)}
+                        onReplaceJobDescription={() => {
+                          if (!role.jobDescriptionReplacement.eligible) return;
+                          setOpenRoleActionsId(null);
+                          setReplacementRole(role);
+                        }}
+                        onToggleRoleStatus={() => setRoleStatusConfirm({ role, nextStatus: role.isInactive ? "active" : "inactive" })}
+                        onDeleteRole={() => setRoleDeleteConfirm({ role })}
+                      />
+                    </div>
                   </td>
-
-                  {/* JD */}
-                  <td className="px-4 py-4 text-center">
-                    <DocButton
-                      has={role.hasJD}
-                      label="JD"
-                      onClick={() => { void openRoleJd(role); }}
-                      disabled={Boolean(openingJd[role.id])}
-                    />
-                  </td>
-
-                  {/* Interview Link */}
-                  <td className="px-4 py-4">
-                    <button
-                      type="button"
-                      onClick={() => { void copyInterviewLink(role); }}
-                      disabled={!role.slugOrToken || role.isInactive}
-                      title={role.isInactive ? "Inactive roles cannot accept new candidates." : undefined}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all hover:opacity-85 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-                      style={{
-                        backgroundColor: role.isInactive ? "var(--as-surface-muted)" : "rgba(163,128,246,0.12)",
-                        color: role.isInactive ? "var(--as-text-subtle)" : "#7C5FCC"
-                      }}
-                    >
-                      <Copy className="w-3 h-3" />
-                      Copy link
-                    </button>
-                  </td>
-
-                  {/* Delete */}
-                  {canManageRoles && (
-                    <td className="px-4 py-4 pr-6">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setRoleStatusConfirm({ role, nextStatus: role.isInactive ? "active" : "inactive" })}
-                          disabled={Boolean(updatingRoleStatus[role.id])}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
-                            role.isInactive
-                              ? "text-[#009E73] bg-[#02D99D]/10 hover:bg-[#02D99D]/15"
-                              : ""
-                          }`}
-                          style={role.isInactive ? undefined : { backgroundColor: "var(--as-surface-muted)", color: "var(--as-text-muted)" }}
-                        >
-                          {role.isInactive ? "Reopen" : "Close"}
-                        </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setRoleDeleteConfirm({ role })}
-                        disabled={Boolean(deletingRoles[role.id])}
-                        className="p-2 rounded-lg hover:text-red-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                        style={subtleTextStyle}
-                        aria-label="Delete role"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      </div>
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+      <ReplaceJobDescriptionModal
+        open={Boolean(replacementRole)}
+        role={replacementRole ? {
+          id: replacementRole.id,
+          clientId: replacementRole.clientId || selectedClientId,
+          title: replacementRole.name,
+          status: replacementRole.status,
+          jobDescriptionUrl: replacementRole.jobDescriptionUrl,
+        } : null}
+        getSessionToken={getSessionToken}
+        onClose={() => setReplacementRole(null)}
+        onSuccess={() => {
+          setRolesReloadNonce((value) => value + 1);
+          setActionNotice({ tone: "success", text: "Job description replaced and role configuration rebuilt." });
+        }}
+        getRestoreFocusTarget={() => replacementTriggerRef.current}
+      />
       {roleStatusConfirm && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
           <button

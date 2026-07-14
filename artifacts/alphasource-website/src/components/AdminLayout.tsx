@@ -5,7 +5,6 @@ import {
   Building2,
   Briefcase,
   Users,
-  Settings,
   UserCheck,
   HeartHandshake,
   CreditCard,
@@ -27,6 +26,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppearance } from "@/context/AppearanceContext";
 import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 import AppearanceSelector from "@/components/AppearanceSelector";
+import DashboardBrand from "@/components/DashboardBrand";
 
 interface NavItem {
   label: string;
@@ -42,7 +42,6 @@ const navItems: NavItem[] = [
   { label: "Clients",               href: "/admin/clients",              icon: Building2 },
   { label: "Roles",                 href: "/admin/roles",                icon: Briefcase },
   { label: "Candidates",            href: "/admin/candidates",           icon: Users },
-  { label: "Role Config",           href: "/admin/role-config",          icon: Settings },
   { label: "Automation",            href: "/admin/automation",           icon: Bot },
   { label: "Members",               href: "/admin/members",              icon: UserCheck },
   { label: "Accommodations",        href: "/admin/accommodations",       icon: HeartHandshake },
@@ -121,8 +120,6 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const filteredClients = clientSearchTerm
     ? availableClients.filter((client) => adminClientSearchText(client).includes(clientSearchTerm))
     : availableClients;
-  const sidebarLogoSrc = resolvedMode === "dark" ? "/logo-dark-mode.png" : "/logo-dark-text.png";
-
   return (
     <div
       className={`as-app-shell min-h-screen flex ${resolvedMode === "dark" ? "dark" : ""}`}
@@ -153,22 +150,14 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
               onClick={() => setCollapsed(false)}
               title="Expand sidebar"
             >
-              <img src="/alpha-symbol.png" alt="αS" className="w-8 h-8 object-contain" />
+              <DashboardBrand mode={resolvedMode} variant="compact" />
               <ChevronsRight className="w-3.5 h-3.5 text-[#A380F6]/50 group-hover:text-[#A380F6] transition-colors" />
             </button>
           ) : (
             <>
-              <div className="flex flex-col min-w-0">
-                <Link href="/" onClick={() => setMobileOpen(false)}>
-                  <img src={sidebarLogoSrc} alt="alphaSource AI" className="h-8 w-auto" />
-                </Link>
-                <span
-                  className="text-[9px] font-black uppercase tracking-widest mt-0.5"
-                  style={{ color: "#A380F6" }}
-                >
-                  Admin
-                </span>
-              </div>
+              <Link href="/" onClick={() => setMobileOpen(false)}>
+                <DashboardBrand mode={resolvedMode} variant="full" />
+              </Link>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
                   className="hidden lg:flex p-1.5 rounded-lg transition-colors"
