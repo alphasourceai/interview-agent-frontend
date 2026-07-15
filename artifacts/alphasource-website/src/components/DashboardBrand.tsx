@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { alphaSourceLogo, alphaSourceLogoDark, alphaSourceSymbol } from "@/assets/branding";
 
 type DashboardBrandMode = "dark" | "light";
 type DashboardBrandVariant = "compact" | "full";
@@ -9,14 +10,14 @@ type DashboardBrandProps = {
   variant: DashboardBrandVariant;
 };
 
-const COMPACT_LOGO_SRC = "/alpha-symbol.png";
+const COMPACT_LOGO_SRC = alphaSourceSymbol;
 
 function initialStage(variant: DashboardBrandVariant): LogoStage {
   return variant === "compact" ? "symbol" : "full";
 }
 
 export default function DashboardBrand({ mode, variant }: DashboardBrandProps) {
-  const fullLogoSrc = mode === "dark" ? "/logo-dark-mode.png" : "/logo-dark-text-clear.png";
+  const fullLogoSrc = mode === "dark" ? alphaSourceLogoDark : alphaSourceLogo;
   const [stage, setStage] = useState<LogoStage>(() => initialStage(variant));
 
   useEffect(() => {

@@ -11,6 +11,27 @@ const routingManifestPath = path.join(projectRoot, "render-routes.json");
 const SITE_URL = "https://www.alphasourceai.com";
 const LAST_UPDATED = "June 2026";
 
+function getBrandingSymbolUrl() {
+  if (!fs.existsSync(indexPath)) {
+    throw new Error(`Build output not found at ${indexPath}. Run Vite build before prerendering public routes.`);
+  }
+
+  const assetsDirectory = path.join(distRoot, "assets");
+  const matchingFiles = fs
+    .readdirSync(assetsDirectory)
+    .filter((fileName) => /^alpha-symbol-[A-Za-z0-9_-]+\.png$/.test(fileName));
+
+  if (matchingFiles.length !== 1) {
+    throw new Error(
+      `Expected one hashed alpha symbol asset, found ${matchingFiles.length} in ${assetsDirectory}`,
+    );
+  }
+
+  return `${SITE_URL}/assets/${matchingFiles[0]}`;
+}
+
+const BRANDING_SYMBOL_URL = getBrandingSymbolUrl();
+
 const routingManifest = JSON.parse(fs.readFileSync(routingManifestPath, "utf8"));
 const publicRoutes = routingManifest.publicRoutes;
 
@@ -181,7 +202,7 @@ const organizationSchema = {
   name: "alphaSource AI",
   alternateName: "alphaSource",
   url: `${SITE_URL}/`,
-  logo: `${SITE_URL}/alpha-symbol.png`,
+  logo: BRANDING_SYMBOL_URL,
   contactPoint: {
     "@type": "ContactPoint",
     email: "info@alphasourceai.com",

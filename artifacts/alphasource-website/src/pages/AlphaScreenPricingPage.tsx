@@ -14,11 +14,14 @@ import LeadCaptureForm from "@/components/LeadCaptureForm";
 import { trackEvent } from "@/lib/analytics";
 import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
 import { getPublicBackendBase, joinUrl } from "@/lib/urlConfig";
+import { alphaSourceSymbol } from "@/assets/branding";
 
 type PackageLoadState = "loading" | "ready" | "fallback";
 type PurchaseIntentStatus = "idle" | "submitting" | "success";
 type AgreementPrepStatus = "idle" | "preparing" | "ready";
+type EmailVerificationStatus = "idle" | "loading" | "sending" | "sent" | "verifying" | "verified";
 type BillingCadenceKey = "monthly" | "annual";
+type EmailVerificationOperation = "send" | "verify" | "status";
 
 type BillingCadence = {
   key?: string;
@@ -95,6 +98,13 @@ type PurchaseIntentResult = {
     additional_interview_fee?: number;
     per_role_fee?: number;
     first_role_prepay?: Partial<FirstRolePrepay>;
+  };
+  email_verification?: {
+    verified?: boolean;
+    status?: string;
+    code_active?: boolean;
+    expires_in_seconds?: number;
+    resend_cooldown_seconds?: number;
   };
   next_step_message?: string;
 };
@@ -247,6 +257,13 @@ function purchaseIntentAgreementEndpoint(purchaseIntentId: string): string {
   return joinUrl(getPublicBackendBase(), `/api/alphascreen/purchase-intents/${encodeURIComponent(purchaseIntentId)}/agreement`);
 }
 
+function purchaseIntentEmailVerificationEndpoint(purchaseIntentId: string, action: "send" | "verify" | "status"): string {
+  return joinUrl(
+    getPublicBackendBase(),
+    `/api/alphascreen/purchase-intents/${encodeURIComponent(purchaseIntentId)}/email-verification/${action}`,
+  );
+}
+
 function isAgreementSigningPath(path: string): boolean {
   return /^\/membership-agreement\/sign\/[^/?#]+(?:[?#].*)?$/.test(String(path || "").trim());
 }
@@ -268,6 +285,65 @@ function agreementSigningHref(result: PurchaseAgreementResult | null): string {
 
 function validEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function maskEmail(value: string): string {
+  const email = String(value || "").trim();
+  const atIndex = email.indexOf("@");
+  if (atIndex <= 0) return "your buyer email";
+  const local = email.slice(0, atIndex);
+  return `${local.slice(0, 2)}***${email.slice(atIndex)}`;
+}
+
+function retryAfterSeconds(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.ceil(parsed)) : 0;
+}
+
+function retailVerificationErrorMessage(
+  code: string,
+  fallback: string,
+  operation: EmailVerificationOperation,
+  retryAfter = 0,
+): string {
+  switch (code) {
+    case "RETAIL_EMAIL_VERIFICATION_COOLDOWN": {
+      const seconds = Math.max(1, retryAfter);
+      return `Please wait ${seconds} seconds before requesting another code.`;
+    }
+    case "RETAIL_EMAIL_VERIFICATION_SEND_LIMIT":
+    case "RETAIL_EMAIL_VERIFICATION_HOURLY_LIMIT":
+      return "Too many codes were requested for this signup. Try again later.";
+    case "RETAIL_EMAIL_VERIFICATION_SEND_FAILED":
+      return "We couldn't send the verification code. Try again in a moment.";
+    case "RETAIL_EMAIL_VERIFICATION_EXPIRED":
+      return "That code has expired. Request a new code.";
+    case "RETAIL_EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED":
+    case "RETAIL_EMAIL_VERIFICATION_ATTEMPT_LIMIT":
+      return "Too many unsuccessful attempts. Request a new code.";
+    case "RETAIL_EMAIL_VERIFICATION_INVALID_CODE":
+      return "That code is not valid. Check the code and try again.";
+    case "RETAIL_EMAIL_VERIFICATION_REQUIRED":
+      return "Verify the buyer email before continuing to the agreement.";
+    case "RETAIL_PUBLIC_RATE_LIMITED":
+    case "RETAIL_EMAIL_VERIFICATION_RATE_LIMITED":
+      return operation === "verify" || operation === "status"
+        ? "Please wait before trying again."
+        : retryAfter > 0
+          ? `Please wait ${retryAfter} seconds before requesting another code.`
+          : "Please wait before requesting another code.";
+    default:
+      return fallback;
+  }
+}
+
+function retailSignupErrorMessage(code: string, fallback: string, retryAfter = 0): string {
+  if (code === "RETAIL_SIGNUP_RATE_LIMITED" || code === "RETAIL_PUBLIC_RATE_LIMITED") {
+    return retryAfter > 0
+      ? `Too many signup attempts were made from this browser or network. Try again in ${retryAfter} seconds.`
+      : "Too many signup attempts were made from this browser or network. Try again later.";
+  }
+  return fallback;
 }
 
 function cleanText(value: string, max: number): string {
@@ -349,6 +425,15 @@ function loadCheckoutRecoveryState(): {
     };
   } catch (_) {
     return null;
+  }
+}
+
+function clearCheckoutRecoveryState() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(CHECKOUT_RECOVERY_STORAGE_KEY);
+  } catch (_) {
+    // Recovery is best-effort and should not block signup edits.
   }
 }
 
@@ -626,7 +711,7 @@ function EnterpriseCard() {
           "15-minute interview cap",
           "Volume discounts",
           "Advanced scoring models available",
-          "Priority Support",
+          "Dedicated Support Agent",
         ].map((item) => (
           <div key={item} className="flex items-center gap-3 text-sm font-bold text-white/85">
             <CheckCircle className="h-4 w-4 flex-shrink-0 text-[#02D99D]" />
@@ -699,8 +784,17 @@ function PurchaseIntentPanel({
   agreementStatus,
   agreementError,
   agreementResult,
+  emailVerificationStatus,
+  emailVerificationError,
+  emailVerificationCode,
+  resendCooldownSeconds,
+  emailSendLoading,
+  emailVerifyLoading,
   onChange,
   onSubmit,
+  onSendEmailVerification,
+  onVerifyEmailVerification,
+  onEmailVerificationCodeChange,
   onContinueToAgreement,
   onBackToPricing,
   onBackToSignup,
@@ -713,8 +807,17 @@ function PurchaseIntentPanel({
   agreementStatus: AgreementPrepStatus;
   agreementError: string;
   agreementResult: PurchaseAgreementResult | null;
+  emailVerificationStatus: EmailVerificationStatus;
+  emailVerificationError: string;
+  emailVerificationCode: string;
+  resendCooldownSeconds: number;
+  emailSendLoading: boolean;
+  emailVerifyLoading: boolean;
   onChange: <K extends keyof PurchaseIntentForm>(field: K, value: PurchaseIntentForm[K]) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSendEmailVerification: () => void;
+  onVerifyEmailVerification: () => void;
+  onEmailVerificationCodeChange: (value: string) => void;
   onContinueToAgreement: () => void;
   onBackToPricing: () => void;
   onBackToSignup: () => void;
@@ -746,6 +849,8 @@ function PurchaseIntentPanel({
 
   if (status === "success" && result) {
     const signingUrl = agreementSigningHref(agreementResult);
+    const emailVerified = emailVerificationStatus === "verified";
+    const codeEntryVisible = emailVerificationStatus === "sent" || emailVerifyLoading;
     return (
       <div className="rounded-lg border border-[#02D99D]/35 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -756,9 +861,17 @@ function PurchaseIntentPanel({
             <p className="text-sm font-black uppercase tracking-[0.18em] text-[#02D99D]">
               {result.duplicate ? "Signup details found" : "Signup details saved"}
             </p>
-            <h3 className="mt-2 text-2xl font-black text-[#0A1547]">{planName} membership is ready for agreement review.</h3>
+            <h3 className="mt-2 text-2xl font-black text-[#0A1547]">
+              {signingUrl
+                ? `${planName} membership agreement is ready.`
+                : emailVerified
+                  ? "Buyer email verified. Continue when you are ready."
+                  : `${planName} membership is ready to verify the buyer email.`}
+            </h3>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#0A1547]/60">
-              Next: review and sign your membership agreement. After signing, you will continue to secure payment.
+              {signingUrl
+                ? "Review and sign your membership agreement. After signing, you will continue to secure payment."
+                : "Verify the buyer email before creating the membership agreement. Payment is not collected here."}
             </p>
           </div>
           <div className="rounded-lg bg-[#F8F9FD] px-4 py-3 text-sm font-bold text-[#0A1547]/65">
@@ -828,8 +941,8 @@ function PurchaseIntentPanel({
           </div>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#A380F6]">Step 2</p>
-            <p className="mt-1 text-sm font-black text-[#0A1547]">Review and sign agreement</p>
-            <p className="mt-1 text-xs font-semibold text-[#0A1547]/55">Next: review and sign your membership agreement.</p>
+            <p className="mt-1 text-sm font-black text-[#0A1547]">Verify email and sign agreement</p>
+            <p className="mt-1 text-xs font-semibold text-[#0A1547]/55">Verify the buyer email, then review and sign the membership agreement.</p>
           </div>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0A1547]/45">Step 3</p>
@@ -842,35 +955,117 @@ function PurchaseIntentPanel({
             {agreementError}
           </div>
         ) : null}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        {emailVerificationError ? (
+          <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">
+            {emailVerificationError}
+          </div>
+        ) : null}
+        <div className="mt-6" aria-live="polite">
           {signingUrl ? (
-            <a
-              href={signingUrl}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#8E6EE0] bg-[#A380F6] px-6 py-3.5 text-sm font-black text-white shadow-[0_10px_24px_rgba(163,128,246,0.26)] transition-colors hover:border-[#7B5FD4] hover:bg-[#8E6EE0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              data-analytics-cta="Open Membership Agreement"
-              data-analytics-placement="signup-modal-success"
-              data-analytics-target="/membership-agreement/sign"
-            >
-              Open membership agreement
-              <ArrowRight className="h-4 w-4" />
-            </a>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <a
+                href={signingUrl}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[#8E6EE0] bg-[#A380F6] px-6 py-3.5 text-sm font-black text-white shadow-[0_10px_24px_rgba(163,128,246,0.26)] transition-colors hover:border-[#7B5FD4] hover:bg-[#8E6EE0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                data-analytics-cta="Open Membership Agreement"
+                data-analytics-placement="signup-modal-success"
+                data-analytics-target="/membership-agreement/sign"
+              >
+                Open membership agreement
+                <ArrowRight className="h-4 w-4" />
+              </a>
+              <p className="text-xs font-semibold leading-relaxed text-[#0A1547]/50">
+                No payment details are collected here. Secure checkout opens after agreement signing.
+              </p>
+            </div>
+          ) : emailVerified ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="inline-flex items-center gap-2 text-sm font-black text-[#02A878]">
+                <CheckCircle className="h-5 w-5" />
+                Email verified
+              </div>
+              <button
+                type="button"
+                onClick={onContinueToAgreement}
+                disabled={agreementStatus === "preparing"}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0A1547] px-6 py-3.5 text-sm font-black text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                data-analytics-cta="Continue to Agreement"
+                data-analytics-placement="signup-modal-success"
+                data-analytics-target="/membership-agreement/sign"
+              >
+                {agreementStatus === "preparing" ? "Preparing agreement..." : "Continue to agreement"}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          ) : codeEntryVisible ? (
+            <div className="max-w-xl rounded-lg border border-[#A380F6]/35 bg-[#F8F9FD] p-4">
+              <p className="text-sm font-bold text-[#0A1547]">We sent a 6-digit code to {maskEmail(form.buyer_email)}.</p>
+              <label htmlFor="retail-email-verification-code" className="mt-4 block text-sm font-black text-[#0A1547]">
+                Verification code
+              </label>
+              <input
+                id="retail-email-verification-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={emailVerificationCode}
+                onChange={(event) => onEmailVerificationCodeChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    if (emailVerificationCode.length === 6 && !emailSendLoading && !emailVerifyLoading) {
+                      onVerifyEmailVerification();
+                    }
+                  }
+                }}
+                aria-describedby="retail-email-verification-help"
+                className="mt-2 w-full max-w-xs rounded-lg border border-[#0A1547]/15 bg-white px-4 py-3 text-lg font-black tracking-[0.2em] text-[#0A1547] outline-none transition focus:border-[#A380F6] focus:ring-2 focus:ring-[#A380F6]/20"
+              />
+              <p id="retail-email-verification-help" className="mt-2 text-xs font-semibold text-[#0A1547]/55">
+                Enter the code from the verification email. It expires in 10 minutes.
+              </p>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={onVerifyEmailVerification}
+                  disabled={emailSendLoading || emailVerifyLoading || emailVerificationCode.length !== 6}
+                  className="inline-flex items-center justify-center rounded-full bg-[#0A1547] px-5 py-3 text-sm font-black text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {emailVerifyLoading ? "Verifying..." : "Verify code"}
+                </button>
+                <button
+                  type="button"
+                  onClick={onSendEmailVerification}
+                  disabled={resendCooldownSeconds > 0 || emailSendLoading || emailVerifyLoading}
+                  className="text-sm font-black text-[#A380F6] transition-colors hover:text-[#0A1547] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Send a new code
+                </button>
+                <span className="text-xs font-semibold text-[#0A1547]/55">
+                  {resendCooldownSeconds > 0 ? `You can request another code in ${resendCooldownSeconds} seconds.` : "You can request a new code now."}
+                </span>
+              </div>
+              <button type="button" onClick={onBackToSignup} className="mt-4 text-sm font-black text-[#A380F6] transition-colors hover:text-[#0A1547]">
+                Change email
+              </button>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={onContinueToAgreement}
-              disabled={agreementStatus === "preparing"}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0A1547] px-6 py-3.5 text-sm font-black text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              data-analytics-cta="Continue to Agreement"
-              data-analytics-placement="signup-modal-success"
-              data-analytics-target="/membership-agreement/sign"
-            >
-              {agreementStatus === "preparing" ? "Preparing agreement..." : "Continue to agreement"}
-              <ArrowRight className="h-4 w-4" />
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={onSendEmailVerification}
+                disabled={emailVerificationStatus === "loading" || emailSendLoading || emailVerifyLoading || resendCooldownSeconds > 0}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[#8E6EE0] bg-[#A380F6] px-6 py-3.5 text-sm font-black text-white shadow-[0_10px_24px_rgba(163,128,246,0.26)] transition-colors hover:border-[#7B5FD4] hover:bg-[#8E6EE0] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {emailSendLoading ? "Sending code..." : emailVerificationStatus === "loading" ? "Checking verification..." : "Verify email with one-time code"}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <p className="max-w-md text-xs font-semibold leading-relaxed text-[#0A1547]/55">
+                We'll send a verification code to the buyer email before creating the agreement.
+              </p>
+            </div>
           )}
-          <p className="text-xs font-semibold leading-relaxed text-[#0A1547]/50">
-            No payment details are collected here. Secure checkout opens after agreement signing.
-          </p>
         </div>
         <div className="mt-5 flex justify-start">
           <button
@@ -1141,6 +1336,9 @@ export default function AlphaScreenPricingPage() {
   const [packages, setPackages] = useState<AlphaScreenPackage[]>(FALLBACK_PACKAGES);
   const [loadState, setLoadState] = useState<PackageLoadState>("loading");
   const purchaseFormStartedRef = useRef(false);
+  const purchaseSubmitInFlightRef = useRef(false);
+  const emailSendInFlightRef = useRef(false);
+  const emailVerifyInFlightRef = useRef(false);
   const [selectedBillingCadence, setSelectedBillingCadence] = useState<BillingCadenceKey>("monthly");
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [selectedPlanKey, setSelectedPlanKey] = useState("");
@@ -1152,6 +1350,12 @@ export default function AlphaScreenPricingPage() {
   const [agreementStatus, setAgreementStatus] = useState<AgreementPrepStatus>("idle");
   const [agreementError, setAgreementError] = useState("");
   const [agreementResult, setAgreementResult] = useState<PurchaseAgreementResult | null>(null);
+  const [emailVerificationStatus, setEmailVerificationStatus] = useState<EmailVerificationStatus>("idle");
+  const [emailVerificationError, setEmailVerificationError] = useState("");
+  const [emailVerificationCode, setEmailVerificationCode] = useState("");
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
+  const [emailSendLoading, setEmailSendLoading] = useState(false);
+  const [emailVerifyLoading, setEmailVerifyLoading] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1195,6 +1399,13 @@ export default function AlphaScreenPricingPage() {
     setAgreementStatus("idle");
     setAgreementError("");
     setAgreementResult(null);
+    setEmailVerificationStatus("idle");
+    setEmailVerificationError("");
+    setEmailVerificationCode("");
+    setResendCooldownSeconds(0);
+    setEmailSendLoading(false);
+    setEmailVerifyLoading(false);
+    clearCheckoutRecoveryState();
     setPurchaseForm((prev) => ({ ...prev, billing_cadence: cadence }));
     trackEvent("signup_started", { plan: plan.plan_key, step: "plan_selection" });
   };
@@ -1218,6 +1429,11 @@ export default function AlphaScreenPricingPage() {
     setPurchaseStatus("idle");
     setPurchaseError("");
     setAgreementError("");
+    setEmailVerificationError("");
+    setEmailVerificationCode("");
+    setResendCooldownSeconds(0);
+    setEmailSendLoading(false);
+    setEmailVerifyLoading(false);
     trackEvent("signup_back_clicked", {
       plan: selectedPlanKey,
       step: "agreement_created",
@@ -1239,6 +1455,12 @@ export default function AlphaScreenPricingPage() {
     setPurchaseSubmissionKey(recovery.purchaseSubmissionKey);
     setAgreementResult(recovery.agreementResult);
     setAgreementStatus(agreementSigningHref(recovery.agreementResult) ? "ready" : "idle");
+    setEmailVerificationStatus("idle");
+    setEmailVerificationError("");
+    setEmailVerificationCode("");
+    setResendCooldownSeconds(0);
+    setEmailSendLoading(false);
+    setEmailVerifyLoading(false);
     setPurchaseStatus("success");
     setCheckoutModalOpen(true);
     setPurchaseError("");
@@ -1249,6 +1471,72 @@ export default function AlphaScreenPricingPage() {
     const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash || "#signup-modal"}`;
     window.history.replaceState(null, "", nextUrl);
   }, []);
+
+  useEffect(() => {
+    const purchaseIntentId = String(purchaseResult?.purchase_intent_id || "").trim();
+    if (!purchaseIntentId || agreementSigningHref(agreementResult)) return;
+
+    const controller = new AbortController();
+    setEmailVerificationStatus("loading");
+    setEmailVerificationError("");
+
+    async function loadEmailVerificationStatus() {
+      try {
+        const response = await fetch(purchaseIntentEmailVerificationEndpoint(purchaseIntentId, "status"), {
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        const body = await response.json().catch(() => ({})) as {
+          code?: string;
+          retry_after_seconds?: number;
+          email_verification?: {
+            verified?: boolean;
+            status?: string;
+            code_active?: boolean;
+            resend_cooldown_seconds?: number;
+          };
+        };
+        if (controller.signal.aborted) return;
+        const retryAfter = retryAfterSeconds(body.retry_after_seconds);
+        if (!response.ok) {
+          setEmailVerificationStatus("idle");
+          setResendCooldownSeconds(retryAfter);
+          if (response.status === 429) {
+            setEmailVerificationError(retailVerificationErrorMessage(
+              String(body.code || "").trim(),
+              "Please wait before trying again.",
+              "status",
+              retryAfter,
+            ));
+          }
+          return;
+        }
+        const verification = body.email_verification;
+        setEmailVerificationStatus(
+          verification?.verified === true
+            ? "verified"
+            : verification?.code_active === true || verification?.status === "code_sent"
+              ? "sent"
+              : "idle",
+        );
+        setResendCooldownSeconds(retryAfterSeconds(verification?.resend_cooldown_seconds));
+      } catch (_) {
+        if (controller.signal.aborted) return;
+        setEmailVerificationStatus("idle");
+      }
+    }
+
+    void loadEmailVerificationStatus();
+    return () => controller.abort();
+  }, [purchaseResult, agreementResult]);
+
+  useEffect(() => {
+    if (resendCooldownSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendCooldownSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendCooldownSeconds]);
 
   const updateSelectedBillingCadence = (cadence: BillingCadenceKey) => {
     setSelectedBillingCadence(cadence);
@@ -1272,11 +1560,26 @@ export default function AlphaScreenPricingPage() {
     if (field === "billing_cadence" && (value === "monthly" || value === "annual")) {
       setSelectedBillingCadence(value);
     }
+    if (field === "buyer_email" && String(value).trim().toLowerCase() !== purchaseForm.buyer_email.trim().toLowerCase()) {
+      setPurchaseResult(null);
+      setPurchaseSubmissionKey("");
+      setAgreementStatus("idle");
+      setAgreementError("");
+      setAgreementResult(null);
+      setEmailVerificationStatus("idle");
+      setEmailVerificationError("The buyer email changed. Verify the new email before continuing.");
+      setEmailVerificationCode("");
+      setResendCooldownSeconds(0);
+      setEmailSendLoading(false);
+      setEmailVerifyLoading(false);
+      clearCheckoutRecoveryState();
+    }
     setPurchaseForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handlePurchaseSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (purchaseSubmitInFlightRef.current) return;
     const validationMessage = validatePurchaseForm(purchaseForm, selectedPlan);
     trackEvent("lead_form_submit_attempted", {
       form_id: "alphascreen-signup-profile",
@@ -1295,6 +1598,7 @@ export default function AlphaScreenPricingPage() {
       return;
     }
 
+    purchaseSubmitInFlightRef.current = true;
     setPurchaseStatus("submitting");
     setPurchaseError("");
 
@@ -1302,6 +1606,7 @@ export default function AlphaScreenPricingPage() {
     const nextSubmissionKey = purchasePayloadKey(payload);
 
     if (purchaseResult?.purchase_intent_id && purchaseSubmissionKey === nextSubmissionKey) {
+      setPurchaseResult({ ...purchaseResult });
       setPurchaseStatus("success");
       setPurchaseError("");
       saveCheckoutRecoveryState({
@@ -1311,6 +1616,7 @@ export default function AlphaScreenPricingPage() {
         agreementResult,
         purchaseSubmissionKey,
       });
+      purchaseSubmitInFlightRef.current = false;
       return;
     }
 
@@ -1325,15 +1631,21 @@ export default function AlphaScreenPricingPage() {
         message?: string;
         code?: string;
         error?: string;
+        retry_after_seconds?: number;
       };
 
       if (!response.ok) {
         const errorCode = String(body.code || body.error || "").trim();
+        const retryAfter = retryAfterSeconds(body.retry_after_seconds);
         const detail = errorCode === "SIGNUP_ALREADY_EXISTS" || errorCode === "signup_already_exists"
           ? SIGNUP_ALREADY_EXISTS_MESSAGE
-          : body.detail || body.message || (response.status === 429
-            ? "Too many signup attempts. Please wait a few minutes and try again."
-            : "We could not save these signup details. Please try again.");
+          : response.status === 429
+            ? retailSignupErrorMessage(
+              errorCode,
+              body.detail || body.message || "Too many signup attempts were made from this browser or network. Try again later.",
+              retryAfter,
+            )
+            : body.detail || body.message || "We could not save these signup details. Please try again.";
         setPurchaseStatus("idle");
         setPurchaseError(detail);
         trackEvent("lead_form_submit_failed", {
@@ -1351,6 +1663,10 @@ export default function AlphaScreenPricingPage() {
       setAgreementStatus("idle");
       setAgreementError("");
       setAgreementResult(null);
+      setEmailVerificationStatus(body.email_verification?.verified === true ? "verified" : "idle");
+      setEmailVerificationError("");
+      setEmailVerificationCode("");
+      setResendCooldownSeconds(0);
       saveCheckoutRecoveryState({
         selectedPlanKey: selectedPlan.plan_key,
         form: purchaseForm,
@@ -1377,12 +1693,142 @@ export default function AlphaScreenPricingPage() {
         product_interest: "alphascreen",
         error_type: "network",
       });
+    } finally {
+      purchaseSubmitInFlightRef.current = false;
     }
+  };
+
+  const handleSendEmailVerification = async () => {
+    const purchaseIntentId = String(purchaseResult?.purchase_intent_id || "").trim();
+    if (
+      !purchaseIntentId ||
+      emailSendInFlightRef.current ||
+      emailVerifyInFlightRef.current ||
+      emailSendLoading ||
+      emailVerifyLoading ||
+      resendCooldownSeconds > 0
+    ) return;
+    if (!validEmail(purchaseForm.buyer_email)) {
+      setEmailVerificationStatus("idle");
+      setEmailVerificationError("The buyer email changed. Verify the new email before continuing.");
+      return;
+    }
+
+    emailSendInFlightRef.current = true;
+    setEmailSendLoading(true);
+    setEmailVerificationStatus("sending");
+    setEmailVerificationError("");
+    try {
+      const response = await fetch(purchaseIntentEmailVerificationEndpoint(purchaseIntentId, "send"), {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      const body = await response.json().catch(() => ({})) as {
+        code?: string;
+        retry_after_seconds?: number;
+        email_verification?: { verified?: boolean; resend_cooldown_seconds?: number };
+      };
+      if (!response.ok) {
+        const code = String(body.code || "").trim();
+        const retryAfter = retryAfterSeconds(body.retry_after_seconds);
+        setEmailVerificationStatus(code === "RETAIL_EMAIL_VERIFICATION_COOLDOWN" ? "sent" : "idle");
+        setEmailVerificationError(retailVerificationErrorMessage(
+          code,
+          "We couldn't send the verification code. Try again in a moment.",
+          "send",
+          retryAfter,
+        ));
+        setResendCooldownSeconds(retryAfter);
+        return;
+      }
+
+      const verified = body.email_verification?.verified === true;
+      setEmailVerificationStatus(verified ? "verified" : "sent");
+      setEmailVerificationCode("");
+      setResendCooldownSeconds(retryAfterSeconds(body.email_verification?.resend_cooldown_seconds || 60));
+      trackEvent("signup_step_completed", {
+        plan: selectedPlanKey,
+        step: "email_verification_code_sent",
+        completion_percent: 58,
+      });
+    } catch (_) {
+      setEmailVerificationStatus("idle");
+      setEmailVerificationError("We couldn't send the verification code. Try again in a moment.");
+    } finally {
+      emailSendInFlightRef.current = false;
+      setEmailSendLoading(false);
+    }
+  };
+
+  const handleVerifyEmailVerification = async () => {
+    const purchaseIntentId = String(purchaseResult?.purchase_intent_id || "").trim();
+    if (!purchaseIntentId || emailVerifyInFlightRef.current || emailSendInFlightRef.current || emailVerifyLoading || emailSendLoading) return;
+    if (!/^\d{6}$/.test(emailVerificationCode)) {
+      setEmailVerificationError("Enter the 6-digit code from the verification email.");
+      return;
+    }
+
+    emailVerifyInFlightRef.current = true;
+    setEmailVerifyLoading(true);
+    setEmailVerificationStatus("verifying");
+    setEmailVerificationError("");
+    try {
+      const response = await fetch(purchaseIntentEmailVerificationEndpoint(purchaseIntentId, "verify"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ code: emailVerificationCode }),
+      });
+      const body = await response.json().catch(() => ({})) as {
+        code?: string;
+        retry_after_seconds?: number;
+        email_verification?: { verified?: boolean };
+      };
+      if (!response.ok || body.email_verification?.verified !== true) {
+        const code = String(body.code || "").trim();
+        const retryAfter = retryAfterSeconds(body.retry_after_seconds);
+        setEmailVerificationStatus("sent");
+        setEmailVerificationError(retailVerificationErrorMessage(
+          code,
+          "Email verification could not be completed. No agreement was created.",
+          "verify",
+          retryAfter,
+        ));
+        if (code === "RETAIL_EMAIL_VERIFICATION_ATTEMPTS_EXCEEDED" || code === "RETAIL_EMAIL_VERIFICATION_ATTEMPT_LIMIT") {
+          setEmailVerificationCode("");
+        }
+        return;
+      }
+
+      setEmailVerificationStatus("verified");
+      setEmailVerificationCode("");
+      setEmailVerificationError("");
+      trackEvent("signup_step_completed", {
+        plan: selectedPlanKey,
+        step: "email_verified",
+        completion_percent: 60,
+      });
+    } catch (_) {
+      setEmailVerificationStatus("sent");
+      setEmailVerificationError("Email verification could not be completed. No agreement was created.");
+    } finally {
+      emailVerifyInFlightRef.current = false;
+      setEmailVerifyLoading(false);
+    }
+  };
+
+  const handleEmailVerificationCodeChange = (value: string) => {
+    setEmailVerificationCode(String(value || "").replace(/\D/g, "").slice(0, 6));
+    setEmailVerificationError("");
   };
 
   const handleContinueToAgreement = async () => {
     const purchaseIntentId = String(purchaseResult?.purchase_intent_id || "").trim();
     if (!purchaseIntentId || agreementStatus === "preparing") return;
+    if (emailVerificationStatus !== "verified") {
+      setAgreementError("Verify the buyer email before continuing to the agreement.");
+      setEmailVerificationError("Verify the buyer email before continuing to the agreement.");
+      return;
+    }
     setAgreementStatus("preparing");
     setAgreementError("");
     trackEvent("signup_step_viewed", {
@@ -1403,9 +1849,18 @@ export default function AlphaScreenPricingPage() {
       };
 
       if (!response.ok) {
-        const detail = body.detail || "We could not prepare the membership agreement. Please try again.";
+        const code = String(body.code || body.error || "").trim();
+        const detail = retailVerificationErrorMessage(
+          code,
+          "We could not prepare the membership agreement. Please try again.",
+          "verify",
+        );
         setAgreementStatus("idle");
         setAgreementError(detail);
+        if (code === "RETAIL_EMAIL_VERIFICATION_REQUIRED") {
+          setEmailVerificationStatus("idle");
+          setEmailVerificationError(detail);
+        }
         return;
       }
 
@@ -1471,7 +1926,7 @@ export default function AlphaScreenPricingPage() {
           <div className="rounded-lg border border-[#0A1547]/10 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between border-b border-[#0A1547]/8 pb-4">
               <div className="flex items-center gap-3">
-                <img src="/alpha-symbol.png" alt="" className="h-9 w-9" />
+                <img src={alphaSourceSymbol} alt="" className="h-9 w-9" />
                 <div>
                   <p className="text-sm font-black text-[#0A1547]">alphaScreen memberships</p>
                   <p className="text-xs font-bold text-[#0A1547]/45">Membership pricing preview</p>
@@ -1614,8 +2069,17 @@ export default function AlphaScreenPricingPage() {
                 agreementStatus={agreementStatus}
                 agreementError={agreementError}
                 agreementResult={agreementResult}
+                emailVerificationStatus={emailVerificationStatus}
+                emailVerificationError={emailVerificationError}
+                emailVerificationCode={emailVerificationCode}
+                resendCooldownSeconds={resendCooldownSeconds}
+                emailSendLoading={emailSendLoading}
+                emailVerifyLoading={emailVerifyLoading}
                 onChange={updatePurchaseField}
                 onSubmit={handlePurchaseSubmit}
+                onSendEmailVerification={handleSendEmailVerification}
+                onVerifyEmailVerification={handleVerifyEmailVerification}
+                onEmailVerificationCodeChange={handleEmailVerificationCodeChange}
                 onContinueToAgreement={handleContinueToAgreement}
                 onBackToPricing={backToPricing}
                 onBackToSignup={backToSignupForm}

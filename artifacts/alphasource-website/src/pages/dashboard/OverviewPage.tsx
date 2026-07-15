@@ -261,10 +261,11 @@ function timeframeButtonStyle(active: boolean) {
 
 export default function OverviewPage() {
   const [timeframe, setTimeframe] = useState<Timeframe>("30d");
-  const { selectedClient, selectedClientId, loading: clientLoading, error: clientError } = useClient();
+  const { selectedClient, selectedClientId, loading: clientLoading, error: clientError, refreshClients } = useClient();
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [rows, setRows] = useState<DashboardRowItem[]>([]);
   const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewReady, setOverviewReady] = useState(false);
   const [overviewError, setOverviewError] = useState("");
 
   const effectiveClientId = selectedClient.id === "all" ? "all" : selectedClientId;
@@ -273,11 +274,18 @@ export default function OverviewPage() {
     let alive = true;
 
     const loadOverview = async () => {
-      if (clientLoading) return;
+      if (clientLoading) {
+        if (!alive) return;
+        setOverviewReady(false);
+        setOverviewLoading(true);
+        setOverviewError("");
+        return;
+      }
       if (clientError) {
         if (!alive) return;
         setRoles([]);
         setRows([]);
+        setOverviewReady(false);
         setOverviewError(clientError);
         setOverviewLoading(false);
         return;
@@ -286,6 +294,7 @@ export default function OverviewPage() {
         if (!alive) return;
         setRoles([]);
         setRows([]);
+        setOverviewReady(true);
         setOverviewError("");
         setOverviewLoading(false);
         return;
@@ -294,6 +303,7 @@ export default function OverviewPage() {
         if (!alive) return;
         setRoles([]);
         setRows([]);
+        setOverviewReady(false);
         setOverviewError("Missing backend base URL configuration.");
         setOverviewLoading(false);
         return;
@@ -301,6 +311,7 @@ export default function OverviewPage() {
 
       if (!alive) return;
       setOverviewLoading(true);
+      setOverviewReady(false);
       setOverviewError("");
 
       try {
@@ -375,11 +386,13 @@ export default function OverviewPage() {
         if (!alive) return;
         setRoles(mappedRoles);
         setRows(mappedRows);
+        setOverviewReady(true);
         setOverviewError("");
       } catch (error) {
         if (!alive) return;
         setRoles([]);
         setRows([]);
+        setOverviewReady(false);
         setOverviewError(error instanceof Error ? error.message : "Failed to load overview.");
       } finally {
         if (alive) setOverviewLoading(false);
@@ -460,19 +473,28 @@ export default function OverviewPage() {
 
       {overviewError && (
         <div
-          className="mb-5 px-4 py-2.5 rounded-xl text-sm font-semibold"
+          className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold"
           style={{ backgroundColor: "rgba(255,107,107,0.12)", color: "#B33A3A" }}
         >
-          {overviewError}
+          <span>{overviewError}</span>
+          <button
+            type="button"
+            onClick={() => { void refreshClients(); }}
+            className="rounded-full border border-current/25 bg-white px-3 py-1 text-xs font-black transition-opacity hover:opacity-80"
+          >
+            Retry
+          </button>
         </div>
       )}
 
-      {!overviewError && overviewLoading && (
+      {!overviewError && !overviewReady && (
         <div className="mb-5 text-sm font-semibold text-[#0A1547]/45" style={{ color: "var(--as-text)", opacity: 0.45 }}>
           Loading overview...
         </div>
       )}
 
+      {overviewReady && (
+        <>
       {/* ── Metric cards ─────────────────────────────────── */}
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-7">
         {metricCards.map((card) => {
@@ -577,6 +599,8 @@ export default function OverviewPage() {
           })}
         </div>
       </div>
+        </>
+      )}
 
     </DashboardLayout>
   );

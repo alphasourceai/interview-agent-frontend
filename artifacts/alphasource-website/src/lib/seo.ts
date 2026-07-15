@@ -1,3 +1,4 @@
+import { alphaSourceSymbol } from "@/assets/branding";
 import { getPublicSiteBase } from "@/lib/urlConfig";
 import { publicFaqItems, publicSupportQuestions, type PublicFaqItem } from "@/lib/publicContent";
 
@@ -14,6 +15,7 @@ export type SeoConfig = {
 };
 
 const SITE_URL = "https://www.alphasourceai.com";
+const ORGANIZATION_LOGO_URL = new URL(alphaSourceSymbol, SITE_URL).toString();
 const TRAILING_SLASH_PUBLIC_PATHS = new Set([
   "/about",
   "/support",
@@ -32,7 +34,7 @@ const ORGANIZATION_SCHEMA = {
   name: "alphaSource AI",
   alternateName: "alphaSource",
   url: `${SITE_URL}/`,
-  logo: `${SITE_URL}/alpha-symbol.png`,
+  logo: ORGANIZATION_LOGO_URL,
   contactPoint: {
     "@type": "ContactPoint",
     email: "info@alphasourceai.com",

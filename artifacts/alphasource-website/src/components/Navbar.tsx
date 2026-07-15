@@ -4,6 +4,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { buildPwResetUrl } from "@/lib/urlConfig";
+import { alphaSourceLogo } from "@/assets/branding";
 
 export default function Navbar() {
   const isValidEmail = (value: string) =>
@@ -158,7 +159,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-0" data-testid="nav-logo">
             <img
-              src="/logo-dark-text-clear.png"
+              src={alphaSourceLogo}
               alt="alphaSource AI"
               className="h-8 w-auto"
             />

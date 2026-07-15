@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTrackingConsent } from "@/context/TrackingConsentContext";
 import { supabase } from "@/lib/supabaseClient";
 import { buildPwResetUrl } from "@/lib/urlConfig";
+import { alphaSourceSymbol } from "@/assets/branding";
 
 export default function Footer() {
   const isValidEmail = (value: string) =>
@@ -87,7 +88,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-2">
             <div className="mb-4">
-              <img src="/alpha-symbol.png" alt="alphaSource AI" className="h-10 w-auto" />
+              <img src={alphaSourceSymbol} alt="alphaSource AI" className="h-10 w-auto" />
             </div>
             <p className="text-white/60 text-sm leading-relaxed max-w-xs">
               Agentic AI that enhances human judgment — helping teams reclaim time and spot potential in every talent interaction.

@@ -335,11 +335,13 @@ export default function AdminOverviewPage() {
     selectedClientId,
     loading: adminClientsLoading,
     error: adminClientsError,
+    refreshClients,
   } = useAdminClient();
   const [globalClients, setGlobalClients] = useState<AdminClientItem[]>([]);
   const [globalRoles, setGlobalRoles] = useState<RoleItem[]>([]);
   const [globalCandidates, setGlobalCandidates] = useState<CandidateItem[]>([]);
   const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewReady, setOverviewReady] = useState(false);
   const [overviewError, setOverviewError] = useState("");
 
   const isAllClients = selectedClient.id === "all" || selectedClientId === "all";
@@ -348,12 +350,19 @@ export default function AdminOverviewPage() {
     let alive = true;
 
     const loadOverview = async () => {
-      if (adminClientsLoading) return;
+      if (adminClientsLoading) {
+        if (!alive) return;
+        setOverviewReady(false);
+        setOverviewLoading(true);
+        setOverviewError("");
+        return;
+      }
       if (adminClientsError) {
         if (!alive) return;
         setGlobalClients([]);
         setGlobalRoles([]);
         setGlobalCandidates([]);
+        setOverviewReady(false);
         setOverviewError(adminClientsError);
         setOverviewLoading(false);
         return;
@@ -363,6 +372,7 @@ export default function AdminOverviewPage() {
         setGlobalClients([]);
         setGlobalRoles([]);
         setGlobalCandidates([]);
+        setOverviewReady(false);
         setOverviewError("Missing backend base URL configuration.");
         setOverviewLoading(false);
         return;
@@ -370,6 +380,7 @@ export default function AdminOverviewPage() {
 
       if (!alive) return;
       setOverviewLoading(true);
+      setOverviewReady(false);
       setOverviewError("");
 
       try {
@@ -454,12 +465,14 @@ export default function AdminOverviewPage() {
         setGlobalClients(mappedClients);
         setGlobalRoles(mappedRoles);
         setGlobalCandidates(candidateBatches.flat());
+        setOverviewReady(true);
         setOverviewError("");
       } catch (error) {
         if (!alive) return;
         setGlobalClients([]);
         setGlobalRoles([]);
         setGlobalCandidates([]);
+        setOverviewReady(false);
         setOverviewError(error instanceof Error ? error.message : "Failed to load admin overview.");
       } finally {
         if (alive) setOverviewLoading(false);
@@ -615,19 +628,28 @@ export default function AdminOverviewPage() {
 
       {overviewError && (
         <div
-          className="mb-5 px-4 py-2.5 rounded-xl text-sm font-semibold"
+          className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold"
           style={{ backgroundColor: "rgba(255,107,107,0.12)", color: "#B33A3A" }}
         >
-          {overviewError}
+          <span>{overviewError}</span>
+          <button
+            type="button"
+            onClick={() => { void refreshClients(); }}
+            className="rounded-full border border-current/25 bg-white px-3 py-1 text-xs font-black transition-opacity hover:opacity-80"
+          >
+            Retry
+          </button>
         </div>
       )}
 
-      {!overviewError && overviewLoading && (
+      {!overviewError && !overviewReady && (
         <div className="mb-5 text-sm font-semibold text-[#0A1547]/45" style={{ color: "var(--as-text)", opacity: 0.45 }}>
           Loading overview...
         </div>
       )}
 
+      {overviewReady && (
+        <>
       {/* ── Metric cards — 2×3 grid ──────────────────────── */}
       <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-7">
         {metricCards.map((card) => {
@@ -812,6 +834,8 @@ export default function AdminOverviewPage() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </AdminLayout>
   );
 }
