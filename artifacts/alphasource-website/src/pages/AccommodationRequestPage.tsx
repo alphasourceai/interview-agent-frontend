@@ -1,5 +1,18 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
+import { ChevronDown } from "lucide-react";
+import { alphaSourceLogo } from "@/assets/branding";
+import {
+  candidatePhoneCountries,
+  getCandidatePhoneError,
+  getCandidatePhoneHelperText,
+  getCandidatePhonePlaceholder,
+  isValidCandidatePhone,
+  normalizeCandidatePhone,
+  normalizeCandidatePhoneCountry,
+  type CandidatePhoneCountry,
+} from "../lib/candidatePhone";
+import { getCandidateFlowError } from "../lib/candidateFlowErrors";
 
 function trimTrailingSlashes(value: string): string {
   return String(value || "").trim().replace(/\/+$/, "");
@@ -52,12 +65,12 @@ const inputCls =
   "w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm " +
   "placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/20 " +
   "focus:border-[#A380F6] transition-all";
+const selectCls = `${inputCls} h-[42px] appearance-none pr-10 leading-5`;
 
 const errorCls = "text-red-500 text-[10px] mt-1 font-semibold";
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
-const isValidPhone = (value: string) =>
-  /^(\d{10}|\(\d{3}\)\s?\d{3}-\d{4}|\d{3}-\d{3}-\d{4}|\d{3}\.\d{3}\.\d{4})$/.test(String(value || "").trim());
 const MAX_REQUEST_CHARS = 200;
+const MAX_RESUME_BYTES = 10 * 1024 * 1024;
 
 type FormState = {
   candidate_name: string;
@@ -70,6 +83,7 @@ type FormState = {
 export default function AccommodationRequestPage({ params }: { params?: { role_token?: string } }) {
   const [, setLocation] = useLocation();
   const [roleToken, setRoleToken] = useState(() => readRoleToken(params));
+  const [phoneCountry, setPhoneCountry] = useState<CandidatePhoneCountry>("US");
   const [form, setForm] = useState<FormState>({
     candidate_name: "",
     candidate_email: "",
@@ -96,13 +110,38 @@ export default function AccommodationRequestPage({ params }: { params?: { role_t
     const next: Record<string, string> = {};
     if (!String(form.candidate_name || "").trim()) next.candidate_name = "Required";
     if (!isValidEmail(form.candidate_email)) next.candidate_email = "Enter a valid email address";
-    if (!isValidPhone(form.candidate_phone)) next.candidate_phone = "Enter a valid phone number";
+    if (!isValidCandidatePhone(form.candidate_phone, phoneCountry)) {
+      next.candidate_phone = getCandidatePhoneError(phoneCountry);
+    }
     const requestText = String(form.accommodation_request_text || "").trim();
     if (!requestText) next.accommodation_request_text = "Please describe your request";
     if (requestText.length > MAX_REQUEST_CHARS) next.accommodation_request_text = `Keep it under ${MAX_REQUEST_CHARS} characters`;
     if (!String(roleToken || "").trim()) next.role_token = "Missing role link. Please use the interview URL you were sent.";
     setErrors(next);
     return Object.keys(next).length === 0;
+  }
+
+  function handleResume(file: File | null) {
+    if (!file) {
+      handleChange("resume", null);
+      return;
+    }
+    if (!/\.(pdf|doc|docx)$/i.test(file.name)) {
+      if (fileRef.current) fileRef.current.value = "";
+      setErrors((prev) => ({ ...prev, resume: "Resume must be a PDF, DOC, or DOCX file." }));
+      return;
+    }
+    if (file.size <= 0) {
+      if (fileRef.current) fileRef.current.value = "";
+      setErrors((prev) => ({ ...prev, resume: "The resume file is empty." }));
+      return;
+    }
+    if (file.size > MAX_RESUME_BYTES) {
+      if (fileRef.current) fileRef.current.value = "";
+      setErrors((prev) => ({ ...prev, resume: "Resume must be 10 MB or smaller." }));
+      return;
+    }
+    handleChange("resume", file);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -116,10 +155,16 @@ export default function AccommodationRequestPage({ params }: { params?: { role_t
 
     setSubmitting(true);
     try {
+      const normalizedPhone = normalizeCandidatePhone(form.candidate_phone, phoneCountry);
+      if (!normalizedPhone) {
+        setErrors((prev) => ({ ...prev, candidate_phone: getCandidatePhoneError(phoneCountry) }));
+        return;
+      }
       const body = new FormData();
       body.append("candidate_name", form.candidate_name.trim());
       body.append("candidate_email", form.candidate_email.trim());
-      body.append("candidate_phone", String(form.candidate_phone || "").replace(/\D/g, ""));
+      body.append("candidate_phone", normalizedPhone);
+      body.append("phone_country", phoneCountry);
       body.append("accommodation_request_text", form.accommodation_request_text.trim());
       body.append("role_token", String(roleToken || "").trim());
       if (form.resume) body.append("resume", form.resume);
@@ -131,13 +176,12 @@ export default function AccommodationRequestPage({ params }: { params?: { role_t
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
-        const detail = String(data?.detail || "").trim();
-        const error = String(data?.error || "").trim();
-        if (error === "request_failed") {
-          setServerError("We could not process this request. Please review your information and try again.");
-        } else {
-          setServerError(detail || error || "Could not submit your request. Please try again.");
-        }
+        const legacyRequestFailed = !String(data?.code || "").trim() && String(data?.error || "").trim() === "request_failed";
+        setServerError(
+          legacyRequestFailed
+            ? "We could not process this request. Please review your information and try again."
+            : getCandidateFlowError(data, "Could not submit your request. Please try again."),
+        );
         return;
       }
 
@@ -155,7 +199,7 @@ export default function AccommodationRequestPage({ params }: { params?: { role_t
         className="bg-white flex-shrink-0 flex items-center px-6 h-14"
         style={{ borderBottom: "1px solid rgba(10,21,71,0.07)" }}
       >
-        <img src="/logo-dark-text.png" alt="alphaSource AI" className="h-8 w-auto" />
+        <img src={alphaSourceLogo} alt="alphaSource AI" className="h-8 w-auto" />
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -219,20 +263,47 @@ export default function AccommodationRequestPage({ params }: { params?: { role_t
                 {errors.candidate_email && <p className={errorCls}>{errors.candidate_email}</p>}
               </div>
 
-              <div>
-                <label className="block text-[11px] uppercase tracking-wide font-bold text-[#0A1547]/65 mb-1.5">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  value={form.candidate_phone}
-                  onChange={(e) => handleChange("candidate_phone", e.target.value)}
-                  className={inputCls}
-                  disabled={submitting}
-                  placeholder="(555) 123-4567"
-                  required
-                />
-                {errors.candidate_phone && <p className={errorCls}>{errors.candidate_phone}</p>}
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)] gap-3">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wide font-bold text-[#0A1547]/65 mb-1.5">
+                    Country
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={phoneCountry}
+                      onChange={(e) => {
+                        setPhoneCountry(normalizeCandidatePhoneCountry(e.target.value));
+                        setErrors((prev) => ({ ...prev, candidate_phone: "" }));
+                      }}
+                      className={selectCls}
+                      disabled={submitting}
+                    >
+                      {candidatePhoneCountries.map((country) => (
+                        <option key={country.value} value={country.value}>{country.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0A1547]/35" aria-hidden="true" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wide font-bold text-[#0A1547]/65 mb-1.5">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={form.candidate_phone}
+                    onChange={(e) => handleChange("candidate_phone", e.target.value)}
+                    className={inputCls}
+                    disabled={submitting}
+                    placeholder={getCandidatePhonePlaceholder(phoneCountry)}
+                    required
+                  />
+                  {errors.candidate_phone ? (
+                    <p className={errorCls}>{errors.candidate_phone}</p>
+                  ) : (
+                    <p className="text-[10px] mt-1 text-[#0A1547]/45">{getCandidatePhoneHelperText(phoneCountry)}</p>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -262,7 +333,7 @@ export default function AccommodationRequestPage({ params }: { params?: { role_t
                   ref={fileRef}
                   type="file"
                   accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={(e) => handleChange("resume", e.target.files?.[0] || null)}
+                  onChange={(e) => handleResume(e.target.files?.[0] || null)}
                   className="hidden"
                   disabled={submitting}
                 />
@@ -274,6 +345,7 @@ export default function AccommodationRequestPage({ params }: { params?: { role_t
                 >
                   {form.resume ? form.resume.name : "Upload resume (PDF, DOC, or DOCX)"}
                 </button>
+                {errors.resume && <p className={errorCls}>{errors.resume}</p>}
               </div>
 
               {errors.role_token && <p className={errorCls}>{errors.role_token}</p>}

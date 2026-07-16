@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { alphaSourceLogo } from "@/assets/branding";
 
 type LiveSessionState = {
   conversation_url: string;
@@ -67,6 +68,9 @@ const DAILY_SCRIPT_ID = "alphasource-daily-sdk";
 const DAILY_SCRIPT_SRC = "https://unpkg.com/@daily-co/daily-js";
 const LIVE_STATE_KEY = "alphasource_interview_live_state";
 const STARTUP_REMOTE_TIMEOUT_MS = 12000;
+// The Tavus prompt checks silence after 4-5 seconds; 45 seconds with no utterance is well beyond normal prompt progression.
+const PROGRESS_STALL_MS = 45000;
+const PROGRESS_WATCHDOG_INTERVAL_MS = 5000;
 const TIME_WARNING_THRESHOLD_SECONDS = 120;
 const GRACEFUL_WRAP_THRESHOLD_SECONDS = 60;
 const FORCE_END_THRESHOLD_SECONDS = 15;
@@ -205,11 +209,14 @@ export default function InterviewCviPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [timeNotice, setTimeNotice] = useState("");
+  const [connectionNotice, setConnectionNotice] = useState("");
+  const [progressStalled, setProgressStalled] = useState(false);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [hasLocalVideo, setHasLocalVideo] = useState(false);
 
   const callRef = useRef<DailyCallObject | null>(null);
   const leavingRef = useRef(false);
+  const reconnectingRef = useRef(false);
   const endTriggeredRef = useRef(false);
   const timeWarningSentRef = useRef(false);
   const gracefulWrapSentRef = useRef(false);
@@ -220,6 +227,10 @@ export default function InterviewCviPage() {
   const startupTimerRef = useRef<number | null>(null);
   const startMsRef = useRef<number>(Date.now());
   const recordingStartRequestedRef = useRef(false);
+  const progressObservedRef = useRef(false);
+  const lastProgressAtRef = useRef<number | null>(null);
+  const progressRecoveryAttemptedRef = useRef(false);
+  const progressRecoveryInFlightRef = useRef(false);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
@@ -295,12 +306,13 @@ export default function InterviewCviPage() {
     setLocation("/interview/complete");
   }, [setLocation, teardownCall]);
 
-  const endInterview = useCallback(async (reason: string) => {
+  const endInterview = useCallback(async (reason: string, stayOnPage = false) => {
     if (endTriggeredRef.current) {
       setFinishBusy(false);
       return;
     }
     endTriggeredRef.current = true;
+    if (stayOnPage) leavingRef.current = true;
     clearAutoEndTimers();
     try {
       const conversationId = String(session?.conversation_id || "").trim();
@@ -323,12 +335,13 @@ export default function InterviewCviPage() {
       }
     } catch (error) {
       console.warn("[InterviewCviPage] Could not end interview cleanly. Closing this session now.", { reason, error });
-      setError("Could not end interview cleanly. Closing this session now.");
+      if (!stayOnPage) setError("Could not end interview cleanly. Closing this session now.");
     } finally {
       setFinishBusy(false);
-      await leaveLiveRoute();
+      if (stayOnPage) await teardownCall();
+      else await leaveLiveRoute();
     }
-  }, [clearAutoEndTimers, leaveLiveRoute, session]);
+  }, [clearAutoEndTimers, leaveLiveRoute, session, teardownCall]);
 
   const sendTimeLimitMessage = useCallback((text: string) => {
     try {
@@ -376,6 +389,7 @@ export default function InterviewCviPage() {
     let alive = true;
     let call: DailyCallObject | null = null;
     let handlers: Array<[string, (event?: DailyEvent) => void]> = [];
+    let progressWatchdogTimer: number | null = null;
 
     const register = (event: string, handler: (payload?: DailyEvent) => void) => {
       call?.on(event, handler);
@@ -428,24 +442,91 @@ export default function InterviewCviPage() {
         if (!alive || startupRemoteSeenRef.current || !call) return;
         if (!startupRecoveryAttemptedRef.current) {
           startupRecoveryAttemptedRef.current = true;
+          reconnectingRef.current = true;
           try {
             await call.leave().catch(() => {});
-          } catch {}
-          if (!alive) return;
-          try {
+            if (!alive || endTriggeredRef.current) return;
             await call.join({
               url: session.conversation_url,
               userName: "Candidate",
               startAudioOff: false,
               startVideoOff: false,
             });
+            if (!alive || endTriggeredRef.current) return;
             beginStartupWatchdog();
             return;
-          } catch {}
+          } catch {
+          } finally {
+            reconnectingRef.current = false;
+          }
         }
         setLoading(false);
         setError("Interview did not start correctly. Please relaunch and try again.");
       }, STARTUP_REMOTE_TIMEOUT_MS);
+    };
+
+    const stopProgressWatchdog = () => {
+      if (progressWatchdogTimer) {
+        window.clearInterval(progressWatchdogTimer);
+        progressWatchdogTimer = null;
+      }
+    };
+
+    const markProgressStalled = (reason: "progress_stalled" | "disconnected") => {
+      if (!alive || endTriggeredRef.current) return;
+      stopProgressWatchdog();
+      setLoading(false);
+      setConnectionNotice("");
+      setProgressStalled(true);
+      setError(
+        reason === "disconnected"
+          ? "The interview connection could not be restored. Please contact support before trying again."
+          : "The interview stopped progressing and cannot continue. Please contact support before trying again.",
+      );
+      void endInterview(reason, true);
+    };
+
+    const beginProgressWatchdog = () => {
+      stopProgressWatchdog();
+      progressWatchdogTimer = window.setInterval(async () => {
+        if (!alive || endTriggeredRef.current) {
+          stopProgressWatchdog();
+          return;
+        }
+        if (!progressObservedRef.current || progressRecoveryInFlightRef.current || !call) return;
+
+        const lastProgressAt = lastProgressAtRef.current;
+        if (!lastProgressAt || Date.now() - lastProgressAt < PROGRESS_STALL_MS) return;
+
+        if (progressRecoveryAttemptedRef.current) {
+          markProgressStalled("progress_stalled");
+          return;
+        }
+
+        progressRecoveryAttemptedRef.current = true;
+        progressRecoveryInFlightRef.current = true;
+        reconnectingRef.current = true;
+        setConnectionNotice("The interview paused. Reconnecting...");
+        try {
+          await call.leave().catch(() => {});
+          if (!alive || endTriggeredRef.current) return;
+          await call.join({
+            url: session.conversation_url,
+            userName: "Candidate",
+            startAudioOff: false,
+            startVideoOff: false,
+          });
+          if (!alive || endTriggeredRef.current) return;
+          lastProgressAtRef.current = Date.now();
+          setConnectionNotice("Connection restored. The interview is resuming.");
+          syncParticipants();
+        } catch {
+          markProgressStalled("disconnected");
+        } finally {
+          reconnectingRef.current = false;
+          progressRecoveryInFlightRef.current = false;
+        }
+      }, PROGRESS_WATCHDOG_INTERVAL_MS);
     };
 
     (async () => {
@@ -455,6 +536,11 @@ export default function InterviewCviPage() {
         startupRemoteSeenRef.current = false;
         startupRecoveryAttemptedRef.current = false;
         recordingStartRequestedRef.current = false;
+        reconnectingRef.current = false;
+        progressObservedRef.current = false;
+        lastProgressAtRef.current = null;
+        progressRecoveryAttemptedRef.current = false;
+        progressRecoveryInFlightRef.current = false;
 
         const daily = await loadDailySdk();
         if (!alive) return;
@@ -472,7 +558,7 @@ export default function InterviewCviPage() {
         register("participant-updated", (event) => syncParticipants(event?.participants));
         register("participant-left", (event) => syncParticipants(event?.participants));
         register("left-meeting", () => {
-          if (!alive || leavingRef.current) return;
+          if (!alive || leavingRef.current || reconnectingRef.current) return;
           void leaveLiveRoute();
         });
         register("error", () => {
@@ -486,6 +572,12 @@ export default function InterviewCviPage() {
         register("app-message", (event) => {
           const data = event?.data ?? event ?? {};
           const eventType = String(data?.event_type || data?.eventType || "").toLowerCase();
+          if (eventType === "conversation.utterance") {
+            progressObservedRef.current = true;
+            lastProgressAtRef.current = Date.now();
+            progressRecoveryAttemptedRef.current = false;
+            setConnectionNotice("");
+          }
           if (eventType === "conversation.tool_call" || eventType === "conversation.toolcall") {
             const toolName = String(
               data?.name ??
@@ -538,6 +630,7 @@ export default function InterviewCviPage() {
         });
         if (!alive) return;
         syncParticipants();
+        beginProgressWatchdog();
       } catch {
         if (!alive) return;
         setLoading(false);
@@ -548,6 +641,9 @@ export default function InterviewCviPage() {
     return () => {
       alive = false;
       clearStartupTimer();
+      stopProgressWatchdog();
+      reconnectingRef.current = false;
+      progressRecoveryInFlightRef.current = false;
       if (call?.off) {
         for (const [eventName, handler] of handlers) {
           try {
@@ -647,6 +743,14 @@ export default function InterviewCviPage() {
     await endInterview("manual");
   }, [endInterview, finishBusy, session]);
 
+  const exitFailedInterview = useCallback(() => {
+    try {
+      window.sessionStorage.removeItem(LIVE_STATE_KEY);
+    } catch {}
+    const roleToken = String(session?.role_token || "").trim();
+    setLocation(roleToken ? `/interview/${encodeURIComponent(roleToken)}` : "/interview");
+  }, [session?.role_token, setLocation]);
+
   const timerLabel = useMemo(() => formatCountdown(secondsRemaining), [secondsRemaining]);
   const timerToneClass = useMemo(() => {
     if (typeof secondsRemaining !== "number") return "bg-black/60 border-white/20 text-white";
@@ -674,7 +778,7 @@ export default function InterviewCviPage() {
         className="bg-white flex-shrink-0 flex items-center px-6 h-14"
         style={{ borderBottom: "1px solid rgba(10,21,71,0.07)" }}
       >
-        <img src="/logo-dark-text.png" alt="alphaSource AI" className="h-8 w-auto" />
+        <img src={alphaSourceLogo} alt="alphaSource AI" className="h-8 w-auto" />
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12">
@@ -729,9 +833,9 @@ export default function InterviewCviPage() {
               </div>
             )}
 
-            {timeNotice && (
+            {(connectionNotice || timeNotice) && (
               <div className="absolute top-3 left-3 max-w-[calc(100%-8rem)] px-3 py-2 rounded-xl border border-[#F59E0B]/40 bg-[#FFFBEB]/95 text-[#3A2600] text-[11px] sm:text-xs font-bold shadow-sm pointer-events-none">
-                {timeNotice}
+                {connectionNotice || timeNotice}
               </div>
             )}
           </div>
@@ -744,15 +848,26 @@ export default function InterviewCviPage() {
             >
               Need help?
             </button>
-            <button
-              type="button"
-              onClick={finishInterview}
-              disabled={finishBusy}
-              className="flex items-center gap-2.5 px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.97]"
-              style={{ backgroundColor: "#A380F6" }}
-            >
-              {finishBusy ? "Finishing..." : "Finish Interview"}
-            </button>
+            {progressStalled ? (
+              <button
+                type="button"
+                onClick={exitFailedInterview}
+                className="px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.97]"
+                style={{ backgroundColor: "#A380F6" }}
+              >
+                Exit interview
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={finishInterview}
+                disabled={finishBusy}
+                className="flex items-center gap-2.5 px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.97]"
+                style={{ backgroundColor: "#A380F6" }}
+              >
+                {finishBusy ? "Finishing..." : "Finish Interview"}
+              </button>
+            )}
           </div>
 
           {!loading && error && (
