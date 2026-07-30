@@ -21,6 +21,7 @@ import {
   BarChart3,
   MousePointerClick,
   ShoppingCart,
+  RadioTower,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAppearance } from "@/context/AppearanceContext";
@@ -37,6 +38,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Overview",              href: "/admin",                      icon: LayoutDashboard },
   { label: "Metrics",               href: "/admin/metrics",              icon: BarChart3 },
+  { label: "Interview Reliability", href: "/admin/interview-reliability", icon: RadioTower },
   { label: "Leads & Public Analytics", href: "/admin/public-analytics",   icon: MousePointerClick },
   { label: "Public Purchases",      href: "/admin/public-purchases",      icon: ShoppingCart },
   { label: "Clients",               href: "/admin/clients",              icon: Building2 },

@@ -40,6 +40,68 @@ interface RecordingModalState {
   duration?: number | null;
 }
 
+interface ResetModalState {
+  candidate: Candidate;
+  eligibility: RecoveryEligibility;
+}
+
+interface RecoveryEligibility {
+  feature_enabled?: boolean;
+  eligible: boolean;
+  blockers: string[];
+  detail: string | null;
+  prior_interview?: {
+    id: string;
+    attempt_number?: number | null;
+    status?: string | null;
+    created_at?: string | null;
+    duration_seconds?: number | null;
+    transcript_present?: boolean;
+    recording_present?: boolean;
+    report_present?: boolean;
+    complete_report_present?: boolean;
+  } | null;
+  replacement?: {
+    authorization_id?: string | null;
+    status?: string | null;
+    start_status?: string | null;
+    replacement_interview_id?: string | null;
+    reset_mode?: string | null;
+    email_status?: string | null;
+    interview_status?: string | null;
+    vendor_start_state?: string | null;
+    vendor_reconciliation_status?: string | null;
+    vendor_resolution_source?: string | null;
+    manual_review_required?: boolean;
+    total_exact_match_count?: number | null;
+    stored_match_reference_count?: number | null;
+    match_references_truncated?: boolean;
+    scan_complete?: boolean;
+    scan_status?: string | null;
+    pages_requested?: number | null;
+    pages_completed?: number | null;
+    total_count_reported?: number | null;
+    reconciliation_at?: string | null;
+    binding_recovery_required?: boolean;
+  } | null;
+  adjudication?: {
+    id?: string | null;
+    decision?: string | null;
+    actor_email?: string | null;
+    created_at?: string | null;
+    reason_code?: string | null;
+    reason_detail?: string | null;
+    resulting_eligibility?: string | null;
+    audit_log_id?: string | null;
+  } | null;
+}
+
+interface RecoveryLoadState {
+  loading: boolean;
+  data: RecoveryEligibility | null;
+  error: string | null;
+}
+
 type SortKey = "name" | "client" | "entity" | "role" | "created" | "resume" | "interview" | "overall";
 type SortDir = "asc" | "desc";
 
@@ -167,6 +229,41 @@ function formatRecordingReadyAt(value?: string | null): string {
   return formatted.ts ? formatted.text : "";
 }
 
+function recoveryStartLabel(replacement?: RecoveryEligibility["replacement"]): string {
+  if (!replacement) return "None";
+  if (replacement.vendor_resolution_source === "list_exact_conversation_name") {
+    return "One vendor conversation found — resolved";
+  }
+  if (replacement.start_status === "started") return "Started successfully";
+  if (replacement.binding_recovery_required || replacement.start_status === "binding_recovery_required") {
+    return "Provider succeeded; database binding requires recovery";
+  }
+  if (replacement.start_status === "manual_review") {
+    if (replacement.scan_status === "incomplete_multi_page_unsupported") {
+      return "Manual review required — the Tavus account contains more conversations than can be verified safely in one response";
+    }
+    if (replacement.vendor_reconciliation_status === "no_match_pending") return "No vendor conversation visible — manual review";
+    if (replacement.vendor_reconciliation_status === "multiple_matches") return "Multiple vendor conversations found — manual review";
+    return "Vendor lookup unavailable — manual review";
+  }
+  if (replacement.start_status === "reconciliation_required") return "Reconciliation required";
+  if (replacement.start_status === "reconciling") return "Reconciliation in progress";
+  if (replacement.start_status === "starting") return "Starting";
+  if (replacement.start_status === "failed_retryable" || replacement.start_status === "failed_terminal") {
+    return "Start failed definitively";
+  }
+  if (replacement.authorization_id && replacement.start_status === "not_started") {
+    return "Authorized — waiting for candidate";
+  }
+  return replacement.status || "Unknown";
+}
+
+function canRunProtectedReconciliation(replacement?: RecoveryEligibility["replacement"]): boolean {
+  return replacement?.start_status === "reconciliation_required"
+    || replacement?.start_status === "binding_recovery_required"
+    || replacement?.binding_recovery_required === true;
+}
+
 /* ── Score helpers ───────────────────────────────────────────── */
 function scoreColor(s: number | null) {
   if (s === null) return "var(--as-text-subtle)";
@@ -230,6 +327,16 @@ export default function AdminCandidatesPage() {
   const [recordingBusy, setRecordingBusy] = useState<Record<string, boolean>>({});
   const [deleteBusy, setDeleteBusy] = useState<Record<string, boolean>>({});
   const [recordingModal, setRecordingModal] = useState<RecordingModalState | null>(null);
+  const [resetModal, setResetModal] = useState<ResetModalState | null>(null);
+  const [resetReason, setResetReason] = useState("candidate_network_disconnect");
+  const [resetDetail, setResetDetail] = useState("");
+  const [coverageAttested, setCoverageAttested] = useState(false);
+  const [clientApprovalAcknowledged, setClientApprovalAcknowledged] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [recoveryCoreEnabled, setRecoveryCoreEnabled] = useState(false);
+  const [recoveryCoreEmailEnabled, setRecoveryCoreEmailEnabled] = useState(false);
+  const [recoveryByCandidate, setRecoveryByCandidate] = useState<Record<string, RecoveryLoadState>>({});
+  const [reconciliationBusy, setReconciliationBusy] = useState<Record<string, boolean>>({});
   const hierarchyClients = useMemo(
     () => adminClients.filter((client) => client.id !== "all"),
     [adminClients],
@@ -239,8 +346,6 @@ export default function AdminCandidatesPage() {
     [hierarchyClients, selectedClientId],
   );
   const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions), [entityOptions]);
-
-  const toggle = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -268,6 +373,155 @@ export default function AdminCandidatesPage() {
     const token = String(session?.access_token || "").trim();
     if (!token) throw new Error("Missing session token.");
     return token;
+  };
+
+  const loadRecoveryEligibility = async (candidate: Candidate): Promise<RecoveryEligibility | null> => {
+    if (!backendBase || !candidate.roleId || !candidate.clientId) {
+      return null;
+    }
+    setRecoveryByCandidate((current) => ({
+      ...current,
+      [candidate.id]: { loading: true, data: current[candidate.id]?.data || null, error: null },
+    }));
+    try {
+      const token = await getSessionToken();
+      const params = new URLSearchParams({ client_id: candidate.clientId, role_id: candidate.roleId });
+      const response = await fetch(`${backendBase}/admin/interview-recovery/${encodeURIComponent(candidate.id)}/eligibility?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "omit",
+      });
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text));
+      const payload = parseJsonSafe(text) as RecoveryEligibility | null;
+      if (!payload) throw new Error("Could not review recovery eligibility.");
+      const normalized: RecoveryEligibility = {
+        ...payload,
+        eligible: payload.eligible === true,
+        blockers: Array.isArray(payload.blockers) ? payload.blockers : [],
+        detail: typeof payload.detail === "string" ? payload.detail : null,
+      };
+      setRecoveryByCandidate((current) => ({
+        ...current,
+        [candidate.id]: { loading: false, data: normalized, error: null },
+      }));
+      return normalized;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not review recovery eligibility.";
+      setRecoveryByCandidate((current) => ({
+        ...current,
+        [candidate.id]: { loading: false, data: null, error: message },
+      }));
+      return null;
+    }
+  };
+
+  const toggle = (candidate: Candidate) => {
+    const opening = expandedId !== candidate.id;
+    setExpandedId(opening ? candidate.id : null);
+    if (opening && recoveryCoreEnabled && !recoveryByCandidate[candidate.id]?.data) {
+      void loadRecoveryEligibility(candidate);
+    }
+  };
+
+  const openResetModal = async (candidate: Candidate) => {
+    if (!recoveryCoreEnabled) return;
+    const eligibility = recoveryByCandidate[candidate.id]?.data || await loadRecoveryEligibility(candidate);
+    if (!eligibility) {
+      setActionNotice({ tone: "error", text: "Candidate recovery information is unavailable." });
+      return;
+    }
+    setResetReason("candidate_network_disconnect");
+    setResetDetail("");
+    setCoverageAttested(false);
+    setClientApprovalAcknowledged(false);
+    setResetModal({ candidate, eligibility });
+  };
+
+  const submitReset = async (mode: "reset_only" | "reset_and_send") => {
+    if (!resetModal || !resetModal.eligibility.eligible || resetBusy) return;
+    if (resetReason === "other" && !resetDetail.trim()) {
+      setActionNotice({ tone: "error", text: "Provide a brief explanation when selecting Other." });
+      return;
+    }
+    if (!coverageAttested || !clientApprovalAcknowledged) {
+      setActionNotice({ tone: "error", text: "Complete both recovery confirmations." });
+      return;
+    }
+    setResetBusy(true);
+    try {
+      const candidate = resetModal.candidate;
+      const token = await getSessionToken();
+      const idempotencyKey = typeof crypto?.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${candidate.id}`;
+      const priorInterviewId = String(resetModal.eligibility.prior_interview?.id || "").trim();
+      if (!priorInterviewId) throw new Error("The prior interview identity is unavailable.");
+      const response = await fetch(`${backendBase}/admin/interview-recovery/${encodeURIComponent(candidate.id)}/authorize`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "omit",
+        body: JSON.stringify({
+          client_id: candidate.clientId,
+          role_id: candidate.roleId,
+          prior_interview_id: priorInterviewId,
+          decision: "authorize_one_video_replacement",
+          reason_code: resetReason,
+          reason_detail: resetDetail.trim(),
+          mode,
+          required_coverage_attested: coverageAttested,
+          client_approval_acknowledged: clientApprovalAcknowledged,
+          idempotency_key: idempotencyKey,
+        }),
+      });
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text));
+      setResetModal(null);
+      setRecoveryByCandidate((current) => ({ ...current, [candidate.id]: { loading: false, data: null, error: null } }));
+      setActionNotice({ tone: "success", text: "One replacement video interview has been authorized." });
+      setRefreshNonce((value) => value + 1);
+    } catch (error) {
+      setActionNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not reset interview access.",
+      });
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
+  const runProtectedReconciliation = async (candidate: Candidate, eligibility: RecoveryEligibility) => {
+    const replacement = eligibility.replacement;
+    const interviewId = replacement?.replacement_interview_id;
+    const authorizationId = replacement?.authorization_id;
+    if (!interviewId || !authorizationId || reconciliationBusy[candidate.id]) return;
+    setReconciliationBusy((current) => ({ ...current, [candidate.id]: true }));
+    try {
+      const token = await getSessionToken();
+      const response = await fetch(`${backendBase}/admin/interview-recovery/${encodeURIComponent(candidate.id)}/reconcile-vendor-start`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "omit",
+        body: JSON.stringify({
+          client_id: candidate.clientId,
+          role_id: candidate.roleId,
+          interview_id: interviewId,
+          authorization_id: authorizationId,
+        }),
+      });
+      const text = await response.text();
+      if (!response.ok) throw new Error(extractErrorMessage(text));
+      const payload = parseJsonSafe(text) as { status?: unknown } | null;
+      const status = typeof payload?.status === "string" ? payload.status : "vendor_reconciliation_manual_review";
+      setActionNotice({
+        tone: status === "started" ? "success" : "error",
+        text: status === "started"
+          ? "The existing vendor conversation is now linked to the replacement attempt."
+          : "Manual review is required. No additional vendor conversation will be created automatically.",
+      });
+      await loadRecoveryEligibility(candidate);
+    } catch (error) {
+      setActionNotice({ tone: "error", text: error instanceof Error ? error.message : "Could not complete the protected reconciliation action." });
+    } finally {
+      setReconciliationBusy((current) => ({ ...current, [candidate.id]: false }));
+    }
   };
 
   const openCandidateResume = async (candidate: Candidate) => {
@@ -332,6 +586,7 @@ export default function AdminCandidatesPage() {
           client_id: selectedClientId,
           candidate_id: candidateId,
           role_id: candidate.roleId || null,
+          interview_id: candidate.latestInterviewId || null,
         }),
       });
       const text = await response.text();
@@ -578,6 +833,16 @@ export default function AdminCandidatesPage() {
         const candidatesText = await candidatesResponse.text();
         if (!candidatesResponse.ok) throw new Error(extractErrorMessage(candidatesText));
         const candidatesPayload = parseJsonSafe(candidatesText);
+        const featurePayload = candidatesPayload && typeof candidatesPayload === "object"
+          ? (candidatesPayload as { features?: { interview_recovery_core?: unknown; interview_recovery_core_email?: unknown } }).features
+          : null;
+        const recoveryEnabled = featurePayload?.interview_recovery_core === true;
+        setRecoveryCoreEnabled(recoveryEnabled);
+        setRecoveryCoreEmailEnabled(featurePayload?.interview_recovery_core_email === true);
+        if (!recoveryEnabled) {
+          setRecoveryByCandidate({});
+          setResetModal(null);
+        }
         const candidateItems =
           candidatesPayload &&
           typeof candidatesPayload === "object" &&
@@ -882,6 +1147,8 @@ export default function AdminCandidatesPage() {
           ) : (
             sorted.map((c) => {
               const expanded = expandedId === c.id;
+              const recoveryState = recoveryByCandidate[c.id];
+              const recovery = recoveryState?.data;
               return (
                 <div key={c.id}>
                   {/* Main row */}
@@ -892,7 +1159,7 @@ export default function AdminCandidatesPage() {
                         : "grid-cols-[1fr_130px_130px_140px_68px_78px_68px_100px_44px]"
                     }`}
                     style={expanded ? { backgroundColor: "var(--as-accent-soft)" } : undefined}
-                    onClick={() => toggle(c.id)}
+                    onClick={() => toggle(c)}
                   >
                     {/* Name + email */}
                     <div className="flex items-start gap-2 min-w-0 pr-2">
@@ -1004,6 +1271,83 @@ export default function AdminCandidatesPage() {
                           <span className="font-semibold" style={mutedTextStyle}>{c.reportDate}</span>
                         </div>
                       </div>
+                      {recoveryCoreEnabled && (
+                        <div className="mt-4 rounded-lg border p-4" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Video interview recovery</p>
+                              <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>Manual, one-replacement authorization</p>
+                            </div>
+                            {recovery?.eligible && (
+                              <button
+                                type="button"
+                                className="rounded-md px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                                style={{ backgroundColor: "#A380F6" }}
+                                onClick={(event) => { event.stopPropagation(); void openResetModal(c); }}
+                              >
+                                Authorize one replacement
+                              </button>
+                            )}
+                          </div>
+                          {recoveryState?.loading ? (
+                            <p className="mt-3 text-xs font-semibold" style={mutedTextStyle}>Reviewing exact attempt evidence…</p>
+                          ) : recoveryState?.error ? (
+                            <p className="mt-3 text-xs font-semibold text-red-600">{recoveryState.error}</p>
+                          ) : recovery ? (
+                            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                              <div className="rounded-md border p-3" style={dividerStyle}>
+                                <p className="text-[10px] font-black uppercase tracking-wider" style={subtleTextStyle}>System-visible prior attempt</p>
+                                <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                                  <dt style={mutedTextStyle}>Status</dt><dd className="font-bold" style={primaryTextStyle}>{recovery.prior_interview?.status || "Unknown"}</dd>
+                                  <dt style={mutedTextStyle}>Created</dt><dd className="font-semibold" style={primaryTextStyle}>{formatDateTime(recovery.prior_interview?.created_at).text}</dd>
+                                  <dt style={mutedTextStyle}>Duration</dt><dd className="font-semibold" style={primaryTextStyle}>{formatRecordingDuration(recovery.prior_interview?.duration_seconds) || "Unknown"}</dd>
+                                  <dt style={mutedTextStyle}>Transcript</dt><dd className="font-semibold" style={primaryTextStyle}>{recovery.prior_interview?.transcript_present ? "Available" : "Not present"}</dd>
+                                  <dt style={mutedTextStyle}>Recording</dt><dd className="font-semibold" style={primaryTextStyle}>{recovery.prior_interview?.recording_present ? "Available" : "Not present"}</dd>
+                                  <dt style={mutedTextStyle}>Report</dt><dd className="font-semibold" style={primaryTextStyle}>{recovery.prior_interview?.report_present ? "Available" : "Not present"}</dd>
+                                  <dt style={mutedTextStyle}>Replacement</dt><dd className="font-semibold" style={primaryTextStyle}>{recoveryStartLabel(recovery.replacement)}</dd>
+                                </dl>
+                                {recovery.replacement?.manual_review_required && (
+                                  <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900">
+                                    Manual review required. No additional vendor conversation will be created automatically.
+                                  </p>
+                                )}
+                                {recovery.replacement && canRunProtectedReconciliation(recovery.replacement) && (
+                                  <button
+                                    type="button"
+                                    className="mt-3 rounded-md border px-3 py-2 text-xs font-bold disabled:opacity-50"
+                                    style={{ ...dividerStyle, color: "var(--as-text-muted)" }}
+                                    disabled={reconciliationBusy[c.id] === true}
+                                    onClick={(event) => { event.stopPropagation(); void runProtectedReconciliation(c, recovery); }}
+                                  >
+                                    {reconciliationBusy[c.id]
+                                      ? "Checking protected recovery state…"
+                                      : (recovery.replacement.binding_recovery_required
+                                        ? "Recover stored vendor binding"
+                                        : "Run read-only vendor reconciliation")}
+                                  </button>
+                                )}
+                              </div>
+                              <div className="rounded-md border p-3" style={dividerStyle}>
+                                <p className="text-[10px] font-black uppercase tracking-wider" style={subtleTextStyle}>Administrator decision</p>
+                                {recovery.adjudication ? (
+                                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                                    <dt style={mutedTextStyle}>Decision</dt><dd className="font-bold" style={primaryTextStyle}>{recovery.adjudication.decision || "—"}</dd>
+                                    <dt style={mutedTextStyle}>Actor</dt><dd className="font-semibold" style={primaryTextStyle}>{recovery.adjudication.actor_email || "System"}</dd>
+                                    <dt style={mutedTextStyle}>Time</dt><dd className="font-semibold" style={primaryTextStyle}>{formatDateTime(recovery.adjudication.created_at).text}</dd>
+                                    <dt style={mutedTextStyle}>Reason</dt><dd className="font-semibold" style={primaryTextStyle}>{recovery.adjudication.reason_code || "—"}</dd>
+                                    <dt style={mutedTextStyle}>Eligibility</dt><dd className="font-semibold" style={primaryTextStyle}>{recovery.adjudication.resulting_eligibility || "—"}</dd>
+                                    <dt style={mutedTextStyle}>Audit</dt><dd className="font-mono text-[10px]" style={primaryTextStyle}>{recovery.adjudication.audit_log_id || "—"}</dd>
+                                  </dl>
+                                ) : (
+                                  <p className="mt-2 text-xs font-semibold" style={mutedTextStyle}>{recovery.eligible ? "No decision recorded." : (recovery.detail || "Recovery is not eligible.")}</p>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <button type="button" className="mt-3 rounded-md border px-3 py-2 text-xs font-bold" style={{ ...dividerStyle, color: "var(--as-text-muted)" }} onClick={() => { void loadRecoveryEligibility(c); }}>Review recovery eligibility</button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1078,6 +1422,51 @@ export default function AdminCandidatesPage() {
                   Download
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {resetModal && (
+        <div className="fixed inset-0 z-[85] flex items-center justify-center p-4">
+          <button type="button" className="absolute inset-0 bg-[#0A1547]/45" aria-label="Close video interview recovery" onClick={() => !resetBusy && setResetModal(null)} />
+          <div className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-lg p-5" style={modalSurfaceStyle}>
+            <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>Video interview recovery</p>
+            <h3 className="mt-1 text-base font-black" style={primaryTextStyle}>Authorize one replacement for {resetModal.candidate.name}</h3>
+            <p className="mt-2 text-xs" style={mutedTextStyle}>
+              Prior attempt {resetModal.eligibility.prior_interview?.attempt_number || "—"} · {resetModal.eligibility.prior_interview?.status || "Unknown status"}. Objective evidence remains unchanged; attempt two is created only when the candidate selects Start.
+            </p>
+            <label className="mt-4 block text-xs font-black uppercase tracking-wider" style={mutedTextStyle}>Reason</label>
+            <select className={selectCls + " mt-1 w-full rounded-md"} style={fieldSurfaceStyle} value={resetReason} onChange={(event) => setResetReason(event.target.value)} disabled={resetBusy}>
+              <option value="candidate_network_disconnect">Candidate network disconnect</option>
+              <option value="unknown_early_termination">Unknown early termination</option>
+              <option value="no_substantive_response">No substantive response</option>
+              <option value="partial_interview">Partial interview</option>
+              <option value="vendor_start_failure">Vendor start failure</option>
+              <option value="client_approved_exception">Client-approved exception</option>
+              <option value="other">Other</option>
+            </select>
+            {resetReason === "other" && (
+              <div className="mt-2">
+                <textarea maxLength={500} className="w-full rounded-md border px-3 py-2 text-sm" style={fieldSurfaceStyle} value={resetDetail} onChange={(event) => setResetDetail(event.target.value)} placeholder="Brief explanation" rows={2} disabled={resetBusy} />
+                <p className="mt-1 text-right text-[10px]" style={subtleTextStyle}>{resetDetail.length}/500</p>
+              </div>
+            )}
+            <div className="mt-4 space-y-3">
+              <label className="flex items-start gap-2 text-xs font-semibold" style={mutedTextStyle}>
+                <input type="checkbox" className="mt-0.5" checked={coverageAttested} onChange={(event) => setCoverageAttested(event.target.checked)} disabled={resetBusy} />
+                <span>I attest that required interview coverage was not completed or cannot be proven completed.</span>
+              </label>
+              <label className="flex items-start gap-2 text-xs font-semibold" style={mutedTextStyle}>
+                <input type="checkbox" className="mt-0.5" checked={clientApprovalAcknowledged} onChange={(event) => setClientApprovalAcknowledged(event.target.checked)} disabled={resetBusy} />
+                <span>I confirm that client approval has been recorded.</span>
+              </label>
+            </div>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button type="button" className="rounded-md border px-3 py-2 text-xs font-bold" style={{ borderColor: "var(--as-border)", color: "var(--as-text-muted)" }} onClick={() => setResetModal(null)} disabled={resetBusy}>Cancel</button>
+              <button type="button" className="rounded-md border px-3 py-2 text-xs font-bold" style={{ borderColor: "var(--as-border)", color: "var(--as-text-muted)" }} onClick={() => { void submitReset("reset_only"); }} disabled={resetBusy || !coverageAttested || !clientApprovalAcknowledged}>Reset only</button>
+              {recoveryCoreEmailEnabled && (
+                <button type="button" className="rounded-md px-3 py-2 text-xs font-bold text-white" style={{ backgroundColor: "#A380F6" }} onClick={() => { void submitReset("reset_and_send"); }} disabled={resetBusy || !coverageAttested || !clientApprovalAcknowledged}>{resetBusy ? "Authorizing…" : "Reset and send"}</button>
+              )}
             </div>
           </div>
         </div>
