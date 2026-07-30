@@ -12,6 +12,7 @@ const CANDIDATE_FLOW_MESSAGES: Record<string, string> = {
   RESUME_UPLOAD_FAILED: "The resume could not be uploaded. Your submission was not completed; please try again.",
   RESUME_UNREADABLE: "The resume file could not be read. Choose a valid PDF, DOC, or DOCX file and try again.",
   INTERVIEW_VENDOR_START_FAILED: "The interview room could not be started. Contact support before trying again.",
+  INTERVIEW_DURATION_NOT_CONFIGURED: "Interview duration is not configured. Please contact the hiring team.",
   INTERVIEW_PROGRESS_STALLED: "The interview stopped progressing after a reconnect attempt. Contact support so your access can be reviewed.",
   INTERVIEW_DISCONNECTED: "The interview disconnected and could not reconnect. Contact support so your access can be reviewed.",
   ANALYSIS_FAILED: "Interview analysis could not be completed. Support can retry the analysis without repeating the interview.",
