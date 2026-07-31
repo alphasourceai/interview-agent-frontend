@@ -8,6 +8,8 @@ type LiveSessionState = {
   interview_id: string;
   role_token: string;
   max_interview_minutes: number | null;
+  silence_engagement_owner?: "prompt" | "tavus_patient" | "application_inactivity";
+  application_inactivity_control_enabled?: boolean;
   email?: string;
   candidate_id?: string;
   role_id?: string;
@@ -116,6 +118,85 @@ export type ProgressWatchdogInput = {
 };
 
 export type CandidateSpeakingTransition = "started" | "ended" | null;
+
+export type CandidateInactivityNudgePhase =
+  | "DISABLED"
+  | "DISARMED"
+  | "ARMED_AFTER_PAL_TURN"
+  | "CANCELLED"
+  | "NUDGE_DISPATCHED"
+  | "WAITING_FOR_CANDIDATE_AFTER_NUDGE"
+  | "SUPPRESSED"
+  | "TERMINAL";
+
+export type CandidateInactivityNudgeReason =
+  | "candidate_speaking"
+  | "candidate_utterance"
+  | "pal_speaking"
+  | "reconnect"
+  | "transport_unhealthy"
+  | "candidate_media_unavailable"
+  | "replica_absent"
+  | "remote_audio_unavailable"
+  | "watchdog_recovery"
+  | "question_lock"
+  | "closing"
+  | "termination"
+  | "provider_end"
+  | "conversation_changed"
+  | "unmount"
+  | "runtime_ownership_lost"
+  | "hidden_document"
+  | "interrupted_pal_turn"
+  | "duplicate_turn"
+  | "stale_sequence"
+  | "wrong_conversation"
+  | "application_control_turn"
+  | "late_timer"
+  | "ambiguous_state"
+  | "dispatch_failed";
+
+export type CandidateInactivityNudgeState = {
+  phase: CandidateInactivityNudgePhase;
+  enabled: boolean;
+  interviewId: string;
+  conversationId: string;
+  activeTurnKey: string | null;
+  activeTurnSequence: number | null;
+  highestProviderSequence: number | null;
+  processedTurnKeys: string[];
+  armedAt: number | null;
+  deadlineAt: number | null;
+};
+
+export type CandidateInactivityEligibility = {
+  phase: InterviewClosingPhase;
+  remainingSeconds: number | null;
+  candidateSpeaking: boolean;
+  reconnectActive: boolean;
+  transportHealthy: boolean;
+  candidateMediaHealthy: boolean;
+  replicaPresent: boolean;
+  remoteAudioReady: boolean;
+  documentVisible: boolean;
+  runtimeOwner: boolean;
+};
+
+export type NormalizedPalSpeakingEvent = {
+  kind: "started" | "stopped";
+  conversationId: string;
+  turnKey: string;
+  providerSequence: number | null;
+  interrupted: boolean;
+  applicationControl: boolean;
+};
+
+export type CandidateInactivityTransition = {
+  state: CandidateInactivityNudgeState;
+  action: "none" | "armed" | "cancelled" | "suppressed" | "send" | "candidate_activity";
+  reason?: CandidateInactivityNudgeReason;
+  latenessBucket?: "on_time" | "within_2s" | "over_2s";
+};
 
 export type TimerTone = "normal" | "warning" | "urgent";
 
@@ -226,6 +307,16 @@ const MIN_INVITATION_REMAINING_SECONDS = 18;
 const CANDIDATE_QUESTION_SILENCE_MS = 6500;
 const DIRECT_SPEECH_MAX_MS = 12000;
 const MAX_INTERRUPTED_INFERENCE_KEYS = 16;
+export const CANDIDATE_INACTIVITY_NUDGE_THRESHOLD_MS = 10000;
+export const CANDIDATE_INACTIVITY_NUDGE_MAX_LATENESS_MS = 2000;
+export const CANDIDATE_INACTIVITY_NUDGE_TEXT =
+  "Take your time. When you’re ready, you can continue.";
+const CANDIDATE_INACTIVITY_NUDGE_INFERENCE_PREFIX =
+  "alphascreen-candidate-inactivity-nudge";
+const CANDIDATE_INACTIVITY_LEASE_PREFIX = "alphascreen-inactivity-owner";
+const CANDIDATE_INACTIVITY_LEASE_MS = 6000;
+const CANDIDATE_INACTIVITY_LEASE_RENEW_MS = 2000;
+const MAX_PROCESSED_INACTIVITY_TURNS = 24;
 const CANDIDATE_QUESTION_INVITATION =
   "Before we finish, do you have one question for me?";
 const FINAL_CLOSING_UTTERANCE =
@@ -618,6 +709,472 @@ function monotonicNow(): number {
     : Date.now();
 }
 
+function boundedOpaqueHash(value: unknown): string {
+  const text = String(value || "").slice(0, 512);
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36).padStart(7, "0").slice(0, 10);
+}
+
+function primitiveNonNegativeInteger(...values: unknown[]): number | null {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
+  }
+  return null;
+}
+
+function boundedPrimitiveString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const normalized = value.trim();
+    if (normalized && normalized.length <= 200) return normalized;
+  }
+  return "";
+}
+
+export function normalizePalSpeakingEvent(
+  payload: unknown,
+  activeConversationId: string,
+): NormalizedPalSpeakingEvent | null {
+  const data = payload && typeof payload === "object" ? payload as Record<string, any> : {};
+  const properties = data.properties && typeof data.properties === "object" && !Array.isArray(data.properties)
+    ? data.properties as Record<string, unknown>
+    : {};
+  const eventType = String(data.event_type || data.eventType || "").trim().toLowerCase();
+  const explicitRole = String(properties.role || data.role || "").trim().toLowerCase();
+  const roleSpecificReplica = /(?:^|[._-])(?:replica|pal|assistant|agent)[._-](?:started|stopped)[._-]speaking$/.test(eventType);
+  const replicaRole = ["replica", "pal", "assistant", "agent"].includes(explicitRole) || roleSpecificReplica;
+  if (!replicaRole) return null;
+
+  const kind = /(?:^|[._-])stopped[._-]speaking$/.test(eventType)
+    ? "stopped"
+    : /(?:^|[._-])started[._-]speaking$/.test(eventType)
+      ? "started"
+      : null;
+  if (!kind) return null;
+
+  const conversationId = boundedPrimitiveString(
+    properties.conversation_id,
+    data.conversation_id,
+    data.conversationId,
+    activeConversationId,
+  );
+  const providerSequence = primitiveNonNegativeInteger(
+    properties.seq,
+    properties.sequence,
+    properties.event_sequence,
+    properties.turn_sequence,
+    properties.turn_index,
+    data.seq,
+    data.sequence,
+    data.event_sequence,
+    data.turn_sequence,
+    data.turn_index,
+    data.turn_idx,
+  );
+  const inferenceId = boundedPrimitiveString(properties.inference_id, data.inference_id);
+  const turnIndex = primitiveNonNegativeInteger(
+    properties.turn_index,
+    properties.turn_idx,
+    data.turn_index,
+    data.turn_idx,
+  );
+  if (!inferenceId && providerSequence === null && turnIndex === null) return null;
+  const turnIdentity = inferenceId || `sequence:${providerSequence ?? turnIndex}`;
+  const interruptedValue = properties.interrupted ?? data.interrupted;
+  const interrupted = interruptedValue === true || String(interruptedValue || "").toLowerCase() === "true";
+  const applicationControl = inferenceId.startsWith(`${CANDIDATE_INACTIVITY_NUDGE_INFERENCE_PREFIX}-`);
+
+  return {
+    kind,
+    conversationId,
+    turnKey: boundedOpaqueHash(`replica:${turnIdentity}`),
+    providerSequence,
+    interrupted,
+    applicationControl,
+  };
+}
+
+export function createCandidateInactivityNudgeState(
+  enabled: boolean,
+  interviewId: string,
+  conversationId: string,
+): CandidateInactivityNudgeState {
+  const normalizedInterviewId = String(interviewId || "").trim();
+  const normalizedConversationId = String(conversationId || "").trim();
+  const active = enabled === true && Boolean(normalizedInterviewId) && Boolean(normalizedConversationId);
+  return {
+    phase: active ? "DISARMED" : "DISABLED",
+    enabled: active,
+    interviewId: normalizedInterviewId,
+    conversationId: normalizedConversationId,
+    activeTurnKey: null,
+    activeTurnSequence: null,
+    highestProviderSequence: null,
+    processedTurnKeys: [],
+    armedAt: null,
+    deadlineAt: null,
+  };
+}
+
+function inactivityEligibilityFailure(
+  eligibility: CandidateInactivityEligibility,
+): CandidateInactivityNudgeReason | null {
+  if (eligibility.phase === "QUESTION_LOCKED") return "question_lock";
+  if (eligibility.phase === "CLOSING_ONLY") return "closing";
+  if (eligibility.phase === "TERMINATION_ONLY" || eligibility.phase === "ENDED") return "termination";
+  if (typeof eligibility.remainingSeconds === "number" && eligibility.remainingSeconds <= QUESTION_LOCK_THRESHOLD_SECONDS) {
+    return "question_lock";
+  }
+  if (eligibility.candidateSpeaking) return "candidate_speaking";
+  if (eligibility.reconnectActive) return "reconnect";
+  if (!eligibility.transportHealthy) return "transport_unhealthy";
+  if (!eligibility.candidateMediaHealthy) return "candidate_media_unavailable";
+  if (!eligibility.replicaPresent) return "replica_absent";
+  if (!eligibility.remoteAudioReady) return "remote_audio_unavailable";
+  if (!eligibility.documentVisible) return "hidden_document";
+  if (!eligibility.runtimeOwner) return "runtime_ownership_lost";
+  return null;
+}
+
+export function armCandidateInactivityNudge(
+  state: CandidateInactivityNudgeState,
+  event: NormalizedPalSpeakingEvent,
+  now: number,
+  eligibility: CandidateInactivityEligibility,
+): CandidateInactivityTransition {
+  if (!state.enabled || state.phase === "DISABLED" || state.phase === "TERMINAL") {
+    return { state, action: "none" };
+  }
+  if (event.kind !== "stopped") return { state, action: "none" };
+  if (state.phase === "WAITING_FOR_CANDIDATE_AFTER_NUDGE" || state.phase === "NUDGE_DISPATCHED") {
+    return { state, action: "none" };
+  }
+  if (event.conversationId !== state.conversationId) {
+    return {
+      state: {
+        ...state,
+        phase: "SUPPRESSED",
+        activeTurnKey: null,
+        activeTurnSequence: null,
+        armedAt: null,
+        deadlineAt: null,
+      },
+      action: "suppressed",
+      reason: "wrong_conversation",
+    };
+  }
+  if (event.applicationControl) {
+    return {
+      state: {
+        ...state,
+        phase: "SUPPRESSED",
+        activeTurnKey: null,
+        activeTurnSequence: null,
+        armedAt: null,
+        deadlineAt: null,
+      },
+      action: "suppressed",
+      reason: "application_control_turn",
+    };
+  }
+  if (event.interrupted) {
+    return {
+      state: {
+        ...state,
+        phase: "SUPPRESSED",
+        activeTurnKey: null,
+        activeTurnSequence: null,
+        armedAt: null,
+        deadlineAt: null,
+      },
+      action: "suppressed",
+      reason: "interrupted_pal_turn",
+    };
+  }
+  if (state.processedTurnKeys.includes(event.turnKey)) {
+    return { state, action: "suppressed", reason: "duplicate_turn" };
+  }
+  if (
+    event.providerSequence !== null &&
+    state.highestProviderSequence !== null &&
+    event.providerSequence <= state.highestProviderSequence
+  ) {
+    return { state, action: "suppressed", reason: "stale_sequence" };
+  }
+
+  const highestProviderSequence = event.providerSequence === null
+    ? state.highestProviderSequence
+    : Math.max(state.highestProviderSequence ?? -1, event.providerSequence);
+  const processedTurnKeys = [...state.processedTurnKeys, event.turnKey].slice(-MAX_PROCESSED_INACTIVITY_TURNS);
+  const reason = inactivityEligibilityFailure(eligibility);
+  if (reason) {
+    return {
+      state: {
+        ...state,
+        phase: "SUPPRESSED",
+        activeTurnKey: null,
+        activeTurnSequence: null,
+        highestProviderSequence,
+        processedTurnKeys,
+        armedAt: null,
+        deadlineAt: null,
+      },
+      action: "suppressed",
+      reason,
+    };
+  }
+
+  return {
+    state: {
+      ...state,
+      phase: "ARMED_AFTER_PAL_TURN",
+      activeTurnKey: event.turnKey,
+      activeTurnSequence: event.providerSequence,
+      highestProviderSequence,
+      processedTurnKeys,
+      armedAt: now,
+      deadlineAt: now + CANDIDATE_INACTIVITY_NUDGE_THRESHOLD_MS,
+    },
+    action: "armed",
+  };
+}
+
+export function cancelCandidateInactivityNudge(
+  state: CandidateInactivityNudgeState,
+  reason: CandidateInactivityNudgeReason,
+  terminal = false,
+): CandidateInactivityTransition {
+  if (!state.enabled || state.phase === "DISABLED" || state.phase === "TERMINAL") {
+    return { state, action: "none" };
+  }
+  if (state.phase !== "ARMED_AFTER_PAL_TURN") {
+    if (terminal) {
+      return {
+        state: {
+          ...state,
+          phase: "TERMINAL",
+          activeTurnKey: null,
+          activeTurnSequence: null,
+          armedAt: null,
+          deadlineAt: null,
+        },
+        action: "cancelled",
+        reason,
+      };
+    }
+    return { state, action: "none" };
+  }
+  return {
+    state: {
+      ...state,
+      phase: terminal ? "TERMINAL" : "CANCELLED",
+      activeTurnKey: null,
+      activeTurnSequence: null,
+      armedAt: null,
+      deadlineAt: null,
+    },
+    action: "cancelled",
+    reason,
+  };
+}
+
+export function recordCandidateActivityForInactivityNudge(
+  state: CandidateInactivityNudgeState,
+  reason: "candidate_speaking" | "candidate_utterance",
+): CandidateInactivityTransition {
+  if (!state.enabled || state.phase === "DISABLED" || state.phase === "TERMINAL") {
+    return { state, action: "none" };
+  }
+  const action = state.phase === "ARMED_AFTER_PAL_TURN" ? "cancelled" : "candidate_activity";
+  return {
+    state: {
+      ...state,
+      phase: "DISARMED",
+      activeTurnKey: null,
+      activeTurnSequence: null,
+      armedAt: null,
+      deadlineAt: null,
+    },
+    action,
+    reason,
+  };
+}
+
+export function evaluateCandidateInactivityDeadline(
+  state: CandidateInactivityNudgeState,
+  now: number,
+  eligibility: CandidateInactivityEligibility,
+): CandidateInactivityTransition {
+  if (state.phase !== "ARMED_AFTER_PAL_TURN" || state.deadlineAt === null) {
+    return { state, action: "none" };
+  }
+  if (now < state.deadlineAt) return { state, action: "none" };
+  const lateness = Math.max(0, now - state.deadlineAt);
+  const latenessBucket = lateness === 0 ? "on_time" : lateness <= CANDIDATE_INACTIVITY_NUDGE_MAX_LATENESS_MS ? "within_2s" : "over_2s";
+  if (lateness > CANDIDATE_INACTIVITY_NUDGE_MAX_LATENESS_MS) {
+    return {
+      state: {
+        ...state,
+        phase: "SUPPRESSED",
+        activeTurnKey: null,
+        activeTurnSequence: null,
+        armedAt: null,
+        deadlineAt: null,
+      },
+      action: "suppressed",
+      reason: "late_timer",
+      latenessBucket,
+    };
+  }
+  const reason = inactivityEligibilityFailure(eligibility);
+  if (reason) {
+    return {
+      state: {
+        ...state,
+        phase: "SUPPRESSED",
+        activeTurnKey: null,
+        activeTurnSequence: null,
+        armedAt: null,
+        deadlineAt: null,
+      },
+      action: "suppressed",
+      reason,
+      latenessBucket,
+    };
+  }
+  if (!state.activeTurnKey) {
+    return {
+      state: {
+        ...state,
+        phase: "SUPPRESSED",
+        activeTurnKey: null,
+        activeTurnSequence: null,
+        armedAt: null,
+        deadlineAt: null,
+      },
+      action: "suppressed",
+      reason: "ambiguous_state",
+      latenessBucket,
+    };
+  }
+  return {
+    state: { ...state, phase: "NUDGE_DISPATCHED", armedAt: null, deadlineAt: null },
+    action: "send",
+    latenessBucket,
+  };
+}
+
+export function recordCandidateInactivityNudgeDispatch(
+  state: CandidateInactivityNudgeState,
+  sent: boolean,
+): CandidateInactivityTransition {
+  if (state.phase !== "NUDGE_DISPATCHED") return { state, action: "none" };
+  if (!sent) {
+    return {
+      state: {
+        ...state,
+        phase: "SUPPRESSED",
+        activeTurnKey: null,
+        activeTurnSequence: null,
+      },
+      action: "suppressed",
+      reason: "dispatch_failed",
+    };
+  }
+  return {
+    state: { ...state, phase: "WAITING_FOR_CANDIDATE_AFTER_NUDGE" },
+    action: "none",
+  };
+}
+
+export function buildCandidateInactivityNudgeMessage(
+  conversationId: string,
+  turnKey: string,
+) {
+  return {
+    message_type: "conversation",
+    event_type: "conversation.echo",
+    conversation_id: conversationId,
+    properties: {
+      modality: "text",
+      text: CANDIDATE_INACTIVITY_NUDGE_TEXT,
+      done: true,
+      inference_id: `${CANDIDATE_INACTIVITY_NUDGE_INFERENCE_PREFIX}-${boundedOpaqueHash(turnKey)}`,
+    },
+  };
+}
+
+type CandidateInactivityLeaseStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+export function candidateInactivityLeaseKey(conversationId: string): string {
+  return `${CANDIDATE_INACTIVITY_LEASE_PREFIX}:${boundedOpaqueHash(conversationId)}`;
+}
+
+function readCandidateInactivityLease(
+  storage: CandidateInactivityLeaseStorage,
+  conversationId: string,
+): { owner: string; expiresAt: number } | null {
+  try {
+    const parsed = JSON.parse(storage.getItem(candidateInactivityLeaseKey(conversationId)) || "null");
+    if (
+      !parsed ||
+      typeof parsed.owner !== "string" ||
+      !parsed.owner ||
+      !Number.isFinite(parsed.expiresAt)
+    ) return null;
+    return { owner: parsed.owner.slice(0, 80), expiresAt: Number(parsed.expiresAt) };
+  } catch {
+    return null;
+  }
+}
+
+export function acquireCandidateInactivityLease(
+  storage: CandidateInactivityLeaseStorage,
+  conversationId: string,
+  tabId: string,
+  now: number,
+  visible: boolean,
+): boolean {
+  if (!conversationId || !tabId || !visible) return false;
+  const current = readCandidateInactivityLease(storage, conversationId);
+  if (current && current.owner !== tabId && current.expiresAt > now) return false;
+  try {
+    storage.setItem(
+      candidateInactivityLeaseKey(conversationId),
+      JSON.stringify({ owner: tabId.slice(0, 80), expiresAt: now + CANDIDATE_INACTIVITY_LEASE_MS }),
+    );
+    return readCandidateInactivityLease(storage, conversationId)?.owner === tabId;
+  } catch {
+    return false;
+  }
+}
+
+export function ownsCandidateInactivityLease(
+  storage: CandidateInactivityLeaseStorage,
+  conversationId: string,
+  tabId: string,
+  now: number,
+): boolean {
+  const current = readCandidateInactivityLease(storage, conversationId);
+  return Boolean(current && current.owner === tabId && current.expiresAt > now);
+}
+
+export function releaseCandidateInactivityLease(
+  storage: CandidateInactivityLeaseStorage,
+  conversationId: string,
+  tabId: string,
+): void {
+  try {
+    if (readCandidateInactivityLease(storage, conversationId)?.owner === tabId) {
+      storage.removeItem(candidateInactivityLeaseKey(conversationId));
+    }
+  } catch {}
+}
+
 function remainingTimeBucket(remaining: number | null): "over_45" | "31_45" | "11_30" | "0_10" {
   if (typeof remaining !== "number" || remaining > QUESTION_LOCK_THRESHOLD_SECONDS) return "over_45";
   if (remaining > CLOSING_ONLY_THRESHOLD_SECONDS) return "31_45";
@@ -772,6 +1329,14 @@ function readLiveState(): LiveSessionState | null {
       interview_id: String(parsed?.interview_id || "").trim(),
       role_token: String(parsed?.role_token || "").trim(),
       max_interview_minutes: Number.isFinite(maxRaw) && maxRaw > 0 ? Math.floor(maxRaw) : null,
+      silence_engagement_owner:
+        parsed?.silence_engagement_owner === "application_inactivity" ||
+        parsed?.silence_engagement_owner === "tavus_patient"
+          ? parsed.silence_engagement_owner
+          : "prompt",
+      application_inactivity_control_enabled:
+        parsed?.application_inactivity_control_enabled === true &&
+        parsed?.silence_engagement_owner === "application_inactivity",
       email: parsed?.email ? String(parsed.email) : undefined,
       candidate_id: parsed?.candidate_id ? String(parsed.candidate_id) : undefined,
       role_id: parsed?.role_id ? String(parsed.role_id) : undefined,
@@ -1107,6 +1672,23 @@ export default function InterviewCviPage() {
   const replicaSpeakingRef = useRef(false);
   const closingAnnouncementObservedRef = useRef(false);
   const candidateSpeakingStateRef = useRef<CandidateSpeakingState>(createCandidateSpeakingState());
+  const inactivityStateRef = useRef<CandidateInactivityNudgeState>(
+    createCandidateInactivityNudgeState(
+      session?.application_inactivity_control_enabled === true,
+      String(session?.interview_id || ""),
+      String(session?.conversation_id || ""),
+    ),
+  );
+  const inactivityTimerRef = useRef<number | null>(null);
+  const inactivityLeaseTimerRef = useRef<number | null>(null);
+  const inactivityRuntimeOwnerRef = useRef(false);
+  const inactivityDocumentVisibleRef = useRef(
+    typeof document !== "undefined" ? document.visibilityState === "visible" : false,
+  );
+  const inactivityTransportHealthyRef = useRef(false);
+  const inactivityCandidateMediaHealthyRef = useRef(false);
+  const inactivityRemoteEvidenceRef = useRef<RemoteParticipantEvidence | null>(null);
+  const inactivityTabIdRef = useRef("");
   const telemetrySequenceRef = useRef(0);
   const telemetryPendingRef = useRef<Set<Promise<unknown>>>(new Set());
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -1117,6 +1699,13 @@ export default function InterviewCviPage() {
     if (startupTimerRef.current) {
       window.clearTimeout(startupTimerRef.current);
       startupTimerRef.current = null;
+    }
+  }, []);
+
+  const clearInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      window.clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
     }
   }, []);
 
@@ -1152,6 +1741,7 @@ export default function InterviewCviPage() {
     const localVideoTrack = extractTrack(local?.tracks?.video);
     const remoteVideoTrack = remotes.map((remote) => extractTrack(remote?.tracks?.video)).find(Boolean) || null;
     const remoteAudioTrack = remotes.map((remote) => extractTrack(remote?.tracks?.audio)).find(Boolean) || null;
+    const localAudioTrack = extractTrack(local?.tracks?.audio);
 
     setElementTrack(localVideoRef.current, localVideoTrack);
     setElementTrack(remoteVideoRef.current, remoteVideoTrack);
@@ -1160,22 +1750,29 @@ export default function InterviewCviPage() {
     const hasRemote = Boolean(remoteVideoTrack);
     setHasRemoteVideo(hasRemote);
     setHasLocalVideo(Boolean(localVideoTrack));
+    inactivityCandidateMediaHealthyRef.current = Boolean(
+      localAudioTrack && localAudioTrack.readyState !== "ended" && localAudioTrack.enabled,
+    );
     if (hasRemote) {
       startupRemoteSeenRef.current = true;
       clearStartupTimer();
       setLoading(false);
       setError("");
     }
-    return {
+    const evidence = {
       remotePresent: remotes.length > 0,
       remoteAudioReady: remotes.some((remote) => isRemoteTrackReady(remote?.tracks?.audio)),
       remoteVideoReady: remotes.some((remote) => isRemoteTrackReady(remote?.tracks?.video)),
       remoteParticipantCount: Math.min(16, remotes.length),
     };
+    inactivityRemoteEvidenceRef.current = evidence;
+    return evidence;
   }, [clearStartupTimer]);
 
   const teardownCall = useCallback(async () => {
     clearStartupTimer();
+    clearInactivityTimer();
+    inactivityTransportHealthyRef.current = false;
     const call = callRef.current;
     callRef.current = null;
     if (!call) return;
@@ -1190,7 +1787,7 @@ export default function InterviewCviPage() {
     setElementTrack(localVideoRef.current, null);
     setElementTrack(remoteVideoRef.current, null);
     setElementTrack(remoteAudioRef.current, null);
-  }, [clearStartupTimer]);
+  }, [clearInactivityTimer, clearStartupTimer]);
 
   const leaveLiveRoute = useCallback(async () => {
     if (leavingRef.current) return;
@@ -1283,7 +1880,165 @@ export default function InterviewCviPage() {
     } catch {}
   }, [session]);
 
+  const currentInactivityEligibility = useCallback((): CandidateInactivityEligibility => {
+    const remote = inactivityRemoteEvidenceRef.current;
+    return {
+      phase: timerRuntimeRef.current?.boundaryState.phase || "INTERVIEWING",
+      remainingSeconds: secondsRemainingRef.current,
+      candidateSpeaking: candidateSpeakingStateRef.current.active,
+      reconnectActive:
+        reconnectingRef.current ||
+        progressRecoveryInFlightRef.current ||
+        isReconnectRecoveryActive(progressRecoveryStateRef.current),
+      transportHealthy: inactivityTransportHealthyRef.current,
+      candidateMediaHealthy: inactivityCandidateMediaHealthyRef.current,
+      replicaPresent: remote?.remotePresent === true,
+      remoteAudioReady: remote?.remoteAudioReady === true,
+      documentVisible: inactivityDocumentVisibleRef.current,
+      runtimeOwner: inactivityRuntimeOwnerRef.current,
+    };
+  }, []);
+
+  const inactivityTelemetryMetadata = useCallback((
+    state: CandidateInactivityNudgeState,
+    eligibility: CandidateInactivityEligibility,
+    transition: CandidateInactivityTransition,
+  ): ReliabilityMetadata => ({
+    threshold_ms: CANDIDATE_INACTIVITY_NUDGE_THRESHOLD_MS,
+    ...(state.activeTurnSequence !== null ? { turn_sequence: state.activeTurnSequence } : {}),
+    inactivity_state: state.phase,
+    ...(transition.reason ? { inactivity_reason: transition.reason } : {}),
+    ...(transition.latenessBucket ? { timer_lateness_bucket: transition.latenessBucket } : {}),
+    ownership_mode: "application_inactivity",
+    candidate_speaking: eligibility.candidateSpeaking,
+    reconnect_active: eligibility.reconnectActive,
+    transport_healthy: eligibility.transportHealthy,
+    replica_present: eligibility.replicaPresent,
+    remote_audio_ready: eligibility.remoteAudioReady,
+    runtime_owner: eligibility.runtimeOwner,
+  }), []);
+
+  const commitInactivityTransition = useCallback((
+    transition: CandidateInactivityTransition,
+    eligibility = currentInactivityEligibility(),
+  ) => {
+    inactivityStateRef.current = transition.state;
+    if (
+      transition.action === "cancelled" ||
+      (transition.action === "suppressed" && transition.state.phase !== "ARMED_AFTER_PAL_TURN") ||
+      transition.action === "candidate_activity"
+    ) clearInactivityTimer();
+
+    const event = transition.action === "armed"
+      ? "candidate_inactivity_nudge_armed"
+      : transition.action === "cancelled"
+        ? "candidate_inactivity_nudge_cancelled"
+        : transition.action === "suppressed"
+          ? "candidate_inactivity_nudge_suppressed"
+          : null;
+    if (event) {
+      sendLifecycleTelemetry(
+        event,
+        inactivityTelemetryMetadata(transition.state, eligibility, transition),
+      );
+    }
+  }, [clearInactivityTimer, currentInactivityEligibility, inactivityTelemetryMetadata, sendLifecycleTelemetry]);
+
+  const cancelInactivityRuntime = useCallback((
+    reason: CandidateInactivityNudgeReason,
+    terminal = false,
+  ) => {
+    const transition = cancelCandidateInactivityNudge(
+      inactivityStateRef.current,
+      reason,
+      terminal,
+    );
+    commitInactivityTransition(transition);
+  }, [commitInactivityTransition]);
+
+  const recordInactivityCandidateActivity = useCallback((
+    reason: "candidate_speaking" | "candidate_utterance",
+  ) => {
+    const transition = recordCandidateActivityForInactivityNudge(
+      inactivityStateRef.current,
+      reason,
+    );
+    commitInactivityTransition(transition);
+  }, [commitInactivityTransition]);
+
+  const armInactivityRuntime = useCallback((event: NormalizedPalSpeakingEvent) => {
+    const eligibility = currentInactivityEligibility();
+    const transition = armCandidateInactivityNudge(
+      inactivityStateRef.current,
+      event,
+      monotonicNow(),
+      eligibility,
+    );
+    commitInactivityTransition(transition, eligibility);
+    if (transition.action !== "armed" || transition.state.deadlineAt === null) return;
+
+    clearInactivityTimer();
+    inactivityTimerRef.current = window.setTimeout(() => {
+      inactivityTimerRef.current = null;
+      const conversationId = String(session?.conversation_id || "").trim();
+      if (
+        conversationId &&
+        inactivityTabIdRef.current &&
+        typeof window !== "undefined"
+      ) {
+        inactivityRuntimeOwnerRef.current = ownsCandidateInactivityLease(
+          window.localStorage,
+          conversationId,
+          inactivityTabIdRef.current,
+          Date.now(),
+        );
+      }
+      const deadlineEligibility = currentInactivityEligibility();
+      const deadline = evaluateCandidateInactivityDeadline(
+        inactivityStateRef.current,
+        monotonicNow(),
+        deadlineEligibility,
+      );
+      inactivityStateRef.current = deadline.state;
+      if (deadline.action !== "send") {
+        commitInactivityTransition(deadline, deadlineEligibility);
+        return;
+      }
+
+      const activeTurnKey = deadline.state.activeTurnKey;
+      const call = callRef.current;
+      let sent = false;
+      if (conversationId && activeTurnKey && call?.sendAppMessage) {
+        try {
+          call.sendAppMessage(
+            buildCandidateInactivityNudgeMessage(conversationId, activeTurnKey),
+            "*",
+          );
+          sent = true;
+        } catch {}
+      }
+      const dispatched = recordCandidateInactivityNudgeDispatch(deadline.state, sent);
+      inactivityStateRef.current = dispatched.state;
+      if (sent) {
+        sendLifecycleTelemetry(
+          "candidate_inactivity_nudge_sent",
+          inactivityTelemetryMetadata(dispatched.state, deadlineEligibility, deadline),
+        );
+      } else {
+        commitInactivityTransition(dispatched, deadlineEligibility);
+      }
+    }, CANDIDATE_INACTIVITY_NUDGE_THRESHOLD_MS);
+  }, [
+    clearInactivityTimer,
+    commitInactivityTransition,
+    currentInactivityEligibility,
+    inactivityTelemetryMetadata,
+    sendLifecycleTelemetry,
+    session?.conversation_id,
+  ]);
+
   const requestClosingProviderEnd = useCallback(async (reason: string) => {
+    cancelInactivityRuntime("provider_end", true);
     const current = timerRuntimeRef.current?.boundaryState || createInterviewTimeBoundaryState();
     const marked = markProviderEndRequested(current);
     if (!marked.requested) return false;
@@ -1305,7 +2060,7 @@ export default function InterviewCviPage() {
       }, { terminal: true });
     }
     return confirmed;
-  }, [endInterview, persistBoundaryState, sendLifecycleTelemetry]);
+  }, [cancelInactivityRuntime, endInterview, persistBoundaryState, sendLifecycleTelemetry]);
 
   const sendHiddenBoundaryControl = useCallback((
     phase: Exclude<InterviewClosingPhase, "INTERVIEWING" | "ENDED">,
@@ -1507,10 +2262,20 @@ export default function InterviewCviPage() {
         directClosingSpeechRef.current.expiresAt >= Date.now(),
       closingAnnouncementObserved: closingAnnouncementObservedRef.current,
     });
+    if (previousState.phase === "INTERVIEWING" && evaluation.state.phase !== "INTERVIEWING") {
+      const inactivityReason = evaluation.state.phase === "QUESTION_LOCKED"
+        ? "question_lock"
+        : evaluation.state.phase === "TERMINATION_ONLY" || evaluation.state.phase === "ENDED"
+          ? "termination"
+          : "closing";
+      cancelInactivityRuntime(
+        inactivityReason,
+      );
+    }
     if (!evaluation.actions.length) return;
 
     applyClosingActions(evaluation.actions, previousState, evaluation.state, remaining);
-  }, [applyClosingActions]);
+  }, [applyClosingActions, cancelInactivityRuntime]);
 
   useEffect(() => () => clearAutoEndTimers(), [clearAutoEndTimers]);
 
@@ -1524,16 +2289,27 @@ export default function InterviewCviPage() {
         );
       }
     };
-    const onOnline = () => sendLifecycleTelemetry("browser_online", { network_state: "online" });
-    const onOffline = () => sendLifecycleTelemetry("browser_offline", { network_state: "offline" });
-    const onVisibilityChange = () => sendLifecycleTelemetry("browser_visibility_changed", {
-      visibility_state:
-        document.visibilityState === "visible" ||
-        document.visibilityState === "hidden" ||
-        document.visibilityState === "prerender"
-          ? document.visibilityState
-          : "unknown",
-    });
+    const onOnline = () => {
+      inactivityTransportHealthyRef.current = Boolean(callRef.current);
+      sendLifecycleTelemetry("browser_online", { network_state: "online" });
+    };
+    const onOffline = () => {
+      inactivityTransportHealthyRef.current = false;
+      cancelInactivityRuntime("transport_unhealthy");
+      sendLifecycleTelemetry("browser_offline", { network_state: "offline" });
+    };
+    const onVisibilityChange = () => {
+      inactivityDocumentVisibleRef.current = document.visibilityState === "visible";
+      if (!inactivityDocumentVisibleRef.current) cancelInactivityRuntime("hidden_document");
+      sendLifecycleTelemetry("browser_visibility_changed", {
+        visibility_state:
+          document.visibilityState === "visible" ||
+          document.visibilityState === "hidden" ||
+          document.visibilityState === "prerender"
+            ? document.visibilityState
+            : "unknown",
+      });
+    };
     window.addEventListener("pagehide", onPageHide);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
@@ -1544,7 +2320,87 @@ export default function InterviewCviPage() {
       window.removeEventListener("offline", onOffline);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [sendLifecycleTelemetry]);
+  }, [cancelInactivityRuntime, sendLifecycleTelemetry]);
+
+  useEffect(() => {
+    const conversationId = String(session?.conversation_id || "").trim();
+    const interviewId = String(session?.interview_id || "").trim();
+    const enabled = session?.application_inactivity_control_enabled === true &&
+      session?.silence_engagement_owner === "application_inactivity" &&
+      Boolean(interviewId) &&
+      Boolean(conversationId);
+    inactivityStateRef.current = createCandidateInactivityNudgeState(
+      enabled,
+      interviewId,
+      conversationId,
+    );
+    clearInactivityTimer();
+    inactivityRuntimeOwnerRef.current = false;
+    if (!enabled || typeof window === "undefined" || typeof document === "undefined") return;
+
+    if (!inactivityTabIdRef.current) {
+      inactivityTabIdRef.current = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+    const tabId = inactivityTabIdRef.current;
+    const leaseKey = candidateInactivityLeaseKey(conversationId);
+    const refreshLease = () => {
+      const visible = document.visibilityState === "visible";
+      inactivityDocumentVisibleRef.current = visible;
+      if (!visible) {
+        releaseCandidateInactivityLease(window.localStorage, conversationId, tabId);
+        const hadOwnership = inactivityRuntimeOwnerRef.current;
+        inactivityRuntimeOwnerRef.current = false;
+        if (hadOwnership) cancelInactivityRuntime("hidden_document");
+        return;
+      }
+      const hadOwnership = inactivityRuntimeOwnerRef.current;
+      const owns = acquireCandidateInactivityLease(
+        window.localStorage,
+        conversationId,
+        tabId,
+        Date.now(),
+        true,
+      );
+      inactivityRuntimeOwnerRef.current = owns;
+      if (hadOwnership && !owns) cancelInactivityRuntime("runtime_ownership_lost");
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== leaseKey) return;
+      const owns = ownsCandidateInactivityLease(
+        window.localStorage,
+        conversationId,
+        tabId,
+        Date.now(),
+      );
+      const hadOwnership = inactivityRuntimeOwnerRef.current;
+      inactivityRuntimeOwnerRef.current = owns;
+      if (hadOwnership && !owns) cancelInactivityRuntime("runtime_ownership_lost");
+    };
+
+    refreshLease();
+    inactivityLeaseTimerRef.current = window.setInterval(refreshLease, CANDIDATE_INACTIVITY_LEASE_RENEW_MS);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      if (inactivityLeaseTimerRef.current) {
+        window.clearInterval(inactivityLeaseTimerRef.current);
+        inactivityLeaseTimerRef.current = null;
+      }
+      window.removeEventListener("storage", onStorage);
+      clearInactivityTimer();
+      releaseCandidateInactivityLease(window.localStorage, conversationId, tabId);
+      inactivityRuntimeOwnerRef.current = false;
+      cancelInactivityRuntime("unmount", true);
+    };
+  }, [
+    cancelInactivityRuntime,
+    clearInactivityTimer,
+    session?.application_inactivity_control_enabled,
+    session?.conversation_id,
+    session?.interview_id,
+    session?.silence_engagement_owner,
+  ]);
 
   useEffect(() => {
     if (!session?.conversation_url) {
@@ -1614,6 +2470,7 @@ export default function InterviewCviPage() {
         if (!startupRecoveryAttemptedRef.current) {
           startupRecoveryAttemptedRef.current = true;
           reconnectingRef.current = true;
+          cancelInactivityRuntime("reconnect");
           try {
             await call.leave().catch(() => {});
             if (!alive || endTriggeredRef.current) return;
@@ -1724,6 +2581,7 @@ export default function InterviewCviPage() {
       setLoading(false);
       setConnectionNotice("");
       setProgressStalled(true);
+      cancelInactivityRuntime("watchdog_recovery", true);
       setError("The interview stopped progressing and cannot continue. Please contact support before trying again.");
       const at = Date.now();
       sendLifecycleTelemetry(
@@ -1794,6 +2652,11 @@ export default function InterviewCviPage() {
       previousRemoteEvidence = evidence;
       for (const diagnostic of events) {
         sendLifecycleTelemetry(diagnostic.event, diagnostic.metadata);
+      }
+      if (!evidence.remotePresent) cancelInactivityRuntime("replica_absent");
+      else if (!evidence.remoteAudioReady) cancelInactivityRuntime("remote_audio_unavailable");
+      if (!inactivityCandidateMediaHealthyRef.current) {
+        cancelInactivityRuntime("candidate_media_unavailable");
       }
       return evidence;
     };
@@ -1906,6 +2769,7 @@ export default function InterviewCviPage() {
         progressRecoveryAttemptedRef.current = true;
         progressRecoveryInFlightRef.current = true;
         reconnectingRef.current = true;
+        cancelInactivityRuntime("watchdog_recovery");
         transitionRecovery({ type: "start", at: recoveryStartedAt });
         previousRemoteEvidence = {
           remotePresent: false,
@@ -1962,6 +2826,9 @@ export default function InterviewCviPage() {
         lastAiSpeechAtRef.current = null;
         lastAiSpeechStoppedAtRef.current = null;
         candidateSpeakingStateRef.current = createCandidateSpeakingState();
+        inactivityTransportHealthyRef.current = false;
+        inactivityCandidateMediaHealthyRef.current = false;
+        inactivityRemoteEvidenceRef.current = null;
 
         const daily = await loadDailySdk();
         if (!alive) return;
@@ -1972,6 +2839,7 @@ export default function InterviewCviPage() {
         register("joined-meeting", () => {
           if (!alive || endTriggeredRef.current) return;
           setLoading(false);
+          inactivityTransportHealthyRef.current = true;
           if (progressRecoveryStateRef.current.phase === "reconnecting_transport") {
             recordReconnectLocalJoin(Date.now());
           }
@@ -1994,6 +2862,8 @@ export default function InterviewCviPage() {
         register("track-stopped", syncParticipantEvent);
         register("left-meeting", () => {
           if (!alive || leavingRef.current || reconnectingRef.current) return;
+          inactivityTransportHealthyRef.current = false;
+          cancelInactivityRuntime("transport_unhealthy");
           sendLifecycleTelemetry("daily_participant_left", {
             participant_role: "candidate",
             meeting_state: "left",
@@ -2007,6 +2877,8 @@ export default function InterviewCviPage() {
         });
         register("error", () => {
           if (!alive || endTriggeredRef.current) return;
+          inactivityTransportHealthyRef.current = false;
+          cancelInactivityRuntime("transport_unhealthy");
           if (isReconnectRecoveryActive(progressRecoveryStateRef.current)) {
             failProgressRecovery({ type: "join_failed", at: Date.now() });
             return;
@@ -2015,6 +2887,8 @@ export default function InterviewCviPage() {
         });
         register("camera-error", () => {
           if (!alive || endTriggeredRef.current) return;
+          inactivityCandidateMediaHealthyRef.current = false;
+          cancelInactivityRuntime("candidate_media_unavailable");
           setError("Camera or microphone access failed. Please allow permissions and relaunch.");
         });
         register("app-message", (event) => {
@@ -2022,6 +2896,10 @@ export default function InterviewCviPage() {
           const data = event?.data ?? event ?? {};
           const eventType = String(data?.event_type || data?.eventType || "").toLowerCase();
           const utteranceRole = String(data?.properties?.role || data?.role || "").toLowerCase();
+          const normalizedPalSpeaking = normalizePalSpeakingEvent(
+            data,
+            String(session.conversation_id || "").trim(),
+          );
           const speech = String(data?.properties?.speech || data?.properties?.text || data?.speech || data?.text || "");
           const isReplicaUtterance =
             eventType === "conversation.utterance" &&
@@ -2030,11 +2908,13 @@ export default function InterviewCviPage() {
             eventType === "conversation.utterance" &&
             (utteranceRole === "candidate" || utteranceRole === "user" || utteranceRole === "participant");
           const isReplicaSpeaking =
-            eventType === "conversation.started_speaking" &&
-            (utteranceRole === "replica" || utteranceRole === "assistant" || utteranceRole === "agent");
+            (eventType === "conversation.started_speaking" &&
+              (utteranceRole === "replica" || utteranceRole === "pal" || utteranceRole === "assistant" || utteranceRole === "agent")) ||
+            normalizedPalSpeaking?.kind === "started";
           const isReplicaStoppedSpeaking =
-            eventType === "conversation.stopped_speaking" &&
-            (utteranceRole === "replica" || utteranceRole === "assistant" || utteranceRole === "agent");
+            (eventType === "conversation.stopped_speaking" &&
+              (utteranceRole === "replica" || utteranceRole === "pal" || utteranceRole === "assistant" || utteranceRole === "agent")) ||
+            normalizedPalSpeaking?.kind === "stopped";
           const candidateSpeakingTransition =
             deriveCandidateSpeakingTransition(eventType, utteranceRole);
           const isCandidateSpeaking = candidateSpeakingTransition === "started";
@@ -2058,6 +2938,10 @@ export default function InterviewCviPage() {
           }
           if (isCandidateSpeaking && directSpeechKind === "invitation") {
             directClosingSpeechRef.current = null;
+          }
+          if (isCandidateSpeaking) recordInactivityCandidateActivity("candidate_speaking");
+          if (normalizedPalSpeaking?.kind === "started") {
+            cancelInactivityRuntime("pal_speaking");
           }
 
           if (isReplicaSpeaking || isReplicaUtterance) {
@@ -2167,6 +3051,13 @@ export default function InterviewCviPage() {
                 );
               }
             }
+            if (normalizedPalSpeaking) {
+              armInactivityRuntime({
+                ...normalizedPalSpeaking,
+                applicationControl:
+                  normalizedPalSpeaking.applicationControl || Boolean(stoppedDirectSpeech),
+              });
+            }
           }
           if (isCandidateSpeaking) {
             const started = beginCandidateSpeaking(candidateSpeakingStateRef.current, progressAt);
@@ -2188,6 +3079,7 @@ export default function InterviewCviPage() {
           }
           if (eventType === "conversation.utterance") {
             if (isCandidateUtterance) {
+              recordInactivityCandidateActivity("candidate_utterance");
               candidateSpeakingStateRef.current =
                 endCandidateSpeaking(candidateSpeakingStateRef.current).state;
               if (candidateQuestionSilenceTimerRef.current) {
@@ -2316,6 +3208,8 @@ export default function InterviewCviPage() {
       clearProgressRecoveryDeadline();
       reconnectingRef.current = false;
       progressRecoveryInFlightRef.current = false;
+      inactivityTransportHealthyRef.current = false;
+      cancelInactivityRuntime("unmount", true);
       candidateSpeakingStateRef.current = createCandidateSpeakingState();
       replicaSpeakingRef.current = false;
       if (call?.off) {
@@ -2329,13 +3223,16 @@ export default function InterviewCviPage() {
       void teardownCall();
     };
   }, [
+    armInactivityRuntime,
     applyClosingActions,
+    cancelInactivityRuntime,
     clearStartupTimer,
     endInterview,
     interruptReplica,
     leaveLiveRoute,
     persistBoundaryState,
     processTimeBoundary,
+    recordInactivityCandidateActivity,
     requestClosingProviderEnd,
     sendLifecycleTelemetry,
     session,

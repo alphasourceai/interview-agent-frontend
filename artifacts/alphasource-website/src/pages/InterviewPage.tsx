@@ -693,6 +693,14 @@ export default function InterviewPage() {
       const maxInterviewMinutes = Number.isFinite(maxInterviewMinutesRaw) && maxInterviewMinutesRaw > 0
         ? Math.floor(maxInterviewMinutesRaw)
         : null;
+      const silenceEngagementOwner =
+        data?.silence_engagement_owner === "application_inactivity" ||
+        data?.silence_engagement_owner === "tavus_patient"
+          ? data.silence_engagement_owner
+          : "prompt";
+      const applicationInactivityControlEnabled =
+        data?.application_inactivity_control_enabled === true &&
+        silenceEngagementOwner === "application_inactivity";
       const candidateAssistanceContact = String(
         data?.candidate_assistance_contact ||
         data?.candidateAssistanceContact ||
@@ -719,6 +727,8 @@ export default function InterviewPage() {
             interview_id: interviewId,
             role_token: roleToken,
             max_interview_minutes: maxInterviewMinutes,
+            silence_engagement_owner: silenceEngagementOwner,
+            application_inactivity_control_enabled: applicationInactivityControlEnabled,
             email: candidateEmail,
             candidate_id: candidateId,
             role_id: roleId,

@@ -338,7 +338,8 @@ test("source statically proves hard boundaries, no legacy warning echo, and priv
   assert.doesNotMatch(source, /TIME_WARNING_(?:NOTICE|TEXT)/);
   assert.doesNotMatch(source, /GRACEFUL_WRAP_(?:NOTICE|TEXT)/);
   assert.doesNotMatch(source, /setTimeNotice/);
-  assert.equal(source.match(/event_type: "conversation\.echo"/g)?.length || 0, 2);
+  assert.equal(source.match(/event_type: "conversation\.echo"/g)?.length || 0, 3);
+  assert.match(source, /CANDIDATE_INACTIVITY_NUDGE_TEXT/);
   assert.doesNotMatch(
     source,
     /post_closing_question_violation[\s\S]{0,500}(?:speech|text)\s*:/,
