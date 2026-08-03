@@ -189,10 +189,9 @@ test("every unsafe arming condition fails silent with a bounded reason", () => {
     [{ remoteAudioReady: false }, "remote_audio_unavailable"],
     [{ documentVisible: false }, "hidden_document"],
     [{ runtimeOwner: false }, "runtime_ownership_lost"],
-    [{ phase: "QUESTION_LOCKED" }, "question_lock"],
-    [{ phase: "CLOSING_ONLY" }, "closing"],
-    [{ phase: "TERMINATION_ONLY" }, "termination"],
-    [{ remainingSeconds: 45 }, "question_lock"],
+    [{ phase: "FINAL_FAREWELL_ELIGIBLE" }, "closing"],
+    [{ phase: "ENDED" }, "termination"],
+    [{ remainingSeconds: 20 }, "closing"],
   ];
   for (const [override, reason] of cases) {
     const result = armCandidateInactivityNudge(
@@ -279,8 +278,8 @@ test("deadline revalidates candidate, transport, reconnect, media, tab, and clos
     { remoteAudioReady: false },
     { documentVisible: false },
     { runtimeOwner: false },
-    { remainingSeconds: 45 },
-    { phase: "CLOSING_ONLY" },
+    { remainingSeconds: 20 },
+    { phase: "FINAL_FAREWELL_ELIGIBLE" },
   ];
   for (const override of cases) {
     assert.equal(deadline(armed(), 11_000, override).action, "suppressed");
