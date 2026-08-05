@@ -26,28 +26,23 @@ after(async () => server.close());
 
 const {
   advanceInterviewClosingPhase,
-  buildFinalClosingAnnouncementMessage,
-  buildReplicaInterruptMessage,
+  closingProviderEndAllowed,
   createInterviewTimeBoundaryState,
   evaluateInterviewTimeBoundary,
   initializeInterviewTimerRuntime,
-  markProviderEndConfirmed,
+  markClosingEchoCompleted,
+  markClosingEchoDispatched,
+  markClosingEchoFallback,
+  markClosingComplete,
   markProviderEndRequested,
+  markProviderEndConfirmed,
   preserveInterviewTimerRuntime,
+  remainingSecondsAtDeadline,
   resetInterviewTimerRuntimeForTests,
   timerToneForRemaining,
 } = timer;
 
 beforeEach(() => resetInterviewTimerRuntimeForTests());
-
-function evaluate(state, remainingSeconds, candidateSpeaking = false, replicaSpeaking = false) {
-  return evaluateInterviewTimeBoundary({
-    state,
-    remainingSeconds,
-    candidateSpeaking,
-    replicaSpeaking,
-  });
-}
 
 test("countdown warning colors remain visual-only at two and one minutes", () => {
   assert.equal(timerToneForRemaining(121), "normal");
@@ -57,103 +52,115 @@ test("countdown warning colors remain visual-only at two and one minutes", () =>
   assert.equal(timerToneForRemaining(1), "urgent");
 });
 
-test("ordinary rubric flow is unchanged through 20.001 seconds", () => {
-  for (const remaining of [180, 120, 60, 45, 30, 21, 20.001]) {
-    const result = evaluate(createInterviewTimeBoundaryState(), remaining, true, true);
-    assert.equal(result.state.phase, "INTERVIEWING");
-    assert.deepEqual(result.actions, []);
+test("no application closing action occurs above the exact zero deadline", () => {
+  for (const remainingSeconds of [180, 120, 60, 45, 30, 20, 1, 0.001]) {
+    for (const [candidateSpeaking, replicaSpeaking] of [[false, false], [true, false], [false, true], [true, true]]) {
+      const result = evaluateInterviewTimeBoundary({
+        state: createInterviewTimeBoundaryState(),
+        remainingSeconds,
+        candidateSpeaking,
+        replicaSpeaking,
+      });
+      assert.equal(result.state.phase, "INTERVIEWING");
+      assert.deepEqual(result.actions, []);
+    }
   }
 });
 
-test("the only transition is the exact 20-second final closing", () => {
-  const initial = createInterviewTimeBoundaryState();
-  const closing = evaluate(initial, 20, true, true);
-  assert.equal(closing.state.phase, "FINAL_FAREWELL_ELIGIBLE");
-  assert.deepEqual(closing.actions, [
-    "interrupt_replica",
-    "record_closing_farewell_reserved",
-    "send_closing_farewell",
-  ]);
+test("zero reserves avatar closing without ending or local playback regardless of speaker state", () => {
+  for (const [candidateSpeaking, replicaSpeaking] of [[false, false], [true, false], [false, true], [true, true]]) {
+    const result = evaluateInterviewTimeBoundary({
+      state: createInterviewTimeBoundaryState(),
+      remainingSeconds: 0,
+      candidateSpeaking,
+      replicaSpeaking,
+    });
+    assert.equal(result.state.phase, "AVATAR_CLOSING");
+    assert.equal(result.state.closingReserved, true);
+    assert.equal(result.state.candidateAudioUnpublishRequested, true);
+    assert.equal(result.state.replicaInterruptRequested, true);
+    assert.equal(result.state.closingEchoPhase, "RESERVED");
+    assert.equal(result.state.providerEndRequested, false);
+    assert.deepEqual(result.actions, [
+      "reserve_avatar_closing",
+      "request_candidate_audio_unpublish",
+      "interrupt_replica",
+      "send_closing_echo",
+    ]);
+  }
 });
 
-test("closing phases cannot regress", () => {
-  const ended = advanceInterviewClosingPhase(
-    advanceInterviewClosingPhase(createInterviewTimeBoundaryState(), "ENDED"),
-    "INTERVIEWING",
-  );
-  assert.equal(ended.phase, "ENDED");
-  assert.strictEqual(advanceInterviewClosingPhase(ended, "FINAL_FAREWELL_ELIGIBLE"), ended);
-});
-
-test("provider end request and confirmation remain idempotent", () => {
-  const closing = evaluate(createInterviewTimeBoundaryState(), 20).state;
-  const first = markProviderEndRequested(closing);
-  const duplicate = markProviderEndRequested(first.state);
-  const confirmed = markProviderEndConfirmed(first.state);
-  const confirmedAgain = markProviderEndConfirmed(confirmed);
-  assert.equal(first.requested, true);
-  assert.equal(duplicate.requested, false);
-  assert.equal(confirmed.providerEndConfirmed, true);
-  assert.strictEqual(confirmedAgain, confirmed);
-});
-
-test("interrupt message follows the bounded Tavus interaction contract", () => {
-  assert.deepEqual(buildReplicaInterruptMessage("synthetic-conversation"), {
-    message_type: "conversation",
-    event_type: "conversation.interrupt",
-    conversation_id: "synthetic-conversation",
+test("terminal evaluation and completion cannot replay or regress", () => {
+  const first = evaluateInterviewTimeBoundary({
+    state: createInterviewTimeBoundaryState(),
+    remainingSeconds: 0,
   });
+  assert.deepEqual(evaluateInterviewTimeBoundary({
+    state: first.state,
+    remainingSeconds: 0,
+  }).actions, []);
+  const complete = markClosingComplete(first.state);
+  assert.equal(complete.phase, "COMPLETE");
+  assert.equal(complete.navigationRequested, true);
+  assert.strictEqual(markClosingComplete(complete), complete);
+  assert.strictEqual(advanceInterviewClosingPhase(complete, "INTERVIEWING"), complete);
 });
 
-test("the one closing Echo contains no timer implementation language", () => {
-  const message = buildFinalClosingAnnouncementMessage("synthetic-conversation");
-  assert.equal(message.event_type, "conversation.echo");
-  assert.equal(message.properties.done, true);
-  assert.equal(
-    message.properties.text,
-    "Time is winding down. Thank you for your time. I am ending the session now.",
-  );
-  assert.doesNotMatch(message.properties.text, /\b(?:seconds?|minutes?|timer|instruction|system)\b/i);
+test("provider end is forbidden at zero until avatar completion or bounded fallback", () => {
+  const initial = createInterviewTimeBoundaryState();
+  assert.strictEqual(markProviderEndConfirmed(initial), initial);
+  const closing = evaluateInterviewTimeBoundary({ state: initial, remainingSeconds: 0 }).state;
+  assert.equal(closingProviderEndAllowed(closing), false);
+  const dispatched = markClosingEchoDispatched(closing);
+  assert.equal(closingProviderEndAllowed(dispatched), false);
+  const completed = markClosingEchoCompleted(dispatched);
+  assert.equal(closingProviderEndAllowed(completed), true);
+  const requested = markProviderEndRequested(completed);
+  assert.equal(requested.requested, true);
+  assert.equal(closingProviderEndAllowed(requested.state), false);
+  const confirmed = markProviderEndConfirmed(requested.state);
+  assert.equal(confirmed.providerEndConfirmed, true);
+  assert.strictEqual(markProviderEndConfirmed(confirmed), confirmed);
+
+  const fallback = markClosingEchoFallback(dispatched, "completion_timeout");
+  assert.equal(closingProviderEndAllowed(fallback), true);
 });
 
-test("same-conversation rerender and remount preserve the clock and one closing state", () => {
-  const initial = initializeInterviewTimerRuntime(null, "synthetic-conversation:3", 1_000, 180_000);
-  const closing = evaluate(initial.boundaryState, 20);
-  const preserved = { ...initial, boundaryState: closing.state };
+test("same-conversation remount preserves the absolute clock and terminal state", () => {
+  const initial = initializeInterviewTimerRuntime(null, "conversation-a:3", 1_000, 180_000);
+  const closing = evaluateInterviewTimeBoundary({
+    state: initial.boundaryState,
+    remainingSeconds: 0,
+  }).state;
+  const preserved = { ...initial, boundaryState: closing };
   preserveInterviewTimerRuntime(preserved);
-  const rerender = initializeInterviewTimerRuntime(preserved, "synthetic-conversation:3", 99_000, 180_000);
-  const remount = initializeInterviewTimerRuntime(null, "synthetic-conversation:3", 100_000, 180_000);
-  assert.strictEqual(rerender, preserved);
-  assert.strictEqual(remount, preserved);
-  assert.equal(remount.startedAt, 1_000);
-  assert.equal(remount.boundaryState.phase, "FINAL_FAREWELL_ELIGIBLE");
-});
-
-test("a genuinely new conversation receives a fresh interviewing state", () => {
-  const first = initializeInterviewTimerRuntime(null, "conversation-a:3", 1_000, 180_000);
-  const closing = evaluate(first.boundaryState, 20);
-  preserveInterviewTimerRuntime({ ...first, boundaryState: closing.state });
-  const reconnect = initializeInterviewTimerRuntime(null, "conversation-a:3", 2_000, 180_000);
-  const next = initializeInterviewTimerRuntime(null, "conversation-b:3", 3_000, 180_000);
-  assert.equal(reconnect.boundaryState.phase, "FINAL_FAREWELL_ELIGIBLE");
+  assert.strictEqual(
+    initializeInterviewTimerRuntime(preserved, "conversation-a:3", 50_000, 180_000),
+    preserved,
+  );
+  assert.strictEqual(
+    initializeInterviewTimerRuntime(null, "conversation-a:3", 60_000, 180_000),
+    preserved,
+  );
+  const next = initializeInterviewTimerRuntime(null, "conversation-b:3", 70_000, 180_000);
   assert.equal(next.boundaryState.phase, "INTERVIEWING");
 });
 
-test("source statically proves one 20-second controller with no staged closing controls", async () => {
+test("the monotonic deadline reaches zero exactly and never becomes negative", () => {
+  const deadline = 100_000;
+  assert.equal(remainingSecondsAtDeadline(deadline, 99_000), 1);
+  assert.equal(remainingSecondsAtDeadline(deadline, 100_000), 0);
+  assert.equal(remainingSecondsAtDeadline(deadline, 101_000), 0);
+});
+
+test("source has one zero-deadline avatar path and no local closing media or splash", async () => {
   const source = await readFile(sourcePath, "utf8");
-  assert.match(source, /FINAL_CLOSING_THRESHOLD_SECONDS = 20/);
-  assert.match(source, /conversation\.interrupt/);
-  assert.match(source, /markProviderEndRequested/);
-  assert.match(source, /closingRuntimeBySession/);
-  assert.doesNotMatch(source, /QUESTION_LOCK_THRESHOLD_SECONDS/);
-  assert.doesNotMatch(source, /WIND_DOWN_THRESHOLD_SECONDS/);
-  assert.doesNotMatch(source, /FINAL_FAREWELL_THRESHOLD_SECONDS/);
-  assert.doesNotMatch(source, /send_candidate_question_invitation/);
-  assert.doesNotMatch(source, /conversation\.append_llm_context/);
-  assert.doesNotMatch(source, /conversation\.respond/);
-  assert.doesNotMatch(source, /TIME_WARNING_(?:NOTICE|TEXT)/);
-  assert.doesNotMatch(source, /GRACEFUL_WRAP_(?:NOTICE|TEXT)/);
-  assert.doesNotMatch(source, /setTimeNotice/);
-  assert.equal(source.match(/event_type: "conversation\.echo"/g)?.length || 0, 2);
-  assert.match(source, /CANDIDATE_INACTIVITY_NUDGE_TEXT/);
+  assert.match(source, /processTimeBoundary\(0\)/);
+  assert.match(source, /buildFinalClosingAnnouncementMessage/);
+  assert.match(source, /buildReplicaInterruptMessage/);
+  assert.match(source, /closing_farewell_started/);
+  assert.doesNotMatch(source, /playLocalClosingAudioOnce/);
+  assert.doesNotMatch(source, /localClosingVisible/);
+  assert.doesNotMatch(source, /INTERVIEW_LOCAL_CLOSING_TEXT/);
+  assert.doesNotMatch(source, /FINAL_CLOSING_THRESHOLD_SECONDS/);
 });

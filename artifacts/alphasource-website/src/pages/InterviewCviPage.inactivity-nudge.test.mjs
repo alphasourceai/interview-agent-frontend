@@ -37,6 +37,7 @@ const {
   createCandidateInactivityNudgeState,
   evaluateCandidateInactivityDeadline,
   normalizePalSpeakingEvent,
+  normalizeCorrelatedRolelessPalStop,
   ownsCandidateInactivityLease,
   recordCandidateActivityForInactivityNudge,
   recordCandidateInactivityNudgeDispatch,
@@ -124,10 +125,95 @@ test("generic and role-specific PAL aliases normalize to one opaque turn identit
   assert.equal(generic.providerSequence, 4);
 });
 
+test("attributed PAL stops without provider correlation fail open with a local ordinal", () => {
+  const generic = normalizePalSpeakingEvent({
+    event_type: "conversation.stopped_speaking",
+    conversation_id: CONVERSATION,
+    properties: { role: "replica", interrupted: false },
+  }, CONVERSATION, 7);
+  const roleSpecific = normalizePalSpeakingEvent({
+    event_type: "conversation.replica.stopped_speaking",
+    conversation_id: CONVERSATION,
+    properties: { interrupted: false },
+  }, CONVERSATION, 8);
+  assert.ok(generic);
+  assert.ok(roleSpecific);
+  assert.equal(generic.kind, "stopped");
+  assert.equal(generic.correlation, "local");
+  assert.equal(generic.providerSequence, null);
+  assert.notEqual(generic.turnKey, roleSpecific.turnKey);
+
+  const armed = armCandidateInactivityNudge(
+    createCandidateInactivityNudgeState(true, INTERVIEW, CONVERSATION),
+    generic,
+    1_000,
+    eligibility(),
+  );
+  assert.equal(armed.action, "armed");
+  assert.equal(armed.state.deadlineAt, 11_000);
+  const duplicateSchemaEvent = armCandidateInactivityNudge(
+    armed.state,
+    roleSpecific,
+    1_500,
+    eligibility(),
+  );
+  assert.equal(duplicateSchemaEvent.action, "suppressed");
+  assert.equal(duplicateSchemaEvent.reason, "duplicate_turn");
+  assert.strictEqual(duplicateSchemaEvent.state, armed.state);
+});
+
 test("unattributed, malformed, and non-speaking provider events fail silent", () => {
   assert.equal(normalizePalSpeakingEvent({ event_type: "conversation.stopped_speaking" }, CONVERSATION), null);
   assert.equal(normalizePalSpeakingEvent({ event_type: "conversation.utterance", role: "replica" }, CONVERSATION), null);
   assert.equal(normalizePalSpeakingEvent({ event_type: "conversation.stopped_speaking", role: "candidate", sequence: 1 }, CONVERSATION), null);
+});
+
+test("a role-less generic stop can close only an already-open qualified replica span", () => {
+  const payload = {
+    event_type: "conversation.stopped_speaking",
+    conversation_id: CONVERSATION,
+    properties: { seq: 17, turn_idx: 4, interrupted: false },
+  };
+  const correlated = normalizeCorrelatedRolelessPalStop(
+    payload,
+    CONVERSATION,
+    9,
+    true,
+    false,
+  );
+  assert.ok(correlated);
+  assert.equal(correlated.kind, "stopped");
+  assert.equal(correlated.providerSequence, 17);
+  assert.equal(correlated.conversationId, CONVERSATION);
+
+  assert.equal(
+    normalizeCorrelatedRolelessPalStop(payload, CONVERSATION, 9, false, false),
+    null,
+  );
+  assert.equal(
+    normalizeCorrelatedRolelessPalStop(payload, CONVERSATION, 9, true, true),
+    null,
+  );
+  assert.equal(normalizeCorrelatedRolelessPalStop({
+    ...payload,
+    properties: { role: "candidate", seq: 17 },
+  }, CONVERSATION, 9, true, false), null);
+  assert.equal(normalizeCorrelatedRolelessPalStop({
+    ...payload,
+    event_type: "conversation.started_speaking",
+  }, CONVERSATION, 9, true, false), null);
+});
+
+test("the app-message runtime pairs a role-less stop with an open replica span before arming", async () => {
+  const source = await readFile(sourcePath, "utf8");
+  assert.match(
+    source,
+    /normalizeCorrelatedRolelessPalStop\([\s\S]{0,320}replicaSpeakingRef\.current[\s\S]{0,180}candidateSpeakingStateRef\.current\.active/,
+  );
+  assert.match(
+    source,
+    /const normalizedPalSpeaking = normalizedExplicitPalSpeaking \|\| correlatedRolelessPalStop/,
+  );
 });
 
 test("one uninterrupted PAL stop in interviewing arms exactly one 10-second window", () => {
@@ -189,9 +275,9 @@ test("every unsafe arming condition fails silent with a bounded reason", () => {
     [{ remoteAudioReady: false }, "remote_audio_unavailable"],
     [{ documentVisible: false }, "hidden_document"],
     [{ runtimeOwner: false }, "runtime_ownership_lost"],
-    [{ phase: "FINAL_FAREWELL_ELIGIBLE" }, "closing"],
-    [{ phase: "ENDED" }, "termination"],
-    [{ remainingSeconds: 20 }, "closing"],
+    [{ phase: "LOCAL_CLOSING" }, "closing"],
+    [{ phase: "COMPLETE" }, "termination"],
+    [{ remainingSeconds: 0 }, "closing"],
   ];
   for (const [override, reason] of cases) {
     const result = armCandidateInactivityNudge(
@@ -278,8 +364,8 @@ test("deadline revalidates candidate, transport, reconnect, media, tab, and clos
     { remoteAudioReady: false },
     { documentVisible: false },
     { runtimeOwner: false },
-    { remainingSeconds: 20 },
-    { phase: "FINAL_FAREWELL_ELIGIBLE" },
+    { remainingSeconds: 0 },
+    { phase: "LOCAL_CLOSING" },
   ];
   for (const override of cases) {
     assert.equal(deadline(armed(), 11_000, override).action, "suppressed");
