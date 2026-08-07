@@ -805,28 +805,30 @@ export default function AdminRolesPage() {
 
       {/* ── Create role form ──────────────────────────────── */}
       <div
-        className="rounded-2xl p-5 mb-5"
+        className="rounded-2xl p-5 mb-5 min-w-0 max-w-[calc(100vw-2.5rem)] lg:max-w-none"
         style={surfaceCardStyle}
       >
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex flex-col gap-3 items-start sm:flex-row sm:flex-wrap sm:items-stretch">
           <input
-            className={inputCls + " flex-1 min-w-36"}
+            className={inputCls + " w-full sm:flex-1 sm:min-w-36"}
             placeholder="Role title"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
           />
-          <div className="min-w-[18rem] flex-1">
+          <div className="w-40 flex-shrink-0">
             <InterviewTypeField
               id="admin-role-interview-type"
               value={form.type}
               onChange={(event) => setForm({ ...form, type: event.target.value as InterviewType })}
               className={selectCls}
+              showLabel={false}
+              showDescription={false}
             />
           </div>
 
           {/* JD file upload */}
           <label
-            className="flex-1 min-w-48 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-dashed cursor-pointer hover:border-[#A380F6]/50 hover:text-[#A380F6]/60 transition-colors"
+            className="w-full sm:flex-1 sm:min-w-48 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-dashed cursor-pointer hover:border-[#A380F6]/50 hover:text-[#A380F6]/60 transition-colors"
             style={{ ...fieldSurfaceStyle, color: "var(--as-text-muted)" }}
           >
             <Upload className="w-3.5 h-3.5 flex-shrink-0" />
@@ -857,18 +859,12 @@ export default function AdminRolesPage() {
             {creatingRole ? "Creating..." : "Create"}
           </button>
         </div>
-        <div className="mt-4">
-          <MembershipTypeSummary
-            membershipLevel={membershipLevelForClient(selectedClient.id)}
-            interviewType={form.type}
-          />
-          <RubricGuidancePanel compact />
-        </div>
+        <RubricGuidancePanel compact />
       </div>
 
       {/* ── Search ────────────────────────────────────────── */}
       <div
-        className="rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
+        className="rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3 min-w-0 max-w-[calc(100vw-2.5rem)] lg:max-w-none"
         style={surfaceCardStyle}
       >
         <input
@@ -934,7 +930,7 @@ export default function AdminRolesPage() {
 
       {/* ── Roles table ───────────────────────────────────── */}
       <div
-        className="rounded-2xl overflow-x-auto"
+        className="rounded-2xl overflow-x-auto min-w-0 max-w-[calc(100vw-2.5rem)] lg:max-w-none"
         style={surfaceCardStyle}
       >
         {/* Header */}

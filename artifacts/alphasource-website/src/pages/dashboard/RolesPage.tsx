@@ -1097,15 +1097,15 @@ export default function RolesPage() {
 
       {canManageRoles && (
         <div
-          className="rounded-2xl p-6 mb-6"
+          className="rounded-2xl p-6 mb-6 min-w-0 max-w-[calc(100vw-2.5rem)] lg:max-w-none"
           style={surfaceCardStyle}
         >
           <h2 className="text-base font-black mb-4" style={primaryTextStyle}>Create Role</h2>
 
           <form onSubmit={handleCreate}>
-            <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex flex-col gap-3 items-start sm:flex-row sm:flex-wrap sm:items-end">
               {/* Role Title */}
-              <div className="flex-1 min-w-[200px]">
+              <div className="w-full sm:flex-1 sm:min-w-[200px]">
                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1 mb-1.5" style={mutedTextStyle}>
                   Role Title
                   <InfoTooltip
@@ -1124,18 +1124,19 @@ export default function RolesPage() {
               </div>
 
               {/* Interview Type */}
-              <div className="min-w-[18rem] flex-1">
+              <div className="w-44 flex-shrink-0">
                 <InterviewTypeField
                   id="dashboard-role-interview-type"
                   value={interviewType}
                   onChange={(event) => setInterviewType(event.target.value as InterviewType)}
                   className="w-full px-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer"
                   selectStyle={fieldSurfaceStyle}
+                  showDescription={false}
                 />
               </div>
 
               {/* JD File Drop zone */}
-              <div className="flex-1 min-w-[200px]">
+              <div className="w-full sm:flex-1 sm:min-w-[200px]">
                 <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1 mb-1.5" style={mutedTextStyle}>
                   Job Description
                   <InfoTooltip
@@ -1198,21 +1199,14 @@ export default function RolesPage() {
                 {createBusy ? "Creating..." : "Create"}
               </button>
             </div>
-            <div className="mt-4">
-              <MembershipTypeSummary
-                membershipLevel={selectedMembershipLevel}
-                backendCapacity={selectedMembershipCapacity}
-                interviewType={interviewType}
-              />
-              <RubricGuidancePanel compact />
-            </div>
+            <RubricGuidancePanel compact />
           </form>
         </div>
       )}
 
       {/* Search */}
       <div
-        className="rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3"
+        className="rounded-2xl px-5 py-3.5 mb-5 flex flex-wrap items-center gap-3 min-w-0 max-w-[calc(100vw-2.5rem)] lg:max-w-none"
         style={compactSurfaceStyle}
       >
         <input
@@ -1278,7 +1272,7 @@ export default function RolesPage() {
 
       {/* Roles table */}
       <div
-        className="rounded-2xl overflow-hidden"
+        className="rounded-2xl overflow-hidden min-w-0 max-w-[calc(100vw-2.5rem)] lg:max-w-none"
         style={surfaceCardStyle}
       >
         {!rolesLoading && !rolesError && actionNotice && (
