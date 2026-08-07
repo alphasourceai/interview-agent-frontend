@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 import {
   Accordion,
   AccordionContent,
@@ -85,6 +86,10 @@ const faqSections = [
         answer: "Candidate access may be limited until additional screening interview capacity is available or the role/client plan is updated. If a candidate cannot start because of capacity, check billing, role settings, or contact support.",
       },
     ],
+  },
+  {
+    title: "Interview types, membership, and warm-up",
+    items: [...RUBRIC_FAQ],
   },
   {
     title: "Candidates",

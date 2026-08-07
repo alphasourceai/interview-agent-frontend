@@ -1,0 +1,26 @@
+{
+  "backend_contract_commit": "0e75f1d9e7ef40be1690da4cc16aab9ae7d83d80",
+  "memberships": {
+    "basic": {
+      "membership_level": "basic",
+      "display_name": "Basic",
+      "interview_duration_minutes": 10,
+      "max_interview_minutes": 10,
+      "scored_question_count": 5
+    },
+    "pro": {
+      "membership_level": "pro",
+      "display_name": "Pro",
+      "interview_duration_minutes": 12,
+      "max_interview_minutes": 12,
+      "scored_question_count": 6
+    },
+    "enterprise": {
+      "membership_level": "enterprise",
+      "display_name": "Enterprise",
+      "interview_duration_minutes": 15,
+      "max_interview_minutes": 15,
+      "scored_question_count": 7
+    }
+  }
+}

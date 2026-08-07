@@ -179,7 +179,7 @@ test("Daily recovery listeners register once and use the shared cleanup", async 
   assert.match(source, /call\.off\(eventName, handler\)/);
 });
 
-test("page wiring removes false success and preserves existing lifecycle paths", async () => {
+test("page wiring gates normal completion and preserves existing lifecycle paths", async () => {
   const source = await readFile(sourcePath, "utf8");
   assert.doesNotMatch(source, /Connection restored\. The interview is resuming\./);
   assert.doesNotMatch(
@@ -192,7 +192,12 @@ test("page wiring removes false success and preserves existing lifecycle paths",
   );
   assert.equal(source.split("void endInterview(reason, true)").length - 1, 1);
   assert.match(source, /beginStartupWatchdog\(\)/);
-  assert.doesNotMatch(source, /void endInterview\("completed_normally"\)/);
+  assert.equal(source.split('void endInterview("completed_normally")').length - 1, 1);
+  assert.match(source, /if \(isNormalCompletionFarewell\(\{/);
+  assert.match(
+    source,
+    /if \(!normalCompletionEndAllowed\(\{[\s\S]{0,300}endTriggered: endTriggeredRef\.current/,
+  );
   assert.match(source, /endInterview\("time_limit_avatar_farewell_complete", true\)/);
   assert.doesNotMatch(source, /endInterview\("time_limit_hard_deadline", true\)/);
   assert.match(source, /sharedProviderEndAttemptAllowed/);

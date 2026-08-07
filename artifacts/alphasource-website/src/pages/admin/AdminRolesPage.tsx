@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Upload } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import InfoTooltip from "@/components/InfoTooltip";
+import InterviewTypeField from "@/components/InterviewTypeField";
+import MembershipTypeSummary from "@/components/MembershipTypeSummary";
+import RubricGuidancePanel from "@/components/RubricGuidancePanel";
 import EditRoleRubricModal from "@/components/roles/EditRoleRubricModal";
 import RoleActionsMenu from "@/components/roles/RoleActionsMenu";
 import ReplaceJobDescriptionModal from "@/components/roles/ReplaceJobDescriptionModal";
@@ -11,11 +14,16 @@ import {
 } from "@/components/roles/roleTableLayout";
 import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import {
+  getInterviewTypeLabel,
+  toCanonicalInterviewTypeWrite,
+  type InterviewType,
+  type InterviewTypeLabel,
+} from "@/lib/interviewContract";
 import { normalizeRoleJdReplacementEligibility, type RoleJdReplacementEligibility } from "@/lib/roleJdReplacementEligibility";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ───────────────────────────────────────────────────── */
-type RoleType = "Basic" | "Detailed" | "Technical";
 type SortKey  = "name" | "entity" | "created" | "type";
 type SortDir  = "asc" | "desc";
 type RoleStatusFilter = "active" | "inactive" | "all";
@@ -32,7 +40,7 @@ interface Role {
   createdDate: string;
   createdTime: string;
   createdTs: number;
-  type: RoleType;
+  type: InterviewTypeLabel;
   hasJD: boolean;
   jobDescriptionUrl: string;
   jobDescriptionReplacement: RoleJdReplacementEligibility;
@@ -92,13 +100,6 @@ function extractErrorMessage(text: string): string {
       : null;
   if (typeof detail === "string" && detail.trim()) return detail;
   return text;
-}
-
-function normalizeRoleType(value: unknown): RoleType {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "technical") return "Technical";
-  if (normalized === "detailed") return "Detailed";
-  return "Basic";
 }
 
 function formatRoleCreated(value: unknown): { text: string; date: string; time: string; ts: number } {
@@ -172,9 +173,9 @@ function extractRubricQuestions(rubric: unknown): string[] {
   return questions;
 }
 
-const typeColors: Record<RoleType, { bg: string; text: string }> = {
-  Basic:     { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
-  Detailed:  { bg: "rgba(2,171,224,0.12)",   text: "#0285B0" },
+const typeColors: Record<InterviewTypeLabel, { bg: string; text: string }> = {
+  Core:      { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
+  Leadership: { bg: "rgba(2,171,224,0.12)",   text: "#0285B0" },
   Technical: { bg: "rgba(2,217,157,0.12)",   text: "#009E73" },
 };
 
@@ -209,11 +210,12 @@ const inputCls =
 
 const selectCls =
   "w-full px-3 py-2 rounded-xl text-sm text-[var(--as-text)] font-medium " +
-  "border border-[var(--as-border)] bg-[var(--as-surface-muted)] appearance-none " +
+  "border border-[var(--as-border)] bg-[var(--as-surface-muted)] " +
   "focus:outline-none focus:border-[#A380F6] transition-colors cursor-pointer";
 
 export default function AdminRolesPage() {
   const {
+    selectedClient,
     selectedClientId,
     clients: adminClients,
     loading: adminClientsLoading,
@@ -234,7 +236,7 @@ export default function AdminRolesPage() {
   const [updatingRoleStatus, setUpdatingRoleStatus] = useState<Record<string, boolean>>({});
   const [creatingRole, setCreatingRole] = useState<boolean>(false);
   const [jdFile, setJdFile] = useState<File | null>(null);
-  const [rubricModal, setRubricModal] = useState<{ roleName: string; questions: string[] } | null>(null);
+  const [rubricModal, setRubricModal] = useState<{ role: Role; questions: string[] } | null>(null);
   const [roleStatusConfirm, setRoleStatusConfirm] = useState<{ role: Role; nextStatus: "active" | "inactive" } | null>(null);
   const [roleDeleteConfirm, setRoleDeleteConfirm] = useState<{ role: Role } | null>(null);
   const [editingRubricRole, setEditingRubricRole] = useState<Role | null>(null);
@@ -243,7 +245,7 @@ export default function AdminRolesPage() {
   const [openRoleActionsId, setOpenRoleActionsId] = useState<string | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const roleActionsTriggerRef = useRef<HTMLButtonElement>(null);
-  const [form, setForm] = useState({ title: "", type: "Basic", jdFileName: "" });
+  const [form, setForm] = useState<{ title: string; type: InterviewType; jdFileName: string }>({ title: "", type: "core", jdFileName: "" });
   const hierarchyClients = useMemo(
     () => adminClients.filter((client) => client.id !== "all"),
     [adminClients],
@@ -263,6 +265,11 @@ export default function AdminRolesPage() {
       ) as Record<string, AdminClient>,
     [adminClients],
   );
+  const membershipLevelForClient = (clientId: string): string | null => {
+    const client = clientById[clientId];
+    const billingClientId = String(client?.billing_client_id || client?.parent_client_id || "").trim();
+    return client?.plan_tier || (billingClientId ? clientById[billingClientId]?.plan_tier || null : null);
+  };
 
   useEffect(() => {
     if (!actionNotice) return;
@@ -370,7 +377,7 @@ export default function AdminRolesPage() {
               createdDate: created.date,
               createdTime: created.time,
               createdTs: created.ts,
-              type: normalizeRoleType(item.interview_type),
+              type: getInterviewTypeLabel(item.interview_type) as InterviewTypeLabel,
               hasJD: Boolean(String(item.job_description_url || "").trim()),
               jobDescriptionUrl: String(item.job_description_url || "").trim(),
               jobDescriptionReplacement: normalizeRoleJdReplacementEligibility(item.job_description_replacement),
@@ -507,8 +514,7 @@ export default function AdminRolesPage() {
       return;
     }
 
-    const normalizedType = String(form.type || "").trim().toUpperCase();
-    const interviewType = ["BASIC", "DETAILED", "TECHNICAL"].includes(normalizedType) ? normalizedType : "BASIC";
+    const interviewType = toCanonicalInterviewTypeWrite(form.type);
     if (jdFile) {
       const ext = String(jdFile.name || "").toLowerCase().split(".").pop() || "";
       if (!["pdf", "docx"].includes(ext)) {
@@ -565,7 +571,7 @@ export default function AdminRolesPage() {
         }
       }
 
-      setForm({ title: "", type: "Basic", jdFileName: "" });
+      setForm({ title: "", type: "core", jdFileName: "" });
       setJdFile(null);
       setActionNotice({ tone: "success", text: "Role created." });
       setRefreshNonce((value) => value + 1);
@@ -619,7 +625,7 @@ export default function AdminRolesPage() {
     if (!role.id || loadingRubric[role.id]) return;
 
     if (role.rubricQuestions.length > 0) {
-      setRubricModal({ roleName: role.name, questions: role.rubricQuestions });
+      setRubricModal({ role, questions: role.rubricQuestions });
       return;
     }
 
@@ -656,7 +662,7 @@ export default function AdminRolesPage() {
         ? item.rubric_questions.map((q) => String(q || "").trim()).filter(Boolean)
         : [];
       if (!questions.length) throw new Error("No rubric questions found.");
-      setRubricModal({ roleName: role.name, questions });
+      setRubricModal({ role, questions });
     } catch (error) {
       setActionNotice({
         tone: "error",
@@ -809,17 +815,13 @@ export default function AdminRolesPage() {
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
           />
-          <div className="relative w-40 flex-shrink-0">
-            <select
-              className={selectCls}
+          <div className="min-w-[18rem] flex-1">
+            <InterviewTypeField
+              id="admin-role-interview-type"
               value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-            >
-              <option>Basic</option>
-              <option>Detailed</option>
-              <option>Technical</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
+              onChange={(event) => setForm({ ...form, type: event.target.value as InterviewType })}
+              className={selectCls}
+            />
           </div>
 
           {/* JD file upload */}
@@ -854,6 +856,13 @@ export default function AdminRolesPage() {
           >
             {creatingRole ? "Creating..." : "Create"}
           </button>
+        </div>
+        <div className="mt-4">
+          <MembershipTypeSummary
+            membershipLevel={membershipLevelForClient(selectedClient.id)}
+            interviewType={form.type}
+          />
+          <RubricGuidancePanel compact />
         </div>
       </div>
 
@@ -1128,6 +1137,8 @@ export default function AdminRolesPage() {
           entityName: editingRubricRole.entityName,
           parentClientName: editingRubricRole.parentClientName,
           status: editingRubricRole.status,
+          interviewType: editingRubricRole.type,
+          membershipLevel: membershipLevelForClient(editingRubricRole.clientId),
         } : null}
         sessionKey={rubricEditorSession}
         backendBase={backendBase}
@@ -1267,7 +1278,7 @@ export default function AdminRolesPage() {
         <div className="fixed inset-0 z-40 bg-black/35 backdrop-blur-[1px] flex items-center justify-center p-4">
           <div className="w-full max-w-2xl rounded-2xl overflow-hidden" style={modalSurfaceStyle}>
             <div className="px-5 py-4 border-b flex items-center justify-between" style={dividerStyle}>
-              <h3 className="text-base font-black" style={primaryTextStyle}>Rubric — {rubricModal.roleName}</h3>
+              <h3 className="text-base font-black" style={primaryTextStyle}>Rubric — {rubricModal.role.name}</h3>
               <button
                 className="px-3 py-1.5 rounded-full text-xs font-bold text-[#0A1547]/60 dark:text-slate-300/70 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
                 onClick={() => setRubricModal(null)}
@@ -1276,6 +1287,16 @@ export default function AdminRolesPage() {
               </button>
             </div>
             <div className="px-5 py-4 max-h-[60vh] overflow-auto">
+              <div className="mb-4">
+                <MembershipTypeSummary
+                  membershipLevel={membershipLevelForClient(rubricModal.role.clientId)}
+                  interviewType={rubricModal.role.type}
+                  compact
+                />
+                <p className="mt-3 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
+                  Opening this rubric does not regenerate it. Existing completed interview evidence is unchanged.
+                </p>
+              </div>
               {rubricModal.questions.length === 0 ? (
                 <p className="text-sm font-semibold" style={mutedTextStyle}>No rubric questions found.</p>
               ) : (

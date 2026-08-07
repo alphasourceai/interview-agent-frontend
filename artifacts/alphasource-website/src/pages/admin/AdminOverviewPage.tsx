@@ -6,12 +6,12 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { useAdminClient } from "@/context/AdminClientContext";
+import { getInterviewTypeLabel, type InterviewTypeLabel } from "@/lib/interviewContract";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Timeframe ───────────────────────────────────────────────── */
 const timeframes = ["7d", "30d", "MTD", "6m", "YTD", "1y"] as const;
 type Timeframe = (typeof timeframes)[number];
-type InterviewType = "Basic" | "Detailed" | "Technical";
 
 /* ── Platform-wide stats per timeframe ──────────────────────── */
 interface PlatformStats {
@@ -30,7 +30,7 @@ interface PlatformStats {
 interface ActivityRow {
   client: string;
   role: string;
-  type: InterviewType;
+  type: InterviewTypeLabel;
   candidates: number;
   date: string;
 }
@@ -56,7 +56,7 @@ interface RoleItem {
   id: string;
   clientId: string;
   title: string;
-  type: InterviewType;
+  type: InterviewTypeLabel;
   createdAtMs: number;
 }
 
@@ -131,13 +131,6 @@ function toScoreOrNull(value: unknown): number | null {
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return Math.max(0, Math.min(100, n));
-}
-
-function normalizeInterviewType(value: unknown): InterviewType {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "detailed") return "Detailed";
-  if (normalized === "technical") return "Technical";
-  return "Basic";
 }
 
 function hashText(value: string): number {
@@ -225,8 +218,8 @@ function formatMonthDay(timestamp: number): string {
 
 /* ── Type badge colors ───────────────────────────────────────── */
 const typeColors: Record<string, { bg: string; text: string }> = {
-  Basic: { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
-  Detailed: { bg: "rgba(2,171,224,0.12)", text: "#0285B0" },
+  Core: { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
+  Leadership: { bg: "rgba(2,171,224,0.12)", text: "#0285B0" },
   Technical: { bg: "rgba(2,217,157,0.12)", text: "#009E73" },
 };
 
@@ -431,7 +424,7 @@ export default function AdminOverviewPage() {
             id: String(item.id || "").trim(),
             clientId: String(item.client_id || "").trim(),
             title: String(item.title || "").trim() || "Untitled role",
-            type: normalizeInterviewType(item.interview_type),
+            type: getInterviewTypeLabel(item.interview_type) as InterviewTypeLabel,
             createdAtMs: toDateMs(item.created_at),
           }))
           .filter((item) => Boolean(item.id && item.clientId));

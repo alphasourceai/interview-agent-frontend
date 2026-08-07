@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { LoaderCircle, Plus, Trash2, X } from "lucide-react";
+import MembershipTypeSummary from "@/components/MembershipTypeSummary";
+import { resolveMembershipCapacity } from "@/lib/interviewContract";
 
 export interface EditRoleRubricModalRole {
   id: string;
@@ -10,6 +12,8 @@ export interface EditRoleRubricModalRole {
   entityName?: string | null;
   parentClientName?: string | null;
   status?: string | null;
+  interviewType?: string | null;
+  membershipLevel?: string | null;
 }
 
 interface RubricQuestion {
@@ -153,7 +157,18 @@ export default function EditRoleRubricModal({
     [isLoaded, loadedConfig],
   );
   const isDirty = isLoaded && configSnapshot(tavusPrompt, questions) !== baseline;
-  const validationError = useMemo(() => questionsValidation(questions), [questions]);
+  const membershipCapacity = useMemo(
+    () => resolveMembershipCapacity(role?.membershipLevel),
+    [role?.membershipLevel],
+  );
+  const validationError = useMemo(() => {
+    const qualityError = questionsValidation(questions);
+    if (qualityError) return qualityError;
+    if (membershipCapacity && questions.length !== membershipCapacity.scored_question_count) {
+      return `${membershipCapacity.label} roles require exactly ${membershipCapacity.scored_question_count} scored questions.`;
+    }
+    return "";
+  }, [questions, membershipCapacity]);
   const canSave = isLoaded && isDirty && !validationError && !saving;
 
   useEffect(() => {
@@ -386,8 +401,14 @@ export default function EditRoleRubricModal({
                   </div>
                 </dl>
 
+                <MembershipTypeSummary
+                  membershipLevel={role.membershipLevel}
+                  interviewType={role.interviewType}
+                  compact
+                />
+
                 <div className="border-l-4 border-[#F0A500] bg-[#F0A500]/8 px-4 py-3 text-sm leading-6" style={{ color: "var(--as-text-muted)" }}>
-                  Changes affect future interviews for this role. Existing completed interviews and reports are not recalculated.
+                  Opening this editor does not regenerate the rubric. Changes are saved only when you choose Save changes, affect future interviews for this role, and leave completed interview evidence and reports unchanged.
                 </div>
 
                 {error && (

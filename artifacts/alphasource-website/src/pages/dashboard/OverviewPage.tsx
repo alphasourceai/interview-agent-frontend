@@ -3,11 +3,11 @@ import { Link } from "wouter";
 import { ArrowRight, Briefcase, Clock, Users, Zap } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient } from "@/context/ClientContext";
+import { getInterviewTypeLabel, type InterviewTypeLabel } from "@/lib/interviewContract";
 import { supabase } from "@/lib/supabaseClient";
 
 const timeframes = ["7d", "30d", "MTD", "6m", "YTD", "1y"] as const;
 type Timeframe = (typeof timeframes)[number];
-type InterviewType = "Basic" | "Detailed" | "Technical";
 
 interface PeriodStats {
   roles: number;
@@ -20,7 +20,7 @@ interface PeriodStats {
 
 interface RecentRole {
   name: string;
-  type: InterviewType;
+  type: InterviewTypeLabel;
   date: string;
   left: number | null;
   used: number | null;
@@ -30,7 +30,7 @@ interface RoleItem {
   id: string;
   title: string;
   createdAtMs: number;
-  type: InterviewType;
+  type: InterviewTypeLabel;
   left: number | null;
   used: number | null;
 }
@@ -97,13 +97,6 @@ function toWholeNonNegativeOrNull(value: unknown): number | null {
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return Math.max(0, Math.floor(n));
-}
-
-function mapInterviewType(value: unknown): InterviewType {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "detailed") return "Detailed";
-  if (normalized === "technical") return "Technical";
-  return "Basic";
 }
 
 function getWindowBounds(timeframe: Timeframe, nowMs: number): { start: number; end: number } {
@@ -180,8 +173,8 @@ function formatRecentRoleDate(timestamp: number): string {
 }
 
 const typeColors: Record<string, { bg: string; text: string }> = {
-  Basic:     { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
-  Detailed:  { bg: "rgba(2,171,224,0.12)",   text: "#0285B0" },
+  Core:      { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
+  Leadership: { bg: "rgba(2,171,224,0.12)",   text: "#0285B0" },
   Technical: { bg: "rgba(2,217,157,0.12)",   text: "#009E73" },
 };
 
@@ -359,7 +352,7 @@ export default function OverviewPage() {
             id: String(item.id || "").trim(),
             title: String(item.title || "").trim() || "Untitled Role",
             createdAtMs: toDateMs(item.created_at),
-            type: mapInterviewType(item.interview_type),
+            type: getInterviewTypeLabel(item.interview_type) as InterviewTypeLabel,
             left: toWholeNonNegativeOrNull(item.remaining_interviews),
             used: toWholeNonNegativeOrNull(item.used_interviews),
           }))

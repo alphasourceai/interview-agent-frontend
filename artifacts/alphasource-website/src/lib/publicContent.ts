@@ -1,4 +1,6 @@
-export const PUBLIC_CONTENT_LAST_UPDATED = "June 25, 2026";
+import { RUBRIC_FAQ } from "@/content/rubricGuidance";
+
+export const PUBLIC_CONTENT_LAST_UPDATED = "August 6, 2026";
 
 export type PublicFaqItem = {
   question: string;
@@ -111,6 +113,11 @@ export const publicFaqSections: PublicFaqSection[] = [
           "Accommodation requests remain part of the employer's hiring process. alphaScreen supports controlled workflows and human review so candidate needs can be routed appropriately.",
       },
     ],
+  },
+  {
+    title: "Interview Types, Membership & Warm-up",
+    intro: "How membership capacity and role-specific interview types work together.",
+    items: [...RUBRIC_FAQ],
   },
   {
     title: "Security, Data & Review",

@@ -19,7 +19,6 @@ import { alphaSourceLogo } from "@/assets/branding";
 const CHECKLIST = [
   "Current resume in PDF, DOC, or DOCX format",
   "Stable internet connection",
-  "3 uninterrupted minutes to complete the interview",
   "Quiet environment free of background conversations and distractions",
   "You may complete only one interview per role. Once submitted, the interview cannot be retaken.",
 ];
@@ -209,7 +208,6 @@ export default function InterviewPage() {
     conversation_url: "",
     max_interview_minutes: null,
   });
-  const [preStartMaxInterviewMinutes, setPreStartMaxInterviewMinutes] = useState<number | null>(null);
   const [deviceModalOpen, setDeviceModalOpen] = useState(false);
   const [deviceLoading, setDeviceLoading] = useState(false);
   const [deviceError, setDeviceError] = useState("");
@@ -442,27 +440,6 @@ export default function InterviewPage() {
       window.removeEventListener("offline", syncNetwork);
     };
   }, []);
-
-  useEffect(() => {
-    const roleToken = String(interviewAuth.role_token || "").trim();
-    if (!backendBase || !roleToken) return;
-    let alive = true;
-    (async () => {
-      try {
-        const resp = await fetch(joinUrl(backendBase, `/public/interview-status?role_token=${encodeURIComponent(roleToken)}`), {
-          method: "GET",
-          credentials: "omit",
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) return;
-        const raw = Number(data?.max_interview_minutes);
-        if (alive && Number.isFinite(raw) && raw > 0) setPreStartMaxInterviewMinutes(Math.floor(raw));
-      } catch {}
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [interviewAuth.role_token]);
 
   useEffect(() => {
     if (!deviceModalOpen) {
@@ -755,12 +732,6 @@ export default function InterviewPage() {
   /* ═══════════════════════════════════════════════════════════════
      PAGE SHELL (all non-live steps)
   ═══════════════════════════════════════════════════════════════ */
-  const checklist = CHECKLIST.map((item) =>
-    item === "3 uninterrupted minutes to complete the interview"
-      ? `${preStartMaxInterviewMinutes ?? 3} uninterrupted minutes to complete the interview`
-      : item,
-  );
-
   return (
     <div
       className="min-h-screen bg-[#F8F9FD] flex flex-col"
@@ -797,7 +768,7 @@ export default function InterviewPage() {
                 Please review this quick checklist before you begin:
               </p>
               <ul className="space-y-2 mb-5">
-                {checklist.map((item) => (
+                {CHECKLIST.map((item) => (
                   <li key={item} className="flex items-start gap-2.5">
                     <span
                       className="mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"

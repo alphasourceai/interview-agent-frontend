@@ -1,0 +1,12 @@
+{
+  "roles": [
+    { "title": "Operations Coordinator", "membership_level": "basic", "interview_type": "core" },
+    { "title": "Regional Operations Manager", "membership_level": "pro", "interview_type": "leadership" },
+    { "title": "Full-Stack Engineer", "membership_level": "enterprise", "interview_type": "technical" }
+  ],
+  "legacy_roles": [
+    { "title": "Customer Service Representative", "membership_level": "basic", "interview_type": "basic", "expected_type_label": "Core" },
+    { "title": "Practice Manager", "membership_level": "pro", "interview_type": "detailed", "expected_type_label": "Leadership" },
+    { "title": "Systems Analyst", "membership_level": "enterprise", "interview_type": "technical", "expected_type_label": "Technical" }
+  ]
+}

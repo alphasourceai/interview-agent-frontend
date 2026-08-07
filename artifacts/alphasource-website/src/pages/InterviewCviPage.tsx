@@ -375,8 +375,51 @@ export const CANDIDATE_INACTIVITY_NUDGE_THRESHOLD_MS = 10000;
 export const CANDIDATE_INACTIVITY_NUDGE_MAX_LATENESS_MS = 2000;
 export const CANDIDATE_INACTIVITY_NUDGE_TEXT =
   "Take your time. When you’re ready, you can continue.";
+export const NORMAL_COMPLETION_FAREWELL_TEXT =
+  "Thank you for your time. I am ending the session now.";
+export const NORMAL_COMPLETION_END_DELAY_MS = 5500;
 export const FINAL_CLOSING_ANNOUNCEMENT_TEXT =
   "We are out of time. Thank you for your time. I am ending the session now.";
+const TERMINAL_INTERVIEW_TOOL_NAMES = new Set(["end_call", "end_interview"]);
+
+export function isTerminalInterviewToolName(value: unknown): boolean {
+  return TERMINAL_INTERVIEW_TOOL_NAMES.has(String(value ?? "").trim().toLowerCase());
+}
+
+function normalizeCompleteUtterance(value: unknown): string {
+  return String(value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
+}
+
+export function normalCompletionEndAllowed(input: {
+  phase: InterviewClosingPhase | null | undefined;
+  avatarClosingActive: boolean;
+  endTriggered: boolean;
+}): boolean {
+  return input.phase === "INTERVIEWING" &&
+    !input.avatarClosingActive &&
+    !input.endTriggered;
+}
+
+export function isNormalCompletionFarewell(input: {
+  eventType: unknown;
+  role: unknown;
+  speech: unknown;
+  phase: InterviewClosingPhase | null | undefined;
+  avatarClosingActive: boolean;
+}): boolean {
+  const eventType = String(input.eventType ?? "").trim().toLowerCase();
+  const role = String(input.role ?? "").trim().toLowerCase();
+  return eventType === "conversation.utterance" &&
+    (role === "replica" || role === "assistant" || role === "agent") &&
+    normalCompletionEndAllowed({
+      phase: input.phase,
+      avatarClosingActive: input.avatarClosingActive,
+      endTriggered: false,
+    }) &&
+    normalizeCompleteUtterance(input.speech) ===
+      normalizeCompleteUtterance(NORMAL_COMPLETION_FAREWELL_TEXT);
+}
+
 export const FINAL_CLOSING_START_TIMEOUT_MS = 5000;
 // Tavus can emit one delayed inference after the terminal interrupt. Keep that
 // stale turn inaudible, allow it to drain, then separate the final interrupt
@@ -2555,6 +2598,9 @@ export default function InterviewCviPage() {
   const leavingRef = useRef(false);
   const reconnectingRef = useRef(false);
   const endTriggeredRef = useRef(false);
+  // This fallback belongs only to a normal conversational close. It is kept
+  // separate from every timer-owned 0:00 ref and state transition below.
+  const normalCompletionEndTimerRef = useRef<number | null>(null);
   const timerRuntimeRef = useRef<InterviewTimerRuntimeState | null>(null);
   const finalTerminationTimerRef = useRef<number | null>(null);
   const closingStartTimerRef = useRef<number | null>(null);
@@ -2639,6 +2685,13 @@ export default function InterviewCviPage() {
     if (inactivityTimerRef.current) {
       window.clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = null;
+    }
+  }, []);
+
+  const clearNormalCompletionEndTimer = useCallback(() => {
+    if (normalCompletionEndTimerRef.current) {
+      window.clearTimeout(normalCompletionEndTimerRef.current);
+      normalCompletionEndTimerRef.current = null;
     }
   }, []);
 
@@ -3566,6 +3619,10 @@ export default function InterviewCviPage() {
   }, [beginAvatarClosing]);
 
   useEffect(() => () => clearAutoEndTimers(), [clearAutoEndTimers]);
+  useEffect(
+    () => () => clearNormalCompletionEndTimer(),
+    [clearNormalCompletionEndTimer],
+  );
 
   useEffect(() => {
     const conversationId = String(session?.conversation_id || "").trim();
@@ -4759,10 +4816,30 @@ export default function InterviewCviPage() {
               data?.function?.name ??
               "",
             ).trim().toLowerCase();
-            if (toolName === "end_interview") {
-              void endInterview("tool_call");
+            if (isTerminalInterviewToolName(toolName)) {
+              void endInterview("closing_utterance");
               return;
             }
+          }
+          if (isNormalCompletionFarewell({
+            eventType,
+            role: utteranceRole,
+            speech,
+            phase: timerRuntimeRef.current?.boundaryState.phase,
+            avatarClosingActive: avatarClosingActiveRef.current,
+          })) {
+            if (!normalCompletionEndTimerRef.current) {
+              normalCompletionEndTimerRef.current = window.setTimeout(() => {
+                normalCompletionEndTimerRef.current = null;
+                if (!normalCompletionEndAllowed({
+                  phase: timerRuntimeRef.current?.boundaryState.phase,
+                  avatarClosingActive: avatarClosingActiveRef.current,
+                  endTriggered: endTriggeredRef.current,
+                })) return;
+                void endInterview("completed_normally");
+              }, NORMAL_COMPLETION_END_DELAY_MS);
+            }
+            return;
           }
           const payloadText = JSON.stringify(data || {}).toLowerCase();
           if (/call_ended|call-ended|meeting-ended|meeting_ended|room_left|room-left|session_ended|session-ended|conversation_ended|conversation-ended|interview_ended|interview-ended/.test(payloadText)) {

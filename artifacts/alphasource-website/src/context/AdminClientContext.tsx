@@ -14,6 +14,7 @@ export interface AdminClient {
   is_child_client?: boolean;
   parent_client_name?: string | null;
   child_count?: number | null;
+  plan_tier?: string | null;
 }
 
 export const ADMIN_CLIENTS: AdminClient[] = [
@@ -252,6 +253,7 @@ export function AdminClientProvider({ children }: { children: ReactNode }) {
             is_child_client: optionalBoolean(item.is_child_client),
             parent_client_name: optionalText(item.parent_client_name),
             child_count: optionalNumber(item.child_count),
+            plan_tier: optionalText(item.plan_tier),
           };
         })
         .filter((item) => Boolean(item.id))

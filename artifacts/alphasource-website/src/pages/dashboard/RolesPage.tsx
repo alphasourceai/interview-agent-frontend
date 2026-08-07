@@ -11,6 +11,9 @@ import {
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
+import InterviewTypeField from "@/components/InterviewTypeField";
+import MembershipTypeSummary from "@/components/MembershipTypeSummary";
+import RubricGuidancePanel from "@/components/RubricGuidancePanel";
 import RoleActionsMenu from "@/components/roles/RoleActionsMenu";
 import ReplaceJobDescriptionModal from "@/components/roles/ReplaceJobDescriptionModal";
 import {
@@ -19,10 +22,16 @@ import {
 } from "@/components/roles/roleTableLayout";
 import { useClient } from "@/context/ClientContext";
 import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import {
+  getInterviewTypeLabel,
+  toCanonicalInterviewTypeWrite,
+  type InterviewType,
+  type InterviewTypeLabel,
+  type MembershipCapacityInput,
+} from "@/lib/interviewContract";
 import { normalizeRoleJdReplacementEligibility, type RoleJdReplacementEligibility } from "@/lib/roleJdReplacementEligibility";
 import { supabase } from "@/lib/supabaseClient";
 
-type InterviewType = "Basic" | "Detailed" | "Technical";
 type RoleSortKey = "name" | "entity" | "type" | "left" | "used" | "date";
 type SortDir = "asc" | "desc";
 type RoleStatusFilter = "active" | "inactive" | "all";
@@ -71,7 +80,10 @@ interface Role {
   entityName: string;
   createdDate: string;
   createdTime: string;
-  type: InterviewType;
+  type: InterviewTypeLabel;
+  membershipLevel: string;
+  maxInterviewMinutes: number | null;
+  scoredQuestionCount: number | null;
   left: number;
   used: number;
   hasRubric: boolean;
@@ -154,13 +166,6 @@ function openCheckoutUrl(checkoutUrl: string): void {
     return;
   }
   window.location.assign(url);
-}
-
-function mapInterviewType(value: unknown): InterviewType {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "detailed") return "Detailed";
-  if (normalized === "technical") return "Technical";
-  return "Basic";
 }
 
 function toWholeNonNegative(value: unknown): number {
@@ -279,13 +284,13 @@ function extractRubricQuestions(rubric: unknown): string[] {
   return out;
 }
 
-const typeColors: Record<InterviewType, { bg: string; text: string }> = {
-  Basic:     { bg: "rgba(163,128,246,0.10)", text: "#7C5FCC" },
-  Detailed:  { bg: "rgba(2,171,224,0.10)",   text: "#0285B0" },
+const typeColors: Record<InterviewTypeLabel, { bg: string; text: string }> = {
+  Core:      { bg: "rgba(163,128,246,0.10)", text: "#7C5FCC" },
+  Leadership: { bg: "rgba(2,171,224,0.10)",   text: "#0285B0" },
   Technical: { bg: "rgba(2,217,157,0.10)",   text: "#009E73" },
 };
 
-function TypeBadge({ type }: { type: InterviewType }) {
+function TypeBadge({ type }: { type: InterviewTypeLabel }) {
   const c = typeColors[type];
   return (
     <span
@@ -337,7 +342,8 @@ export default function RolesPage() {
     : selectedMembershipRoleValue;
   const canManageRoles = isGlobalAdmin || ["manager", "admin", "owner", "super_admin"].includes(selectedMembershipRole);
   const [roleTitle, setRoleTitle] = useState("");
-  const [interviewType, setInterviewType] = useState<InterviewType>("Basic");
+  const [interviewType, setInterviewType] = useState<InterviewType>("core");
+  const [billingPlanTier, setBillingPlanTier] = useState("");
   const [jdFile, setJdFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [sortKey, setSortKey] = useState<RoleSortKey | null>(null);
@@ -376,6 +382,18 @@ export default function RolesPage() {
     [clients, selectedClientId],
   );
   const entityHelpText = useMemo(() => entityFilterHelpText(entityOptions), [entityOptions]);
+  const roleCapacity = useMemo(
+    () => roles.find((role) => Boolean(role.membershipLevel)) || null,
+    [roles],
+  );
+  const selectedMembershipLevel = billingPlanTier || roleCapacity?.membershipLevel || "";
+  const selectedMembershipCapacity: MembershipCapacityInput | null = roleCapacity
+    ? {
+        membership_level: roleCapacity.membershipLevel,
+        max_interview_minutes: roleCapacity.maxInterviewMinutes,
+        scored_question_count: roleCapacity.scoredQuestionCount,
+      }
+    : null;
 
   useEffect(() => {
     setEntityFilter(defaultEntityFilterValue(clients, selectedClientId));
@@ -396,6 +414,7 @@ export default function RolesPage() {
     setRubricNotes("");
     setRubricError("");
     setRubricSending(false);
+    setBillingPlanTier("");
     if (embeddedCheckoutInstanceRef.current) {
       try {
         embeddedCheckoutInstanceRef.current.unmount?.();
@@ -412,6 +431,39 @@ export default function RolesPage() {
     setEmbeddedCheckout(null);
     setEmbeddedCheckoutLoading(false);
     setEmbeddedCheckoutError("");
+  }, [selectedClientId, clientLoading, clientError]);
+
+  useEffect(() => {
+    let alive = true;
+    const loadMembership = async () => {
+      if (clientLoading || clientError || !selectedClientId || selectedClientId === "all" || !backendBase) return;
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = String(session?.access_token || "").trim();
+        if (!token) return;
+        const response = await fetch(
+          `${backendBase}/clients/billing/summary?client_id=${encodeURIComponent(selectedClientId)}`,
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "omit",
+          },
+        );
+        if (!response.ok) return;
+        const payload = parseJsonSafe(await response.text());
+        const items = payload && typeof payload === "object" && Array.isArray((payload as { items?: unknown }).items)
+          ? (payload as { items: unknown[] }).items
+          : [];
+        const first = items.find((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"));
+        if (alive) setBillingPlanTier(String(first?.plan_tier || "").trim().toLowerCase());
+      } catch {
+        // Capacity also arrives on role reads; billing visibility is permission-scoped.
+      }
+    };
+    void loadMembership();
+    return () => { alive = false; };
   }, [selectedClientId, clientLoading, clientError]);
 
   useEffect(() => {
@@ -643,7 +695,7 @@ export default function RolesPage() {
       const formData = new FormData();
       formData.append("client_id", selectedClientId);
       formData.append("role_title", title);
-      formData.append("interview_type", String(interviewType).toUpperCase());
+      formData.append("interview_type", toCanonicalInterviewTypeWrite(interviewType));
       formData.append("tab", "roles");
       formData.append("embedded", "true");
       formData.append("file", jdFile);
@@ -663,7 +715,7 @@ export default function RolesPage() {
       const data = parseJsonSafe(text) as RoleCheckoutResponse | null;
       if (data?.credit_applied === true) {
         setRoleTitle("");
-        setInterviewType("Basic");
+        setInterviewType("core");
         setJdFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         setRolesReloadNonce((value) => value + 1);
@@ -781,7 +833,14 @@ export default function RolesPage() {
               entityName: String(item.entity_name || "").trim() || selectedClient.name || "—",
               createdDate: created.date,
               createdTime: created.time,
-              type: mapInterviewType(item.interview_type),
+              type: getInterviewTypeLabel(item.interview_type) as InterviewTypeLabel,
+              membershipLevel: String(item.membership_level || "").trim().toLowerCase(),
+              maxInterviewMinutes: Number.isFinite(Number(item.max_interview_minutes))
+                ? Number(item.max_interview_minutes)
+                : null,
+              scoredQuestionCount: Number.isFinite(Number(item.scored_question_count))
+                ? Number(item.scored_question_count)
+                : null,
               left: toWholeNonNegative(item.remaining_interviews),
               used: toWholeNonNegative(item.used_interviews),
               hasRubric: questions.length > 0,
@@ -1065,27 +1124,14 @@ export default function RolesPage() {
               </div>
 
               {/* Interview Type */}
-              <div className="w-44">
-                <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1 mb-1.5" style={mutedTextStyle}>
-                  Interview Type
-                  <InfoTooltip
-                    content="Basic: shorter screening focused on core fit and relevant experience. Detailed: deeper behavioral and situational interview. Technical: skill-heavy interview focused on role-specific reasoning and execution."
-                    side="bottom"
-                  />
-                </label>
-                <div className="relative">
-                  <select
-                    value={interviewType}
-                    onChange={(e) => setInterviewType(e.target.value as InterviewType)}
-                    className="w-full appearance-none px-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer pr-9"
-                    style={fieldSurfaceStyle}
-                  >
-                    <option value="Basic">Basic</option>
-                    <option value="Detailed">Detailed</option>
-                    <option value="Technical">Technical</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={mutedTextStyle} />
-                </div>
+              <div className="min-w-[18rem] flex-1">
+                <InterviewTypeField
+                  id="dashboard-role-interview-type"
+                  value={interviewType}
+                  onChange={(event) => setInterviewType(event.target.value as InterviewType)}
+                  className="w-full px-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer"
+                  selectStyle={fieldSurfaceStyle}
+                />
               </div>
 
               {/* JD File Drop zone */}
@@ -1151,6 +1197,14 @@ export default function RolesPage() {
               >
                 {createBusy ? "Creating..." : "Create"}
               </button>
+            </div>
+            <div className="mt-4">
+              <MembershipTypeSummary
+                membershipLevel={selectedMembershipLevel}
+                backendCapacity={selectedMembershipCapacity}
+                interviewType={interviewType}
+              />
+              <RubricGuidancePanel compact />
             </div>
           </form>
         </div>
@@ -1589,6 +1643,21 @@ export default function RolesPage() {
               </button>
             </div>
             <div className="min-h-0 overflow-y-auto px-5 py-4">
+              <div className="mb-4">
+                <MembershipTypeSummary
+                  membershipLevel={rubricModalRole.membershipLevel}
+                  backendCapacity={{
+                    membership_level: rubricModalRole.membershipLevel,
+                    max_interview_minutes: rubricModalRole.maxInterviewMinutes,
+                    scored_question_count: rubricModalRole.scoredQuestionCount,
+                  }}
+                  interviewType={rubricModalRole.type}
+                  compact
+                />
+                <p className="mt-3 text-xs font-semibold leading-relaxed" style={mutedTextStyle}>
+                  Opening this rubric does not regenerate it. Existing completed interview evidence is unchanged.
+                </p>
+              </div>
               {rubricQuestions.length === 0 ? (
                 <p className="text-sm font-semibold" style={mutedTextStyle}>No rubric questions available.</p>
               ) : (
