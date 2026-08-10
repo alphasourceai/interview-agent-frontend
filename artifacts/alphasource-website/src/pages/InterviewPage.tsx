@@ -160,20 +160,38 @@ function readRoleToken(): string {
   }
 }
 
+function readRecoveryOtpSeed() {
+  const empty = { challenge_id: "", candidate_id: "", email: "" };
+  if (typeof window === "undefined") return empty;
+  try {
+    const url = new URL(window.location.href);
+    const challengeId = String(url.searchParams.get("challenge_id") || "").trim();
+    const candidateId = String(url.searchParams.get("candidate_id") || "").trim();
+    const recoveryEmail = String(url.searchParams.get("email") || "").trim().toLowerCase();
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuid.test(challengeId) || !uuid.test(candidateId) || !/\S+@\S+\.\S+/.test(recoveryEmail)) return empty;
+    return { challenge_id: challengeId, candidate_id: candidateId, email: recoveryEmail };
+  } catch {
+    return empty;
+  }
+}
+
 export default function InterviewPage() {
   const [, setLocation] = useLocation();
+  const recoveryOtpSeedRef = useRef(readRecoveryOtpSeed());
+  const recoveryOtpSeed = recoveryOtpSeedRef.current;
 
   /* ── Terms modal ─────────────────────────────────────────────── */
   const [termsOpen, setTermsOpen]     = useState(true);
   const [understood, setUnderstood]   = useState(false);
 
   /* ── Workflow step ───────────────────────────────────────────── */
-  const [step, setStep] = useState<Step>("info");
+  const [step, setStep] = useState<Step>(recoveryOtpSeed.challenge_id ? "otp" : "info");
 
   /* ── Step 1 fields ───────────────────────────────────────────── */
   const [firstName, setFirstName]     = useState("");
   const [lastName, setLastName]       = useState("");
-  const [email, setEmail]             = useState("");
+  const [email, setEmail]             = useState(recoveryOtpSeed.email);
   const [phoneCountry, setPhoneCountry] = useState<CandidatePhoneCountry>("US");
   const [phone, setPhone]             = useState("");
   const [resumeFile, setResumeFile]   = useState<File | null>(null);
@@ -192,9 +210,10 @@ export default function InterviewPage() {
   const [startLoading, setStartLoading] = useState(false);
   const [startError, setStartError] = useState("");
   const [interviewAuth, setInterviewAuth] = useState({
-    candidate_id: "",
+    candidate_id: recoveryOtpSeed.candidate_id,
     role_id: "",
-    email: "",
+    challenge_id: recoveryOtpSeed.challenge_id,
+    email: recoveryOtpSeed.email,
     role_token: readRoleToken(),
   });
   const [interviewStartState, setInterviewStartState] = useState<{
@@ -502,6 +521,7 @@ export default function InterviewPage() {
 
       const resp = await fetch(joinUrl(backendBase, "/api/candidate/submit"), {
         method: "POST",
+        credentials: "include",
         body,
       });
       const data = await resp.json().catch(() => ({}));
@@ -513,9 +533,15 @@ export default function InterviewPage() {
       clearCandidateSubmissionKey(roleToken);
 
       const verifiedEmail = String(data?.email || email).trim();
+      const challengeId = String(data?.challenge_id || "").trim();
+      if (!challengeId) {
+        setErrors((e) => ({ ...e, submit: "Could not establish a verification session. Please try again." }));
+        return;
+      }
       setInterviewAuth({
         candidate_id: String(data?.candidate_id || "").trim(),
         role_id: String(data?.role_id || "").trim(),
+        challenge_id: challengeId,
         email: verifiedEmail,
         role_token: roleToken,
       });
@@ -531,7 +557,7 @@ export default function InterviewPage() {
 
   async function handleResendOtp() {
     const resendEmail = String(interviewAuth.email || email).trim().toLowerCase();
-    if (!resendEmail) {
+    if (!resendEmail || !interviewAuth.challenge_id) {
       setResendMessage("");
       setResendError("Could not resend the code. Please try again.");
       return;
@@ -548,17 +574,24 @@ export default function InterviewPage() {
     try {
       const resp = await fetch(joinUrl(backendBase, "/api/candidate/verify-otp/resend"), {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: resendEmail,
-          candidate_id: interviewAuth.candidate_id,
-          role_id: interviewAuth.role_id,
+          challenge_id: interviewAuth.challenge_id,
         }),
       });
+      const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
         setResendError("Could not resend the code. Please try again.");
         return;
       }
+      const nextChallengeId = String(data?.challenge_id || "").trim();
+      if (!nextChallengeId) {
+        setResendError("Could not resend the code. Please try again.");
+        return;
+      }
+      setInterviewAuth((prev) => ({ ...prev, challenge_id: nextChallengeId }));
+      setOtp("");
       setResendMessage("A new code was sent. Please check your email.");
     } catch {
       setResendError("Could not resend the code. Please try again.");
@@ -578,7 +611,7 @@ export default function InterviewPage() {
     }
 
     const verifyEmail = String(interviewAuth.email || email).trim().toLowerCase();
-    if (!verifyEmail || !interviewAuth.candidate_id || !interviewAuth.role_id) {
+    if (!verifyEmail || !interviewAuth.challenge_id) {
       setOtpError("Missing interview session data. Please submit your information again.");
       return;
     }
@@ -588,12 +621,11 @@ export default function InterviewPage() {
     try {
       const resp = await fetch(joinUrl(backendBase, "/api/candidate/verify-otp"), {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: verifyEmail,
+          challenge_id: interviewAuth.challenge_id,
           code: otp.trim(),
-          candidate_id: interviewAuth.candidate_id,
-          role_id: interviewAuth.role_id,
         }),
       });
       const data = await resp.json().catch(() => ({}));
@@ -606,6 +638,7 @@ export default function InterviewPage() {
       setInterviewAuth((prev) => ({
         candidate_id: String(data?.candidate_id || prev.candidate_id).trim(),
         role_id: String(data?.role_id || prev.role_id).trim(),
+        challenge_id: prev.challenge_id,
         email: verifiedEmail,
         role_token: prev.role_token,
       }));
@@ -642,6 +675,7 @@ export default function InterviewPage() {
     try {
       const resp = await fetch(joinUrl(backendBase, "/create-tavus-interview"), {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           candidate_id: candidateId,
