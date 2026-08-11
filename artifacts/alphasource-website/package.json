@@ -8,6 +8,7 @@
     "build": "vite build --config vite.config.ts && node scripts/prerender-public-routes.mjs && node scripts/verify-html-integrity.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "generate:support-voice-knowledge": "node scripts/generate-support-voice-knowledge.mjs",
     "verify:routes": "node scripts/verify-routes.mjs",
     "verify:html": "node scripts/verify-html-integrity.mjs",
     "verify:recovery-core-ui": "node scripts/verify-recovery-core-ui.mjs"
@@ -58,6 +59,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
+    "esbuild": "^0.27.3",
     "framer-motion": "catalog:",
     "input-otp": "^1.4.2",
     "lucide-react": "catalog:",

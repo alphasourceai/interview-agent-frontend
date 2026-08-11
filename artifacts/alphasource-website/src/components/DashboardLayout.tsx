@@ -28,6 +28,7 @@ import { useAppearance } from "@/context/AppearanceContext";
 import { useClient, type Client } from "@/context/ClientContext";
 import AppearanceSelector from "@/components/AppearanceSelector";
 import DashboardBrand from "@/components/DashboardBrand";
+import SupportVoicePopover from "@/components/SupportVoicePopover";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "alphasource:dashboard_sidebar_collapsed";
 
@@ -65,7 +66,7 @@ const navItems: NavItem[] = [
   { label: "Members",    href: "/dashboard/members",    icon: UserCheck       },
   { label: "Billing",    href: "/dashboard/billing",    icon: CreditCard      },
   { label: "Entities",   href: "/dashboard/entities",   icon: Building2       },
-  { label: "Support",    href: "/dashboard/support",    icon: HelpCircle      },
+  { label: "Help Center", href: "/dashboard/support",    icon: HelpCircle      },
 ];
 
 /* ── Tour steps ──────────────────────────────────────────────── */
@@ -114,7 +115,7 @@ const TOUR_STEPS_BY_HREF: Record<string, TourStep> = {
     bullets: ["View parent and child entities", "Import child entities from CSV", "Archive inactive child entities without deleting history"],
   },
   "/dashboard/support": {
-    href: "/dashboard/support", title: "Support", emoji: "❓",
+    href: "/dashboard/support", title: "Help Center", emoji: "❓",
     desc: "Find alphaScreen guidance, common questions, product updates, and client data-practice documentation directly inside the client portal.",
     bullets: ["Review dashboard help topics", "See client-facing product updates", "Understand retention, deletion, incidents, automation, and entity filtering"],
   },
@@ -769,6 +770,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1" />
+          <SupportVoicePopover />
           <div className="mr-2">
             <AppearanceSelector />
           </div>

@@ -6,6 +6,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { PUBLIC_CONTENT_LAST_UPDATED, publicSupportQuestions, publicSupportTopics } from "@/lib/publicContent";
+import {
+  AI_SUPPORT_PHONE_DISPLAY,
+  AI_SUPPORT_PHONE_LABEL,
+  AI_SUPPORT_PHONE_URI,
+} from "@/lib/supportContact";
 
 const EASE_OUT = "easeOut" as const;
 
@@ -64,6 +69,16 @@ export default function SupportPage() {
             <h2 className="mb-3 text-2xl font-black text-[#0A1547]">
               Include enough context to help support triage
             </h2>
+            <div className="mb-4 rounded-lg border border-[#A380F6]/20 bg-[#F8F9FD] px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#0A1547]/50">AI Customer Support</p>
+              <a
+                href={AI_SUPPORT_PHONE_URI}
+                aria-label={AI_SUPPORT_PHONE_LABEL}
+                className="mt-1 inline-flex min-h-8 items-center whitespace-nowrap text-base font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4 transition-colors hover:text-[#A380F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/45"
+              >
+                {AI_SUPPORT_PHONE_DISPLAY}
+              </a>
+            </div>
             <p className="text-sm leading-relaxed text-[#0A1547]/65">
               Email <a href="mailto:info@alphasourceai.com" className="font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4">info@alphasourceai.com</a> with your company name, buyer email, role name if relevant, and a short description of the issue. Do not send passwords, setup tokens, or private candidate details unless support specifically requests them through an approved channel.
             </p>

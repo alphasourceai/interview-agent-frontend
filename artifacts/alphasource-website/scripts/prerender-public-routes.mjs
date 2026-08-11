@@ -7,9 +7,13 @@ const projectRoot = path.resolve(__dirname, "..");
 const distRoot = path.join(projectRoot, "dist");
 const indexPath = path.join(distRoot, "index.html");
 const routingManifestPath = path.join(projectRoot, "render-routes.json");
+const supportContactPath = path.join(projectRoot, "src", "lib", "support-contact.json");
 
 const SITE_URL = "https://www.alphasourceai.com";
 const LAST_UPDATED = "June 2026";
+const supportContact = JSON.parse(fs.readFileSync(supportContactPath, "utf8"));
+const AI_SUPPORT_PHONE_DISPLAY = supportContact.display;
+const AI_SUPPORT_PHONE_URI = supportContact.uri;
 
 function getBrandingSymbolUrl() {
   if (!fs.existsSync(indexPath)) {
@@ -711,6 +715,7 @@ function supportRoute() {
       "Public guidance for setup help, account access, memberships, billing, first-role prepay, role creation, candidate links, agreement recovery, and support contact.",
     sections: [
       section("Contact support", [
+        `Call AI Customer Support at ${AI_SUPPORT_PHONE_DISPLAY}.`,
         "Email info@alphasourceai.com with your company name, buyer email, role name if relevant, and a short description of the issue. Do not send passwords, setup tokens, or private candidate details unless support specifically requests them through an approved channel.",
       ]),
       section("Setup help", [
@@ -959,6 +964,7 @@ function renderFooter() {
           <strong>alphaSource AI</strong>
           <p>alphaScreen is a structured AI-assisted candidate screening platform for hiring teams.</p>
           <p><a href="mailto:info@alphasourceai.com">info@alphasourceai.com</a></p>
+          <p><strong>AI Customer Support</strong><br><a href="${escapeAttr(AI_SUPPORT_PHONE_URI)}" aria-label="Call AI Customer Support at ${escapeAttr(AI_SUPPORT_PHONE_DISPLAY)}">${escapeHtml(AI_SUPPORT_PHONE_DISPLAY)}</a></p>
           <p><a href="https://www.linkedin.com/company/alphasourceai">LinkedIn</a> <a href="https://www.facebook.com/alphasourceai">Facebook</a></p>
         </div>
         <nav aria-label="Footer navigation">

@@ -4,6 +4,11 @@ import { useAuth } from "@/context/AuthContext";
 import { useTrackingConsent } from "@/context/TrackingConsentContext";
 import { supabase } from "@/lib/supabaseClient";
 import { buildPwResetUrl } from "@/lib/urlConfig";
+import {
+  AI_SUPPORT_PHONE_DISPLAY,
+  AI_SUPPORT_PHONE_LABEL,
+  AI_SUPPORT_PHONE_URI,
+} from "@/lib/supportContact";
 import { alphaSourceSymbol } from "@/assets/branding";
 
 export default function Footer() {
@@ -157,6 +162,16 @@ export default function Footer() {
               <li>
                 <a href="mailto:info@alphasourceai.com" className="text-sm text-white/60 hover:text-[#A380F6] transition-colors">
                   info@alphasourceai.com
+                </a>
+              </li>
+              <li className="space-y-1">
+                <p className="text-xs font-semibold text-white/45">AI Customer Support</p>
+                <a
+                  href={AI_SUPPORT_PHONE_URI}
+                  aria-label={AI_SUPPORT_PHONE_LABEL}
+                  className="inline-flex min-h-6 items-center whitespace-nowrap text-sm text-white/60 transition-colors hover:text-[#A380F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1547]"
+                >
+                  {AI_SUPPORT_PHONE_DISPLAY}
                 </a>
               </li>
               <li>

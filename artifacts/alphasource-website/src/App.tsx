@@ -15,6 +15,12 @@ import Seo from "@/components/Seo";
 import PageAnalytics from "@/components/PageAnalytics";
 import IDPixelLoader from "@/components/IDPixelLoader";
 import TrackingConsentNotice from "@/components/TrackingConsentNotice";
+import {
+  DASHBOARD_ACTIVITY_EVENT,
+  DASHBOARD_ACTIVITY_STORAGE_KEY,
+  newerDashboardActivity,
+  parseDashboardActivity,
+} from "@/lib/dashboardActivity";
 
 /* Public pages */
 import HomePage from "@/pages/HomePage";
@@ -190,14 +196,11 @@ function MembershipAgreementSignerRoute({ params }: { params?: { token?: string 
 }
 const DASHBOARD_INACTIVITY_LIMIT_MS = 60 * 60 * 1000;
 const DASHBOARD_WARNING_WINDOW_MS = 60 * 1000;
-const DASHBOARD_ACTIVITY_STORAGE_KEY = "alphasource:dashboard_last_activity_ms";
 
 function readStoredDashboardActivity(): number {
   if (typeof window === "undefined") return 0;
   try {
-    const raw = window.localStorage.getItem(DASHBOARD_ACTIVITY_STORAGE_KEY);
-    const parsed = Number(raw || "");
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    return parseDashboardActivity(window.localStorage.getItem(DASHBOARD_ACTIVITY_STORAGE_KEY));
   } catch {
     return 0;
   }
@@ -341,18 +344,33 @@ function DashboardInactivityController({ enabled }: { enabled: boolean }) {
     ];
 
     const handleActivity = () => markActivity(false);
+    const handleStoredActivity = (event: StorageEvent) => {
+      if (event.key !== DASHBOARD_ACTIVITY_STORAGE_KEY || logoutTriggeredRef.current) return;
+      const activityAt = newerDashboardActivity(lastActivityRef.current, event.newValue);
+      if (activityAt === null) return;
+      lastActivityRef.current = activityAt;
+      warnedRef.current = false;
+      setWarningOpen(false);
+      setSecondsRemaining(60);
+      scheduleFrom(activityAt);
+    };
+    const handleSupportVoiceActivity = () => markActivity(false);
     const handleFocus = () => validateSessionAge();
     const handleVisibility = () => {
       if (document.visibilityState === "visible") validateSessionAge();
     };
 
     activityEvents.forEach((eventName) => window.addEventListener(eventName, handleActivity));
+    window.addEventListener("storage", handleStoredActivity);
+    window.addEventListener(DASHBOARD_ACTIVITY_EVENT, handleSupportVoiceActivity);
     window.addEventListener("focus", handleFocus);
     window.addEventListener("pageshow", handleFocus);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       activityEvents.forEach((eventName) => window.removeEventListener(eventName, handleActivity));
+      window.removeEventListener("storage", handleStoredActivity);
+      window.removeEventListener(DASHBOARD_ACTIVITY_EVENT, handleSupportVoiceActivity);
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("pageshow", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
@@ -361,7 +379,7 @@ function DashboardInactivityController({ enabled }: { enabled: boolean }) {
       setWarningOpen(false);
       setSecondsRemaining(60);
     };
-  }, [clearTimers, enabled, markActivity, validateSessionAge]);
+  }, [clearTimers, enabled, markActivity, scheduleFrom, validateSessionAge]);
 
   if (!enabled || !warningOpen) return null;
 
