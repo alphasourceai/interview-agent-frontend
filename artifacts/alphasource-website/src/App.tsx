@@ -58,6 +58,7 @@ import PublicSupportPage from "@/pages/SupportPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import CandidateTermsPage from "@/pages/CandidateTermsPage";
+import SmsConsentEvidencePage from "@/pages/SmsConsentEvidencePage";
 import InterviewPage from "@/pages/InterviewPage";
 import InterviewCviPage from "@/pages/InterviewCviPage";
 import AccommodationRequestPage from "@/pages/AccommodationRequestPage";
@@ -640,6 +641,7 @@ function Router() {
         <Route path="/text-interview" component={TextInterviewPage} />
         <Route path="/membership-agreement/sign/:token" component={MembershipAgreementSignerRoute} />
         <Route path="/membership-agreement/sign" component={MembershipAgreementSignerRoute} />
+        <Route path="/interview/sms-consent-evidence" component={SmsConsentEvidencePage} />
         <Route path="/interview/terms" component={CandidateTermsPage} />
         <Route path="/pwreset" component={PwResetPage} />
         <Route path="/pwreset/" component={PwResetPage} />
