@@ -1698,7 +1698,7 @@ export default function CandidatesPage() {
         className="rounded-2xl p-6 mb-5"
         style={surfaceCardStyle}
       >
-        <h2 className="text-base font-black mb-4" style={primaryTextStyle}>Candidates</h2>
+        <h2 className="text-base font-black mb-4" style={primaryTextStyle}>Candidate filters</h2>
 
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-black uppercase tracking-widest" style={mutedTextStyle}>Filters</span>

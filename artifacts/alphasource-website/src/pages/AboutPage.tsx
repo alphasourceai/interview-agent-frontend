@@ -321,11 +321,11 @@ function TechnologySection() {
                   style={{ color: item.color, width: 24, height: 24, strokeWidth: 1.75 }}
                 />
                 <p
-                  className="text-sm leading-relaxed"
-                  style={{
-                    color: item.weight === "semibold" ? "#0A1547" : "rgba(10,21,71,0.7)",
-                    fontWeight: item.weight === "semibold" ? 600 : 400,
-                  }}
+                  className={`text-sm leading-relaxed ${
+                    item.weight === "semibold"
+                      ? "font-semibold text-[#0A1547]"
+                      : "text-[#0A1547]/70"
+                  }`}
                 >
                   {item.text}
                 </p>

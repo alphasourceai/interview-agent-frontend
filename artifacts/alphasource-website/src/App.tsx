@@ -1,11 +1,28 @@
-import { Component, useCallback, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from "react";
-import { Redirect, Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import {
+  Component,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
+import {
+  Redirect,
+  Switch,
+  Route,
+  Router as WouterRouter,
+  useLocation,
+} from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { AppearanceProvider } from "@/context/AppearanceContext";
-import { TrackingConsentProvider, useTrackingConsent } from "@/context/TrackingConsentContext";
+import { AppearanceProvider, useAppearance } from "@/context/AppearanceContext";
+import {
+  TrackingConsentProvider,
+  useTrackingConsent,
+} from "@/context/TrackingConsentContext";
 import { ClientProvider } from "@/context/ClientContext";
 import { AdminClientProvider } from "@/context/AdminClientContext";
 import Navbar from "@/components/Navbar";
@@ -192,6 +209,21 @@ function MembershipAgreementSignerRoute({ params }: { params?: { token?: string 
     <PublicCheckoutBoundaryRoute>
       <MembershipAgreementSignerPage params={params} />
     </PublicCheckoutBoundaryRoute>
+  );
+}
+
+function PublicSiteShell({ children }: { children: ReactNode }) {
+  const { resolvedMode } = useAppearance();
+  const [location] = useLocation();
+  const isHomePage = location === "/";
+
+  return (
+    <div
+      className={`public-site-shell min-h-screen ${isHomePage ? "public-site-home" : "public-site-rest"} ${resolvedMode === "dark" ? "dark" : ""}`}
+      data-theme={resolvedMode}
+    >
+      {children}
+    </div>
   );
 }
 const DASHBOARD_INACTIVITY_LIMIT_MS = 60 * 60 * 1000;
@@ -569,7 +601,6 @@ function Router() {
     location.startsWith("/accommodation-request/") ||
     location === "/interview-cvi" ||
     location === "/interview-complete";
-  const isPublicSite = !isDashboard && !isAdmin && !isAutomationDigestApproval && !isAutomationApproval && !isInterview;
   const isPublicTawkRoute = PUBLIC_TAWK_ROUTES.has(normalizedLocation);
   let content: ReactNode;
 
@@ -621,10 +652,12 @@ function Router() {
     );
   } else {
     content = (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1">
-        <Switch>
+      <AppearanceProvider>
+        <PublicSiteShell>
+          <div className="min-h-screen flex flex-col bg-white text-[#0A1547] transition-colors duration-300 dark:bg-[#080E2E] dark:text-white">
+            <Navbar />
+            <main className="flex-1">
+              <Switch>
           <Route path="/checkout/password-setup-preview/" component={PasswordSetupPreviewPage} />
           <Route path="/checkout/password-setup-preview" component={PasswordSetupPreviewPage} />
           <Route path="/checkout/subscription-success/" component={CheckoutSubscriptionSuccessRoute} />
@@ -659,17 +692,30 @@ function Router() {
           <Route path="/terms/"      component={TermsPage} />
           <Route path="/terms"       component={TermsPage} />
           <Route component={NotFound} />
-        </Switch>
-      </main>
-      <Footer />
-      {isPublicTawkRoute && (
-        <PublicTawkWidget
-          enabled={visitorChatEnabled && (env as Record<string, unknown>).VITE_TAWK_PUBLIC_ENABLED === "true"}
-          propertyId={String((env as Record<string, unknown>).VITE_TAWK_PUBLIC_PROPERTY_ID || "")}
-          widgetId={String((env as Record<string, unknown>).VITE_TAWK_PUBLIC_WIDGET_ID || "")}
-        />
-      )}
-    </div>
+              </Switch>
+            </main>
+            <Footer />
+            <TrackingConsentNotice visible />
+            {isPublicTawkRoute && (
+              <PublicTawkWidget
+                enabled={
+                  visitorChatEnabled &&
+                  (env as Record<string, unknown>).VITE_TAWK_PUBLIC_ENABLED ===
+                    "true"
+                }
+                propertyId={String(
+                  (env as Record<string, unknown>)
+                    .VITE_TAWK_PUBLIC_PROPERTY_ID || "",
+                )}
+                widgetId={String(
+                  (env as Record<string, unknown>).VITE_TAWK_PUBLIC_WIDGET_ID ||
+                    "",
+                )}
+              />
+            )}
+          </div>
+        </PublicSiteShell>
+      </AppearanceProvider>
     );
   }
 
@@ -679,7 +725,6 @@ function Router() {
       <PageAnalytics location={location} />
       <IDPixelLoader location={location} />
       {content}
-      <TrackingConsentNotice visible={isPublicSite} />
     </>
   );
 }

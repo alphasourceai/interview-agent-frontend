@@ -9,7 +9,24 @@ import {
   AI_SUPPORT_PHONE_LABEL,
   AI_SUPPORT_PHONE_URI,
 } from "@/lib/supportContact";
-import { alphaSourceSymbol } from "@/assets/branding";
+import { alphaSourceLogoDark } from "@/assets/branding";
+
+const EXPLORE_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "About Us", href: "/about" },
+  { label: "alphaScreen", href: "/alphascreen" },
+  { label: "Pricing", href: "/alphascreen/pricing" },
+  { label: "FAQ", href: "/faq" },
+  { label: "Support", href: "/support" },
+];
+
+const PRODUCT_LINKS = [
+  { label: "How It Works", href: "/alphascreen/how-it-works" },
+  { label: "Security", href: "/alphascreen/security" },
+  { label: "Candidate Experience", href: "/alphascreen/candidate-experience" },
+  { label: "Dental Groups", href: "/alphascreen/for-dental-groups" },
+  { label: "ROI Estimator", href: "/alphascreen/roi" },
+];
 
 export default function Footer() {
   const isValidEmail = (value: string) =>
@@ -87,15 +104,15 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-[#0A1547] text-white">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+    <footer className="border-t border-[#A380F6]/25 bg-[#070E36] text-white">
+      <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.25fr_0.72fr_0.92fr_1.05fr] lg:gap-12">
           {/* Brand */}
-          <div className="md:col-span-2">
+          <div>
             <div className="mb-4">
-              <img src={alphaSourceSymbol} alt="alphaSource AI" className="h-10 w-auto" />
+              <img src={alphaSourceLogoDark} alt="alphaSource AI" className="h-9 w-auto" />
             </div>
-            <p className="text-white/60 text-sm leading-relaxed max-w-xs">
+            <p className="max-w-xs text-sm leading-relaxed text-white/60">
               Agentic AI that enhances human judgment — helping teams reclaim time and spot potential in every talent interaction.
             </p>
             <div className="flex gap-3 mt-6">
@@ -124,27 +141,15 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Links */}
+          {/* Explore links */}
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">Company</h4>
+            <h4 className="mb-4 text-[11px] font-black uppercase tracking-[0.16em] text-[#A380F6]">Explore</h4>
             <ul className="space-y-3">
-              {[
-                { label: "Home",         href: "/" },
-                { label: "About Us",     href: "/about" },
-                { label: "alphaScreen",  href: "/alphascreen" },
-                { label: "alphaScreen Pricing", href: "/alphascreen/pricing" },
-                { label: "How It Works", href: "/alphascreen/how-it-works" },
-                { label: "Security",     href: "/alphascreen/security" },
-                { label: "Candidate Experience", href: "/alphascreen/candidate-experience" },
-                { label: "Dental Groups", href: "/alphascreen/for-dental-groups" },
-                { label: "ROI Estimator", href: "/alphascreen/roi" },
-                { label: "FAQ",          href: "/faq" },
-                { label: "Support",      href: "/support" },
-              ].map((link) => (
+              {EXPLORE_LINKS.map((link) => (
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm text-white/60 hover:text-[#A380F6] transition-colors"
+                    className="text-sm font-medium text-white/70 transition-colors hover:text-[#A380F6]"
                     data-analytics-cta={link.label}
                     data-analytics-placement="footer"
                   >
@@ -155,42 +160,58 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Product links */}
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">Get in Touch</h4>
+            <h4 className="mb-4 text-[11px] font-black uppercase tracking-[0.16em] text-[#A380F6]">Product</h4>
             <ul className="space-y-3">
-              <li>
-                <a href="mailto:info@alphasourceai.com" className="text-sm text-white/60 hover:text-[#A380F6] transition-colors">
-                  info@alphasourceai.com
+              {PRODUCT_LINKS.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-sm font-medium text-white/70 transition-colors hover:text-[#A380F6]"
+                    data-analytics-cta={link.label}
+                    data-analytics-placement="footer"
+                  >
+                    {link.label}
                 </a>
               </li>
-              <li className="space-y-1">
-                <p className="text-xs font-semibold text-white/45">AI Customer Support</p>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <div className="space-y-7">
+              <div>
+                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#A380F6]">Email us</p>
+                <a href="mailto:info@alphasourceai.com" className="text-sm font-semibold text-white transition-colors hover:text-[#A380F6]">
+                  info@alphasourceai.com
+                </a>
+              </div>
+              <div>
+                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#A380F6]">AI Customer Support</p>
                 <a
                   href={AI_SUPPORT_PHONE_URI}
                   aria-label={AI_SUPPORT_PHONE_LABEL}
-                  className="inline-flex min-h-6 items-center whitespace-nowrap text-sm text-white/60 transition-colors hover:text-[#A380F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1547]"
+                  className="inline-flex min-h-6 items-center whitespace-nowrap text-sm font-semibold text-white transition-colors hover:text-[#A380F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070E36]"
                 >
                   {AI_SUPPORT_PHONE_DISPLAY}
                 </a>
-              </li>
-              <li>
-                <a
-                  href="/#contact"
-                  className="text-sm font-semibold transition-colors hover:text-white"
-                  style={{ color: "#A380F6" }}
-                  data-analytics-cta="Request a Demo"
-                  data-analytics-placement="footer-contact"
-                >
-                  Request a Demo →
-                </a>
-              </li>
-            </ul>
+              </div>
+              <a
+                href="/#contact"
+                className="inline-flex text-sm font-bold text-[#A380F6] transition-colors hover:text-white"
+                data-analytics-cta="Request a Demo"
+                data-analytics-placement="footer-contact"
+              >
+                Request a Demo →
+              </a>
+            </div>
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-white/10 mt-12 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
           <p className="text-white/40 text-sm">
             &copy; {new Date().getFullYear()} alphaSource AI. All rights reserved.
           </p>

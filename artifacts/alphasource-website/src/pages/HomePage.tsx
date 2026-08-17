@@ -1,6 +1,15 @@
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle, Target, Sprout, Clock, Scale } from "lucide-react";
 import { useState } from "react";
+import {
+  ArrowRight,
+  CheckCircle,
+  ClipboardCheck,
+  Target,
+  Sprout,
+  Clock,
+  Scale,
+  UserRound,
+} from "lucide-react";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
 import { alphaSourceSymbol } from "@/assets/branding";
 
@@ -35,18 +44,18 @@ function HeroBrandMark() {
 
 function HeroSection() {
   return (
-    <section className="relative pt-16 overflow-hidden">
-      <div className="absolute inset-0 gradient-hero-bg" />
+    <section className="relative pt-[88px] overflow-hidden bg-white dark:bg-[#070E36]">
+      <div className="absolute inset-0 public-hero-gradient" />
       <div className="absolute inset-0 gradient-lilac-glow" />
       <div
-        className="absolute inset-0 opacity-40"
+        className="hero-dot-grid absolute inset-0 opacity-40 dark:opacity-20"
         style={{
           backgroundImage: `radial-gradient(circle at 1px 1px, rgba(10,21,71,0.07) 1px, transparent 0)`,
           backgroundSize: "36px 36px",
         }}
       />
 
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-20 pb-16 lg:pt-28 lg:pb-28 w-full">
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-16 lg:py-20 w-full">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left */}
           <div>
@@ -55,7 +64,7 @@ function HeroSection() {
               animate="visible"
               custom={0}
               variants={fadeUp}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#A380F6]/30 text-sm font-medium text-[#A380F6] mb-6 shadow-sm"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#A380F6]/30 text-sm font-semibold text-[#A380F6] mb-6 shadow-sm dark:bg-[#111E57] dark:border-[#2A3568]"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#02D99D] animate-pulse" />
               AI-Powered Solutions
@@ -66,7 +75,7 @@ function HeroSection() {
               animate="visible"
               custom={1}
               variants={fadeUp}
-              className="text-5xl lg:text-6xl xl:text-7xl font-black text-[#0A1547] leading-[1.05] tracking-tight mb-3"
+              className="text-5xl lg:text-6xl xl:text-7xl font-black text-[#0A1547] leading-[1.05] tracking-tight mb-3 dark:text-white"
             >
               Unleash Your
               <br />
@@ -89,7 +98,7 @@ function HeroSection() {
               animate="visible"
               custom={3}
               variants={fadeUp}
-              className="text-lg text-[#0A1547]/60 leading-relaxed mb-3 max-w-lg"
+              className="text-lg text-[#0A1547]/60 leading-relaxed mb-3 max-w-lg dark:text-[#B9C0D8]"
             >
               Custom AI tools that give your team hours back.
             </motion.p>
@@ -99,9 +108,10 @@ function HeroSection() {
               animate="visible"
               custom={3.5}
               variants={fadeUp}
-              className="text-base text-[#0A1547]/50 leading-relaxed mb-8 max-w-lg"
+              className="text-base text-[#0A1547]/50 leading-relaxed mb-8 max-w-lg dark:text-[#B9C0D8]/80"
             >
-              AI-powered solutions that amplify human talent. We don't replace judgment. We enhance it.
+              AI-powered solutions that amplify human talent. We don't replace
+              judgment. We enhance it.
             </motion.p>
 
             <motion.div
@@ -124,38 +134,13 @@ function HeroSection() {
               </a>
               <a
                 href="/alphascreen"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-[#0A1547] bg-white border border-[#0A1547]/10 rounded-full transition-all hover:border-[#A380F6] hover:text-[#A380F6] hover:shadow-md active:scale-95"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-[#0A1547] bg-white border border-[#0A1547]/10 rounded-full transition-all hover:border-[#A380F6] hover:text-[#A380F6] hover:shadow-md active:scale-95 dark:bg-[#111E57] dark:text-white dark:border-[#2A3568]"
                 data-testid="hero-cta-secondary"
                 data-analytics-cta="Explore alphaScreen"
                 data-analytics-placement="home-hero"
               >
                 Explore alphaScreen
               </a>
-            </motion.div>
-
-            {/* Trust indicators */}
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              custom={5}
-              variants={fadeUp}
-              className="flex flex-col gap-3 border-t border-[#0A1547]/8 pt-8"
-            >
-              {[
-                { Icon: Clock, label: "Reclaim Your Time", sub: "Hours back for higher-value work", color: "#A380F6" },
-                { Icon: Scale, label: "Consistent Support", sub: "Repeatable workflows and clearer handoffs", color: "#02ABE0" },
-                { Icon: Target, label: "Clearer Insight", sub: "Organized signal for better decisions", color: "#02D99D" },
-              ].map(({ Icon, label, sub, color }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${color}14` }}>
-                    <Icon className="w-4 h-4" style={{ color }} strokeWidth={1.75} />
-                  </div>
-                  <div>
-                    <span className="text-sm font-semibold text-[#0A1547]">{label}</span>
-                    <span className="text-sm text-[#0A1547]/40 ml-2">{sub}</span>
-                  </div>
-                </div>
-              ))}
             </motion.div>
           </div>
 
@@ -174,69 +159,111 @@ function HeroSection() {
               className="relative"
             >
               <div
-                className="bg-white rounded-2xl overflow-hidden"
-                style={{ boxShadow: "0 28px 80px rgba(10,21,71,0.18), 0 0 0 1px rgba(10,21,71,0.06)" }}
+                className="bg-white rounded-2xl overflow-hidden dark:bg-[#0D1A4A] dark:border dark:border-[#2A3568]"
+                style={{
+                  boxShadow:
+                    "0 28px 80px rgba(10,21,71,0.18), 0 0 0 1px rgba(10,21,71,0.06)",
+                }}
               >
                 {/* Window chrome */}
-                <div className="bg-gray-50 border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+                <div className="bg-gray-50 border-b border-gray-100 px-4 py-3 flex items-center gap-3 dark:bg-[#111E57] dark:border-[#2A3568]">
                   <div className="flex gap-1.5 flex-shrink-0">
                     <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
                     <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
                     <div className="w-3 h-3 rounded-full bg-[#28C840]" />
                   </div>
                   <div className="flex-1 text-center">
-                    <span className="text-xs font-semibold text-gray-400">alphaSource AI Workflow Panel</span>
+                    <span className="text-xs font-semibold text-gray-400 dark:text-[#B9C0D8]">
+                      alphaSource AI Workflow Panel
+                    </span>
                   </div>
                 </div>
 
                 {/* Body */}
                 <div className="p-4 space-y-3">
                   {/* Agent row */}
-                  <div className="flex items-start gap-3 p-3 bg-[#F8F9FD] rounded-xl">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#A380F615" }}>
+                  <div className="flex items-start gap-3 p-3 bg-[#F8F9FD] rounded-xl dark:bg-[#14235E]">
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: "#A380F615" }}
+                    >
                       <HeroBrandMark />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-[#0A1547]">Custom AI Agent</div>
-                      <div className="text-xs text-gray-400 mt-0.5">Organizing work into insight.</div>
+                      <div className="text-sm font-bold text-[#0A1547] dark:text-white">
+                        Custom AI Agent
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5 dark:text-[#B9C0D8]">
+                        Organizing work into insight.
+                      </div>
                     </div>
                   </div>
 
                   {/* Active evaluations */}
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Active Workflows</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#02D99D18", color: "#02D99D" }}>Insight Ready</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-[#B9C0D8]">
+                      Active Workflows
+                    </span>
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: "#02D99D18", color: "#02D99D" }}
+                    >
+                      Insight Ready
+                    </span>
                   </div>
 
                   <div className="space-y-2">
                     {[
-                      { label: "Workflow Analysis", pct: 78, from: "#A380F6", to: "#c8a8f8", icon: (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A380F6" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                      )},
-                      { label: "Operational Signal", pct: 91, from: "#02ABE0", to: "#02D99D", icon: (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#02ABE0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                      )},
+                      {
+                        label: "Workflow Analysis",
+                        pct: 78,
+                        from: "#A380F6",
+                        to: "#c8a8f8",
+                        Icon: UserRound,
+                      },
+                      {
+                        label: "Operational Signal",
+                        pct: 91,
+                        from: "#02ABE0",
+                        to: "#02D99D",
+                        Icon: ClipboardCheck,
+                      },
                     ].map((row, i) => (
                       <motion.div
                         key={row.label}
                         initial={{ opacity: 0, x: 8 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.7 + i * 0.15, duration: 0.4 }}
-                        className="bg-white border border-gray-100 rounded-xl p-2.5"
+                        className="bg-white border border-gray-100 rounded-xl p-2.5 dark:bg-[#111E57] dark:border-[#2A3568]"
                       >
                         <div className="flex items-center gap-2 mb-1.5">
-                          <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ backgroundColor: `${row.from}18` }}>
-                            {row.icon}
+                          <div
+                            className="w-5 h-5 rounded-md flex items-center justify-center"
+                            style={{ backgroundColor: `${row.from}18` }}
+                          >
+                            <row.Icon
+                              className="h-2.5 w-2.5"
+                              style={{ color: row.from }}
+                              strokeWidth={2.5}
+                            />
                           </div>
-                          <span className="text-xs font-semibold text-[#0A1547]">{row.label}</span>
+                          <span className="text-xs font-semibold text-[#0A1547] dark:text-white">
+                            {row.label}
+                          </span>
                         </div>
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden dark:bg-[#0D1A4A]">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${row.pct}%` }}
-                            transition={{ delay: 0.9 + i * 0.15, duration: 0.8, ease: "easeOut" }}
+                            transition={{
+                              delay: 0.9 + i * 0.15,
+                              duration: 0.8,
+                              ease: "easeOut",
+                            }}
                             className="h-full rounded-full"
-                            style={{ background: `linear-gradient(90deg, ${row.from}, ${row.to})` }}
+                            style={{
+                              background: `linear-gradient(90deg, ${row.from}, ${row.to})`,
+                            }}
                           />
                         </div>
                       </motion.div>
@@ -279,15 +306,30 @@ function HeroSection() {
             >
               <motion.div
                 animate={{ y: [0, -7, 0] }}
-                transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
-                className="bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 border border-gray-100"
+                transition={{
+                  duration: 4.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.8,
+                }}
+                className="bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 border border-gray-100 dark:bg-[#111E57] dark:border-[#2A3568]"
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ border: "2px solid #A380F6" }}>
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "#A380F6" }} />
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ border: "2px solid #A380F6" }}
+                >
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: "#A380F6" }}
+                  />
                 </div>
                 <div>
-                  <div className="text-[9px] uppercase tracking-widest font-bold text-gray-400">Insight Status</div>
-                  <div className="text-sm font-black text-[#0A1547]">Ready to Review</div>
+                  <div className="text-[9px] uppercase tracking-widest font-bold text-gray-400 dark:text-[#B9C0D8]">
+                    Insight Status
+                  </div>
+                  <div className="text-sm font-black text-[#0A1547] dark:text-white">
+                    Ready to Review
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
@@ -301,11 +343,18 @@ function HeroSection() {
             >
               <motion.div
                 animate={{ y: [0, -7, 0] }}
-                transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-                className="bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-2 border border-gray-100"
+                transition={{
+                  duration: 3.8,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 1.5,
+                }}
+                className="bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-2 border border-gray-100 dark:bg-[#111E57] dark:border-[#2A3568]"
               >
                 <div className="w-2 h-2 rounded-full bg-[#02D99D] animate-pulse flex-shrink-0" />
-                <span className="text-sm font-bold text-[#0A1547]">Workflows Active</span>
+                <span className="text-sm font-bold text-[#0A1547] dark:text-white">
+                  Workflows Active
+                </span>
               </motion.div>
             </motion.div>
           </motion.div>
@@ -315,9 +364,64 @@ function HeroSection() {
   );
 }
 
+function ValueBandSection() {
+  const values = [
+    {
+      Icon: Clock,
+      label: "Reclaim Your Time",
+      sub: "Hours back for higher-value work",
+      color: "#A380F6",
+    },
+    {
+      Icon: Scale,
+      label: "Consistent Support",
+      sub: "Repeatable workflows and clearer handoffs",
+      color: "#02ABE0",
+    },
+    {
+      Icon: Target,
+      label: "Clearer Insight",
+      sub: "Organized signal for better decisions",
+      color: "#02D99D",
+    },
+  ];
+
+  return (
+    <section className="border-y border-white/10 bg-[#070E36] py-10 text-white">
+      <motion.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.4 }}
+        variants={fadeUp}
+        className="mx-auto grid max-w-7xl gap-7 px-6 md:grid-cols-3 lg:px-8"
+      >
+        {values.map(({ Icon, label, sub, color }) => (
+          <div
+            key={label}
+            className="flex items-center gap-4 md:justify-center"
+          >
+            <div
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl"
+              style={{ backgroundColor: `${color}18` }}
+            >
+              <Icon className="h-5 w-5" style={{ color }} strokeWidth={1.75} />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white">{label}</div>
+              <div className="mt-1 text-xs font-medium leading-relaxed text-white/55">
+                {sub}
+              </div>
+            </div>
+          </div>
+        ))}
+      </motion.div>
+    </section>
+  );
+}
+
 function PeopleDrivenSection() {
   return (
-    <section className="py-24 bg-white">
+    <section className="py-24 bg-white transition-colors duration-300 dark:bg-[#09133E]">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <motion.div
@@ -329,16 +433,20 @@ function PeopleDrivenSection() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#A380F6]/10 text-sm font-medium text-[#A380F6] mb-5">
               People-Driven
             </div>
-            <h2 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight mb-6">
+            <h2 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight mb-6 dark:text-white">
               Obsessed with People. Powered by AI.
             </h2>
-            <p className="text-lg text-[#0A1547]/70 leading-relaxed mb-4">
-              We're obsessed with people. Their grit, their gifts, what they're capable of when nobody's wasting their time.
+            <p className="text-lg text-[#0A1547]/70 leading-relaxed mb-4 dark:text-[#B9C0D8]">
+              We're obsessed with people. Their grit, their gifts, what they're
+              capable of when nobody's wasting their time.
             </p>
-            <p className="text-base text-[#0A1547]/60 leading-relaxed mb-4">
-              Every company has work that eats time, hides insight, or slows good people down. From automated candidate screening to operational analysis and custom AI workflows, alphaSource creates technology that fits your team, your process, and your goals.
+            <p className="text-base text-[#0A1547]/60 leading-relaxed mb-4 dark:text-[#B9C0D8]/85">
+              Every company has work that eats time, hides insight, or slows
+              good people down. From automated candidate screening to
+              operational analysis and custom AI workflows, alphaSource creates
+              technology that fits your team, your process, and your goals.
             </p>
-            <p className="text-base font-semibold text-[#0A1547] leading-relaxed">
+            <p className="text-base font-semibold text-[#0A1547] leading-relaxed dark:text-white">
               We're here to make work feel human again.
             </p>
           </motion.div>
@@ -383,15 +491,24 @@ function PeopleDrivenSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1, duration: 0.5 }}
-                  className="bg-gray-50 rounded-2xl p-6"
+                  className="bg-gray-50 rounded-2xl border border-transparent p-6 transition-colors duration-300 dark:bg-[#111E57] dark:border-[#2A3568]"
                   data-testid={`pillar-card-${i}`}
                 >
                   <card.Icon
                     className="mb-5"
-                    style={{ color: card.color, width: 28, height: 28, strokeWidth: 1.75 }}
+                    style={{
+                      color: card.color,
+                      width: 28,
+                      height: 28,
+                      strokeWidth: 1.75,
+                    }}
                   />
-                  <h3 className="text-[15px] font-bold text-[#0A1547] mb-2">{card.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{card.description}</p>
+                  <h3 className="text-[15px] font-bold text-[#0A1547] mb-2 dark:text-white">
+                    {card.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 leading-relaxed dark:text-[#B9C0D8]">
+                    {card.description}
+                  </p>
                 </motion.div>
               ))}
             </div>
@@ -426,10 +543,12 @@ function AlphaScreenFeatureSection() {
   ];
 
   return (
-    <section id="agents" className="py-24 bg-[#F8F9FD]">
+    <section
+      id="agents"
+      className="py-24 bg-[#F8F9FD] transition-colors duration-300 dark:bg-[#0D1A4A]"
+    >
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-
           {/* Left — terminal card */}
           <motion.div
             initial="hidden"
@@ -440,19 +559,36 @@ function AlphaScreenFeatureSection() {
             className="order-2 lg:order-1"
           >
             <div
-              className="bg-white rounded-2xl p-5"
-              style={{ boxShadow: "0 8px 40px rgba(10,21,71,0.10), 0 0 0 1px rgba(10,21,71,0.05)" }}
+              className="bg-white rounded-2xl p-5 dark:bg-[#111E57] dark:border dark:border-[#2A3568]"
+              style={{
+                boxShadow:
+                  "0 8px 40px rgba(10,21,71,0.10), 0 0 0 1px rgba(10,21,71,0.05)",
+              }}
             >
               {/* Card header */}
-              <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-100">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#A380F618" }}>
-                  <img src={alphaSourceSymbol} alt="alpha" className="w-6 h-6" />
+              <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-100 dark:border-[#2A3568]">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: "#A380F618" }}
+                >
+                  <img
+                    src={alphaSourceSymbol}
+                    alt="alpha"
+                    className="w-6 h-6"
+                  />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-[#0A1547]">alphaScreen</div>
+                  <div className="text-sm font-bold text-[#0A1547] dark:text-white">
+                    alphaScreen
+                  </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-[#02D99D] animate-pulse" />
-                    <span className="text-xs font-semibold" style={{ color: "#02D99D" }}>Executing analysis</span>
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: "#02D99D" }}
+                    >
+                      Executing analysis
+                    </span>
                   </div>
                 </div>
               </div>
@@ -506,11 +642,13 @@ function AlphaScreenFeatureSection() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#A380F6]/10 text-sm font-medium text-[#A380F6] mb-5">
               Featured Solution
             </div>
-            <h2 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight mb-5">
+            <h2 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight mb-5 dark:text-white">
               Meet alphaScreen
             </h2>
-            <p className="text-lg text-[#0A1547]/60 leading-relaxed mb-6">
-              alphaScreen is our AI-powered interview and candidate evaluation product for teams that need a clearer, more consistent screening process.
+            <p className="text-lg text-[#0A1547]/60 leading-relaxed mb-6 dark:text-[#B9C0D8]">
+              alphaScreen is our AI-powered interview and candidate evaluation
+              product for teams that need a clearer, more consistent screening
+              process.
             </p>
 
             <div className="space-y-3 mb-7">
@@ -521,14 +659,24 @@ function AlphaScreenFeatureSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1, duration: 0.4 }}
-                  className="flex items-start gap-3 bg-white rounded-xl px-4 py-3.5 border border-gray-100"
+                  className="flex items-start gap-3 bg-white rounded-xl px-4 py-3.5 border border-gray-100 dark:bg-[#111E57] dark:border-[#2A3568]"
                 >
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: "#02D99D18" }}>
-                    <CheckCircle className="w-4 h-4" style={{ color: "#02D99D" }} />
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ backgroundColor: "#02D99D18" }}
+                  >
+                    <CheckCircle
+                      className="w-4 h-4"
+                      style={{ color: "#02D99D" }}
+                    />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-[#0A1547] mb-0.5">{card.title}</div>
-                    <div className="text-sm text-gray-500 leading-relaxed">{card.description}</div>
+                    <div className="text-sm font-bold text-[#0A1547] mb-0.5 dark:text-white">
+                      {card.title}
+                    </div>
+                    <div className="text-sm text-gray-500 leading-relaxed dark:text-[#B9C0D8]">
+                      {card.description}
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -581,7 +729,10 @@ function HowItWorksSection() {
   ];
 
   return (
-    <section id="how-it-works" className="py-24 bg-white">
+    <section
+      id="how-it-works"
+      className="py-24 bg-white transition-colors duration-300 dark:bg-[#09133E]"
+    >
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <motion.div
           initial="hidden"
@@ -590,10 +741,10 @@ function HowItWorksSection() {
           variants={fadeUp}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0A1547]/8 text-sm font-medium text-[#0A1547] mb-5">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0A1547]/8 text-sm font-medium text-[#0A1547] mb-5 dark:bg-white/8 dark:text-white">
             How It Works
           </div>
-          <h2 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight">
+          <h2 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight dark:text-white">
             From Manual Work to Usable Insight,
             <br />
             <span style={{ color: "#A380F6" }}>Without the Grind</span>
@@ -609,14 +760,21 @@ function HowItWorksSection() {
               viewport={{ once: true, amount: 0.2 }}
               custom={i}
               variants={fadeUp}
-              className="relative bg-[#F8F9FD] rounded-2xl p-6 border border-gray-100"
+              className="relative bg-[#F8F9FD] rounded-2xl p-6 border border-gray-100 dark:bg-[#111E57] dark:border-[#2A3568]"
               data-testid={`step-card-${step.number}`}
             >
-              <div className="text-4xl font-black mb-4 leading-none" style={{ color: `${step.color}30` }}>
+              <div
+                className="text-4xl font-black mb-4 leading-none"
+                style={{ color: `${step.color}30` }}
+              >
                 {step.number}
               </div>
-              <h3 className="text-lg font-bold text-[#0A1547] mb-2">{step.title}</h3>
-              <p className="text-sm text-[#0A1547]/60 leading-relaxed">{step.description}</p>
+              <h3 className="text-lg font-bold text-[#0A1547] mb-2 dark:text-white">
+                {step.title}
+              </h3>
+              <p className="text-sm text-[#0A1547]/60 leading-relaxed dark:text-[#B9C0D8]">
+                {step.description}
+              </p>
               <div
                 className="absolute bottom-0 left-6 right-6 h-0.5 rounded-full opacity-50"
                 style={{ backgroundColor: step.color }}
@@ -631,7 +789,7 @@ function HowItWorksSection() {
 
 function AboutSnippetSection() {
   return (
-    <section className="py-24 bg-[#0A1547]">
+    <section className="py-24 bg-[#0A1547] dark:bg-[#070E36]">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <motion.div
@@ -699,7 +857,10 @@ function AboutSnippetSection() {
 
 function CTASection() {
   return (
-    <section id="contact" className="py-24 bg-[#F8F9FD]">
+    <section
+      id="contact"
+      className="py-24 bg-[#F8F9FD] transition-colors duration-300 dark:bg-[#09133E]"
+    >
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <motion.div
           initial="hidden"
@@ -738,7 +899,7 @@ function CTASection() {
           </div>
 
           {/* Right — white form panel */}
-          <div className="flex-1 bg-white p-10">
+          <div className="flex-1 bg-white p-10 dark:bg-[#111E57]">
             <LeadCaptureForm
               formId="home-contact"
               formType="contact"
@@ -756,8 +917,9 @@ function CTASection() {
 
 export default function HomePage() {
   return (
-    <div>
+    <div className="bg-white transition-colors duration-300 dark:bg-[#080E2E]">
       <HeroSection />
+      <ValueBandSection />
       <PeopleDrivenSection />
       <AlphaScreenFeatureSection />
       <HowItWorksSection />

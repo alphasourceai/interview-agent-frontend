@@ -18,7 +18,8 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
-  Map,
+  ArrowRight,
+  Compass,
   CheckCircle2,
   Search,
   Building2,
@@ -411,7 +412,18 @@ interface DashboardLayoutProps {
   title:    string;
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+const DASHBOARD_PAGE_DESCRIPTIONS: Record<string, string> = {
+  Overview: "Your hiring pipeline at a glance. Prioritize decisions and keep things moving.",
+  Roles: "Create and manage interview roles, capacity, and status for this client.",
+  Automation: "Configure review criteria, digest timing, reviewers, and scheduling workflows.",
+  Candidates: "Review, filter, and manage candidates across roles and interview stages.",
+  Members: "Manage dashboard access and client membership for your team.",
+  Billing: "Review membership, usage, billing status, agreements, and payment activity.",
+  Entities: "Manage parent and child entities, labels, and client scope structure.",
+  Support: "Find practical guidance for roles, candidates, reports, billing, and team access.",
+};
+
+export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const [mobileOpen,         setMobileOpen]         = useState(false);
   const [collapsed,          setCollapsed]           = useState(() => readStoredSidebarCollapsed());
   const [clientDropdownOpen, setClientDropdownOpen]  = useState(false);
@@ -517,13 +529,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return location.startsWith(href);
   };
 
-  const sidebarW  = collapsed ? "w-16" : "w-60";
-  const contentML = collapsed ? "lg:ml-16" : "lg:ml-60";
-  const sidebarRight = collapsed ? 64 : 240;
+  const sidebarW  = collapsed ? "w-16" : "w-[232px]";
+  const contentML = collapsed ? "lg:ml-16" : "lg:ml-[232px]";
+  const sidebarRight = collapsed ? 64 : 232;
   const clientSearchTerm = clientSearch.trim().toLowerCase();
   const filteredClients = clientSearchTerm
     ? clients.filter((client) => clientSearchText(client).includes(clientSearchTerm))
     : clients;
+  const pageDescription = DASHBOARD_PAGE_DESCRIPTIONS[title] || "Manage your alphaScreen workspace.";
   const clientSearchPlaceholder = getClientSearchPlaceholder(clients);
   return (
     <div
@@ -538,13 +551,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         className={`fixed inset-y-0 left-0 z-40 flex flex-col
           transition-all duration-300 ease-in-out ${sidebarW}
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
-        style={{ overflow: "visible", backgroundColor: "var(--as-surface)", borderRight: "1px solid var(--as-border)" }}
+        style={{ overflow: "visible", backgroundColor: "#070D2E", borderRight: "1px solid rgba(163,128,246,0.16)" }}
       >
         {/* Logo / Collapse toggle */}
         <div
-          className={`flex items-center flex-shrink-0 h-14
-          ${collapsed ? "justify-center px-0" : "justify-between px-4"}`}
-          style={{ borderBottom: "1px solid var(--as-border)" }}
+          className={`flex items-center flex-shrink-0 h-20
+          ${collapsed ? "justify-center px-0" : "justify-between px-5"}`}
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
         >
           {collapsed ? (
             <button
@@ -554,18 +567,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               onClick={() => setCollapsed(false)}
               title="Expand sidebar"
             >
-              <DashboardBrand mode={resolvedMode} variant="compact" />
+              <DashboardBrand mode="dark" variant="compact" />
               <ChevronsRight className="w-3.5 h-3.5 text-[#A380F6]/50 group-hover:text-[#A380F6] transition-colors" />
             </button>
           ) : (
             <>
               <Link href="/" onClick={() => setMobileOpen(false)}>
-                <DashboardBrand mode={resolvedMode} variant="full" />
+                <DashboardBrand mode="dark" variant="full" />
               </Link>
               <div className="flex items-center gap-1">
                 <button
                   className="hidden lg:flex p-1.5 rounded-lg transition-colors"
-                  style={{ color: "var(--as-text-subtle)" }}
+                    style={{ color: "rgba(255,255,255,0.45)" }}
                   onClick={() => { setCollapsed(true); setClientDropdownOpen(false); }}
                   title="Collapse sidebar"
                 >
@@ -573,7 +586,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </button>
                 <button
                   className="lg:hidden p-1.5 rounded-lg"
-                  style={{ color: "var(--as-text-muted)" }}
+                    style={{ color: "rgba(255,255,255,0.7)" }}
                   onClick={() => setMobileOpen(false)}
                 >
                   <X className="w-4 h-4" />
@@ -583,105 +596,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           )}
         </div>
 
-        {/* Client selector */}
-        <div
-          className={`flex-shrink-0 relative ${collapsed ? "py-3 flex justify-center" : "px-3 py-3"}`}
-          style={{ borderBottom: "1px solid var(--as-border)" }}
-          ref={dropdownRef}
-        >
-          {collapsed ? (
-            <button
-              onClick={() => setCollapsed(false)}
-              title={selectedClient.name}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0 transition-transform hover:scale-105"
-              style={{ backgroundColor: sidebarAvatarColor(selectedClient.color, resolvedMode) }}
-            >
-              {selectedClient.letter}
-            </button>
-          ) : (
-            <button
-              onClick={() => setClientDropdownOpen((o) => !o)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all"
-              style={{ backgroundColor: clientDropdownOpen ? "var(--as-accent-soft-strong)" : "var(--as-accent-soft)" }}
-            >
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-black text-white"
-                style={{ backgroundColor: sidebarAvatarColor(selectedClient.color, resolvedMode) }}
-              >
-                {selectedClient.letter}
-              </div>
-              <div className="min-w-0 flex-1 text-left">
-                <p className="text-xs font-black truncate leading-tight" style={{ color: "var(--as-text)" }}>{selectedClient.name}</p>
-                <p className="text-[10px] truncate" style={{ color: "var(--as-text-muted)" }}>{clientScopeSubtitle(selectedClient)}</p>
-              </div>
-              <ChevronDown
-                className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${clientDropdownOpen ? "rotate-180" : ""}`}
-                style={{ color: "var(--as-text-subtle)" }}
-              />
-            </button>
-          )}
-
-          {clientDropdownOpen && !collapsed && (
-            <div
-              className="absolute left-3 right-3 z-50 rounded-xl shadow-lg border py-1 mt-1 max-h-72 overflow-y-auto"
-              style={{ top: "100%", backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}
-            >
-              {!clientsLoading && clients.length > 1 && (
-                <div className="px-2 py-1.5">
-                  <div
-                    className="flex items-center gap-1.5 rounded-lg border px-2 py-1.5"
-                    style={{ backgroundColor: "var(--as-surface-muted)", borderColor: "var(--as-border)" }}
-                  >
-                    <Search className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--as-text-subtle)" }} />
-                    <input
-                      value={clientSearch}
-                      onChange={(event) => setClientSearch(event.target.value)}
-                      placeholder={clientSearchPlaceholder}
-                      className="min-w-0 flex-1 bg-transparent text-xs font-semibold outline-none"
-                      style={{ color: "var(--as-text)" }}
-                    />
-                  </div>
-                </div>
-              )}
-              {clientsLoading && (
-                <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>Loading clients...</div>
-              )}
-              {!clientsLoading && clients.length === 0 && (
-                <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>
-                  {clientsError ? "Could not load clients." : "No client access."}
-                </div>
-              )}
-              {!clientsLoading && clients.length > 0 && filteredClients.length === 0 && (
-                <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>No scopes match your search.</div>
-              )}
-              {!clientsLoading && filteredClients.map((client) => (
-                <button
-                  key={client.id}
-                  onClick={() => { setSelectedClient(client); setClientSearch(""); setClientDropdownOpen(false); }}
-                  className="as-shell-dropdown-item w-full flex items-center gap-2.5 px-3 py-2 transition-colors text-left"
-                >
-                  <div
-                    className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 text-[10px] font-black text-white"
-                    style={{ backgroundColor: sidebarAvatarColor(client.color, resolvedMode) }}
-                  >
-                    {client.letter}
-                  </div>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-semibold truncate" style={{ color: "var(--as-text)" }}>{client.name}</span>
-                    <span className="block text-[10px] truncate" style={{ color: "var(--as-text-muted)" }}>{clientScopeSubtitle(client)}</span>
-                  </span>
-                  {selectedClient.id === client.id && (
-                    <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#A380F6" }} />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Nav links */}
-        <nav className={`flex-1 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden
+        <nav className={`min-h-0 flex-1 py-4 space-y-0.5 overflow-y-auto overflow-x-hidden
           ${collapsed ? "px-0 flex flex-col items-center" : "px-3"}`}>
+          {!collapsed && <p className="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/45">Workspace</p>}
           {visibleNavItems.map((item) => {
             const active = isActive(item.href);
 
@@ -693,9 +611,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   ref={(el) => { navRefs.current[item.href] = el as HTMLAnchorElement | null; }}
                   onClick={() => setMobileOpen(false)}
                   title={item.label}
-                  className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-150 ${
-                    active ? "as-shell-link-active" : "as-shell-link"
-                  }`}
+                  className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-150 ${active ? "bg-[#A380F6]/25 text-white" : "text-white/65 hover:bg-white/5 hover:text-white"}`}
                 >
                   <item.icon className="w-[18px] h-[18px]" />
                 </Link>
@@ -708,10 +624,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 href={item.href}
                 ref={(el) => { navRefs.current[item.href] = el as HTMLAnchorElement | null; }}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
-                  active ? "as-shell-link-active" : "as-shell-link"
-                }`}
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${active ? "bg-[#A380F6]/25 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
               >
+                {active && <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-[#A380F6]" />}
                 <item.icon className="w-4 h-4 flex-shrink-0" />
                 {item.label}
               </Link>
@@ -719,29 +634,52 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           })}
         </nav>
 
-        {/* Sign out */}
-        <div
-          className={`flex-shrink-0 ${collapsed ? "py-3 flex justify-center" : "px-3 py-3"}`}
-          style={{ borderTop: "1px solid var(--as-border)" }}
-        >
+        <div className={`flex-shrink-0 ${collapsed ? "px-3" : "px-5"}`}>
+          {collapsed ? <SupportVoicePopover placement="sidebar" collapsed /> : <SupportVoicePopover />}
+          {collapsed && (
+            <button
+              type="button"
+              onClick={startTour}
+              aria-label="Start dashboard tour"
+              title="Start dashboard tour"
+              className="mt-2 flex h-10 w-10 items-center justify-center rounded-xl border border-[#A380F6]/30 bg-[#A380F6]/10 text-[#BBA4FF] transition-colors hover:border-[#A380F6]/70 hover:bg-[#A380F6]/20"
+            >
+              <Compass className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {!collapsed && (
+          <button
+            type="button"
+            onClick={startTour}
+            className="mx-5 mb-4 rounded-2xl border border-[#A380F6]/25 bg-[#25266A] p-4 text-left text-white transition-colors hover:border-[#A380F6]/55 hover:bg-[#2D2D76]"
+          >
+            <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-white/80">Quick guide</span>
+            <span className="mt-3 block text-sm font-black">Need a refresher?</span>
+            <span className="mt-2 block text-[11px] leading-relaxed text-white/70">Replay the dashboard tour without leaving your work.</span>
+            <span className="mt-4 flex items-center gap-1.5 text-xs font-bold text-[#BBA4FF]">Start tour <ArrowRight className="h-3 w-3" /></span>
+          </button>
+        )}
+
+        {/* Sign out and version */}
+        <div className={`flex-shrink-0 ${collapsed ? "py-3 flex justify-center" : "px-4 pb-4"}`}>
           {collapsed ? (
             <button
               onClick={handleSignOut}
               title="Sign Out"
-              className="w-10 h-10 flex items-center justify-center rounded-xl hover:text-red-500 hover:bg-red-50 transition-all duration-150"
-              style={{ color: "var(--as-text-muted)" }}
+              className="w-10 h-10 flex items-center justify-center rounded-xl hover:text-red-300 hover:bg-red-500/15 transition-all duration-150"
+              style={{ color: "rgba(255,255,255,0.55)" }}
             >
               <LogOut className="w-[18px] h-[18px]" />
             </button>
           ) : (
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-sm font-semibold transition-all duration-150"
-              style={{ color: "var(--as-text-muted)" }}
-            >
-              <LogOut className="w-4 h-4 flex-shrink-0" />
-              Sign Out
-            </button>
+            <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-3">
+              <span className="text-[10px] font-semibold text-white/40">alphaScreen · QA</span>
+              <button onClick={handleSignOut} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-bold text-white/60 transition-colors hover:bg-white/5 hover:text-white">
+                <LogOut className="h-3.5 w-3.5" /> Sign out
+              </button>
+            </div>
           )}
         </div>
       </aside>
@@ -758,8 +696,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className={`flex-1 min-h-screen flex flex-col transition-all duration-300 ${contentML}`}>
         {/* Top bar */}
         <header
-          className="sticky top-0 z-20 flex items-center h-14 px-5"
-          style={{ backgroundColor: "var(--as-surface)", borderBottom: "1px solid var(--as-border)" }}
+          className="sticky top-0 z-20 flex min-h-[88px] items-center gap-4 px-5 lg:px-8"
+          style={{ backgroundColor: "color-mix(in srgb, var(--as-page) 94%, transparent)", borderBottom: "1px solid var(--as-border)", backdropFilter: "blur(14px)" }}
         >
           <button
             className="lg:hidden mr-3 p-1.5 rounded-lg transition-colors"
@@ -769,29 +707,59 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex-1" />
-          <SupportVoicePopover />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-2xl font-black leading-tight" style={{ color: "var(--as-text)" }}>{title}</h1>
+            <p className="mt-1 truncate text-xs sm:text-sm" style={{ color: "var(--as-text-muted)" }}>{pageDescription}</p>
+          </div>
+
+          <div className="relative min-w-0" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setClientDropdownOpen((open) => !open)}
+              aria-expanded={clientDropdownOpen}
+              aria-haspopup="listbox"
+              aria-label="Select client scope"
+              className="flex h-10 w-40 items-center gap-2.5 rounded-xl border px-3 text-left transition-colors hover:border-[#A380F6]/45 sm:w-64"
+              style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}
+            >
+              <span className="min-w-0 flex-1 truncate text-xs font-black" style={{ color: "var(--as-text)" }}>{selectedClient.name}</span>
+              <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${clientDropdownOpen ? "rotate-180" : ""}`} style={{ color: "var(--as-text-muted)" }} />
+            </button>
+            {clientDropdownOpen && (
+              <div role="listbox" aria-label="Client scopes" className="absolute right-0 top-12 z-50 max-h-80 w-80 overflow-y-auto rounded-xl border py-1 shadow-xl" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}>
+                {!clientsLoading && clients.length > 1 && (
+                  <div className="px-2 py-1.5">
+                    <div className="flex items-center gap-1.5 rounded-lg border px-2 py-1.5" style={{ backgroundColor: "var(--as-surface-muted)", borderColor: "var(--as-border)" }}>
+                      <Search className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "var(--as-text-subtle)" }} />
+                      <input aria-label="Search client scopes" value={clientSearch} onChange={(event) => setClientSearch(event.target.value)} placeholder={clientSearchPlaceholder} className="min-w-0 flex-1 bg-transparent text-xs font-semibold outline-none" style={{ color: "var(--as-text)" }} />
+                    </div>
+                  </div>
+                )}
+                {clientsLoading && <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>Loading clients...</div>}
+                {!clientsLoading && clients.length === 0 && <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>{clientsError ? "Could not load clients." : "No client access."}</div>}
+                {!clientsLoading && clients.length > 0 && filteredClients.length === 0 && <div className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>No scopes match your search.</div>}
+                {!clientsLoading && filteredClients.map((client) => (
+                  <button key={client.id} type="button" role="option" aria-selected={selectedClient.id === client.id} onClick={() => { setSelectedClient(client); setClientSearch(""); setClientDropdownOpen(false); }} className="as-shell-dropdown-item flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors">
+                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[10px] font-black text-white" style={{ backgroundColor: sidebarAvatarColor(client.color, resolvedMode) }}>{client.letter}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold" style={{ color: "var(--as-text)" }}>{client.name}</span>
+                      <span className="block truncate text-[10px]" style={{ color: "var(--as-text-muted)" }}>{clientScopeSubtitle(client)}</span>
+                    </span>
+                    {selectedClient.id === client.id && <Check className="h-3.5 w-3.5 flex-shrink-0 text-[#A380F6]" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="mr-2">
             <AppearanceSelector />
           </div>
-
-          {/* Take a Tour pill */}
-          <button
-            onClick={startTour}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all hover:opacity-90 active:scale-[0.97]"
-            style={{
-              backgroundColor: tourActive ? "#A380F6" : "rgba(163,128,246,0.10)",
-              color:           tourActive ? "white"   : "#A380F6",
-              border:          "1px solid rgba(163,128,246,0.25)",
-            }}
-          >
-            <Map className="w-3.5 h-3.5" />
-            Take a Tour
-          </button>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#9272EB] text-xs font-black text-white">{selectedClient.letter}</span>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-5 lg:p-8">{children}</main>
+        <main className="flex-1 p-5 lg:px-8 lg:py-5">{children}</main>
       </div>
 
       {/* ── Spotlight tour ───────────────────────────────────── */}

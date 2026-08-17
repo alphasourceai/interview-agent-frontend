@@ -1118,7 +1118,7 @@ export default function RolesPage() {
                   placeholder="e.g. Dental Hygienist"
                   value={roleTitle}
                   onChange={(e) => setRoleTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all"
+                  className="h-12 w-full rounded-xl border px-4 text-sm placeholder-gray-400 transition-all focus:border-[#A380F6] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25"
                   style={fieldSurfaceStyle}
                 />
               </div>
@@ -1129,7 +1129,7 @@ export default function RolesPage() {
                   id="dashboard-role-interview-type"
                   value={interviewType}
                   onChange={(event) => setInterviewType(event.target.value as InterviewType)}
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25 focus:border-[#A380F6] transition-all cursor-pointer"
+                  className="h-12 w-full cursor-pointer rounded-xl border px-4 text-sm font-semibold transition-all focus:border-[#A380F6] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/25"
                   selectStyle={fieldSurfaceStyle}
                   showDescription={false}
                 />
@@ -1146,7 +1146,7 @@ export default function RolesPage() {
                 </label>
                 <div className="flex items-center gap-2">
                   <div
-                    className="flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 border-dashed cursor-pointer transition-all text-sm hover:border-[#A380F6]/50"
+                    className="flex h-12 flex-1 cursor-pointer items-center gap-2.5 rounded-xl border-2 border-dashed px-3 text-sm transition-all hover:border-[#A380F6]/50"
                     style={{
                       backgroundColor: dragging ? "var(--as-accent-soft)" : "var(--as-surface-muted)",
                       borderColor: dragging ? "#A380F6" : "var(--as-border)",

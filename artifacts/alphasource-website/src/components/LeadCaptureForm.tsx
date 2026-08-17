@@ -158,37 +158,64 @@ export default function LeadCaptureForm({
       cta: ctaLabel,
     });
     if (!ok) {
-      setSubmitError("We could not submit this request. Please email info@alphasourceai.com.");
-      trackEvent("lead_form_submit_failed", { form_id: formId, form_type: formType, error_type: "backend" });
+      setSubmitError(
+        "We could not submit this request. Please email info@alphasourceai.com.",
+      );
+      trackEvent("lead_form_submit_failed", {
+        form_id: formId,
+        form_type: formType,
+        error_type: "backend",
+      });
       return;
     }
     submittedRef.current = true;
     setSubmitted(true);
-    trackEvent("lead_form_submit_succeeded", { form_id: formId, form_type: formType });
+    trackEvent("lead_form_submit_succeeded", {
+      form_id: formId,
+      form_type: formType,
+    });
   };
 
   if (submitted) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center py-8">
-        <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "#02D99D18" }}>
+        <div
+          className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+          style={{ backgroundColor: "#02D99D18" }}
+        >
           <CheckCircle className="w-7 h-7" style={{ color: "#02D99D" }} />
         </div>
-        <h3 className="text-xl font-bold text-[#0A1547] mb-2">{successTitle}</h3>
-        <p className="text-[#0A1547]/60 text-sm">{successBody}</p>
+        <h3 className="text-xl font-bold text-[#0A1547] mb-2 dark:text-white">
+          {successTitle}
+        </h3>
+        <p className="text-[#0A1547]/60 text-sm dark:text-[#B9C0D8]">
+          {successBody}
+        </p>
       </div>
     );
   }
 
   return (
     <>
-      <h3 className="text-xl font-bold text-[#0A1547] mb-2">Request a Demo</h3>
-      <p className="text-xs text-[#0A1547]/50 leading-relaxed mb-6">
-        We may save the business contact details you enter so we can respond, help you finish this request, or prepare a future membership signup. Message details are saved only when you submit.
+      <h3 className="text-xl font-bold text-[#0A1547] mb-2 dark:text-white">
+        Request a Demo
+      </h3>
+      <p className="text-xs text-[#0A1547]/50 leading-relaxed mb-6 dark:text-[#B9C0D8]">
+        We may save the business contact details you enter so we can respond,
+        help you finish this request, or prepare a future membership signup.
+        Message details are saved only when you submit.
       </p>
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" data-testid={formTestId}>
+      <form
+        ref={formRef}
+        onSubmit={handleSubmit}
+        className="space-y-4"
+        data-testid={formTestId}
+      >
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-[#0A1547] mb-1.5">First Name</label>
+            <label className="block text-sm font-medium text-[#0A1547] mb-1.5 dark:text-white">
+              First Name
+            </label>
             <input
               type="text"
               required
@@ -196,12 +223,14 @@ export default function LeadCaptureForm({
               onChange={(e) => updateField("first_name", e.target.value)}
               onBlur={() => trackFieldBlur("first_name")}
               placeholder="Jane"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all dark:bg-[#0D1A4A] dark:border-[#2A3568] dark:text-white dark:placeholder:text-white/35"
               data-testid="input-first-name"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0A1547] mb-1.5">Last Name</label>
+            <label className="block text-sm font-medium text-[#0A1547] mb-1.5 dark:text-white">
+              Last Name
+            </label>
             <input
               type="text"
               required
@@ -209,13 +238,15 @@ export default function LeadCaptureForm({
               onChange={(e) => updateField("last_name", e.target.value)}
               onBlur={() => trackFieldBlur("last_name")}
               placeholder="Smith"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all dark:bg-[#0D1A4A] dark:border-[#2A3568] dark:text-white dark:placeholder:text-white/35"
               data-testid="input-last-name"
             />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#0A1547] mb-1.5">Email</label>
+          <label className="block text-sm font-medium text-[#0A1547] mb-1.5 dark:text-white">
+            Email
+          </label>
           <input
             type="email"
             required
@@ -223,31 +254,35 @@ export default function LeadCaptureForm({
             onChange={(e) => updateField("email", e.target.value)}
             onBlur={() => trackFieldBlur("email")}
             placeholder="jane@company.com"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all dark:bg-[#0D1A4A] dark:border-[#2A3568] dark:text-white dark:placeholder:text-white/35"
             data-testid="input-email"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#0A1547] mb-1.5">Phone</label>
+          <label className="block text-sm font-medium text-[#0A1547] mb-1.5 dark:text-white">
+            Phone
+          </label>
           <input
             type="tel"
             value={fields.phone}
             onChange={(e) => updateField("phone", e.target.value)}
             onBlur={() => trackFieldBlur("phone")}
             placeholder="+1 (555) 000-0000"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all dark:bg-[#0D1A4A] dark:border-[#2A3568] dark:text-white dark:placeholder:text-white/35"
             data-testid="input-phone"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#0A1547] mb-1.5">How can we help?</label>
+          <label className="block text-sm font-medium text-[#0A1547] mb-1.5 dark:text-white">
+            How can we help?
+          </label>
           <textarea
             value={fields.message || ""}
             onChange={(e) => updateField("message", e.target.value)}
             onBlur={() => trackFieldBlur("message")}
             rows={3}
             placeholder="Let us know how we can help..."
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-[#0A1547] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/40 focus:border-[#A380F6] transition-all resize-none dark:bg-[#0D1A4A] dark:border-[#2A3568] dark:text-white dark:placeholder:text-white/35"
             data-testid="input-message"
           />
         </div>

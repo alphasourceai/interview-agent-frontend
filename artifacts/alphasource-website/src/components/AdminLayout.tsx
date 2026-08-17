@@ -116,8 +116,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     if (!clientDropdownOpen) setClientSearch("");
   }, [clientDropdownOpen]);
 
-  const sidebarW  = collapsed ? "w-16" : "w-64";
-  const contentML = collapsed ? "lg:ml-16" : "lg:ml-64";
+  const sidebarW  = collapsed ? "w-[72px]" : "w-60";
+  const contentML = collapsed ? "lg:ml-[72px]" : "lg:ml-60";
+  const contentW  = collapsed ? "lg:w-[calc(100%-72px)]" : "lg:w-[calc(100%-15rem)]";
+  const isOverview = location === "/admin";
   const clientSearchTerm = clientSearch.trim().toLowerCase();
   const filteredClients = clientSearchTerm
     ? availableClients.filter((client) => adminClientSearchText(client).includes(clientSearchTerm))
@@ -136,13 +138,13 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           transition-all duration-300 ease-in-out
           ${sidebarW}
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
-        style={{ overflow: "visible", backgroundColor: "var(--as-surface)", borderRight: "1px solid var(--as-border)" }}
+        style={{ overflow: "visible", backgroundColor: "#071033", borderRight: "1px solid rgba(255,255,255,0.06)" }}
       >
         {/* Logo / Collapse toggle */}
         <div
-          className={`flex items-center flex-shrink-0 h-14
+          className={`flex min-h-[76px] flex-shrink-0 items-center
           ${collapsed ? "justify-center px-0" : "justify-between px-4"}`}
-          style={{ borderBottom: "1px solid var(--as-border)" }}
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
         >
           {collapsed ? (
             <button
@@ -152,18 +154,19 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
               onClick={() => setCollapsed(false)}
               title="Expand sidebar"
             >
-              <DashboardBrand mode={resolvedMode} variant="compact" />
+              <DashboardBrand mode="dark" variant="compact" />
               <ChevronsRight className="w-3.5 h-3.5 text-[#A380F6]/50 group-hover:text-[#A380F6] transition-colors" />
             </button>
           ) : (
             <>
-              <Link href="/" onClick={() => setMobileOpen(false)}>
-                <DashboardBrand mode={resolvedMode} variant="full" />
+              <Link href="/" onClick={() => setMobileOpen(false)} className="flex flex-col gap-0.5">
+                <DashboardBrand mode="dark" variant="full" />
+                <span className="pl-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">Admin console</span>
               </Link>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
                   className="hidden lg:flex p-1.5 rounded-lg transition-colors"
-                  style={{ color: "var(--as-text-subtle)" }}
+                  style={{ color: "rgba(255,255,255,0.48)" }}
                   onClick={() => { setCollapsed(true); setClientDropdownOpen(false); }}
                   title="Collapse sidebar"
                 >
@@ -184,7 +187,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
         {/* Client selector */}
         <div
           className={`flex-shrink-0 relative ${collapsed ? "py-3 flex justify-center" : "px-3 py-3"}`}
-          style={{ borderBottom: "1px solid var(--as-border)" }}
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
           ref={dropdownRef}
         >
           {collapsed ? (
@@ -199,62 +202,58 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           ) : (
             <button
               onClick={() => setClientDropdownOpen((o) => !o)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all"
-              style={{ backgroundColor: clientDropdownOpen ? "var(--as-accent-soft-strong)" : "var(--as-accent-soft)" }}
+              className="w-full rounded-xl border px-3 py-2.5 text-left transition-all"
+              style={{ backgroundColor: clientDropdownOpen ? "rgba(163,128,246,0.20)" : "rgba(255,255,255,0.08)", borderColor: clientDropdownOpen ? "rgba(163,128,246,0.42)" : "rgba(255,255,255,0.06)" }}
             >
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-black text-white"
-                style={{ backgroundColor: selectedClient.color === "#0A1547" ? "#A380F6" : selectedClient.color }}
-              >
-                {selectedClient.letter === "∗" ? "✦" : selectedClient.letter}
-              </div>
-              <div className="min-w-0 flex-1 text-left">
-                <p className="text-xs font-black truncate leading-tight" style={{ color: "var(--as-text)" }}>{selectedClient.name}</p>
-                <p className="text-[10px]" style={{ color: "var(--as-text-muted)" }}>
-                  {clientsLoading ? "Loading clients..." : clientsError ? "Client load error" : "Admin view"}
-                </p>
-              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold leading-tight text-white">{selectedClient.name}</p>
+                  <p className="mt-1 truncate text-[10px] text-white/55">
+                    {clientsLoading ? "Loading clients..." : clientsError ? "Client load error" : adminClientScopeLabel(selectedClient)}
+                  </p>
+                </div>
               <ChevronDown
                 className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${clientDropdownOpen ? "rotate-180" : ""}`}
-                style={{ color: "var(--as-text-subtle)" }}
+                style={{ color: "rgba(255,255,255,0.46)" }}
               />
+              </div>
             </button>
           )}
 
           {clientDropdownOpen && !collapsed && (
             <div
-              className="absolute left-3 right-3 z-50 rounded-xl shadow-lg border py-1 mt-1 max-h-64 overflow-y-auto"
-              style={{ top: "100%", backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}
+              className="absolute left-3 right-3 z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border py-1 shadow-2xl"
+              style={{ top: "100%", backgroundColor: "#0D1744", borderColor: "rgba(255,255,255,0.12)" }}
             >
               {!clientsLoading && !clientsError && availableClients.length > 1 && (
                 <div className="px-2 py-1.5">
                   <div
                     className="flex items-center gap-1.5 rounded-lg border px-2 py-1.5"
-                    style={{ backgroundColor: "var(--as-surface-muted)", borderColor: "var(--as-border)" }}
+                    style={{ backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.10)" }}
                   >
-                    <Search className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--as-text-subtle)" }} />
+                    <Search className="w-3.5 h-3.5 flex-shrink-0 text-white/45" />
                     <input
                       value={clientSearch}
                       onChange={(event) => setClientSearch(event.target.value)}
                       placeholder="Search clients..."
                       className="min-w-0 flex-1 bg-transparent text-xs font-semibold outline-none"
-                      style={{ color: "var(--as-text)" }}
+                      style={{ color: "white" }}
                     />
                   </div>
                 </div>
               )}
               {clientsLoading ? (
-                <p className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>Loading clients...</p>
+                <p className="px-3 py-2 text-xs font-semibold text-white/55">Loading clients...</p>
               ) : clientsError ? (
                 <p className="px-3 py-2 text-xs font-semibold text-red-500">{clientsError}</p>
               ) : filteredClients.length === 0 ? (
-                <p className="px-3 py-2 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>No clients match your search.</p>
+                <p className="px-3 py-2 text-xs font-semibold text-white/55">No clients match your search.</p>
               ) : (
                 filteredClients.map((client) => (
                   <button
                     key={client.id}
                     onClick={() => { setSelectedClient(client); setClientSearch(""); setClientDropdownOpen(false); }}
-                    className="as-shell-dropdown-item w-full flex items-center gap-2.5 px-3 py-2 transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-white/75 transition-colors hover:bg-white/5 hover:text-white"
                   >
                     <div
                       className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 text-[10px] font-black text-white"
@@ -263,8 +262,8 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                       {client.letter === "∗" ? "✦" : client.letter}
                     </div>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-semibold truncate" style={{ color: "var(--as-text)" }}>{client.name}</span>
-                      <span className="block text-[10px] truncate" style={{ color: "var(--as-text-muted)" }}>{adminClientScopeLabel(client)}</span>
+                      <span className="block truncate text-xs font-semibold">{client.name}</span>
+                      <span className="block truncate text-[10px] text-white/45">{adminClientScopeLabel(client)}</span>
                     </span>
                     {selectedClient.id === client.id && (
                       <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#A380F6" }} />
@@ -277,7 +276,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
         </div>
 
         {/* Nav links */}
-        <nav className={`flex-1 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden
+        <nav className={`flex-1 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden
           ${collapsed ? "px-0 flex flex-col items-center" : "px-3"}`}>
           {navItems.map((item) => {
             const active = isActive(item.href);
@@ -288,9 +287,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   title={item.label}
-                  className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-150 ${
-                    active ? "as-shell-link-active" : "as-shell-link"
-                  }`}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-150 ${active ? "bg-[#A380F6] text-white" : "text-white/55 hover:bg-white/5 hover:text-white"}`}
                 >
                   <item.icon className="w-[18px] h-[18px]" />
                 </Link>
@@ -301,9 +298,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
-                  active ? "as-shell-link-active" : "as-shell-link"
-                }`}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-150 ${active ? "bg-[#A380F6] text-white shadow-[0_8px_20px_rgba(163,128,246,0.22)]" : "text-white/68 hover:bg-white/5 hover:text-white"}`}
               >
                 <item.icon className="w-4 h-4 flex-shrink-0" />
                 {item.label}
@@ -312,29 +307,29 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           })}
         </nav>
 
-        {/* Sign out */}
+        {/* Admin status and sign out */}
         <div
-          className={`flex-shrink-0 ${collapsed ? "py-3 flex justify-center" : "px-3 py-3"}`}
-          style={{ borderTop: "1px solid var(--as-border)" }}
+          className={`flex-shrink-0 ${collapsed ? "py-3 flex justify-center" : "px-3 pb-4 pt-2"}`}
+          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
         >
           {collapsed ? (
             <button
               onClick={handleSignOut}
               title="Sign Out"
-              className="w-10 h-10 flex items-center justify-center rounded-xl hover:text-red-500 hover:bg-red-50 transition-all duration-150"
-              style={{ color: "var(--as-text-muted)" }}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-white/55 transition-all duration-150 hover:bg-red-500/15 hover:text-red-300"
             >
               <LogOut className="w-[18px] h-[18px]" />
             </button>
           ) : (
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-sm font-semibold transition-all duration-150"
-              style={{ color: "var(--as-text-muted)" }}
-            >
-              <LogOut className="w-4 h-4 flex-shrink-0" />
-              Sign Out
-            </button>
+            <div className="space-y-2">
+              <Link href="/admin/interview-reliability" className="block rounded-xl border border-white/5 bg-white/[0.07] px-3 py-2.5 transition-colors hover:bg-white/10">
+                <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">System status</span>
+                <span className="mt-1 block text-[10px] font-semibold text-white/65">Review reliability</span>
+              </Link>
+              <button onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold text-white/55 transition-all duration-150 hover:bg-red-500/15 hover:text-red-300">
+                <LogOut className="h-4 w-4 flex-shrink-0" /> Sign out
+              </button>
+            </div>
           )}
         </div>
       </aside>
@@ -348,10 +343,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       )}
 
       {/* ── Main content ──────────────────────────────────────── */}
-      <div className={`flex-1 min-w-0 min-h-screen flex flex-col transition-all duration-300 ${contentML}`}>
-        {/* Top bar */}
+      <div className={`flex min-h-screen w-full min-w-0 flex-none flex-col transition-all duration-300 ${contentML} ${contentW}`}>
+        {/* The overview owns its desktop Figma header; this bar remains on mobile for navigation and appearance. */}
         <header
-          className="sticky top-0 z-20 flex items-center h-14 px-5"
+          className={`sticky top-0 z-20 flex h-14 items-center px-5 ${isOverview ? "lg:hidden" : ""}`}
           style={{ backgroundColor: "var(--as-surface)", borderBottom: "1px solid var(--as-border)" }}
         >
           <button

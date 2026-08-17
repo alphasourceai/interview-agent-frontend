@@ -21,7 +21,8 @@ test("candidate application, verification, and launch routes remain wired", () =
   assert.match(app, /path=["']\/interview-access\/:role_token["']/);
   assert.match(app, /path=["']\/interview-access["']/);
   assert.match(app, /path=["']\/interview-cvi["']/);
-  assert.match(access, /\/api\/candidate\/verify-otp/);
+  assert.match(access, /backendBase \? joinUrl\(backendBase, "\/api\/candidate"\)/);
+  assert.match(access, /joinUrl\(candidateApiBase, "\/verify-otp"\)/);
   assert.match(access, /\/create-tavus-interview/);
   assert.match(access, /Before you start your interview/);
   assert.doesNotMatch(access, /3 uninterrupted minutes to complete the interview/);

@@ -1,10 +1,13 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
+import { Check, LogIn, Menu, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useAppearance } from "@/context/AppearanceContext";
 import { supabase } from "@/lib/supabaseClient";
 import { buildPwResetUrl } from "@/lib/urlConfig";
-import { alphaSourceLogo } from "@/assets/branding";
+import { alphaSourceLogo, alphaSourceLogoDark } from "@/assets/branding";
+import AppearanceSelector from "@/components/AppearanceSelector";
 
 export default function Navbar() {
   const isValidEmail = (value: string) =>
@@ -24,6 +27,7 @@ export default function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const signInInFlightRef = useRef(false);
   const { login, clientLoginLoading, clientLoginError } = useAuth();
+  const { resolvedMode } = useAppearance();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -117,13 +121,12 @@ export default function Navbar() {
 
   const navLinks = [
     { label: "Home", href: "/" },
-    { label: "About", href: "/about" },
+    { label: "About", href: "/about/" },
     { label: "alphaScreen", href: "/alphascreen" },
     { label: "How It Works", href: "/alphascreen/how-it-works" },
     { label: "Get in Touch", href: "/#contact" },
     { label: "FAQ", href: "/faq" },
   ];
-
   const pageDimOverlay = setupSpotlightVisible && typeof document !== "undefined"
     ? createPortal(
         <button
@@ -142,8 +145,8 @@ export default function Navbar() {
       <nav
         className={`fixed top-0 left-0 right-0 z-50 overflow-visible transition-all duration-300 ${
           scrolled
-            ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100"
-            : "bg-white/80 backdrop-blur-sm"
+            ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-[#DCE3F3] dark:bg-[#070E36]/95 dark:border-[#2A3568]"
+            : "bg-white/90 backdrop-blur-sm border-b border-transparent dark:bg-[#070E36]/90"
         }`}
       >
         {setupSpotlightVisible && (
@@ -154,30 +157,38 @@ export default function Navbar() {
             onClick={() => setSetupSpotlightVisible(false)}
           />
         )}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-0" data-testid="nav-logo">
-            <img
-              src={alphaSourceLogo}
-              alt="alphaSource AI"
-              className="h-8 w-auto"
-            />
-          </Link>
+        <div className="max-w-[1440px] mx-auto px-6 lg:px-10 xl:px-[72px]">
+          <div className="flex items-center justify-between h-[88px]">
+            {/* Logo */}
+            <Link
+              href="/"
+              className="flex items-center gap-0"
+              data-testid="nav-logo"
+            >
+              <img
+                src={
+                  resolvedMode === "dark"
+                    ? alphaSourceLogoDark
+                    : alphaSourceLogo
+                }
+                alt="alphaSource AI"
+                className="h-10 w-auto"
+              />
+            </Link>
 
-          {/* Desktop Links */}
-          <div className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  location === link.href
-                    ? "text-[#A380F6]"
-                    : "text-[#0A1547] hover:text-[#A380F6]"
-                }`}
-                data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
-                data-analytics-cta={link.label}
+            {/* Desktop Links */}
+            <div className="hidden xl:flex items-center gap-2">
+              {navLinks.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className={`px-2.5 py-2 text-[13px] xl:px-3 xl:text-sm font-semibold rounded-lg transition-colors ${
+                    location === link.href
+                      ? "text-[#A380F6]"
+                      : "text-[#0A1547] hover:text-[#A380F6] dark:text-white/80 dark:hover:text-[#A380F6]"
+                  }`}
+                  data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                  data-analytics-cta={link.label}
                 data-analytics-placement="primary-nav"
               >
                 {link.label}
@@ -185,93 +196,99 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Log In button + popout */}
-          <div
-            className={`${setupSpotlightVisible ? "relative z-30 flex" : "hidden"} items-center gap-3 md:flex`}
-            ref={dropdownRef}
-          >
-            <div className="relative">
-              <button
-                onClick={() => {
-                  if (setupSpotlightVisible) setSetupSpotlightVisible(false);
-                  setLoginOpen(!loginOpen);
-                }}
-                className={`relative px-4 py-2.5 text-sm font-semibold text-[#0A1547] border rounded-full transition-all duration-200 hover:border-[#A380F6] hover:text-[#A380F6] hover:shadow-sm active:scale-95 flex items-center gap-2 sm:px-5 ${
-                  setupSpotlightVisible
-                    ? "border-[#A380F6] bg-white shadow-[0_0_0_6px_rgba(163,128,246,0.22),0_12px_28px_rgba(10,21,71,0.16)]"
-                    : "border-[#0A1547]/15"
-                }`}
-                data-testid="nav-login-button"
-                aria-describedby={setupSpotlightVisible ? setupSpotlightDescriptionId : undefined}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                  <polyline points="10 17 15 12 10 7"/>
-                  <line x1="15" y1="12" x2="3" y2="12"/>
-                </svg>
-                Sign In
-              </button>
+            {/* Log In button + popout */}
+            <div
+              className={`${setupSpotlightVisible ? "relative z-30 flex" : "hidden"} items-center gap-3 xl:flex`}
+              ref={dropdownRef}
+            >
+              <AppearanceSelector />
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    if (setupSpotlightVisible) setSetupSpotlightVisible(false);
+                    setLoginOpen(!loginOpen);
+                  }}
+                  className={`relative h-10 px-4 text-sm font-semibold text-[#0A1547] border rounded-full transition-all duration-200 hover:border-[#A380F6] hover:text-[#A380F6] hover:shadow-sm active:scale-95 flex items-center gap-2 sm:px-5 dark:text-white dark:hover:text-[#A380F6] ${
+                    setupSpotlightVisible
+                      ? "border-[#A380F6] bg-white shadow-[0_0_0_6px_rgba(163,128,246,0.22),0_12px_28px_rgba(10,21,71,0.16)] dark:bg-[#111E57]"
+                      : "border-[#0A1547]/15 bg-white dark:border-[#A380F6]/45 dark:bg-[#111E57]"
+                  }`}
+                  data-testid="nav-login-button"
+                  aria-describedby={
+                    setupSpotlightVisible
+                      ? setupSpotlightDescriptionId
+                      : undefined
+                  }
+                >
+                  <LogIn aria-hidden="true" className="h-3.5 w-3.5" />
+                  Sign In
+                </button>
 
               {setupSpotlightVisible && (
                 <div
                   role="status"
                   id={setupSpotlightDescriptionId}
                   className="absolute right-0 top-full z-40 mt-3 w-72 rounded-lg border border-[#A380F6]/35 bg-white p-4 shadow-xl sm:w-80"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#02D99D]/10 text-[#02D99D]">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M20 6 9 17l-5-5" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black leading-snug text-[#0A1547]">Your password is set.</p>
-                      <p className="mt-1 text-xs font-semibold leading-relaxed text-[#0A1547]/65">
-                        Use Sign In to access your alphaScreen dashboard.
-                      </p>
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#02D99D]/10 text-[#02D99D]">
+                        <Check
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                          strokeWidth={2.5}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black leading-snug text-[#0A1547]">
+                          Your password is set.
+                        </p>
+                        <p className="mt-1 text-xs font-semibold leading-relaxed text-[#0A1547]/65">
+                          Use Sign In to access your alphaScreen dashboard.
+                        </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSetupSpotlightVisible(false)}
-                      className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-[#0A1547]/10 text-[#0A1547]/55 transition-colors hover:border-[#A380F6] hover:text-[#A380F6] focus:outline-none focus:ring-2 focus:ring-[#A380F6]"
-                      aria-label="Dismiss sign-in guidance"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                        <path d="M18 6 6 18" />
-                        <path d="m6 6 12 12" />
-                      </svg>
-                    </button>
+                        className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-[#0A1547]/10 text-[#0A1547]/55 transition-colors hover:border-[#A380F6] hover:text-[#A380F6] focus:outline-none focus:ring-2 focus:ring-[#A380F6]"
+                        aria-label="Dismiss sign-in guidance"
+                      >
+                        <X aria-hidden="true" className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {loginOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 p-6 z-50">
-                  <div className="mb-5">
-                    <h3 className="text-base font-black text-[#0A1547] mb-1">Sign In to alphaSource</h3>
-                    <p className="text-xs text-[#0A1547]/50">Access your client dashboard</p>
-                  </div>
+                {loginOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 p-6 z-50 dark:bg-[#111E57] dark:border-[#2A3568]">
+                    <div className="mb-5">
+                      <h3 className="text-base font-black text-[#0A1547] mb-1 dark:text-white">
+                        Sign In to alphaSource
+                      </h3>
+                      <p className="text-xs text-[#0A1547]/50 dark:text-white/55">
+                        Access your client dashboard
+                      </p>
+                    </div>
 
-                  <form onSubmit={handleSignIn} className="space-y-3">
+                    <form onSubmit={handleSignIn} className="space-y-3">
                     <input
                       type="email"
                       placeholder="Email address"
                       value={email}
                       onChange={(e) => {
-                        setEmail(e.target.value);
-                        setEmailError("");
-                      }}
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/30 focus:border-[#A380F6] transition-all"
-                    />
-                    <input
-                      type="password"
-                      placeholder="Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/30 focus:border-[#A380F6] transition-all"
-                    />
-                    <button
-                      type="submit"
+                          setEmail(e.target.value);
+                          setEmailError("");
+                        }}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/30 focus:border-[#A380F6] transition-all dark:bg-[#0D1A4A] dark:border-[#2A3568] dark:text-white dark:placeholder:text-white/35"
+                      />
+                      <input
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#A380F6]/30 focus:border-[#A380F6] transition-all dark:bg-[#0D1A4A] dark:border-[#2A3568] dark:text-white dark:placeholder:text-white/35"
+                      />
+                      <button
+                        type="submit"
                       disabled={clientLoginLoading || !email || !password}
                       className="w-full py-2.5 text-sm font-semibold text-white rounded-full transition-all hover:opacity-90 active:scale-[0.99]"
                       style={{ backgroundColor: "#A380F6" }}
@@ -279,103 +296,110 @@ export default function Navbar() {
                       {clientLoginLoading ? "Signing in..." : "Sign In"}
                     </button>
                     <button
-                      type="button"
-                      onClick={startReset}
-                      className="text-xs text-[#A380F6] hover:underline"
-                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit" }}
-                    >
-                      Forgot password?
-                    </button>
-                  </form>
-                  {clientLoginError && (
-                    <p className="mt-2 text-xs text-red-500">{clientLoginError}</p>
-                  )}
-                  {emailError && (
-                    <p className="mt-2 text-xs text-red-500">{emailError}</p>
+                        type="button"
+                        onClick={startReset}
+                        className="text-xs text-[#A380F6] hover:underline"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          font: "inherit",
+                        }}
+                      >
+                        Forgot password?
+                      </button>
+                    </form>
+                    {clientLoginError && (
+                      <p className="mt-2 text-xs text-red-500">
+                        {clientLoginError}
+                      </p>
+                    )}
+                    {emailError && (
+                      <p className="mt-2 text-xs text-red-500">{emailError}</p>
                   )}
                   {resetError && (
-                    <p className="mt-2 text-xs text-red-500">{resetError}</p>
-                  )}
-                  {resetSuccess && (
-                    <p className="mt-2 text-xs text-[#02D99D]">{resetSuccess}</p>
-                  )}
+                      <p className="mt-2 text-xs text-red-500">{resetError}</p>
+                    )}
+                    {resetSuccess && (
+                      <p className="mt-2 text-xs text-[#02D99D]">
+                        {resetSuccess}
+                      </p>
+                    )}
 
-                  <p className="mt-4 text-center text-xs text-[#0A1547]/40">
-                    Need access?{" "}
-                    <a href="/#contact" className="text-[#A380F6] hover:underline" onClick={() => setLoginOpen(false)}>
-                      Get in touch
-                    </a>
-                  </p>
+                    <p className="mt-4 text-center text-xs text-[#0A1547]/40 dark:text-white/45">
+                      Need access?{" "}
+                      <a
+                        href="/#contact"
+                        className="text-[#A380F6] hover:underline"
+                        onClick={() => setLoginOpen(false)}
+                      >
+                        Get in touch
+                      </a>
+                    </p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Mobile hamburger */}
-          <button
-            className={`md:hidden p-2 rounded-lg text-[#0A1547] ${setupSpotlightVisible ? "hidden" : ""}`}
-            onClick={() => setMobileOpen(!mobileOpen)}
-            data-testid="nav-mobile-menu-button"
-            aria-label="Toggle menu"
-          >
-            <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-              {mobileOpen ? (
-                <path
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeWidth="2"
-                  d="M6 6l12 12M6 18L18 6"
-                />
-              ) : (
-                <path
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-1">
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="block px-3 py-2.5 text-sm font-medium text-[#0A1547] hover:text-[#A380F6] hover:bg-purple-50 rounded-lg transition-colors"
-              onClick={() => setMobileOpen(false)}
-              data-analytics-cta={link.label}
-              data-analytics-placement="mobile-nav"
+            {/* Mobile hamburger */}
+            <button
+              className={`xl:hidden p-2 rounded-lg text-[#0A1547] dark:text-white ${setupSpotlightVisible ? "hidden" : ""}`}
+              onClick={() => setMobileOpen(!mobileOpen)}
+              data-testid="nav-mobile-menu-button"
+              aria-label="Toggle menu"
             >
-              {link.label}
-            </a>
-          ))}
-          <div className="pt-3 border-t border-gray-100 mt-3">
-            <p className="text-xs font-semibold text-[#0A1547]/40 uppercase tracking-wider mb-3 px-3">Client Login</p>
-            <form onSubmit={handleSignIn} className="space-y-2 px-3">
-              <input
-                type="email"
+              {mobileOpen ? (
+                <X aria-hidden="true" className="h-[22px] w-[22px]" />
+              ) : (
+                <Menu aria-hidden="true" className="h-[22px] w-[22px]" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        {mobileOpen && (
+          <div className="xl:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-1 dark:bg-[#070E36] dark:border-[#2A3568]">
+            <div className="mb-3 px-3">
+              <AppearanceSelector alwaysShowLabel />
+            </div>
+            {navLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="block px-3 py-2.5 text-sm font-medium text-[#0A1547] hover:text-[#A380F6] hover:bg-purple-50 rounded-lg transition-colors dark:text-white/80 dark:hover:bg-white/5 dark:hover:text-[#A380F6]"
+                onClick={() => setMobileOpen(false)}
+                data-analytics-cta={link.label}
+                data-analytics-placement="mobile-nav"
+            >
+                {link.label}
+              </a>
+            ))}
+            <div className="pt-3 border-t border-gray-100 mt-3 dark:border-[#2A3568]">
+              <p className="text-xs font-semibold text-[#0A1547]/40 uppercase tracking-wider mb-3 px-3 dark:text-white/45">
+                Client Login
+              </p>
+              <form onSubmit={handleSignIn} className="space-y-2 px-3">
+                <input
+                  type="email"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => {
-                  setEmail(e.target.value);
-                  setEmailError("");
-                }}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm placeholder-gray-400 focus:outline-none"
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm placeholder-gray-400 focus:outline-none"
-              />
-              <button
-                type="submit"
+                    setEmail(e.target.value);
+                    setEmailError("");
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm placeholder-gray-400 focus:outline-none dark:bg-[#0D1A4A] dark:border-[#2A3568] dark:text-white dark:placeholder:text-white/35"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[#0A1547] text-sm placeholder-gray-400 focus:outline-none dark:bg-[#0D1A4A] dark:border-[#2A3568] dark:text-white dark:placeholder:text-white/35"
+                />
+                <button
+                  type="submit"
                 disabled={clientLoginLoading || !email || !password}
                 className="w-full py-2.5 text-sm font-semibold text-white rounded-full"
                 style={{ backgroundColor: "#A380F6" }}
@@ -383,13 +407,19 @@ export default function Navbar() {
                 {clientLoginLoading ? "Signing in..." : "Sign In"}
               </button>
               <button
-                type="button"
-                onClick={startReset}
-                className="text-xs text-[#A380F6] hover:underline"
-                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit" }}
-              >
-                Forgot password?
-              </button>
+                  type="button"
+                  onClick={startReset}
+                  className="text-xs text-[#A380F6] hover:underline"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    font: "inherit",
+                  }}
+                >
+                  Forgot password?
+                </button>
               {clientLoginError && (
                 <p className="text-xs text-red-500">{clientLoginError}</p>
               )}

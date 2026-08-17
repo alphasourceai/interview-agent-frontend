@@ -204,12 +204,12 @@ const mutedTextStyle = { color: "var(--as-text-muted)" };
 const subtleTextStyle = { color: "var(--as-text-subtle)" };
 
 const inputCls =
-  "w-full px-3 py-2 rounded-xl text-sm text-[var(--as-text)] font-medium " +
+  "h-10 w-full rounded-xl px-3 text-sm text-[var(--as-text)] font-medium " +
   "border border-[var(--as-border)] bg-[var(--as-surface-muted)] " +
   "placeholder:text-[#0A1547]/30 dark:placeholder:text-slate-400/45 focus:outline-none focus:border-[#A380F6] transition-colors";
 
 const selectCls =
-  "w-full px-3 py-2 rounded-xl text-sm text-[var(--as-text)] font-medium " +
+  "h-10 w-full rounded-xl px-3 text-sm text-[var(--as-text)] font-medium " +
   "border border-[var(--as-border)] bg-[var(--as-surface-muted)] " +
   "focus:outline-none focus:border-[#A380F6] transition-colors cursor-pointer";
 
@@ -828,7 +828,7 @@ export default function AdminRolesPage() {
 
           {/* JD file upload */}
           <label
-            className="w-full sm:flex-1 sm:min-w-48 flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border border-dashed cursor-pointer hover:border-[#A380F6]/50 hover:text-[#A380F6]/60 transition-colors"
+            className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed px-3 text-sm font-medium transition-colors hover:border-[#A380F6]/50 hover:text-[#A380F6]/60 sm:min-w-48 sm:flex-1"
             style={{ ...fieldSurfaceStyle, color: "var(--as-text-muted)" }}
           >
             <Upload className="w-3.5 h-3.5 flex-shrink-0" />

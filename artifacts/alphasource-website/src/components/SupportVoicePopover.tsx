@@ -61,7 +61,12 @@ function statusText(state: VoiceState): string {
   return "Ready when you are.";
 }
 
-export default function SupportVoicePopover() {
+interface SupportVoicePopoverProps {
+  placement?: "header" | "sidebar";
+  collapsed?: boolean;
+}
+
+export default function SupportVoicePopover({ placement = "sidebar", collapsed = false }: SupportVoicePopoverProps) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<VoiceState>("idle");
   const [serviceWorkerSafe, setServiceWorkerSafe] = useState(false);
@@ -408,14 +413,19 @@ export default function SupportVoicePopover() {
         <button
           type="button"
           aria-label="Talk with Support"
-          className="mr-2 inline-flex h-9 items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold transition-colors hover:border-[#A380F6]/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/45 sm:px-3"
-          style={{ backgroundColor: "var(--as-accent-soft)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
+          title={collapsed ? "Talk with Support" : undefined}
+          className={placement === "sidebar"
+            ? `inline-flex h-10 items-center rounded-xl border text-xs font-bold text-white transition-all hover:border-[#A380F6]/80 hover:bg-[#A380F6]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/60 ${collapsed ? "w-10 justify-center px-0" : "w-full justify-start gap-2.5 px-3"}`
+            : "mr-2 inline-flex h-9 items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold transition-colors hover:border-[#A380F6]/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/45 sm:px-3"}
+          style={placement === "sidebar"
+            ? { backgroundColor: "rgba(163,128,246,0.12)", borderColor: "rgba(163,128,246,0.48)" }
+            : { backgroundColor: "var(--as-accent-soft)", borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}
         >
           <Headphones className="h-4 w-4" aria-hidden="true" />
-          <span>Talk with Support</span>
+          {!collapsed && <span>Talk with Support</span>}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} aria-label="Browser AI support" className="w-[calc(100vw-2rem)] max-w-sm rounded-lg border p-4 shadow-lg" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text)" }}>
+      <PopoverContent align={placement === "sidebar" ? "start" : "end"} side={placement === "sidebar" ? "right" : "bottom"} sideOffset={10} aria-label="Browser AI support" className="w-[calc(100vw-2rem)] max-w-sm rounded-lg border p-4 shadow-lg" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text)" }}>
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: "var(--as-accent-soft-strong)", color: "#A380F6" }}>
             {state === "speaking" ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <Headphones className="h-4 w-4" aria-hidden="true" />}

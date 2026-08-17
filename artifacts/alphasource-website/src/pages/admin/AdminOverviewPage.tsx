@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import {
   Building2, Briefcase, Users, CheckCircle2,
-  Star, TrendingUp, ArrowRight, Activity,
+  Star, ArrowRight, Download, Plus, AlertCircle,
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
+import AppearanceSelector from "@/components/AppearanceSelector";
 import { useAdminClient } from "@/context/AdminClientContext";
 import { getInterviewTypeLabel, type InterviewTypeLabel } from "@/lib/interviewContract";
 import { supabase } from "@/lib/supabaseClient";
@@ -21,6 +22,7 @@ interface PlatformStats {
   completed: number;
   avgScore: number;
   completionRate: number;
+  clientActivityRate: number;
   rolesDelta: number;
   candidatesDelta: number;
   completedDelta: number;
@@ -42,7 +44,8 @@ interface ClientRow {
   color: string;
   roles: number;
   candidates: number;
-  avgScore: number;
+  completed: number;
+  avgScore: number | null;
 }
 
 interface AdminClientItem {
@@ -57,6 +60,7 @@ interface RoleItem {
   clientId: string;
   title: string;
   type: InterviewTypeLabel;
+  status: string;
   createdAtMs: number;
 }
 
@@ -187,7 +191,7 @@ function summarizeWindow(
   end: number,
   roles: RoleItem[],
   candidates: CandidateItem[],
-): Omit<PlatformStats, "clients" | "rolesDelta" | "candidatesDelta" | "completedDelta"> & { roles: number } {
+): Omit<PlatformStats, "clients" | "clientActivityRate" | "rolesDelta" | "candidatesDelta" | "completedDelta"> & { roles: number } {
   const rolesInWindow = roles.filter((role) => inWindow(role.createdAtMs, start, end));
   const candidatesInWindow = candidates.filter((candidate) => inWindow(candidate.createdAtMs, start, end));
   const completed = candidatesInWindow.filter(isInterviewCompleted);
@@ -216,13 +220,6 @@ function formatMonthDay(timestamp: number): string {
   });
 }
 
-/* ── Type badge colors ───────────────────────────────────────── */
-const typeColors: Record<string, { bg: string; text: string }> = {
-  Core: { bg: "rgba(163,128,246,0.12)", text: "#7C5FCC" },
-  Leadership: { bg: "rgba(2,171,224,0.12)", text: "#0285B0" },
-  Technical: { bg: "rgba(2,217,157,0.12)", text: "#009E73" },
-};
-
 /* ── Trend indicator ─────────────────────────────────────────── */
 function Trend({ delta }: { delta: number }) {
   if (delta === 0) return <span className="text-[11px] font-semibold" style={{ color: "var(--as-text-subtle)" }}>No change</span>;
@@ -236,7 +233,10 @@ function Trend({ delta }: { delta: number }) {
 }
 
 /* ── Score badge ─────────────────────────────────────────────── */
-function ScoreBadge({ score }: { score: number }) {
+function ScoreBadge({ score }: { score: number | null }) {
+  if (score === null) {
+    return <span className="inline-flex rounded-lg bg-[var(--as-surface-muted)] px-2.5 py-1 text-xs font-black" style={mutedTextStyle}>—</span>;
+  }
   const color = score >= 75 ? "#02D99D" : score >= 60 ? "#F0A500" : "#FF6B6B";
   return (
     <span
@@ -267,15 +267,15 @@ const metricCards = [
     delta: (s: PlatformStats) => s.rolesDelta,
   },
   {
-    label: "Candidates Screened",
+    label: "Candidates",
     icon: Users,
     color: "#02D99D",
     format: (s: PlatformStats) => s.candidates.toLocaleString(),
-    sub: "total screenings",
+    sub: "in selected period",
     delta: (s: PlatformStats) => s.candidatesDelta,
   },
   {
-    label: "Interviews Completed",
+    label: "Interviews",
     icon: CheckCircle2,
     color: "#F0A500",
     format: (s: PlatformStats) => s.completed.toLocaleString(),
@@ -283,19 +283,11 @@ const metricCards = [
     delta: (s: PlatformStats) => s.completedDelta,
   },
   {
-    label: "Avg Overall Score",
+    label: "Avg. Score",
     icon: Star,
     color: "#A380F6",
     format: (s: PlatformStats) => `${s.avgScore}`,
     sub: "platform average",
-    delta: (_s: PlatformStats) => 0,
-  },
-  {
-    label: "Client Activity Rate",
-    icon: TrendingUp,
-    color: "#02D99D",
-    format: (s: PlatformStats) => `${s.completionRate.toFixed(1)}%`,
-    sub: "clients with completed interviews",
     delta: (_s: PlatformStats) => 0,
   },
 ];
@@ -305,21 +297,10 @@ const surfaceCardStyle = {
   border: "1px solid var(--as-border)",
   boxShadow: "var(--as-shadow)",
 };
-const compactSurfaceStyle = {
-  backgroundColor: "var(--as-surface)",
-  border: "1px solid var(--as-border)",
-  boxShadow: "0 1px 6px rgba(10,21,71,0.05)",
-};
 const dividerStyle = { borderColor: "var(--as-border)" };
 const primaryTextStyle = { color: "var(--as-text)" };
 const mutedTextStyle = { color: "var(--as-text-muted)" };
 const subtleTextStyle = { color: "var(--as-text-subtle)" };
-
-function timeframeButtonStyle(active: boolean) {
-  return active
-    ? { backgroundColor: "var(--as-text)", color: "var(--as-surface)" }
-    : mutedTextStyle;
-}
 
 export default function AdminOverviewPage() {
   const [timeframe, setTimeframe] = useState<Timeframe>("30d");
@@ -425,6 +406,7 @@ export default function AdminOverviewPage() {
             clientId: String(item.client_id || "").trim(),
             title: String(item.title || "").trim() || "Untitled role",
             type: getInterviewTypeLabel(item.interview_type) as InterviewTypeLabel,
+            status: String(item.status || "active").trim().toLowerCase(),
             createdAtMs: toDateMs(item.created_at),
           }))
           .filter((item) => Boolean(item.id && item.clientId));
@@ -508,24 +490,27 @@ export default function AdminOverviewPage() {
     const currentSummary = summarizeWindow(current.start, current.end, scopedRoles, scopedCandidates);
     const priorSummary = summarizeWindow(priorStart, priorEnd, scopedRoles, scopedCandidates);
     const clientsWithCompletedInWindow = new Set(
-      globalCandidates
+      scopedCandidates
         .filter((candidate) => inWindow(candidate.createdAtMs, current.start, current.end) && isInterviewCompleted(candidate))
         .map((candidate) => candidate.clientId),
     );
-    const clientActivityRate = globalClients.length ? (clientsWithCompletedInWindow.size / globalClients.length) * 100 : 0;
+    const clientActivityRate = scopedClientCount ? (clientsWithCompletedInWindow.size / scopedClientCount) * 100 : 0;
+
+    const activeRoles = scopedRoles.filter((role) => role.status !== "inactive" && role.status !== "closed").length;
 
     return {
       clients: scopedClientCount,
-      roles: currentSummary.roles,
+      roles: activeRoles,
       candidates: currentSummary.candidates,
       completed: currentSummary.completed,
       avgScore: currentSummary.avgScore,
-      completionRate: clientActivityRate,
+      completionRate: currentSummary.completionRate,
+      clientActivityRate,
       rolesDelta: currentSummary.roles - priorSummary.roles,
       candidatesDelta: currentSummary.candidates - priorSummary.candidates,
       completedDelta: currentSummary.completed - priorSummary.completed,
     };
-  }, [timeframe, scopedRoles, scopedCandidates, scopedClientCount, globalCandidates, globalClients]);
+  }, [timeframe, scopedRoles, scopedCandidates, scopedClientCount]);
 
   const recentActivity = useMemo<ActivityRow[]>(() => {
     const candidateCountByRoleId = new Map<string, number>();
@@ -548,17 +533,25 @@ export default function AdminOverviewPage() {
   }, [scopedRoles, scopedCandidates, clientNameById]);
 
   const clientBreakdown = useMemo<ClientRow[]>(() => {
+    const nowMs = Date.now();
+    const window = getWindowBounds(timeframe, nowMs);
     const rolesByClient = new Map<string, number>();
     for (const role of globalRoles) {
+      if (role.status === "inactive" || role.status === "closed") continue;
       const current = rolesByClient.get(role.clientId) || 0;
       rolesByClient.set(role.clientId, current + 1);
     }
 
     const candidatesByClient = new Map<string, number>();
+    const completedByClient = new Map<string, number>();
     const scoreTotalsByClient = new Map<string, { sum: number; count: number }>();
     for (const candidate of globalCandidates) {
+      if (!inWindow(candidate.createdAtMs, window.start, window.end)) continue;
       const current = candidatesByClient.get(candidate.clientId) || 0;
       candidatesByClient.set(candidate.clientId, current + 1);
+      if (isInterviewCompleted(candidate)) {
+        completedByClient.set(candidate.clientId, (completedByClient.get(candidate.clientId) || 0) + 1);
+      }
 
       if (candidate.overallScore !== null) {
         const existing = scoreTotalsByClient.get(candidate.clientId) || { sum: 0, count: 0 };
@@ -569,16 +562,21 @@ export default function AdminOverviewPage() {
       }
     }
 
-    return [...globalClients]
+    const visibleClients = isAllClients
+      ? globalClients
+      : globalClients.filter((client) => client.id === selectedClientId);
+
+    return visibleClients
       .map((client) => {
         const score = scoreTotalsByClient.get(client.id);
-        const avgScore = score && score.count > 0 ? Math.round(score.sum / score.count) : 0;
+        const avgScore = score && score.count > 0 ? Math.round(score.sum / score.count) : null;
         return {
           name: client.name,
           letter: client.letter,
           color: client.color,
           roles: rolesByClient.get(client.id) || 0,
           candidates: candidatesByClient.get(client.id) || 0,
+          completed: completedByClient.get(client.id) || 0,
           avgScore,
         };
       })
@@ -586,36 +584,48 @@ export default function AdminOverviewPage() {
         if (b.candidates !== a.candidates) return b.candidates - a.candidates;
         return a.name.localeCompare(b.name);
       });
-  }, [globalClients, globalRoles, globalCandidates]);
+  }, [globalClients, globalRoles, globalCandidates, timeframe, isAllClients, selectedClientId]);
+
+  const exportOverview = () => {
+    if (typeof window === "undefined") return;
+    const rows = [
+      ["Client", "Active roles", "Candidates in period", "Completed interviews", "Average score"],
+      ...clientBreakdown.map((client) => [client.name, client.roles, client.candidates, client.completed, client.avgScore]),
+    ];
+    const csv = rows
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `alphascreen-admin-overview-${timeframe.toLowerCase()}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <AdminLayout title="Overview">
       {/* ── Header ───────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-7">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1" style={{ color: "var(--as-text)", opacity: 0.35 }}>
-            {selectedClient.id === "all" ? "Platform" : "Client"}
+          <h1 className="text-2xl font-black leading-tight tracking-[-0.03em] sm:text-[28px]" style={primaryTextStyle}>Platform overview</h1>
+          <p className="mt-1 text-xs font-medium sm:text-sm" style={mutedTextStyle}>
+            Monitor client health, hiring activity, and interview progress for {selectedClient.id === "all" ? "all clients" : selectedClient.name}.
           </p>
-          <h2 className="text-2xl font-black text-[#0A1547] leading-tight" style={{ color: "var(--as-text)" }}>
-            {selectedClient.id === "all" ? "All Clients" : selectedClient.name}
-          </h2>
         </div>
 
-        {/* Timeframe pill selector */}
-        <div
-          className="flex items-center gap-0.5 bg-white rounded-full p-1"
-          style={compactSurfaceStyle}
-        >
-          {timeframes.map((tf) => (
-            <button
-              key={tf}
-              onClick={() => setTimeframe(tf)}
-              className="px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-200"
-              style={timeframeButtonStyle(timeframe === tf)}
-            >
-              {tf}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="hidden lg:inline-flex"><AppearanceSelector /></span>
+          <label className="sr-only" htmlFor="admin-overview-timeframe">Overview timeframe</label>
+          <select id="admin-overview-timeframe" value={timeframe} onChange={(event) => setTimeframe(event.target.value as Timeframe)} className="h-10 rounded-xl border bg-[var(--as-surface)] px-3 text-xs font-bold outline-none focus:border-[#A380F6]" style={{ borderColor: "var(--as-border)", color: "var(--as-text)" }}>
+            {timeframes.map((tf) => <option key={tf} value={tf}>{tf}</option>)}
+          </select>
+          <button type="button" onClick={exportOverview} disabled={!overviewReady} className="inline-flex h-10 items-center gap-1.5 rounded-xl border bg-[var(--as-surface)] px-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-45" style={{ borderColor: "var(--as-border)", color: "var(--as-text)" }}>
+            <Download className="h-3.5 w-3.5" /> Export
+          </button>
+          <Link href="/admin/clients" className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#A380F6] px-3.5 text-xs font-bold text-white shadow-[0_8px_18px_rgba(163,128,246,0.24)]">
+            <Plus className="h-3.5 w-3.5" /> Add client
+          </Link>
         </div>
       </div>
 
@@ -643,19 +653,18 @@ export default function AdminOverviewPage() {
 
       {overviewReady && (
         <>
-      {/* ── Metric cards — 2×3 grid ──────────────────────── */}
-      <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-7">
+      {/* ── Compact platform metrics ──────────────────────── */}
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {metricCards.map((card) => {
           const Icon = card.icon;
           return (
             <div
               key={card.label}
-              className="bg-white rounded-2xl overflow-hidden flex flex-col"
+              className="flex min-h-[116px] flex-col overflow-hidden rounded-xl bg-white"
               style={surfaceCardStyle}
             >
-              <div className="h-[3px]" style={{ backgroundColor: card.color }} />
-              <div className="p-5 flex flex-col flex-1">
-                <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-1 flex-col p-4">
+                <div className="mb-3 flex items-center justify-between">
                   <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
                     {card.label}
                   </p>
@@ -666,12 +675,20 @@ export default function AdminOverviewPage() {
                     <Icon className="w-3.5 h-3.5" style={{ color: card.color }} />
                   </div>
                 </div>
-                <p className="text-[2.25rem] font-black leading-none mb-2" style={primaryTextStyle}>
+                <p className="mb-2 text-2xl font-black leading-none" style={primaryTextStyle}>
                   {card.format(stats)}
                 </p>
                 <div className="mt-auto space-y-0.5">
-                  <Trend delta={card.delta(stats)} />
-                  <p className="text-[11px] font-medium" style={subtleTextStyle}>{card.sub}</p>
+                  {card.label === "Active Roles"
+                    ? <span className="text-[11px] font-semibold" style={mutedTextStyle}>Current active roles</span>
+                    : <Trend delta={card.delta(stats)} />}
+                  <p className="text-[11px] font-medium" style={subtleTextStyle}>
+                    {card.label === "Active Roles"
+                      ? (isAllClients ? "across all clients" : "for selected client")
+                      : card.label === "Avg. Score"
+                        ? (isAllClients ? "platform average" : "selected client average")
+                        : card.sub}
+                  </p>
                 </div>
               </div>
             </div>
@@ -679,153 +696,77 @@ export default function AdminOverviewPage() {
         })}
       </div>
 
-      {/* ── Bottom row: Activity + Client Breakdown ────────── */}
-      <div className="grid xl:grid-cols-5 gap-4">
-        {/* Recent Role Activity */}
-        <div
-          className="xl:col-span-3 bg-white rounded-2xl overflow-hidden"
-          style={surfaceCardStyle}
-        >
-          <div className="flex items-center justify-between px-6 py-4 border-b" style={dividerStyle}>
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4" style={subtleTextStyle} />
-              <p className="text-sm font-black" style={primaryTextStyle}>Recent Role Activity</p>
+      {/* ── Operational review + context rail ─────────────── */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2.1fr)_minmax(280px,1fr)]">
+        <section className="overflow-hidden rounded-xl bg-white" style={surfaceCardStyle}>
+          <div className="flex items-start justify-between gap-4 border-b px-5 py-4" style={dividerStyle}>
+            <div>
+              <h2 className="text-base font-black" style={primaryTextStyle}>Client operational review</h2>
+              <p className="mt-0.5 text-[11px] font-medium" style={mutedTextStyle}>Prioritize accounts using current roles and activity.</p>
             </div>
-            <Link
-              href="/admin/roles"
-              className="flex items-center gap-1 text-xs font-bold transition-colors"
-              style={{ color: "#A380F6" }}
-            >
-              View all <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <Link href="/admin/clients" className="flex items-center gap-1 text-[11px] font-bold text-[#8B68E8]">All clients <ArrowRight className="h-3.5 w-3.5" /></Link>
           </div>
-          <div className="divide-y divide-[var(--as-border)]">
-            {!overviewLoading && recentActivity.length === 0 && (
-              <div className="px-6 py-4 text-sm font-semibold" style={mutedTextStyle}>
-                No recent roles in this scope.
-              </div>
-            )}
-            {recentActivity.map((row, i) => {
-              const tc = typeColors[row.type];
+
+          <div className="grid grid-cols-[minmax(0,1.6fr)_70px_92px_82px] gap-2 bg-[var(--as-surface-muted)] px-5 py-2 text-[9px] font-black uppercase tracking-[0.11em] sm:grid-cols-[minmax(0,1.7fr)_70px_92px_90px_96px]" style={subtleTextStyle}>
+            <span>Client</span><span>Roles</span><span>Candidates</span><span>Score</span><span className="hidden sm:block">Status</span>
+          </div>
+          <div className="divide-y divide-[var(--as-border)] px-3">
+            {!overviewLoading && clientBreakdown.length === 0 && <p className="px-2 py-5 text-sm font-semibold" style={mutedTextStyle}>No client activity is available in this scope.</p>}
+            {clientBreakdown.slice(0, 8).map((client) => {
+              const status = client.candidates > 0 ? "Active" : client.roles > 0 ? "Ready" : "Quiet";
+              const statusColor = status === "Active" ? "#04966F" : status === "Ready" ? "#7C5FCC" : "#718096";
               return (
-                <div
-                  key={i}
-                  className="as-shell-dropdown-item flex items-center gap-3 px-6 py-3 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate leading-snug" style={primaryTextStyle}>{row.role}</p>
-                    <p className="text-[11px] mt-0.5" style={subtleTextStyle}>{row.client}</p>
+                <div key={client.name} className="grid min-h-[62px] grid-cols-[minmax(0,1.6fr)_70px_92px_82px] items-center gap-2 rounded-lg px-2 py-2.5 transition-colors hover:bg-[var(--as-hover)] sm:grid-cols-[minmax(0,1.7fr)_70px_92px_90px_96px]">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold" style={primaryTextStyle}>{client.name}</p>
+                    <p className="mt-0.5 text-[10px]" style={subtleTextStyle}>{client.completed} completed in period</p>
                   </div>
-                  <span
-                    className="flex-shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-bold"
-                    style={{ backgroundColor: tc.bg, color: tc.text }}
-                  >
-                    {row.type}
-                  </span>
-                  <div className="flex-shrink-0 text-right">
-                    <p className="text-sm font-black" style={primaryTextStyle}>{row.candidates}</p>
-                    <p className="text-[10px]" style={subtleTextStyle}>screened</p>
-                  </div>
-                  <p className="flex-shrink-0 text-[11px] w-10 text-right" style={subtleTextStyle}>{row.date}</p>
+                  <div><p className="text-xs font-black" style={primaryTextStyle}>{client.roles}</p><p className="text-[9px]" style={subtleTextStyle}>active</p></div>
+                  <div><p className="text-xs font-black" style={primaryTextStyle}>{client.candidates}</p><p className="text-[9px]" style={subtleTextStyle}>{timeframe}</p></div>
+                  <ScoreBadge score={client.avgScore} />
+                  <span className="hidden w-fit rounded-full px-2.5 py-1 text-[9px] font-black sm:inline-flex" style={{ backgroundColor: `${statusColor}16`, color: statusColor }}>{status}</span>
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
 
-        {/* Clients by Volume */}
-        <div
-          className="xl:col-span-2 bg-white rounded-2xl overflow-hidden"
-          style={surfaceCardStyle}
-        >
-          <div className="flex items-center justify-between px-6 py-4 border-b" style={dividerStyle}>
-            <p className="text-sm font-black" style={primaryTextStyle}>Clients by Volume</p>
-            <Link
-              href="/admin/clients"
-              className="flex items-center gap-1 text-xs font-bold transition-colors"
-              style={{ color: "#A380F6" }}
-            >
-              View all <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-          <div className="divide-y divide-[var(--as-border)]">
-            {!overviewLoading && clientBreakdown.length === 0 && (
-              <div className="px-6 py-4 text-sm font-semibold" style={mutedTextStyle}>
-                No client volume data yet.
-              </div>
-            )}
-            {clientBreakdown.slice(0, 10).map((client, i) => (
-              <div
-                key={i}
-                className="as-shell-dropdown-item flex items-center gap-3 px-5 py-3 transition-colors"
-              >
-                <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black text-white flex-shrink-0"
-                  style={{ backgroundColor: client.color }}
-                >
-                  {client.letter}
+        <aside className="space-y-4">
+          <section className="rounded-xl bg-white p-5" style={surfaceCardStyle}>
+            <h2 className="text-base font-black" style={primaryTextStyle}>Interview progress</h2>
+            <p className="mt-3 text-3xl font-black" style={primaryTextStyle}>{stats.completionRate.toFixed(1)}%</p>
+            <p className="mt-1 text-[11px] font-medium" style={mutedTextStyle}>Candidates with interview scoring in the selected period</p>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--as-surface-muted)]"><div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.min(100, stats.completionRate)}%` }} /></div>
+            <div className="mt-3 grid grid-cols-2 gap-3 text-[10px]">
+              <div><p className="text-xs font-black" style={primaryTextStyle}>{stats.completed}</p><p style={mutedTextStyle}>Completed</p></div>
+              <div><p className="text-xs font-black" style={primaryTextStyle}>{stats.clientActivityRate.toFixed(1)}%</p><p style={mutedTextStyle}>Clients active</p></div>
+            </div>
+          </section>
+
+          <section className="rounded-xl bg-white p-5" style={surfaceCardStyle}>
+            <div className="flex items-center justify-between gap-3"><h2 className="text-base font-black" style={primaryTextStyle}>Completion follow-up</h2><span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-[9px] font-black text-rose-600">{Math.max(0, stats.candidates - stats.completed)} not complete</span></div>
+            <div className="mt-3 flex gap-2.5"><AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" /><div><p className="text-xs font-bold" style={primaryTextStyle}>Incomplete interviews</p><p className="mt-0.5 text-[10px] leading-relaxed" style={mutedTextStyle}>{Math.max(0, stats.candidates - stats.completed)} candidates in this period have not reached completed status.</p></div></div>
+            <Link href="/admin/candidates" className="mt-4 inline-flex items-center gap-1 text-[11px] font-bold text-[#8B68E8]">View candidates <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </section>
+
+          <section className="rounded-xl bg-white p-5" style={surfaceCardStyle}>
+            <h2 className="text-base font-black" style={primaryTextStyle}>Recent platform activity</h2>
+            <div className="mt-3 space-y-3">
+              {recentActivity.length === 0 && <p className="text-[11px] font-medium" style={mutedTextStyle}>No recent role activity in this scope.</p>}
+              {recentActivity.slice(0, 3).map((row) => (
+                <div key={`${row.client}-${row.role}`} className="flex gap-2.5">
+                  <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#A380F6]" />
+                  <div className="min-w-0"><p className="truncate text-[11px] font-bold" style={primaryTextStyle}>{row.role}</p><p className="mt-0.5 truncate text-[9px]" style={mutedTextStyle}>{row.client} · {row.date}</p></div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold truncate leading-snug" style={primaryTextStyle}>{client.name}</p>
-                  <p className="text-[10px] mt-0.5" style={subtleTextStyle}>
-                    {client.roles} roles · {client.candidates} candidates
-                  </p>
-                </div>
-                <ScoreBadge score={client.avgScore} />
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </section>
+        </aside>
       </div>
 
-      {/* ── Client name scroller ──────────────────────────── */}
-      <div className="mt-4">
-        <div
-          className="bg-white rounded-2xl overflow-hidden py-5"
-          style={surfaceCardStyle}
-        >
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-center mb-4" style={subtleTextStyle}>
-            Active Client Network
-          </p>
-
-          {/* Fade masks + scrolling track */}
-          <div className="relative overflow-hidden w-full">
-            {/* Left fade */}
-            <div
-              className="absolute left-0 top-0 bottom-0 w-16 z-10 pointer-events-none"
-              style={{ background: "linear-gradient(to right, var(--as-surface), transparent)" }}
-            />
-            {/* Right fade */}
-            <div
-              className="absolute right-0 top-0 bottom-0 w-16 z-10 pointer-events-none"
-              style={{ background: "linear-gradient(to left, var(--as-surface), transparent)" }}
-            />
-
-            {/* Scrolling strip — items duplicated for seamless loop */}
-            <div className="flex animate-marquee w-max">
-              {globalClients.length === 0 && !overviewLoading ? (
-                <div className="px-6 text-sm font-semibold" style={mutedTextStyle}>No active clients.</div>
-              ) : (
-                [...globalClients, ...globalClients].map((client, i) => (
-                  <div key={i} className="flex items-center gap-2.5 mx-8 flex-shrink-0">
-                    <div
-                      className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black text-white flex-shrink-0"
-                      style={{ backgroundColor: client.color }}
-                    >
-                      {client.letter}
-                    </div>
-                    <span
-                      className="text-sm font-bold whitespace-nowrap"
-                      style={mutedTextStyle}
-                    >
-                      {client.name}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border bg-[var(--as-surface)] px-4 py-2.5 text-[10px] font-semibold" style={{ borderColor: "var(--as-border)", color: "var(--as-text-muted)" }}>
+        <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Dashboard data loaded from authenticated admin services</span>
+        <Link href="/admin/interview-reliability" className="font-bold text-[#8B68E8]">View reliability</Link>
       </div>
         </>
       )}

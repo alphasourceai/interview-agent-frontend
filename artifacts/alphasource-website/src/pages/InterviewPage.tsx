@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { Upload, FileText, Trash2, Check, ArrowRight, ChevronRight, ChevronDown } from "lucide-react";
+import { Upload, FileText, Trash2, Check, ArrowRight, ChevronRight, ChevronDown, Mail, MessageSquareText } from "lucide-react";
 import {
   candidatePhoneCountries,
   getCandidatePhoneError,
@@ -13,7 +13,16 @@ import {
 } from "../lib/candidatePhone";
 import { getCandidateFlowError } from "../lib/candidateFlowErrors";
 import { clearCandidateSubmissionKey, getOrCreateCandidateSubmissionKey } from "../lib/candidateSubmission";
+import { postCandidateSubmission } from "../lib/candidateSubmissionTransport";
 import { alphaSourceLogo } from "@/assets/branding";
+import {
+  SMS_CONSENT_COPY_VERSION,
+  SMS_CONSENT_DISCLOSURE,
+  acceptedDeliveryOutcome,
+  isCandidateSmsUiEnabled,
+  maskSmsDestination,
+  type OtpDeliveryChannel,
+} from "../lib/smsOtp";
 
 /* ── Checklist copy (verbatim) ───────────────────────────────────── */
 const CHECKLIST = [
@@ -134,6 +143,11 @@ const backendBase = firstBase(
   env.PUBLIC_BACKEND_URL,
   env.BACKEND_URL,
 );
+const candidateApiBase = firstBase(
+  env.VITE_CANDIDATE_API_BASE,
+  backendBase ? joinUrl(backendBase, "/api/candidate") : "",
+);
+const smsUiEnabled = isCandidateSmsUiEnabled(env);
 
 function joinUrl(base: string, path: string): string {
   if (!base) return path;
@@ -161,16 +175,17 @@ function readRoleToken(): string {
 }
 
 function readRecoveryOtpSeed() {
-  const empty = { challenge_id: "", candidate_id: "", email: "" };
+  const empty = { challenge_id: "", candidate_id: "", email: "", delivery_channel: "email" as OtpDeliveryChannel };
   if (typeof window === "undefined") return empty;
   try {
     const url = new URL(window.location.href);
     const challengeId = String(url.searchParams.get("challenge_id") || "").trim();
     const candidateId = String(url.searchParams.get("candidate_id") || "").trim();
     const recoveryEmail = String(url.searchParams.get("email") || "").trim().toLowerCase();
+    const deliveryChannel: OtpDeliveryChannel = url.searchParams.get("delivery_channel") === "sms" ? "sms" : "email";
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuid.test(challengeId) || !uuid.test(candidateId) || !/\S+@\S+\.\S+/.test(recoveryEmail)) return empty;
-    return { challenge_id: challengeId, candidate_id: candidateId, email: recoveryEmail };
+    return { challenge_id: challengeId, candidate_id: candidateId, email: recoveryEmail, delivery_channel: deliveryChannel };
   } catch {
     return empty;
   }
@@ -195,6 +210,7 @@ export default function InterviewPage() {
   const [phoneCountry, setPhoneCountry] = useState<CandidatePhoneCountry>("US");
   const [phone, setPhone]             = useState("");
   const [resumeFile, setResumeFile]   = useState<File | null>(null);
+  const [otpChannel, setOtpChannel] = useState<OtpDeliveryChannel>(recoveryOtpSeed.delivery_channel);
   const [dragging, setDragging]       = useState(false);
   const [errors, setErrors]           = useState<Record<string, string>>({});
   const fileRef                       = useRef<HTMLInputElement>(null);
@@ -205,6 +221,8 @@ export default function InterviewPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
   const [resendError, setResendError] = useState("");
+  const [activeOtpChannel, setActiveOtpChannel] = useState<OtpDeliveryChannel>(recoveryOtpSeed.delivery_channel);
+  const [smsFallbackRequired, setSmsFallbackRequired] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
@@ -484,7 +502,7 @@ export default function InterviewPage() {
     stopDevicePreview();
   }, []);
 
-  async function handleSubmit() {
+  async function handleSubmit(channelOverride?: OtpDeliveryChannel) {
     if (submitLoading) return;
     if (!validateStep1()) return;
 
@@ -493,6 +511,9 @@ export default function InterviewPage() {
       setErrors((e) => ({ ...e, phone: getCandidatePhoneError(phoneCountry), submit: "" }));
       return;
     }
+    const selectedChannel: OtpDeliveryChannel = channelOverride === "email"
+      ? "email"
+      : smsUiEnabled && phoneCountry === "US" && otpChannel === "sms" ? "sms" : "email";
 
     const roleToken = String(interviewAuth.role_token || "").trim();
     if (!roleToken) {
@@ -509,20 +530,33 @@ export default function InterviewPage() {
     setOtpError("");
 
     try {
-      const body = new FormData();
-      body.append("first_name", firstName.trim());
-      body.append("last_name", lastName.trim());
-      body.append("email", email.trim());
-      body.append("phone", normalizedPhone);
-      body.append("phone_country", phoneCountry);
-      body.append("role_token", roleToken);
-      body.append("submission_key", getOrCreateCandidateSubmissionKey(roleToken));
-      if (resumeFile) body.append("resume", resumeFile);
+      const submissionKey = getOrCreateCandidateSubmissionKey(roleToken);
+      const buildBody = () => {
+        const body = new FormData();
+        body.append("first_name", firstName.trim());
+        body.append("last_name", lastName.trim());
+        body.append("email", email.trim());
+        body.append("phone", normalizedPhone);
+        body.append("phone_country", phoneCountry);
+        body.append("role_token", roleToken);
+        body.append("submission_key", submissionKey);
+        body.append("otp_channel", selectedChannel);
+        if (selectedChannel === "sms") {
+          body.append("consent_copy_version", SMS_CONSENT_COPY_VERSION);
+        }
+        if (resumeFile) body.append("resume", resumeFile);
+        return body;
+      };
 
-      const resp = await fetch(joinUrl(backendBase, "/api/candidate/submit"), {
-        method: "POST",
-        credentials: "include",
-        body,
+      const resp = await postCandidateSubmission({
+        url: joinUrl(candidateApiBase, "/submit"),
+        buildBody,
+        onRetry: () => {
+          setErrors((current) => ({
+            ...current,
+            submit: "The upload connection was interrupted. Reconnecting safely…",
+          }));
+        },
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
@@ -534,10 +568,9 @@ export default function InterviewPage() {
 
       const verifiedEmail = String(data?.email || email).trim();
       const challengeId = String(data?.challenge_id || "").trim();
-      if (!challengeId) {
-        setErrors((e) => ({ ...e, submit: "Could not establish a verification session. Please try again." }));
-        return;
-      }
+      const deliveryChannel: OtpDeliveryChannel = data?.delivery_channel === "sms" ? "sms" : "email";
+      const smsAccepted = deliveryChannel !== "sms" || acceptedDeliveryOutcome(data?.delivery_outcome);
+      const emailFallbackAvailable = data?.email_fallback_available === true;
       setInterviewAuth({
         candidate_id: String(data?.candidate_id || "").trim(),
         role_id: String(data?.role_id || "").trim(),
@@ -546,16 +579,32 @@ export default function InterviewPage() {
         role_token: roleToken,
       });
       setEmail(verifiedEmail);
+      setActiveOtpChannel(deliveryChannel);
+      if (!smsAccepted || emailFallbackAvailable) {
+        setSmsFallbackRequired(true);
+        setResendError("The text message could not be confirmed. Choose Email to continue.");
+        setStep("otp");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      if (!challengeId) {
+        setErrors((e) => ({ ...e, submit: "Could not establish a verification session. Please try again." }));
+        return;
+      }
+      setSmsFallbackRequired(false);
       setStep("otp");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
-      setErrors((e) => ({ ...e, submit: "Network error. Please try again." }));
+      setErrors((e) => ({
+        ...e,
+        submit: "The upload connection was interrupted. Your information is still here; please try again.",
+      }));
     } finally {
       setSubmitLoading(false);
     }
   }
 
-  async function handleResendOtp() {
+  async function requestOtpResend(channel: OtpDeliveryChannel) {
     const resendEmail = String(interviewAuth.email || email).trim().toLowerCase();
     if (!resendEmail || !interviewAuth.challenge_id) {
       setResendMessage("");
@@ -572,12 +621,14 @@ export default function InterviewPage() {
     setResendMessage("");
     setResendError("");
     try {
-      const resp = await fetch(joinUrl(backendBase, "/api/candidate/verify-otp/resend"), {
+      const resp = await fetch(joinUrl(candidateApiBase, "/verify-otp/resend"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           challenge_id: interviewAuth.challenge_id,
+          channel,
+          ...(channel === "sms" ? { consent_copy_version: SMS_CONSENT_COPY_VERSION } : {}),
         }),
       });
       const data = await resp.json().catch(() => ({}));
@@ -586,18 +637,48 @@ export default function InterviewPage() {
         return;
       }
       const nextChallengeId = String(data?.challenge_id || "").trim();
+      if (nextChallengeId) {
+        setInterviewAuth((prev) => ({ ...prev, challenge_id: nextChallengeId }));
+      }
+      const accepted = acceptedDeliveryOutcome(data?.delivery_outcome);
+      if (channel === "sms" && !accepted) {
+        setSmsFallbackRequired(true);
+        setResendError("The text message could not be confirmed. Choose Email to continue.");
+        return;
+      }
       if (!nextChallengeId) {
         setResendError("Could not resend the code. Please try again.");
         return;
       }
-      setInterviewAuth((prev) => ({ ...prev, challenge_id: nextChallengeId }));
+      setActiveOtpChannel(channel);
+      setOtpChannel(channel);
+      setSmsFallbackRequired(false);
       setOtp("");
-      setResendMessage("A new code was sent. Please check your email.");
+      setResendMessage(channel === "sms"
+        ? "A new code was requested. Please check your text messages."
+        : "A new code was sent. Please check your email.");
     } catch {
       setResendError("Could not resend the code. Please try again.");
     } finally {
       setResendLoading(false);
     }
+  }
+
+  async function handleResendOtp() {
+    await requestOtpResend(activeOtpChannel);
+  }
+
+  async function handleUseEmailInstead() {
+    if (resendLoading || submitLoading || verifyLoading) return;
+    setOtpChannel("email");
+    setResendMessage("");
+    setResendError("");
+    if (interviewAuth.challenge_id) {
+      await requestOtpResend("email");
+      return;
+    }
+    setStep("info");
+    await handleSubmit("email");
   }
 
   async function handleVerify() {
@@ -619,7 +700,7 @@ export default function InterviewPage() {
     setVerifyLoading(true);
     setOtpError("");
     try {
-      const resp = await fetch(joinUrl(backendBase, "/api/candidate/verify-otp"), {
+      const resp = await fetch(joinUrl(candidateApiBase, "/verify-otp"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -1098,7 +1179,9 @@ export default function InterviewPage() {
                     <select
                       value={phoneCountry}
                       onChange={(e) => {
-                        setPhoneCountry(normalizeCandidatePhoneCountry(e.target.value));
+                        const nextCountry = normalizeCandidatePhoneCountry(e.target.value);
+                        setPhoneCountry(nextCountry);
+                        if (nextCountry !== "US") setOtpChannel("email");
                         setErrors((er) => ({ ...er, phone: "", submit: "" }));
                       }}
                       className={selectCls}
@@ -1131,6 +1214,66 @@ export default function InterviewPage() {
                   )}
                 </div>
               </div>
+
+              {smsUiEnabled && phoneCountry === "US" && (
+                <fieldset>
+                  <legend className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 block mb-1.5">
+                    Verification code delivery
+                  </legend>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Verification code delivery method">
+                    {([
+                      { channel: "email" as const, label: "Email", destination: email.trim() || "Your email", icon: Mail },
+                      { channel: "sms" as const, label: "Text Message", destination: maskSmsDestination(phone), icon: MessageSquareText },
+                    ]).map((choice) => {
+                      const Icon = choice.icon;
+                      const selected = otpChannel === choice.channel;
+                      return (
+                        <button
+                          key={choice.channel}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => {
+                            setOtpChannel(choice.channel);
+                            setErrors((current) => ({ ...current, submit: "" }));
+                          }}
+                          className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${
+                            selected
+                              ? "border-[#A380F6] bg-[#A380F6]/[0.06]"
+                              : "border-gray-200 bg-white hover:border-[#A380F6]/45"
+                          }`}
+                        >
+                          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                            selected ? "bg-[#A380F6] text-white" : "bg-gray-100 text-[#0A1547]/45"
+                          }`}>
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-xs font-black text-[#0A1547]">{choice.label}</span>
+                            <span className="mt-0.5 block truncate text-[10px] font-semibold text-[#0A1547]/45">{choice.destination}</span>
+                          </span>
+                          <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                            selected ? "border-[#A380F6] bg-[#A380F6]" : "border-gray-300 bg-white"
+                          }`}>
+                            {selected && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {otpChannel === "sms" && (
+                    <div className="mt-2 rounded-xl border border-[#A380F6]/20 bg-[#A380F6]/[0.05] p-3">
+                      <p className="text-[10px] font-semibold leading-relaxed text-[#0A1547]/70">
+                        {SMS_CONSENT_DISCLOSURE}
+                      </p>
+                      <p className="mt-2 text-[10px] font-semibold text-[#0A1547]/50">
+                        Review our <a href="/terms/" target="_blank" rel="noopener noreferrer" className="text-[#7554CE] underline underline-offset-2">Terms &amp; Conditions</a>
+                        {" "}and <a href="/privacy/" target="_blank" rel="noopener noreferrer" className="text-[#7554CE] underline underline-offset-2">Privacy Policy</a>.
+                      </p>
+                    </div>
+                  )}
+                </fieldset>
+              )}
 
               {/* Resume upload */}
               <div>
@@ -1206,12 +1349,18 @@ export default function InterviewPage() {
                 Need an accommodation?
               </a>
               <button
-                onClick={handleSubmit}
+                onClick={() => { void handleSubmit(); }}
                 disabled={submitLoading}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.97]"
                 style={{ backgroundColor: "#A380F6" }}
               >
-                {submitLoading ? "Submitting..." : "Submit & Get OTP"}
+                {submitLoading
+                  ? "Submitting..."
+                  : !smsUiEnabled
+                    ? "Submit & Get OTP"
+                    : otpChannel === "sms" && phoneCountry === "US"
+                    ? "Submit & Text Code"
+                    : "Submit & Email Code"}
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -1223,9 +1372,27 @@ export default function InterviewPage() {
           <Card>
             <h1 className="text-xl font-black text-[#0A1547] mb-1">Verify your identity</h1>
             <p className="text-xs text-[#0A1547]/45 font-semibold mb-6">
-              A one-time code was sent to{" "}
-              <span className="text-[#0A1547]/70">{interviewAuth.email || email}</span>.
+              {activeOtpChannel === "sms" ? "A one-time code was requested for " : "A one-time code was sent to "}
+              <span className="text-[#0A1547]/70">
+                {activeOtpChannel === "sms" ? maskSmsDestination(phone) : interviewAuth.email || email}
+              </span>.
             </p>
+
+            {activeOtpChannel === "sms" && smsFallbackRequired && (
+              <div className="mb-5 rounded-xl border border-amber-300/60 bg-amber-50 p-3">
+                <p className="text-xs font-bold leading-relaxed text-amber-900">
+                  Text delivery could not be confirmed. We will not retry automatically.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { void handleUseEmailInstead(); }}
+                  disabled={resendLoading || submitLoading || verifyLoading}
+                  className="mt-3 w-full rounded-full bg-[#0A1547] px-5 py-2.5 text-xs font-black text-white disabled:opacity-60"
+                >
+                  Send a new code by email
+                </button>
+              </div>
+            )}
 
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40 block mb-1.5">
@@ -1246,7 +1413,7 @@ export default function InterviewPage() {
             </div>
 
             <p className="text-[10px] text-[#0A1547]/35 mt-3 leading-relaxed">
-              Didn't receive a code? Check your spam folder or contact{" "}
+              {activeOtpChannel === "email" ? "Didn't receive a code? Check your spam folder or contact " : "Didn't receive a code? You can choose Email or contact "}
               <a href="mailto:info@alphasourceai.com" className="text-[#A380F6] hover:underline">
                 info@alphasourceai.com
               </a>
@@ -1266,11 +1433,21 @@ export default function InterviewPage() {
             <button
               type="button"
               onClick={handleResendOtp}
-              disabled={resendLoading || verifyLoading || submitLoading}
+              disabled={resendLoading || verifyLoading || submitLoading || smsFallbackRequired}
               className="mt-3 w-full px-6 py-2.5 rounded-full text-sm font-bold text-[#7C5FCC] bg-[#A380F6]/10 hover:bg-[#A380F6]/15 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               {resendLoading ? "Sending..." : "Resend code"}
             </button>
+            {activeOtpChannel === "sms" && !smsFallbackRequired && (
+              <button
+                type="button"
+                onClick={() => { void handleUseEmailInstead(); }}
+                disabled={resendLoading || verifyLoading || submitLoading}
+                className="mt-3 w-full px-6 py-2.5 rounded-full text-sm font-bold text-[#0A1547]/65 border border-[#0A1547]/10 bg-white hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              >
+                Use email instead
+              </button>
+            )}
             {resendMessage && <p className="text-[#02D99D] text-[10px] mt-2 font-semibold">{resendMessage}</p>}
             {resendError && <p className={errorCls}>{resendError}</p>}
           </Card>

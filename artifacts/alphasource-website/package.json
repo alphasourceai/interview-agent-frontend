@@ -11,6 +11,8 @@
     "generate:support-voice-knowledge": "node scripts/generate-support-voice-knowledge.mjs",
     "verify:routes": "node scripts/verify-routes.mjs",
     "verify:html": "node scripts/verify-html-integrity.mjs",
+    "verify:sms-candidate-ui": "node scripts/verify-sms-candidate-ui.mjs",
+    "verify:candidate-submit-reliability": "node scripts/verify-candidate-submit-reliability.mjs",
     "verify:recovery-core-ui": "node scripts/verify-recovery-core-ui.mjs"
   },
   "devDependencies": {

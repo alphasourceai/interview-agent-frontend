@@ -13,6 +13,7 @@ import {
   type OptionalTrackingSelection,
   useTrackingConsent,
 } from "@/context/TrackingConsentContext";
+import { useAppearance } from "@/context/AppearanceContext";
 
 const EMPTY_OPTIONAL_TRACKING_SELECTION: OptionalTrackingSelection = {
   analytics: false,
@@ -75,6 +76,7 @@ function PreferenceRow({
 }
 
 export default function TrackingConsentNotice({ visible }: TrackingConsentNoticeProps) {
+  const { resolvedMode } = useAppearance();
   const {
     allowAllOptionalTracking,
     closeTrackingPreferences,
@@ -106,8 +108,9 @@ export default function TrackingConsentNotice({ visible }: TrackingConsentNotice
         <section
           aria-hidden={preferencesOpen}
           aria-label="Privacy choices"
+          data-theme={resolvedMode}
           data-testid="tracking-consent-banner"
-          className={`fixed inset-x-0 bottom-0 z-[80] border-t border-[#A380F6]/55 bg-[#F8F9FD] shadow-[0_-8px_24px_rgba(10,21,71,0.10)] ${
+          className={`tracking-consent-surface fixed inset-x-0 bottom-0 z-[80] border-t border-[#A380F6]/55 bg-[#F8F9FD] shadow-[0_-8px_24px_rgba(10,21,71,0.10)] ${
             preferencesOpen ? "invisible pointer-events-none" : ""
           }`}
         >
@@ -153,8 +156,9 @@ export default function TrackingConsentNotice({ visible }: TrackingConsentNotice
         }}
       >
         <DialogContent
+          data-theme={resolvedMode}
           data-testid="tracking-preferences-dialog"
-          className="max-h-[calc(100vh-2rem)] max-w-2xl overflow-y-auto border-[#0A1547]/15 bg-white p-0 sm:rounded-lg"
+          className="tracking-consent-surface max-h-[calc(100vh-2rem)] max-w-2xl overflow-y-auto border-[#0A1547]/15 bg-white p-0 sm:rounded-lg"
         >
           <div className="p-5 sm:p-6">
             <DialogHeader className="pr-8">

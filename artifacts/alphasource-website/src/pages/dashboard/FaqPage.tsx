@@ -38,22 +38,7 @@ const faqSections = supportFaqSections.map((section) => (
 export default function DashboardFaqPage() {
   return (
     <DashboardLayout title="Support">
-      <div
-        className="flex flex-wrap items-start justify-between gap-4 mb-7"
-        data-support-knowledge-version={DASHBOARD_SUPPORT_KNOWLEDGE_VERSION}
-      >
-        <div className="max-w-3xl">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/35 mb-1" style={{ color: "var(--as-text)", opacity: 0.35 }}>
-            Client Support
-          </p>
-          <h2 className="text-2xl font-black text-[#0A1547] leading-tight mb-3" style={{ color: "var(--as-text)" }}>
-            Support
-          </h2>
-          <p className="text-sm text-[#0A1547]/60 leading-relaxed" style={{ color: "var(--as-text)", opacity: 0.6 }}>
-            Practical alphaScreen guidance for managing roles, candidates, reports, membership workflows, and team access inside the client dashboard.
-          </p>
-        </div>
-      </div>
+      <div data-support-knowledge-version={DASHBOARD_SUPPORT_KNOWLEDGE_VERSION} />
 
       <div
         className="rounded-2xl p-4 mb-5"

@@ -637,7 +637,7 @@ function HowItWorksSection() {
                   {step.number}
                 </div>
                 {/* Card */}
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 w-full text-center">
+                <div className="min-h-[10.625rem] h-full bg-white rounded-2xl p-5 border border-gray-100 w-full text-center">
                   <h3 className="text-sm font-bold text-[#0A1547] mb-2">{step.title}</h3>
                   <p className="text-xs text-[#0A1547]/60 leading-relaxed">{step.description}</p>
                 </div>

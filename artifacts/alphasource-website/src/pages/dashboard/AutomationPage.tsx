@@ -1097,15 +1097,7 @@ export default function AutomationPage() {
     <DashboardLayout title="Automation">
       <CurrentScopeBanner client={selectedClient} />
 
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="max-w-3xl">
-          <h2 className="text-2xl font-black leading-tight mb-3" style={primaryTextStyle}>
-            Automation
-          </h2>
-          <p className="text-sm leading-relaxed" style={mutedTextStyle}>
-            Set when candidates should be gathered for client admin review before a second-round interview. You choose the score criteria, reviewers, digest schedule, and scheduling link.
-          </p>
-        </div>
+      <div className="mb-5 flex justify-end">
         <label className="inline-flex items-center gap-3 rounded-2xl border px-4 py-3 shrink-0" style={compactSurfaceStyle}>
           <span className="min-w-0">
             <span className="flex items-center gap-1 text-xs font-black" style={primaryTextStyle}>
