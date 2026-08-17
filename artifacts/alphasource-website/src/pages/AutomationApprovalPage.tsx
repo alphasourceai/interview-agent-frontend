@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, ShieldCheck, XCircle } from "lucide-react";
+import { alphaSourceLogo } from "@/assets/branding";
 
 type ApprovalStatus = "loading" | "ready" | "approved" | "rejected" | "expired" | "unavailable" | "error";
 
@@ -283,7 +284,7 @@ export default function AutomationApprovalPage({ params }: AutomationApprovalPag
         className="bg-white flex-shrink-0 flex items-center px-6 h-14"
         style={{ borderBottom: "1px solid rgba(10,21,71,0.07)" }}
       >
-        <img src="/logo-dark-text.png" alt="alphaSource AI" className="h-8 w-auto" />
+        <img src={alphaSourceLogo} alt="alphaSource AI" className="h-8 w-auto" />
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-10 sm:py-12">

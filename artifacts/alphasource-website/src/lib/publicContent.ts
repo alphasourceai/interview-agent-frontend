@@ -214,7 +214,7 @@ export const publicSupportTopics: PublicSupportTopic[] = [
       "Use the public security and privacy pages for high-level review. Specific legal, privacy, or security questions can be routed to alphaSource support before purchase.",
     links: [
       { label: "Security overview", href: "/alphascreen/security" },
-      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Privacy Policy", href: "/privacy/" },
     ],
   },
 ];

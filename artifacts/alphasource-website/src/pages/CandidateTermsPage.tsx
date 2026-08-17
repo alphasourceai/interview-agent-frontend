@@ -1,3 +1,5 @@
+import { alphaSourceLogo } from "@/assets/branding";
+
 export default function CandidateTermsPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex flex-col" style={{ fontFamily: "'Raleway', sans-serif" }}>
@@ -5,7 +7,7 @@ export default function CandidateTermsPage() {
         className="bg-white flex-shrink-0 flex items-center px-6 h-14"
         style={{ borderBottom: "1px solid rgba(10,21,71,0.07)" }}
       >
-        <img src="/logo-dark-text.png" alt="alphaSource AI" className="h-8 w-auto" />
+        <img src={alphaSourceLogo} alt="alphaSource AI" className="h-8 w-auto" />
       </header>
 
       <main className="flex-1 flex items-start justify-center px-4 py-10 sm:py-12">

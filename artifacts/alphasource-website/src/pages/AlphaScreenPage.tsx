@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
 import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
+import { alphaSourceSymbol } from "@/assets/branding";
 
 const EASE_OUT = "easeOut" as const;
 
@@ -512,7 +513,7 @@ function AboutAlphaScreenSection() {
               style={{ boxShadow: "0 0 0 1.5px rgba(163,128,246,0.2), 0 24px 64px rgba(10,21,71,0.1)" }}
             >
               <div className="bg-[#0A1547] px-6 py-5 flex items-center gap-3">
-                <img src="/alpha-symbol.png" alt="Alpha" className="h-8 w-8" />
+                <img src={alphaSourceSymbol} alt="Alpha" className="h-8 w-8" />
                 <div>
                   <div className="text-sm font-bold text-white">alphaScreen</div>
                   <div className="text-xs text-white/50">Candidate Evaluation Report</div>

@@ -20,6 +20,8 @@ const TRAILING_SLASH_PUBLIC_PATHS = new Set([
   "/about",
   "/support",
   "/faq",
+  "/privacy",
+  "/terms",
   "/alphascreen",
   "/alphascreen/pricing",
   "/alphascreen/how-it-works",
@@ -28,6 +30,10 @@ const TRAILING_SLASH_PUBLIC_PATHS = new Set([
   "/alphascreen/for-dental-groups",
   "/alphascreen/roi",
 ]);
+const PUBLIC_ROUTE_ALIASES: Record<string, string> = {
+  "/privacy-policy": "/privacy",
+  "/terms-and-conditions": "/terms",
+};
 const ORGANIZATION_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -466,7 +472,8 @@ export function assetUrl(path = "/opengraph.jpg"): string {
 }
 
 export function getSeoConfig(pathname: string): SeoConfig {
-  const path = normalizePath(pathname);
+  const normalizedPath = normalizePath(pathname);
+  const path = PUBLIC_ROUTE_ALIASES[normalizedPath] || normalizedPath;
   const publicConfig = PUBLIC_ROUTES[path];
   if (!publicConfig) return DEFAULT_NO_INDEX;
 

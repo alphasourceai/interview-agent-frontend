@@ -330,7 +330,7 @@ export function AlphaScreenSecurityPage() {
               Review the public Privacy Policy, read the FAQ, or contact alphaSource with your data protection questions before starting a membership.
             </p>
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <a href="/privacy" className="inline-flex items-center justify-center rounded-full bg-[#0A1547] px-5 py-3 text-sm font-black text-white">Read Privacy Policy</a>
+              <a href="/privacy/" className="inline-flex items-center justify-center rounded-full bg-[#0A1547] px-5 py-3 text-sm font-black text-white">Read Privacy Policy</a>
               <a href="/faq" className="inline-flex items-center justify-center rounded-full border border-[#0A1547]/12 bg-white px-5 py-3 text-sm font-black text-[#0A1547]">Read FAQ</a>
             </div>
           </div>

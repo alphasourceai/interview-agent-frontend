@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { CheckCircle, Users, BarChart2, Scale, Zap, Shield, Globe } from "lucide-react";
 import { ArrowRight } from "lucide-react";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
+import { alphaSourceSymbol } from "@/assets/branding";
 
 const EASE_OUT = "easeOut" as const;
 
@@ -208,7 +209,7 @@ function StorySection() {
             >
               "
             </div>
-            <img src="/alpha-symbol.png" alt="alphaSource" className="h-10 w-auto mb-8" />
+            <img src={alphaSourceSymbol} alt="alphaSource" className="h-10 w-auto mb-8" />
             <blockquote className="text-2xl font-medium leading-relaxed italic text-white/90 mb-8 relative z-10">
               "alphaSource cut our screening time in half and uncovered candidates we'd have missed — people with real spark. They overdeliver every time."
             </blockquote>
