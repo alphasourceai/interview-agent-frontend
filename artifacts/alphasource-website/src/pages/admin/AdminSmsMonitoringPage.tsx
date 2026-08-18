@@ -155,7 +155,7 @@ function responseError(text: string, fallback: string): string {
 function CapabilityNotice({ available, children }: { available: boolean; children: ReactNode }) {
   if (available) return null;
   return (
-    <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-700 dark:text-amber-300">
+    <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-medium leading-relaxed text-amber-700 dark:text-amber-300">
       {children}
     </p>
   );
@@ -167,8 +167,8 @@ function ChecklistRow({ label, ready, detail }: { label: string; ready: boolean;
     <div className="flex items-start gap-3 border-t py-3 first:border-t-0" style={{ borderColor: "var(--as-border)" }}>
       <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${ready ? "text-emerald-500" : "text-amber-500"}`} />
       <div className="min-w-0">
-        <p className="text-xs font-black" style={textStyle}>{label}</p>
-        <p className="mt-0.5 text-xs font-semibold" style={subtleTextStyle}>{detail}</p>
+        <p className="text-xs font-semibold" style={textStyle}>{label}</p>
+        <p className="mt-0.5 text-xs font-normal leading-relaxed" style={subtleTextStyle}>{detail}</p>
       </div>
     </div>
   );
@@ -242,12 +242,12 @@ export default function AdminSmsMonitoringPage() {
     ["Provider and sender", Boolean(runtime?.provider && runtime?.sender_configured), runtime?.sender_configured ? `${titleCase(runtime?.provider)} sender is configured.` : "Provider or sender configuration is incomplete."],
     ["Outbound credentials", runtime?.outbound_credentials_configured === true, runtime?.outbound_credentials_configured ? "Credentials are present; values remain hidden." : "Outbound credentials are not configured."],
     ["Signed delivery webhook", runtime?.delivery_webhook_signing_configured === true, runtime?.delivery_webhook_signing_configured ? "Webhook verification material is configured." : "Delivery webhook verification is not configured."],
-    ["Signed inbound controls", (runtime?.inbound_webhook_signing_configured ?? runtime?.inbound_webhook_secret_configured) === true, (runtime?.inbound_webhook_signing_configured ?? runtime?.inbound_webhook_secret_configured) ? "Telnyx Ed25519 verification material is configured." : "Signed STOP/START/HELP verification material is not configured."],
-    ["Line-type lookup", runtime?.lookup_enabled === true, runtime?.lookup_enabled ? `${titleCase(runtime?.lookup_provider)} lookup is enabled.` : "Mobile/landline/VoIP lookup is disabled."],
-    ["Global spend cap", number(runtime?.spend_cap_cents) > 0, runtime?.spend_cap_cents ? `${formatMoney(runtime.spend_cap_cents)} daily configured cap.` : "A daily spend cap is not configured."],
+    ["Signed inbound controls", (runtime?.inbound_webhook_signing_configured ?? runtime?.inbound_webhook_secret_configured) === true, (runtime?.inbound_webhook_signing_configured ?? runtime?.inbound_webhook_secret_configured) ? "Signed STOP/START/HELP controls are active with Telnyx Ed25519 verification." : "Signed STOP/START/HELP verification material is not configured."],
+    ["Line-type lookup", runtime?.lookup_enabled === true, runtime?.lookup_enabled ? `${titleCase(runtime?.lookup_provider)} mobile, landline, and VoIP lookup is enabled and fails closed.` : "Mobile/landline/VoIP lookup is disabled."],
+    ["Global spend cap", number(runtime?.spend_cap_cents) > 0, runtime?.spend_cap_cents ? `${formatMoney(runtime.spend_cap_cents)} daily spend cap is configured.` : "A daily spend cap is not configured."],
     ["SMS abuse key", runtime?.abuse_secret_configured === true, runtime?.abuse_secret_configured ? "Keyed abuse controls are configured." : "SMS abuse control secret is not configured."],
     ["Consent disclosure", Boolean(runtime?.consent_copy_version), runtime?.consent_copy_version ? `Version ${runtime.consent_copy_version} is configured.` : "Consent disclosure version is not configured."],
-    ["Formal compliance review", runtime?.compliance_review?.status === "approved", runtime?.compliance_review?.status === "approved" ? `Approved${runtime.compliance_review.version ? ` as ${runtime.compliance_review.version}` : ""}.` : "LEGAL_REVIEW_REQUIRED — formal approval is not recorded."],
+    ["Formal compliance review", runtime?.compliance_review?.status === "approved", runtime?.compliance_review?.status === "approved" ? `Approved${runtime.compliance_review.version ? ` as ${runtime.compliance_review.version}` : ""}.` : runtime?.compliance_review?.status === "pending" ? "Review packet is ready; formal owner approval remains pending." : "LEGAL_REVIEW_REQUIRED — formal approval is not recorded."],
   ] as const, [runtime]);
 
   return (
@@ -259,8 +259,8 @@ export default function AdminSmsMonitoringPage() {
               <h2 className="text-2xl font-black" style={textStyle}>SMS Monitoring &amp; Compliance</h2>
               <span className="rounded-full border px-2.5 py-1 text-[10px] font-black uppercase" style={{ ...surfaceStyle, color: "var(--as-subtle)" }}>Read only</span>
             </div>
-            <p className="mt-1 text-sm font-semibold" style={mutedTextStyle}>Operational delivery, safety controls, consent evidence, and compliance readiness.</p>
-            <p className="mt-1 text-xs font-semibold" style={subtleTextStyle}>Last refreshed {formatDateTime(payload?.generated_at)}</p>
+            <p className="mt-1 text-sm font-normal" style={mutedTextStyle}>Operational delivery, safety controls, consent evidence, and compliance readiness.</p>
+            <p className="mt-1 text-xs font-normal" style={subtleTextStyle}>Last refreshed {formatDateTime(payload?.generated_at)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -280,28 +280,28 @@ export default function AdminSmsMonitoringPage() {
           </div>
         </div>
 
-        {error ? <div role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 p-4 text-sm font-bold text-red-700 dark:text-red-300">{error}</div> : null}
-        {loading && !payload ? <div className="rounded-xl border p-6 text-sm font-bold" style={surfaceStyle}>Loading SMS monitoring data…</div> : null}
+        {error ? <div role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 p-4 text-sm font-medium text-red-700 dark:text-red-300">{error}</div> : null}
+        {loading && !payload ? <div className="rounded-xl border p-6 text-sm font-medium" style={surfaceStyle}>Loading SMS monitoring data…</div> : null}
 
         {payload ? (
           <>
             <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${state.className}`}>
               <StateIcon className="h-5 w-5" />
-              <div><p className="text-sm font-black">{state.label}</p><p className="text-xs font-semibold">Environment: {titleCase(runtime?.environment)} · Scope: {titleCase(payload.scope)}</p></div>
+              <div><p className="text-sm font-semibold">{state.label}</p><p className="text-xs font-normal">Environment: {titleCase(runtime?.environment)} · Scope: {titleCase(payload.scope)}</p></div>
             </div>
 
             <section aria-label="SMS delivery summary" className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
               {summary.map(([label, value, Icon]) => (
                 <div key={label} className="min-w-0 rounded-xl border px-3 py-3" style={surfaceStyle}>
                   <div className="flex items-center justify-between gap-2"><p className="truncate text-xl font-black tabular-nums" style={textStyle}>{typeof value === "number" ? value.toLocaleString() : value}</p><Icon className="h-4 w-4 shrink-0 text-[#A380F6]" /></div>
-                  <p className="mt-1 text-[10px] font-black uppercase leading-tight" style={subtleTextStyle}>{label}</p>
+                  <p className="mt-1 text-[10px] font-semibold uppercase leading-tight tracking-wide" style={subtleTextStyle}>{label}</p>
                 </div>
               ))}
             </section>
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.55fr)]">
               <section className="rounded-xl border p-4" style={surfaceStyle}>
-                <div className="mb-4"><h3 className="text-sm font-black" style={textStyle}>Delivery trend</h3><p className="text-xs font-semibold" style={subtleTextStyle}>Requested, delivered, and failed challenges by day.</p></div>
+                <div className="mb-4"><h3 className="text-sm font-bold" style={textStyle}>Delivery trend</h3><p className="text-xs font-normal" style={subtleTextStyle}>Requested, delivered, and failed challenges by day.</p></div>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={delivery?.trend || []} margin={{ left: -24, right: 8, top: 8, bottom: 0 }}>
@@ -319,25 +319,25 @@ export default function AdminSmsMonitoringPage() {
               </section>
 
               <section className="rounded-xl border p-4" style={surfaceStyle}>
-                <h3 className="text-sm font-black" style={textStyle}>Delivery states</h3>
+                <h3 className="text-sm font-bold" style={textStyle}>Delivery states</h3>
                 <div className="mt-3 space-y-2">
                   {Object.entries(delivery?.by_status || {}).length ? Object.entries(delivery?.by_status || {}).sort().map(([status, count]) => (
-                    <div key={status} className="flex items-center justify-between rounded-lg border px-3 py-2" style={{ borderColor: "var(--as-border)" }}><span className="text-xs font-bold" style={mutedTextStyle}>{titleCase(status)}</span><span className="text-sm font-black tabular-nums" style={textStyle}>{number(count).toLocaleString()}</span></div>
-                  )) : <p className="text-xs font-semibold" style={subtleTextStyle}>No SMS delivery states in this range.</p>}
+                    <div key={status} className="flex items-center justify-between rounded-lg border px-3 py-2" style={{ borderColor: "var(--as-border)" }}><span className="text-xs font-medium" style={mutedTextStyle}>{titleCase(status)}</span><span className="text-sm font-bold tabular-nums" style={textStyle}>{number(count).toLocaleString()}</span></div>
+                  )) : <p className="text-xs font-normal" style={subtleTextStyle}>No SMS delivery states in this range.</p>}
                 </div>
               </section>
             </div>
 
             <div className="grid gap-4 xl:grid-cols-2">
               <section className="rounded-xl border p-4" style={surfaceStyle}>
-                <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#A380F6]"/><h3 className="text-sm font-black" style={textStyle}>Runtime and compliance readiness</h3></div>
+                <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#A380F6]"/><h3 className="text-sm font-bold" style={textStyle}>Runtime and compliance readiness</h3></div>
                 <div className="mt-2">{checklist.map(([label, ready, detail]) => <ChecklistRow key={label} label={label} ready={ready} detail={detail} />)}</div>
               </section>
 
               <section className="space-y-4">
                 <div className="rounded-xl border p-4" style={surfaceStyle}>
-                  <h3 className="text-sm font-black" style={textStyle}>Consent and suppressions</h3>
-                  <p className="mt-1 text-xs font-semibold" style={subtleTextStyle}>Suppression totals are platform-wide because the private ledger intentionally has no candidate or client identity.</p>
+                  <h3 className="text-sm font-bold" style={textStyle}>Consent and suppressions</h3>
+                  <p className="mt-1 text-xs font-normal leading-relaxed" style={subtleTextStyle}>Suppression totals are platform-wide because the private ledger intentionally has no candidate or client identity.</p>
                   <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {[
                       ["Explicit selections", payload.consent?.selected],
@@ -346,13 +346,13 @@ export default function AdminSmsMonitoringPage() {
                       ["Opted out", payload.suppressions?.opted_out],
                       ["Provider blocked", payload.suppressions?.provider_blocked],
                       ["Abuse blocked", payload.suppressions?.abuse_blocked],
-                    ].map(([label, value]) => <div key={String(label)} className="rounded-lg border p-3" style={{ borderColor: "var(--as-border)" }}><p className="text-lg font-black" style={textStyle}>{number(value).toLocaleString()}</p><p className="text-[10px] font-black uppercase" style={subtleTextStyle}>{label}</p></div>)}
+                    ].map(([label, value]) => <div key={String(label)} className="rounded-lg border p-3" style={{ borderColor: "var(--as-border)" }}><p className="text-lg font-bold" style={textStyle}>{number(value).toLocaleString()}</p><p className="text-[10px] font-semibold uppercase tracking-wide" style={subtleTextStyle}>{label}</p></div>)}
                   </div>
                 </div>
 
                 <div className="rounded-xl border p-4" style={surfaceStyle}>
-                  <h3 className="text-sm font-black" style={textStyle}>Inbound controls and line type</h3>
-                  <p className="mt-1 text-xs font-semibold" style={subtleTextStyle}>These safety totals are platform-wide and contain no raw destination data.</p>
+                  <h3 className="text-sm font-bold" style={textStyle}>Inbound controls and line type</h3>
+                  <p className="mt-1 text-xs font-normal leading-relaxed" style={subtleTextStyle}>These safety totals are platform-wide and contain no raw destination data.</p>
                   <div className="mt-3 space-y-2">
                     <CapabilityNotice available={payload.capabilities?.inbound_control_monitoring === true}>Inbound STOP/START/HELP monitoring is not installed in this environment.</CapabilityNotice>
                     <CapabilityNotice available={payload.capabilities?.line_type_monitoring === true}>Live line-type monitoring is not installed in this environment.</CapabilityNotice>
@@ -361,13 +361,13 @@ export default function AdminSmsMonitoringPage() {
                     {[
                       ["STOP", payload.inbound?.stop], ["START", payload.inbound?.start], ["HELP", payload.inbound?.help],
                       ["Mobile", payload.line_type?.mobile], ["Landline", payload.line_type?.landline], ["VoIP", payload.line_type?.voip], ["Unknown", payload.line_type?.unknown],
-                    ].map(([label, value]) => <div key={String(label)} className="rounded-lg border p-2.5" style={{ borderColor: "var(--as-border)" }}><p className="text-base font-black" style={textStyle}>{number(value).toLocaleString()}</p><p className="text-[10px] font-black uppercase" style={subtleTextStyle}>{label}</p></div>)}
+                    ].map(([label, value]) => <div key={String(label)} className="rounded-lg border p-2.5" style={{ borderColor: "var(--as-border)" }}><p className="text-base font-bold" style={textStyle}>{number(value).toLocaleString()}</p><p className="text-[10px] font-semibold uppercase tracking-wide" style={subtleTextStyle}>{label}</p></div>)}
                   </div>
                 </div>
 
                 <div className="rounded-xl border p-4" style={surfaceStyle}>
-                  <h3 className="text-sm font-black" style={textStyle}>Spend and breaker protection</h3>
-                  <p className="mt-1 text-xs font-semibold" style={subtleTextStyle}>Spend respects the selected client scope; provider breaker totals are platform-wide.</p>
+                  <h3 className="text-sm font-bold" style={textStyle}>Spend and breaker protection</h3>
+                  <p className="mt-1 text-xs font-normal leading-relaxed" style={subtleTextStyle}>Spend respects the selected client scope; provider breaker totals are platform-wide.</p>
                   <div className="mt-3 space-y-2">
                     <CapabilityNotice available={payload.capabilities?.spend_monitoring === true}>Spend-reservation monitoring is not installed in this environment.</CapabilityNotice>
                     <CapabilityNotice available={payload.capabilities?.provider_breaker_monitoring === true}>Provider-breaker monitoring is not installed in this environment.</CapabilityNotice>
@@ -378,17 +378,17 @@ export default function AdminSmsMonitoringPage() {
                       ["Counted attempts", payload.spend?.today_counted_attempts ?? "—"],
                       ["Active breakers", payload.provider_breakers?.active ?? "—"],
                       ["Released breakers", payload.provider_breakers?.released ?? "—"],
-                    ].map(([label, value]) => <div key={String(label)} className="rounded-lg border p-2.5" style={{ borderColor: "var(--as-border)" }}><p className="text-base font-black" style={textStyle}>{value}</p><p className="text-[10px] font-black uppercase" style={subtleTextStyle}>{label}</p></div>)}
+                    ].map(([label, value]) => <div key={String(label)} className="rounded-lg border p-2.5" style={{ borderColor: "var(--as-border)" }}><p className="text-base font-bold" style={textStyle}>{value}</p><p className="text-[10px] font-semibold uppercase tracking-wide" style={subtleTextStyle}>{label}</p></div>)}
                   </div>
                 </div>
               </section>
             </div>
 
             <section className="overflow-hidden rounded-xl border" style={surfaceStyle}>
-              <div className="border-b px-4 py-3" style={{ borderColor: "var(--as-border)" }}><h3 className="text-sm font-black" style={textStyle}>Recent bounded incidents</h3><p className="text-xs font-semibold" style={subtleTextStyle}>No phone numbers, candidate identities, message IDs, fingerprints, or OTPs are displayed.</p></div>
+              <div className="border-b px-4 py-3" style={{ borderColor: "var(--as-border)" }}><h3 className="text-sm font-bold" style={textStyle}>Recent bounded incidents</h3><p className="text-xs font-normal leading-relaxed" style={subtleTextStyle}>No phone numbers, candidate identities, message IDs, fingerprints, or OTPs are displayed.</p></div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[680px] text-left text-xs"><thead><tr className="border-b" style={{ borderColor: "var(--as-border)" }}>{["Occurred", "Provider", "Delivery status", "Failure category"].map((heading) => <th key={heading} className="px-4 py-2.5 text-[10px] font-black uppercase" style={subtleTextStyle}>{heading}</th>)}</tr></thead><tbody>
-                  {(payload.incidents || []).length ? payload.incidents?.map((incident, index) => <tr key={`${incident.occurred_at || "incident"}-${index}`} className="border-b last:border-b-0" style={{ borderColor: "var(--as-border)" }}><td className="px-4 py-3 font-semibold" style={mutedTextStyle}>{formatDateTime(incident.occurred_at)}</td><td className="px-4 py-3 font-black" style={textStyle}>{titleCase(incident.provider)}</td><td className="px-4 py-3 font-black" style={textStyle}>{titleCase(incident.delivery_status)}</td><td className="px-4 py-3 font-black" style={textStyle}>{titleCase(incident.failure_category)}</td></tr>) : <tr><td colSpan={4} className="px-4 py-8 text-center text-sm font-semibold" style={subtleTextStyle}>No bounded SMS incidents in this range.</td></tr>}
+                <table className="w-full min-w-[680px] text-left text-xs"><thead><tr className="border-b" style={{ borderColor: "var(--as-border)" }}>{["Occurred", "Provider", "Delivery status", "Failure category"].map((heading) => <th key={heading} className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={subtleTextStyle}>{heading}</th>)}</tr></thead><tbody>
+                  {(payload.incidents || []).length ? payload.incidents?.map((incident, index) => <tr key={`${incident.occurred_at || "incident"}-${index}`} className="border-b last:border-b-0" style={{ borderColor: "var(--as-border)" }}><td className="px-4 py-3 font-normal" style={mutedTextStyle}>{formatDateTime(incident.occurred_at)}</td><td className="px-4 py-3 font-medium" style={textStyle}>{titleCase(incident.provider)}</td><td className="px-4 py-3 font-medium" style={textStyle}>{titleCase(incident.delivery_status)}</td><td className="px-4 py-3 font-medium" style={textStyle}>{titleCase(incident.failure_category)}</td></tr>) : <tr><td colSpan={4} className="px-4 py-8 text-center text-sm font-normal" style={subtleTextStyle}>No bounded SMS incidents in this range.</td></tr>}
                 </tbody></table>
               </div>
             </section>

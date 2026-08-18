@@ -32,6 +32,22 @@ test("page covers delivery, controls, consent, compliance, spend, line type, and
   for (const range of ["24h", "7d", "30d"]) assert.match(page, new RegExp(`value="${range}"`));
 });
 
+test("readiness copy distinguishes configured controls from pending owner review", () => {
+  assert.match(page, /Signed STOP\/START\/HELP controls are active with Telnyx Ed25519 verification/);
+  assert.match(page, /mobile, landline, and VoIP lookup is enabled and fails closed/);
+  assert.match(page, /daily spend cap is configured/);
+  assert.match(page, /Keyed abuse controls are configured/);
+  assert.match(page, /Review packet is ready; formal owner approval remains pending/);
+});
+
+test("typography reserves heavy emphasis for page identity and primary metrics", () => {
+  assert.match(page, /text-xs font-normal leading-relaxed/);
+  assert.match(page, /text-xs font-medium leading-relaxed/);
+  assert.match(page, /text-\[10px\] font-semibold uppercase tracking-wide/);
+  assert.match(page, /px-4 py-3 font-medium/);
+  assert.doesNotMatch(page, /px-4 py-3 font-black/);
+});
+
 test("page fetches only the protected aggregate endpoint with client scope", () => {
   assert.match(page, /\/admin\/sms-monitoring\?/);
   assert.match(page, /params\.set\("client_id", selectedClientId\)/);
