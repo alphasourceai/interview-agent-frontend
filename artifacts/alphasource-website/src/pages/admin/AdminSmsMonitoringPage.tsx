@@ -89,6 +89,7 @@ interface MonitoringPayload {
     sender_configured?: boolean;
     outbound_credentials_configured?: boolean;
     delivery_webhook_signing_configured?: boolean;
+    inbound_webhook_signing_configured?: boolean;
     inbound_webhook_secret_configured?: boolean;
     lookup_enabled?: boolean;
     lookup_provider?: string;
@@ -241,7 +242,7 @@ export default function AdminSmsMonitoringPage() {
     ["Provider and sender", Boolean(runtime?.provider && runtime?.sender_configured), runtime?.sender_configured ? `${titleCase(runtime?.provider)} sender is configured.` : "Provider or sender configuration is incomplete."],
     ["Outbound credentials", runtime?.outbound_credentials_configured === true, runtime?.outbound_credentials_configured ? "Credentials are present; values remain hidden." : "Outbound credentials are not configured."],
     ["Signed delivery webhook", runtime?.delivery_webhook_signing_configured === true, runtime?.delivery_webhook_signing_configured ? "Webhook verification material is configured." : "Delivery webhook verification is not configured."],
-    ["Inbound control webhook", runtime?.inbound_webhook_secret_configured === true, runtime?.inbound_webhook_secret_configured ? "Inbound control secret is configured." : "Inbound STOP/START/HELP secret is not configured."],
+    ["Signed inbound controls", (runtime?.inbound_webhook_signing_configured ?? runtime?.inbound_webhook_secret_configured) === true, (runtime?.inbound_webhook_signing_configured ?? runtime?.inbound_webhook_secret_configured) ? "Telnyx Ed25519 verification material is configured." : "Signed STOP/START/HELP verification material is not configured."],
     ["Line-type lookup", runtime?.lookup_enabled === true, runtime?.lookup_enabled ? `${titleCase(runtime?.lookup_provider)} lookup is enabled.` : "Mobile/landline/VoIP lookup is disabled."],
     ["Global spend cap", number(runtime?.spend_cap_cents) > 0, runtime?.spend_cap_cents ? `${formatMoney(runtime.spend_cap_cents)} daily configured cap.` : "A daily spend cap is not configured."],
     ["SMS abuse key", runtime?.abuse_secret_configured === true, runtime?.abuse_secret_configured ? "Keyed abuse controls are configured." : "SMS abuse control secret is not configured."],
