@@ -19,7 +19,7 @@ export default function CandidateTermsPage() {
           }}
         >
           <h1 className="text-2xl sm:text-3xl font-black text-[#0A1547] leading-tight">Candidate Terms &amp; Conditions</h1>
-          <p className="mt-2 text-xs sm:text-sm text-[#0A1547]/50 font-semibold">Effective date: April 22, 2026</p>
+          <p className="mt-2 text-xs sm:text-sm text-[#0A1547]/50 font-semibold">Effective date: August 18, 2026</p>
 
           <section className="mt-7 space-y-5 text-sm text-[#0A1547]/75 leading-relaxed">
             <div>
@@ -69,7 +69,17 @@ export default function CandidateTermsPage() {
             </div>
 
             <div>
-              <h2 className="text-base font-black text-[#0A1547] mb-1.5">7. Acceptance</h2>
+              <h2 className="text-base font-black text-[#0A1547] mb-1.5">7. Optional Text-Message Verification</h2>
+              <p>
+                If you expressly select Text Message, alphaScreen may send the transactional interview-access verification codes you request to the mobile number you provide. Message frequency varies based on your requests and resends, and message and data rates may apply. Reply STOP to opt out or HELP for help. Text-message consent is optional; Email verification remains available. Review the public{" "}
+                <a href="/terms/" target="_blank" rel="noopener noreferrer" className="text-[#A380F6] hover:underline font-semibold">Terms &amp; Conditions</a>
+                {" "}and{" "}
+                <a href="/privacy/" target="_blank" rel="noopener noreferrer" className="text-[#A380F6] hover:underline font-semibold">Privacy Policy</a>.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-base font-black text-[#0A1547] mb-1.5">8. Acceptance</h2>
               <p>
                 By continuing in the interview flow, you acknowledge and accept these Candidate Terms &amp; Conditions.
               </p>

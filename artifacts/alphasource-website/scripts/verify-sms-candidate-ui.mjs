@@ -8,7 +8,9 @@ const contract = fs.readFileSync(path.join(projectRoot, "src/lib/smsOtp.ts"), "u
 
 const required = [
   "VITE_SMS_OTP_UI_ENABLED",
-  "sms-consent-v1",
+  "sms-consent-v2",
+  "Message frequency varies based on your verification requests and resends",
+  "Text message consent is optional; you may choose Email instead",
   "Text Message",
   "Message and data rates may apply",
   "Reply STOP to opt out or HELP for help",

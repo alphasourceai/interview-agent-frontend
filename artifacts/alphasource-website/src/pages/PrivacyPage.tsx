@@ -17,7 +17,7 @@ export default function PrivacyPage() {
             <h1 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight mb-3">
               Privacy Policy
             </h1>
-            <p className="text-base text-[#0A1547]/50">Effective Date: 6/20/2026</p>
+            <p className="text-base text-[#0A1547]/50">Effective Date: 8/18/2026</p>
           </motion.div>
         </div>
       </div>
@@ -103,7 +103,19 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section number="8" title="SERVICE PROVIDERS AND DATA SHARING">
+          <Section number="8" title="MOBILE INFORMATION AND TRANSACTIONAL VERIFICATION MESSAGES">
+            <p>
+              If you select Text Message for interview-access verification, alphaScreen processes the mobile number and country you provide, the time and version of your selection, a keyed destination fingerprint, delivery and opt-out status, line-type classification, and limited provider delivery metadata.
+            </p>
+            <p>
+              We use this information only to deliver and secure the requested verification flow, prevent abuse and excess spend, honor STOP and related control requests, investigate bounded delivery failures, and maintain compliance evidence.
+            </p>
+            <p>
+              We may disclose the minimum necessary mobile information to contracted messaging, carrier, security, and infrastructure providers that process it for these purposes. We do not sell mobile information or share it with third parties for their own promotional or marketing purposes. Email verification remains available.
+            </p>
+          </Section>
+
+          <Section number="9" title="SERVICE PROVIDERS AND DATA SHARING">
             <p>
               alphaSource AI uses service providers for hosting, analytics infrastructure, email, database and storage, payment, AI and video services, error monitoring, support, security, and related operations. These providers help us operate the website and services.
             </p>
@@ -112,7 +124,7 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section number="9" title="USER CHOICES AND CONTACT">
+          <Section number="10" title="USER CHOICES AND CONTACT">
             <p>
               You may contact us with privacy questions, deletion requests, or requests not to be contacted. The best public contact method is email at{" "}
               <a href="mailto:info@alphasourceai.com" className="text-[#A380F6] hover:underline">
@@ -125,7 +137,7 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section number="10" title="CHANGES TO THIS NOTICE" last>
+          <Section number="11" title="CHANGES TO THIS NOTICE" last>
             <p>
               We may update this Privacy Policy as our website, products, services, and workflows evolve. The effective date above shows when this notice was last updated.
             </p>

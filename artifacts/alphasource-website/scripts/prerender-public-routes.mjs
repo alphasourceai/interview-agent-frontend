@@ -785,6 +785,10 @@ function privacyRoute() {
         "Authenticated dashboard, client, candidate, and product workflows may involve information that is handled according to applicable agreements, product controls, access permissions, and operational requirements.",
         "Candidate, interview, and report data is used to provide screening and hiring workflow services requested by the client or employer.",
       ]),
+      section("Mobile information and transactional verification messages", [
+        "If you select Text Message for interview-access verification, alphaScreen processes the mobile number and country you provide, selection evidence, a keyed destination fingerprint, delivery and opt-out status, line-type classification, and limited provider delivery metadata.",
+        "This information is used only to deliver and secure the requested verification flow, prevent abuse and excess spend, honor STOP and related control requests, investigate bounded delivery failures, and maintain compliance evidence. Mobile information is not sold or shared with third parties for their own promotional or marketing purposes. Email verification remains available.",
+      ]),
       section("Contact", [
         "Privacy questions, deletion requests, or requests not to be contacted can be sent to info@alphasourceai.com.",
       ]),
@@ -824,6 +828,10 @@ function termsRoute() {
       ]),
       section("Candidate data and consent", [
         "Candidate data is used for interview, evaluation, and reporting workflows requested by clients or employers. Candidate data is not sold.",
+      ]),
+      section("Optional transactional text messages", [
+        "When a candidate expressly selects Text Message, alphaScreen may send requested transactional interview-access verification codes to the provided mobile number. Message frequency varies based on verification requests and resends. Message and data rates may apply. Reply STOP to opt out or HELP for help.",
+        "Text message consent is optional and is not required to use the Email verification alternative. Opting out affects text-message delivery; Email verification remains available.",
       ]),
       section("AI-generated analysis and limitations", [
         "AI outputs may contain inaccuracies or omissions and should not be used as the sole basis for hiring decisions.",
