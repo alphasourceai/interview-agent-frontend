@@ -25,6 +25,7 @@ test("page covers delivery, controls, consent, compliance, spend, line type, and
     "Consent and suppressions",
     "Inbound controls and line type",
     "Spend and breaker protection",
+    "Data retention enforcement",
     "Recent bounded incidents",
     "Formal compliance review",
     "LEGAL_REVIEW_REQUIRED",
@@ -38,6 +39,8 @@ test("readiness copy distinguishes configured controls from pending owner review
   assert.match(page, /daily spend cap is configured/);
   assert.match(page, /Keyed abuse controls are configured/);
   assert.match(page, /Review packet is ready; formal owner approval remains pending/);
+  assert.match(page, /Daily enforcement is scheduled/);
+  assert.match(page, /Only aggregate deletion counts are displayed/);
 });
 
 test("typography reserves heavy emphasis for page identity and primary metrics", () => {

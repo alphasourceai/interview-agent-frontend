@@ -69,6 +69,15 @@ interface MonitoringPayload {
     help?: number;
   };
   provider_breakers?: { available?: boolean; active?: number; released?: number };
+  retention?: {
+    available?: boolean;
+    scheduled?: boolean;
+    schedule_utc?: string;
+    last_completed_at?: string | null;
+    last_run_succeeded?: boolean;
+    last_scheduler_status?: string;
+    last_counts?: CountMap;
+  };
   incidents?: Array<{
     occurred_at?: string;
     provider?: string;
@@ -218,7 +227,13 @@ export default function AdminSmsMonitoringPage() {
   const runtime = payload?.runtime;
   const delivery = payload?.delivery;
   const activeBreaker = number(payload?.provider_breakers?.active) > 0;
-  const attention = activeBreaker || number(delivery?.failed) > 0 || runtime?.compliance_review?.legal_review_required === true;
+  const retentionReady = payload?.retention?.available === true
+    && payload.retention.scheduled === true
+    && payload.retention.last_run_succeeded === true;
+  const attention = activeBreaker
+    || number(delivery?.failed) > 0
+    || runtime?.compliance_review?.legal_review_required === true
+    || !retentionReady;
   const state = !runtime?.delivery_enabled
     ? { label: "Delivery disabled", className: "border-slate-400/30 bg-slate-400/10 text-slate-600 dark:text-slate-300", icon: Clock3 }
     : attention
@@ -248,7 +263,8 @@ export default function AdminSmsMonitoringPage() {
     ["SMS abuse key", runtime?.abuse_secret_configured === true, runtime?.abuse_secret_configured ? "Keyed abuse controls are configured." : "SMS abuse control secret is not configured."],
     ["Consent disclosure", Boolean(runtime?.consent_copy_version), runtime?.consent_copy_version ? `Version ${runtime.consent_copy_version} is configured.` : "Consent disclosure version is not configured."],
     ["Formal compliance review", runtime?.compliance_review?.status === "approved", runtime?.compliance_review?.status === "approved" ? `Approved${runtime.compliance_review.version ? ` as ${runtime.compliance_review.version}` : ""}.` : runtime?.compliance_review?.status === "pending" ? "Review packet is ready; formal owner approval remains pending." : "LEGAL_REVIEW_REQUIRED — formal approval is not recorded."],
-  ] as const, [runtime]);
+    ["Retention enforcement", retentionReady, retentionReady ? `Daily enforcement is scheduled; last completed ${formatDateTime(payload?.retention?.last_completed_at)}.` : payload?.retention?.scheduled ? "Daily enforcement is scheduled but has not completed successfully." : "Approved SMS retention enforcement is not scheduled."],
+  ] as const, [payload?.retention?.last_completed_at, payload?.retention?.scheduled, retentionReady, runtime]);
 
   return (
     <AdminLayout title="SMS Monitoring">
@@ -379,6 +395,26 @@ export default function AdminSmsMonitoringPage() {
                       ["Active breakers", payload.provider_breakers?.active ?? "—"],
                       ["Released breakers", payload.provider_breakers?.released ?? "—"],
                     ].map(([label, value]) => <div key={String(label)} className="rounded-lg border p-2.5" style={{ borderColor: "var(--as-border)" }}><p className="text-base font-bold" style={textStyle}>{value}</p><p className="text-[10px] font-semibold uppercase tracking-wide" style={subtleTextStyle}>{label}</p></div>)}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border p-4" style={surfaceStyle}>
+                  <h3 className="text-sm font-bold" style={textStyle}>Data retention enforcement</h3>
+                  <p className="mt-1 text-xs font-normal leading-relaxed" style={subtleTextStyle}>Approved retention is enforced by a private daily job. Only aggregate deletion counts are displayed.</p>
+                  <div className="mt-3 space-y-2">
+                    <CapabilityNotice available={payload.retention?.available === true}>SMS retention enforcement is not installed in this environment.</CapabilityNotice>
+                    <CapabilityNotice available={payload.retention?.scheduled === true}>SMS retention enforcement is not scheduled in this environment.</CapabilityNotice>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {[
+                      ["Schedule UTC", payload.retention?.schedule_utc || "—"],
+                      ["Last completed", payload.retention?.last_completed_at ? formatDateTime(payload.retention.last_completed_at) : "—"],
+                      ["Last run result", payload.retention?.last_run_succeeded
+                        ? "Succeeded"
+                        : payload.retention?.last_scheduler_status === "succeeded"
+                          ? "Stale"
+                          : titleCase(payload.retention?.last_scheduler_status || "not recorded")],
+                    ].map(([label, value]) => <div key={String(label)} className="rounded-lg border p-2.5" style={{ borderColor: "var(--as-border)" }}><p className="text-xs font-medium" style={textStyle}>{value}</p><p className="mt-1 text-[10px] font-semibold uppercase tracking-wide" style={subtleTextStyle}>{label}</p></div>)}
                   </div>
                 </div>
               </section>
