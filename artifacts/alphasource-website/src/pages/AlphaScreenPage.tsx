@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
+import PatentPendingBadge from "@/components/PatentPendingBadge";
 import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
 import { alphaSourceSymbol } from "@/assets/branding";
 
@@ -35,10 +36,13 @@ function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#A380F6]/30 text-sm font-medium text-[#A380F6] mb-6 shadow-sm"
+              className="mb-6 flex flex-wrap items-center gap-2"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#02D99D] animate-pulse" />
-              AI Interview Agent
+              <span className="inline-flex min-h-7 items-center gap-2 rounded-full border border-[#A380F6]/30 bg-white px-3 py-1.5 text-sm font-medium text-[#A380F6] shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#02D99D] animate-pulse" />
+                AI Interview Agent
+              </span>
+              <PatentPendingBadge />
             </motion.div>
 
             <motion.h1

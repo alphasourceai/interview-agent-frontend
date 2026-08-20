@@ -41,7 +41,12 @@ export default function Footer() {
   const dropdownRef                         = useRef<HTMLDivElement>(null);
   const { loginAdmin, adminLoginLoading, adminLoginError, clearAdminLoginError } = useAuth();
   const { openTrackingPreferences } = useTrackingConsent();
-  const [, setLocation]                     = useLocation();
+  const [location, setLocation]             = useLocation();
+  const normalizedPath = String(location || "/").split("?")[0].replace(/\/$/, "") || "/";
+  const showPatentNotice =
+    normalizedPath !== "/" &&
+    !normalizedPath.startsWith("/checkout") &&
+    !normalizedPath.startsWith("/membership-agreement");
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -212,9 +217,16 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
-          <p className="text-white/40 text-sm">
-            &copy; {new Date().getFullYear()} alphaSource AI. All rights reserved.
-          </p>
+          <div className="text-center sm:text-left">
+            <p className="text-white/40 text-sm">
+              &copy; {new Date().getFullYear()} alphaSource AI. All rights reserved.
+            </p>
+            {showPatentNotice ? (
+              <p className="mt-1.5 text-xs font-semibold tracking-[0.02em] text-white/50">
+                alphaScreen technology — Patent Pending
+              </p>
+            ) : null}
+          </div>
           <div className="flex items-center gap-6">
             <a href="/privacy/" className="text-white/40 text-sm hover:text-white/70 transition-colors">
               Privacy Policy
