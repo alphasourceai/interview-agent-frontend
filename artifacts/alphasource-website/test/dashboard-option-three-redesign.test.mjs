@@ -57,7 +57,8 @@ test("period and sidebar controls retain truthful behavior", () => {
   assert.match(overview, /value: String\(stats\.roles\)/);
   assert.match(overview, /value: String\(stats\.candidates\)/);
   assert.doesNotMatch(overview, /ChevronDown/);
-  assert.match(layout, /hover:bg-red-500\/15/);
+  assert.match(layout, /text-red-600 focus:bg-red-50 focus:text-red-700/);
+  assert.match(layout, /<DropdownMenuItem[\s\S]*?<LogOut[\s\S]*?Sign Out[\s\S]*?<\/DropdownMenuItem>/);
 });
 
 test("overview uses live role and dashboard row endpoints for every panel", () => {

@@ -21,6 +21,7 @@ export default function Navbar() {
   const [emailError, setEmailError] = useState("");
   const [resetError, setResetError] = useState("");
   const [resetSuccess, setResetSuccess] = useState("");
+  const [passkeyNotice, setPasskeyNotice] = useState("");
   const [setupSpotlightVisible, setSetupSpotlightVisible] = useState(false);
   const [location, setLocation] = useLocation();
   const setupSpotlightDescriptionId = useId();
@@ -73,6 +74,7 @@ export default function Navbar() {
 
     setResetError("");
     setResetSuccess("");
+    setPasskeyNotice("");
     const normalizedEmail = email.trim();
     if (!normalizedEmail || !password) return;
     if (!isValidEmail(normalizedEmail)) {
@@ -97,9 +99,14 @@ export default function Navbar() {
     setEmailError("");
     setResetError("");
     setResetSuccess("");
+    setPasskeyNotice("");
     signInInFlightRef.current = true;
-    const { error } = await loginWithPasskey();
+    const { error, cancelled } = await loginWithPasskey();
     signInInFlightRef.current = false;
+    if (cancelled) {
+      setPasskeyNotice("Passkey sign-in was cancelled. You can try again or use your password.");
+      return;
+    }
     if (error) return;
     setLoginOpen(false);
     setMobileOpen(false);
@@ -341,6 +348,11 @@ export default function Navbar() {
                         {clientLoginError}
                       </p>
                     )}
+                    {passkeyNotice && (
+                      <p role="status" className="mt-2 text-xs text-[#0A1547]/60 dark:text-white/65">
+                        {passkeyNotice}
+                      </p>
+                    )}
                     {emailError && (
                       <p className="mt-2 text-xs text-red-500">{emailError}</p>
                   )}
@@ -454,6 +466,9 @@ export default function Navbar() {
                 )}
               {clientLoginError && (
                 <p className="text-xs text-red-500">{clientLoginError}</p>
+              )}
+              {passkeyNotice && (
+                <p role="status" className="text-xs text-[#0A1547]/60 dark:text-white/65">{passkeyNotice}</p>
               )}
               {emailError && (
                 <p className="text-xs text-red-500">{emailError}</p>

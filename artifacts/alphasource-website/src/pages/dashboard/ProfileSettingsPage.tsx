@@ -17,6 +17,7 @@ import { useAppearance, type AppearanceMode } from "@/context/AppearanceContext"
 import { useAuth } from "@/context/AuthContext";
 import { useClient } from "@/context/ClientContext";
 import { PASSKEYS_ENABLED, supabase } from "@/lib/supabaseClient";
+import { isPasskeyCancellation, passkeyFailureMessage } from "@/lib/passkeyErrors";
 import { buildPwResetUrl, getPublicBackendBase } from "@/lib/urlConfig";
 
 interface PasskeyRecord {
@@ -33,7 +34,7 @@ interface Notice {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function profileName(user: ReturnType<typeof useAuth>["currentUser"]): string {
+function explicitProfileName(user: ReturnType<typeof useAuth>["currentUser"]): string {
   const metadata = user?.user_metadata || {};
   const explicit = String(metadata.full_name || metadata.name || "").trim();
   if (explicit) return explicit;
@@ -41,7 +42,7 @@ function profileName(user: ReturnType<typeof useAuth>["currentUser"]): string {
     .map((value) => String(value || "").trim())
     .filter(Boolean)
     .join(" ");
-  return fromParts || String(user?.email || "").split("@")[0] || "";
+  return fromParts;
 }
 
 function normalizePasskey(value: unknown): PasskeyRecord | null {
@@ -98,7 +99,7 @@ export default function ProfileSettingsPage() {
   const { currentUser } = useAuth();
   const { selectedClient } = useClient();
   const { mode, setMode } = useAppearance();
-  const [fullName, setFullName] = useState(() => profileName(currentUser));
+  const [fullName, setFullName] = useState(() => explicitProfileName(currentUser));
   const [email, setEmail] = useState(() => String(currentUser?.email || ""));
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileNotice, setProfileNotice] = useState<Notice | null>(null);
@@ -114,13 +115,14 @@ export default function ProfileSettingsPage() {
   const pendingEmail = String((currentUser as { new_email?: string } | null)?.new_email || "").trim();
   const passkeySupported = typeof window !== "undefined" && "PublicKeyCredential" in window;
   const currentEmail = String(currentUser?.email || "").trim();
+  const currentProfileName = explicitProfileName(currentUser);
 
   useEffect(() => {
-    setFullName(profileName(currentUser));
-    setEmail(String(currentUser?.email || ""));
-  }, [currentUser]);
+    setFullName(currentProfileName);
+    setEmail(currentEmail);
+  }, [currentEmail, currentProfileName, currentUser?.id]);
 
-  const syncMemberProfile = useCallback(async (nextFullName: string) => {
+  const syncMemberProfile = useCallback(async (nextFullName?: string) => {
     const backendBase = getPublicBackendBase();
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     const token = String(sessionData.session?.access_token || "").trim();
@@ -132,16 +134,15 @@ export default function ProfileSettingsPage() {
         "Content-Type": "application/json",
       },
       credentials: "omit",
-      body: JSON.stringify({ full_name: nextFullName }),
+      body: JSON.stringify(nextFullName ? { full_name: nextFullName } : {}),
     });
     if (!response.ok) throw new Error("Could not synchronize the member profile.");
   }, []);
 
   useEffect(() => {
-    const existingName = profileName(currentUser);
-    if (!currentUser?.id || !existingName) return;
-    void syncMemberProfile(existingName).catch(() => {});
-  }, [currentUser?.email, currentUser?.id, syncMemberProfile]);
+    if (!currentUser?.id || !currentEmail) return;
+    void syncMemberProfile().catch(() => {});
+  }, [currentEmail, currentUser?.id, syncMemberProfile]);
 
   const loadPasskeys = useCallback(async () => {
     if (!PASSKEYS_ENABLED) {
@@ -193,7 +194,7 @@ export default function ProfileSettingsPage() {
         if (emailError) throw emailError;
         setProfileNotice({
           tone: "info",
-          text: "Your name was saved. Check your email to confirm the new address; the current address remains active until confirmation is complete.",
+          text: "Your name was saved. Confirm the change from both your current and new email addresses. Your current address remains active until both confirmations are complete.",
         });
       } else {
         setProfileNotice({ tone: "success", text: "Profile changes saved." });
@@ -223,14 +224,20 @@ export default function ProfileSettingsPage() {
     setPasskeyNotice(null);
     try {
       const { error } = await supabase.auth.registerPasskey();
-      if (error) throw error;
+      if (error) {
+        if (isPasskeyCancellation(error)) {
+          setPasskeyNotice({ tone: "info", text: "Passkey setup was cancelled. No changes were made." });
+        } else {
+          setPasskeyNotice({ tone: "error", text: passkeyFailureMessage(error, "Could not add a passkey.") });
+        }
+        return;
+      }
       setPasskeyNotice({ tone: "success", text: "Passkey added successfully." });
       await loadPasskeys();
     } catch (error) {
-      const message = error instanceof Error && error.name !== "NotAllowedError"
-        ? error.message
-        : "Passkey setup was cancelled or unavailable.";
-      setPasskeyNotice({ tone: "error", text: message });
+      setPasskeyNotice(isPasskeyCancellation(error)
+        ? { tone: "info", text: "Passkey setup was cancelled. No changes were made." }
+        : { tone: "error", text: passkeyFailureMessage(error, "Could not add a passkey.") });
     } finally {
       setPasskeyBusy(false);
     }
@@ -246,7 +253,9 @@ export default function ProfileSettingsPage() {
     const { error } = await supabase.auth.passkey.update({ passkeyId, friendlyName });
     setPasskeyBusy(false);
     if (error) {
-      setPasskeyNotice({ tone: "error", text: error.message || "Could not rename this passkey." });
+      setPasskeyNotice(isPasskeyCancellation(error)
+        ? { tone: "info", text: "Passkey update was cancelled. No changes were made." }
+        : { tone: "error", text: passkeyFailureMessage(error, "Could not rename this passkey.") });
       return;
     }
     setEditingPasskeyId("");
@@ -261,7 +270,9 @@ export default function ProfileSettingsPage() {
     const { error } = await supabase.auth.passkey.delete({ passkeyId: passkey.id });
     setPasskeyBusy(false);
     if (error) {
-      setPasskeyNotice({ tone: "error", text: error.message || "Could not remove this passkey." });
+      setPasskeyNotice(isPasskeyCancellation(error)
+        ? { tone: "info", text: "Passkey removal was cancelled. No changes were made." }
+        : { tone: "error", text: passkeyFailureMessage(error, "Could not remove this passkey.") });
       return;
     }
     setPasskeyNotice({ tone: "success", text: "Passkey removed. Your password remains available as a fallback." });
@@ -290,7 +301,7 @@ export default function ProfileSettingsPage() {
               </span>
               <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" className="mt-1.5 w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition-colors focus:border-[#A380F6]" style={{ backgroundColor: "var(--as-surface-muted)", borderColor: "var(--as-border)", color: "var(--as-text)" }} />
             </label>
-            {pendingEmail && pendingEmail !== currentEmail && <p className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">Pending confirmation: {pendingEmail}</p>}
+            {pendingEmail && pendingEmail !== currentEmail && <p className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">Pending email change: {pendingEmail}. Confirm the change from both your current and new inboxes.</p>}
             <button type="submit" disabled={savingProfile} className="rounded-full bg-[#A380F6] px-5 py-2.5 text-xs font-black text-white transition-opacity hover:opacity-90 disabled:opacity-50">{savingProfile ? "Saving…" : "Save changes"}</button>
             <NoticeBanner notice={profileNotice} />
           </form>

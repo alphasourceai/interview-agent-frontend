@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { PASSKEYS_ENABLED, supabase } from "@/lib/supabaseClient";
+import { isPasskeyCancellation, passkeyFailureMessage } from "@/lib/passkeyErrors";
 
 interface ClientLoginResult {
   error: string | null;
+  cancelled?: boolean;
 }
 
 interface AdminLoginResult {
@@ -330,7 +332,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase.auth.signInWithPasskey();
       if (error) {
-        const message = error.message || "Could not sign in with a passkey.";
+        if (isPasskeyCancellation(error)) {
+          setClientLoginError("");
+          return { error: null, cancelled: true };
+        }
+        const message = passkeyFailureMessage(error, "Could not sign in with a passkey.");
         setClientLoginError(message);
         return { error: message };
       }
@@ -339,9 +345,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       seedDashboardActivityNow();
       return { error: null };
     } catch (error) {
-      const message = error instanceof Error && error.name !== "NotAllowedError"
-        ? error.message
-        : "Passkey sign-in was cancelled or unavailable.";
+      if (isPasskeyCancellation(error)) {
+        setClientLoginError("");
+        return { error: null, cancelled: true };
+      }
+      const message = passkeyFailureMessage(error, "Could not sign in with a passkey.");
       setClientLoginError(message);
       return { error: message };
     } finally {
