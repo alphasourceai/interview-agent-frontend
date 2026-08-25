@@ -23,13 +23,21 @@ import {
   CheckCircle2,
   Search,
   Building2,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAppearance } from "@/context/AppearanceContext";
 import { useClient, type Client } from "@/context/ClientContext";
-import AppearanceSelector from "@/components/AppearanceSelector";
 import DashboardBrand from "@/components/DashboardBrand";
 import SupportVoicePopover from "@/components/SupportVoicePopover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "alphasource:dashboard_sidebar_collapsed";
 
@@ -421,7 +429,23 @@ const DASHBOARD_PAGE_DESCRIPTIONS: Record<string, string> = {
   Billing: "Review membership, usage, billing status, agreements, and payment activity.",
   Entities: "Manage parent and child entities, labels, and client scope structure.",
   Support: "Find practical guidance for roles, candidates, reports, billing, and team access.",
+  "Profile Settings": "Manage your personal information, appearance, and sign-in methods.",
 };
+
+function userDisplayName(user: ReturnType<typeof useAuth>["currentUser"]): string {
+  const metadata = user?.user_metadata || {};
+  const explicit = String(metadata.full_name || metadata.name || "").trim();
+  if (explicit) return explicit;
+  const parts = [metadata.first_name, metadata.last_name]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  return parts.join(" ") || String(user?.email || "").split("@")[0] || "Account";
+}
+
+function userInitial(user: ReturnType<typeof useAuth>["currentUser"]): string {
+  const match = userDisplayName(user).match(/[A-Za-z0-9]/);
+  return match ? match[0].toUpperCase() : "A";
+}
 
 export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const [mobileOpen,         setMobileOpen]         = useState(false);
@@ -433,7 +457,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
   const [spotRect,           setSpotRect]            = useState<SpotRect | null>(null);
 
   const [location, setLocation] = useLocation();
-  const { logout }              = useAuth();
+  const { logout, currentUser } = useAuth();
   const { mode: appearanceMode, resolvedMode } = useAppearance();
   const { selectedClient, setSelectedClient, clients, loading: clientsLoading, error: clientsError, isGlobalAdmin } = useClient();
   const dropdownRef  = useRef<HTMLDivElement>(null);
@@ -662,26 +686,13 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
           </button>
         )}
 
-        {/* Sign out and version */}
-        <div className={`flex-shrink-0 ${collapsed ? "py-3 flex justify-center" : "px-4 pb-4"}`}>
-          {collapsed ? (
-            <button
-              onClick={handleSignOut}
-              title="Sign Out"
-              className="w-10 h-10 flex items-center justify-center rounded-xl hover:text-red-300 hover:bg-red-500/15 transition-all duration-150"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              <LogOut className="w-[18px] h-[18px]" />
-            </button>
-          ) : (
-            <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-3">
+        {!collapsed && (
+          <div className="flex-shrink-0 px-4 pb-4">
+            <div className="border-t border-white/10 pt-3">
               <span className="text-[10px] font-semibold text-white/40">alphaScreen · QA</span>
-              <button onClick={handleSignOut} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-bold text-white/60 transition-colors hover:bg-white/5 hover:text-white">
-                <LogOut className="h-3.5 w-3.5" /> Sign out
-              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </aside>
 
       {/* Mobile overlay */}
@@ -752,10 +763,44 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
             )}
           </div>
 
-          <div className="mr-2">
-            <AppearanceSelector />
-          </div>
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#9272EB] text-xs font-black text-white">{selectedClient.letter}</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Open account menu"
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#9272EB] text-xs font-black text-white transition-all hover:bg-[#8060DC] focus:outline-none focus:ring-2 focus:ring-[#A380F6]/35 focus:ring-offset-2"
+              >
+                {userInitial(currentUser)}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              sideOffset={8}
+              className="w-64 rounded-xl border p-1.5 shadow-xl"
+              style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)", color: "var(--as-text)" }}
+            >
+              <DropdownMenuLabel className="px-3 py-2">
+                <span className="block truncate text-xs font-black">{userDisplayName(currentUser)}</span>
+                <span className="mt-0.5 block truncate text-[11px] font-medium" style={{ color: "var(--as-text-muted)" }}>{currentUser?.email || ""}</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator style={{ backgroundColor: "var(--as-border)" }} />
+              <DropdownMenuItem
+                onSelect={(event) => { event.preventDefault(); setLocation("/dashboard/profile"); }}
+                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold"
+              >
+                <Settings className="h-4 w-4 text-[#A380F6]" />
+                Profile Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator style={{ backgroundColor: "var(--as-border)" }} />
+              <DropdownMenuItem
+                onSelect={(event) => { event.preventDefault(); handleSignOut(); }}
+                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold text-red-600 focus:bg-red-50 focus:text-red-700"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         {/* Page content */}

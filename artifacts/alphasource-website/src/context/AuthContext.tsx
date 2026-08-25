@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabaseClient";
+import type { Session, User } from "@supabase/supabase-js";
+import { PASSKEYS_ENABLED, supabase } from "@/lib/supabaseClient";
 
 interface ClientLoginResult {
   error: string | null;
@@ -15,11 +15,13 @@ interface AuthContextType {
   clientAuthReady: boolean;
   adminAuthReady: boolean;
   isAdminLoggedIn: boolean;
+  currentUser: User | null;
   clientLoginLoading: boolean;
   clientLoginError: string;
   adminLoginLoading: boolean;
   adminLoginError: string;
   login: (email: string, password: string) => Promise<ClientLoginResult>;
+  loginWithPasskey: () => Promise<ClientLoginResult>;
   loginAdmin: (email: string, password: string) => Promise<AdminLoginResult>;
   resolveAdminAccess: () => Promise<boolean>;
   clearAdminLoginError: () => void;
@@ -31,11 +33,13 @@ const AuthContext = createContext<AuthContextType>({
   clientAuthReady: false,
   adminAuthReady: false,
   isAdminLoggedIn: false,
+  currentUser: null,
   clientLoginLoading: false,
   clientLoginError: "",
   adminLoginLoading: false,
   adminLoginError: "",
   login: async () => ({ error: null }),
+  loginWithPasskey: async () => ({ error: null }),
   loginAdmin: async () => ({ error: null }),
   resolveAdminAccess: async () => false,
   clearAdminLoginError: () => {},
@@ -105,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [clientAuthReady, setClientAuthReady] = useState(false);
   const [adminAuthReady, setAdminAuthReady]   = useState(false);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser]         = useState<User | null>(null);
   const [clientLoginLoading, setClientLoginLoading] = useState(false);
   const [clientLoginError, setClientLoginError]     = useState("");
   const [adminLoginLoading, setAdminLoginLoading]   = useState(false);
@@ -215,6 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           clearDashboardActivity();
           await supabase.auth.signOut({ scope: "local" }).catch(() => {});
           setIsLoggedIn(false);
+          setCurrentUser(null);
           setClientAuthReady(true);
           setIsAdminLoggedIn(false);
           setAdminAuthReady(true);
@@ -228,12 +234,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           clearDashboardActivity();
         }
         setIsLoggedIn(Boolean(session));
+        setCurrentUser(session?.user || null);
         setClientAuthReady(true);
       })
       .catch(() => {
         if (!mounted) return;
         clearDashboardActivity();
         setIsLoggedIn(false);
+        setCurrentUser(null);
         setClientAuthReady(true);
         setIsAdminLoggedIn(false);
         setAdminAuthReady(true);
@@ -245,6 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session && String(event || "") === "INITIAL_SESSION" && hasStaleDashboardActivity()) {
         clearDashboardActivity();
         setIsLoggedIn(false);
+        setCurrentUser(null);
         setIsAdminLoggedIn(false);
         setAdminAuthReady(true);
         void supabase.auth.signOut({ scope: "local" }).catch(() => {});
@@ -252,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (!session) clearDashboardActivity();
       setIsLoggedIn(Boolean(session));
+      setCurrentUser(session?.user || null);
       if (!session) {
         adminProbeRef.current += 1;
         setIsAdminLoggedIn(false);
@@ -283,7 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setClientLoginError("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
@@ -295,11 +305,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setIsLoggedIn(true);
+      setCurrentUser(data.user || null);
       seedDashboardActivityNow();
       setClientLoginError("");
       return { error: null };
     } catch {
       const message = "Could not sign in.";
+      setClientLoginError(message);
+      return { error: message };
+    } finally {
+      setClientLoginLoading(false);
+    }
+  };
+
+  const loginWithPasskey = async (): Promise<ClientLoginResult> => {
+    if (!PASSKEYS_ENABLED) {
+      const message = "Passkey sign-in is not enabled in this environment.";
+      setClientLoginError(message);
+      return { error: message };
+    }
+
+    setClientLoginLoading(true);
+    setClientLoginError("");
+    try {
+      const { data, error } = await supabase.auth.signInWithPasskey();
+      if (error) {
+        const message = error.message || "Could not sign in with a passkey.";
+        setClientLoginError(message);
+        return { error: message };
+      }
+      setIsLoggedIn(true);
+      setCurrentUser(data.user || null);
+      seedDashboardActivityNow();
+      return { error: null };
+    } catch (error) {
+      const message = error instanceof Error && error.name !== "NotAllowedError"
+        ? error.message
+        : "Passkey sign-in was cancelled or unavailable.";
       setClientLoginError(message);
       return { error: message };
     } finally {
@@ -378,6 +420,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     adminProbeRef.current += 1;
     void supabase.auth.signOut().catch(() => {});
     setIsLoggedIn(false);
+    setCurrentUser(null);
     setIsAdminLoggedIn(false);
     setAdminAuthReady(true);
     setClientLoginError("");
@@ -393,11 +436,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clientAuthReady,
         adminAuthReady,
         isAdminLoggedIn,
+        currentUser,
         clientLoginLoading,
         clientLoginError,
         adminLoginLoading,
         adminLoginError,
         login,
+        loginWithPasskey,
         loginAdmin,
         resolveAdminAccess,
         clearAdminLoginError,

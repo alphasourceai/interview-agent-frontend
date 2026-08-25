@@ -77,6 +77,7 @@ import MembersPage from "@/pages/dashboard/MembersPage";
 import BillingPage from "@/pages/dashboard/BillingPage";
 import EntitiesPage from "@/pages/dashboard/EntitiesPage";
 import DashboardFaqPage from "@/pages/dashboard/FaqPage";
+import ProfileSettingsPage from "@/pages/dashboard/ProfileSettingsPage";
 
 /* Admin dashboard */
 import AdminOverviewPage from "@/pages/admin/AdminOverviewPage";
@@ -490,6 +491,7 @@ function DashboardGuard() {
           <Route path="/dashboard/members"    component={MembersPage} />
           <Route path="/dashboard/billing"    component={BillingPage} />
           <Route path="/dashboard/entities"   component={EntitiesPage} />
+          <Route path="/dashboard/profile"    component={ProfileSettingsPage} />
           <Route path="/dashboard/support"    component={DashboardFaqPage} />
           <Route path="/dashboard/faq"        component={DashboardFaqPage} />
           <Route component={NotFound} />

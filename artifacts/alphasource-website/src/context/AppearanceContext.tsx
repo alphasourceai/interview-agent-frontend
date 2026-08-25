@@ -13,22 +13,22 @@ const APPEARANCE_STORAGE_KEY = "alphasource:appearance";
 const SYSTEM_DARK_QUERY = "(prefers-color-scheme: dark)";
 
 const AppearanceContext = createContext<AppearanceContextType>({
-  mode: "light",
+  mode: "system",
   resolvedMode: "light",
   setMode: () => {},
 });
 
 function normalizeMode(value: unknown): AppearanceMode {
   const normalized = String(value || "").trim().toLowerCase();
-  return normalized === "dark" || normalized === "system" ? normalized : "light";
+  return normalized === "light" || normalized === "dark" ? normalized : "system";
 }
 
 function readStoredMode(): AppearanceMode {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "system";
   try {
     return normalizeMode(window.localStorage.getItem(APPEARANCE_STORAGE_KEY));
   } catch {
-    return "light";
+    return "system";
   }
 }
 

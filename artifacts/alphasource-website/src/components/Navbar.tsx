@@ -1,10 +1,10 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
-import { Check, LogIn, Menu, X } from "lucide-react";
+import { Check, KeyRound, LogIn, Menu, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAppearance } from "@/context/AppearanceContext";
-import { supabase } from "@/lib/supabaseClient";
+import { PASSKEYS_ENABLED, supabase } from "@/lib/supabaseClient";
 import { buildPwResetUrl } from "@/lib/urlConfig";
 import { alphaSourceLogo, alphaSourceLogoDark } from "@/assets/branding";
 import AppearanceSelector from "@/components/AppearanceSelector";
@@ -26,7 +26,7 @@ export default function Navbar() {
   const setupSpotlightDescriptionId = useId();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const signInInFlightRef = useRef(false);
-  const { login, clientLoginLoading, clientLoginError } = useAuth();
+  const { login, loginWithPasskey, clientLoginLoading, clientLoginError } = useAuth();
   const { resolvedMode } = useAppearance();
 
   useEffect(() => {
@@ -86,6 +86,21 @@ export default function Navbar() {
     signInInFlightRef.current = false;
     if (error) return;
 
+    setLoginOpen(false);
+    setMobileOpen(false);
+    const next = new URL(window.location.href).searchParams.get("next");
+    setLocation(next || "/dashboard");
+  };
+
+  const handlePasskeySignIn = async () => {
+    if (signInInFlightRef.current || clientLoginLoading) return;
+    setEmailError("");
+    setResetError("");
+    setResetSuccess("");
+    signInInFlightRef.current = true;
+    const { error } = await loginWithPasskey();
+    signInInFlightRef.current = false;
+    if (error) return;
     setLoginOpen(false);
     setMobileOpen(false);
     const next = new URL(window.location.href).searchParams.get("next");
@@ -310,6 +325,17 @@ export default function Navbar() {
                         Forgot password?
                       </button>
                     </form>
+                    {PASSKEYS_ENABLED && (
+                      <>
+                        <div className="my-4 flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-[#0A1547]/35 dark:text-white/35">
+                          <span className="h-px flex-1 bg-[#0A1547]/10 dark:bg-white/10" />or<span className="h-px flex-1 bg-[#0A1547]/10 dark:bg-white/10" />
+                        </div>
+                        <button type="button" disabled={clientLoginLoading} onClick={() => void handlePasskeySignIn()} className="flex w-full items-center justify-center gap-2 rounded-full border border-[#A380F6]/40 px-4 py-2.5 text-sm font-semibold text-[#0A1547] transition-colors hover:border-[#A380F6] hover:text-[#A380F6] disabled:opacity-50 dark:text-white dark:hover:text-[#A380F6]">
+                          <KeyRound className="h-4 w-4" />
+                          Sign in with a passkey
+                        </button>
+                      </>
+                    )}
                     {clientLoginError && (
                       <p className="mt-2 text-xs text-red-500">
                         {clientLoginError}
@@ -420,6 +446,12 @@ export default function Navbar() {
                 >
                   Forgot password?
                 </button>
+                {PASSKEYS_ENABLED && (
+                  <button type="button" disabled={clientLoginLoading} onClick={() => void handlePasskeySignIn()} className="flex w-full items-center justify-center gap-2 rounded-full border border-[#A380F6]/40 px-4 py-2.5 text-sm font-semibold text-[#0A1547] dark:text-white">
+                    <KeyRound className="h-4 w-4" />
+                    Sign in with a passkey
+                  </button>
+                )}
               {clientLoginError && (
                 <p className="text-xs text-red-500">{clientLoginError}</p>
               )}
