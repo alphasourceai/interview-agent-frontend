@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
 import PatentPendingBadge from "@/components/PatentPendingBadge";
+import { AlphaScreenBreathingMark } from "@/components/AlphaScreenBrand";
 import { alphaSourceSymbol } from "@/assets/branding";
 
 const EASE_OUT = "easeOut" as const;
@@ -568,16 +569,11 @@ function AlphaScreenFeatureSection() {
             >
               {/* Card header */}
               <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-100 dark:border-[#2A3568]">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: "#A380F618" }}
-                >
-                  <img
-                    src={alphaSourceSymbol}
-                    alt="alpha"
-                    className="w-6 h-6"
-                  />
-                </div>
+                <AlphaScreenBreathingMark
+                  treatment="duotone"
+                  label="alphaScreen is executing analysis"
+                  className="h-10 w-10 flex-shrink-0"
+                />
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="text-sm font-bold text-[#0A1547] dark:text-white">
@@ -586,7 +582,7 @@ function AlphaScreenFeatureSection() {
                     <PatentPendingBadge className="min-h-6 px-2.5 py-0.5 text-[10px]" />
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#02D99D] animate-pulse" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#02D99D]" />
                     <span
                       className="text-xs font-semibold"
                       style={{ color: "#02D99D" }}

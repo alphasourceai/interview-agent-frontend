@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
 import PatentPendingBadge from "@/components/PatentPendingBadge";
+import { AlphaScreenLockup } from "@/components/AlphaScreenBrand";
 
 const EASE_OUT = "easeOut" as const;
 
@@ -95,6 +96,12 @@ function PageHero({
       />
       <div className="relative mx-auto max-w-7xl px-6 pb-14 pt-10 lg:px-8 lg:pb-18">
         <motion.div initial="hidden" animate="visible" variants={fadeUp} className="max-w-4xl">
+          <AlphaScreenLockup
+            treatment="gradient"
+            className="mb-6"
+            markClassName="h-10 w-10"
+            wordmarkClassName="text-2xl"
+          />
           <div className="mb-6 flex flex-wrap items-center gap-2">
             <span className="inline-flex min-h-7 items-center gap-2 rounded-full border border-[#A380F6]/25 bg-white px-3 py-1.5 text-sm font-bold text-[#A380F6] shadow-sm">
               <span className="h-1.5 w-1.5 rounded-full bg-[#02D99D]" />

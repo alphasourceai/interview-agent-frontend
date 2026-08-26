@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
 import PatentPendingBadge from "@/components/PatentPendingBadge";
+import { AlphaScreenLockup } from "@/components/AlphaScreenBrand";
 import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
-import { alphaSourceSymbol } from "@/assets/branding";
 
 const EASE_OUT = "easeOut" as const;
 
@@ -45,14 +45,20 @@ function HeroSection() {
               <PatentPendingBadge />
             </motion.div>
 
-            <motion.h1
+            <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.6 }}
-              className="text-5xl lg:text-6xl xl:text-7xl font-black text-[#0A1547] leading-[1.05] tracking-tight mb-4"
+              className="mb-4"
             >
-              alphaScreen
-            </motion.h1>
+              <h1>
+                <AlphaScreenLockup
+                  treatment="gradient"
+                  markClassName="h-12 w-12 lg:h-14 lg:w-14"
+                  wordmarkClassName="text-4xl lg:text-5xl"
+                />
+              </h1>
+            </motion.div>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -517,9 +523,13 @@ function AboutAlphaScreenSection() {
               style={{ boxShadow: "0 0 0 1.5px rgba(163,128,246,0.2), 0 24px 64px rgba(10,21,71,0.1)" }}
             >
               <div className="bg-[#0A1547] px-6 py-5 flex items-center gap-3">
-                <img src={alphaSourceSymbol} alt="Alpha" className="h-8 w-8" />
                 <div>
-                  <div className="text-sm font-bold text-white">alphaScreen</div>
+                  <AlphaScreenLockup
+                    treatment="duotone"
+                    wordmarkTone="white"
+                    markClassName="h-8 w-8"
+                    wordmarkClassName="text-sm"
+                  />
                   <div className="text-xs text-white/50">Candidate Evaluation Report</div>
                 </div>
               </div>

@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "generate:support-voice-knowledge": "node scripts/generate-support-voice-knowledge.mjs",
     "verify:routes": "node scripts/verify-routes.mjs",
+    "verify:alphascreen-brand": "node scripts/verify-alphascreen-brand.mjs",
     "verify:html": "node scripts/verify-html-integrity.mjs",
     "verify:sms-candidate-ui": "node scripts/verify-sms-candidate-ui.mjs",
     "verify:candidate-submit-reliability": "node scripts/verify-candidate-submit-reliability.mjs",
