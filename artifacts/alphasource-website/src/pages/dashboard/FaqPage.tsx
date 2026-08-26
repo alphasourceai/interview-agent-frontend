@@ -7,6 +7,7 @@ import {
   productUpdates,
 } from "@/content/dashboardSupportContent";
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
+import { Link } from "wouter";
 import {
   Accordion,
   AccordionContent,
@@ -68,43 +69,15 @@ export default function DashboardFaqPage() {
             >
               <h4 className="text-sm font-black mb-2" style={primaryTextStyle}>{card.title}</h4>
               <p className="text-xs leading-relaxed" style={mutedTextStyle}>{card.body}</p>
+              {card.href && card.linkLabel ? (
+                <Link
+                  href={card.href}
+                  className="mt-3 inline-flex rounded-full border border-[#A380F6]/25 bg-[#A380F6]/10 px-3 py-1.5 text-[11px] font-black text-[#A380F6] transition-colors hover:bg-[#A380F6]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A380F6]/45"
+                >
+                  {card.linkLabel}
+                </Link>
+              ) : null}
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section
-        className="rounded-2xl p-6 mb-5"
-        style={surfaceCardStyle}
-      >
-        <div className="flex flex-col gap-1 mb-5">
-          <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
-            Security and Data Practices
-          </p>
-          <h3 className="text-base font-black" style={primaryTextStyle}>Client data guidance</h3>
-          <p className="text-sm leading-relaxed" style={mutedTextStyle}>
-            Client-facing documentation for retention, deletion, incident response, and notification practices.
-          </p>
-        </div>
-        <div className="grid gap-3">
-          {dataPracticeSections.map((section) => (
-            <article
-              key={section.title}
-              className="rounded-xl border p-4"
-              style={mutedPanelStyle}
-            >
-              <h4 className="text-sm font-black mb-2" style={primaryTextStyle}>{section.title}</h4>
-              <p className="text-xs leading-relaxed mb-3" style={mutedTextStyle}>
-                {section.body}
-              </p>
-              <ul className="grid gap-1.5">
-                {section.bullets.map((bullet) => (
-                  <li key={bullet} className="text-xs leading-relaxed" style={mutedTextStyle}>
-                    • {bullet}
-                  </li>
-                ))}
-              </ul>
-            </article>
           ))}
         </div>
       </section>
@@ -137,6 +110,42 @@ export default function DashboardFaqPage() {
               </p>
               <ul className="grid gap-1.5 md:grid-cols-2">
                 {update.bullets.map((bullet) => (
+                  <li key={bullet} className="text-xs leading-relaxed" style={mutedTextStyle}>
+                    • {bullet}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section
+        className="rounded-2xl p-6 mb-5"
+        style={surfaceCardStyle}
+      >
+        <div className="flex flex-col gap-1 mb-5">
+          <p className="text-[10px] font-black uppercase tracking-widest" style={subtleTextStyle}>
+            Security and Data Practices
+          </p>
+          <h3 className="text-base font-black" style={primaryTextStyle}>Client data guidance</h3>
+          <p className="text-sm leading-relaxed" style={mutedTextStyle}>
+            Client-facing documentation for retention, deletion, incident response, and notification practices.
+          </p>
+        </div>
+        <div className="grid gap-3">
+          {dataPracticeSections.map((section) => (
+            <article
+              key={section.title}
+              className="rounded-xl border p-4"
+              style={mutedPanelStyle}
+            >
+              <h4 className="text-sm font-black mb-2" style={primaryTextStyle}>{section.title}</h4>
+              <p className="text-xs leading-relaxed mb-3" style={mutedTextStyle}>
+                {section.body}
+              </p>
+              <ul className="grid gap-1.5">
+                {section.bullets.map((bullet) => (
                   <li key={bullet} className="text-xs leading-relaxed" style={mutedTextStyle}>
                     • {bullet}
                   </li>

@@ -5,7 +5,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { PUBLIC_CONTENT_LAST_UPDATED, publicSupportQuestions, publicSupportTopics } from "@/lib/publicContent";
+import {
+  PUBLIC_CONTENT_LAST_UPDATED,
+  publicProductUpdates,
+  publicSupportQuestions,
+  publicSupportTopics,
+} from "@/lib/publicContent";
 import {
   AI_SUPPORT_PHONE_DISPLAY,
   AI_SUPPORT_PHONE_LABEL,
@@ -44,7 +49,7 @@ export default function SupportPage() {
               alphaScreen support and setup help
             </h1>
             <p className="mt-4 max-w-3xl text-base leading-relaxed text-[#0A1547]/65 lg:text-lg">
-              Public guidance for setup help, account access, memberships, billing, first-role prepay, role creation, candidate links, agreement recovery, and support contact.
+              Public guidance for setup help, account access, passkeys, candidate verification, memberships, billing, product updates, and support contact.
             </p>
             <p className="mt-4 text-sm font-semibold text-[#0A1547]/45">
               Last updated {PUBLIC_CONTENT_LAST_UPDATED}
@@ -146,6 +151,43 @@ export default function SupportPage() {
           initial="hidden"
           animate="visible"
           custom={3}
+          variants={fadeUp}
+          className="mt-8 rounded-lg border border-gray-100 bg-white p-6 shadow-sm lg:p-10"
+          style={{ color: "#0A1547" }}
+        >
+          <div className="mb-8">
+            <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-[#A380F6]">
+              Product updates
+            </p>
+            <h2 className="mb-3 text-2xl font-black text-[#0A1547]">What&apos;s new in alphaScreen</h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-[#0A1547]/60">
+              Plain-language highlights from recent alphaScreen releases.
+            </p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            {publicProductUpdates.map((update) => (
+              <article key={update.title} className="rounded-lg border border-gray-100 bg-[#F8F9FD] p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#A380F6]">{update.date}</p>
+                <h3 className="mt-2 text-base font-black text-[#0A1547]">{update.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-[#0A1547]/65">{update.summary}</p>
+                <ul className="mt-4 space-y-2">
+                  {update.bullets.map((bullet) => (
+                    <li key={bullet} className="flex gap-2 text-xs leading-relaxed text-[#0A1547]/60">
+                      <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-[#A380F6]" />
+                      <span>{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </motion.section>
+
+        <motion.section
+          initial="hidden"
+          animate="visible"
+          custom={4}
           variants={fadeUp}
           className="mt-8 rounded-lg border border-gray-100 bg-white p-6 shadow-sm lg:p-10"
           style={{ color: "#0A1547" }}

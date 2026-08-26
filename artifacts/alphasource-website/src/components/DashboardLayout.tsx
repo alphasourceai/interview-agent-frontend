@@ -428,7 +428,7 @@ const DASHBOARD_PAGE_DESCRIPTIONS: Record<string, string> = {
   Members: "Manage dashboard access and client membership for your team.",
   Billing: "Review membership, usage, billing status, agreements, and payment activity.",
   Entities: "Manage parent and child entities, labels, and client scope structure.",
-  Support: "Find practical guidance for roles, candidates, reports, billing, and team access.",
+  Support: "Find practical guidance, product updates, account security help, and support contacts.",
   "Profile Settings": "Manage your personal information, appearance, and sign-in methods.",
 };
 
@@ -786,10 +786,15 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
               <DropdownMenuSeparator style={{ backgroundColor: "var(--as-border)" }} />
               <DropdownMenuItem
                 onSelect={(event) => { event.preventDefault(); setLocation("/dashboard/profile"); }}
-                className="cursor-pointer rounded-lg px-3 py-2 text-xs font-bold"
+                className="cursor-pointer items-start rounded-lg px-3 py-2.5"
               >
-                <Settings className="h-4 w-4 text-[#A380F6]" />
-                Profile Settings
+                <Settings className="mt-0.5 h-4 w-4 text-[#A380F6]" />
+                <span className="min-w-0">
+                  <span className="block text-xs font-black">Profile &amp; security</span>
+                  <span className="mt-0.5 block text-[10px] font-medium" style={{ color: "var(--as-text-muted)" }}>
+                    Profile, appearance, and passkeys
+                  </span>
+                </span>
               </DropdownMenuItem>
               <DropdownMenuSeparator style={{ backgroundColor: "var(--as-border)" }} />
               <DropdownMenuItem

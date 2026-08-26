@@ -26,6 +26,7 @@ const compiled = await build({
       export {
         PUBLIC_CONTENT_LAST_UPDATED,
         publicFaqSections,
+        publicProductUpdates,
         publicSupportQuestions,
         publicSupportTopics
       } from "./src/lib/publicContent.ts";
@@ -56,6 +57,7 @@ const snapshot = {
     dashboard_faq: "src/content/dashboardSupportContent.ts",
     dashboard_rubric_faq: "src/content/rubricGuidance.ts#RUBRIC_FAQ",
     public_faq: "src/lib/publicContent.ts#publicFaqSections",
+    public_product_updates: "src/lib/publicContent.ts#publicProductUpdates",
     public_support_topics: "src/lib/publicContent.ts#publicSupportTopics",
     public_support_questions: "src/lib/publicContent.ts#publicSupportQuestions",
   },
@@ -67,6 +69,7 @@ const snapshot = {
   },
   public: {
     faq_sections: content.publicFaqSections,
+    product_updates: content.publicProductUpdates,
     support_topics: content.publicSupportTopics,
     support_questions: content.publicSupportQuestions,
   },

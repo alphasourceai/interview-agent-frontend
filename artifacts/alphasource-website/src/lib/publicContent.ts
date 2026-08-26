@@ -1,6 +1,6 @@
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 
-export const PUBLIC_CONTENT_LAST_UPDATED = "August 6, 2026";
+export const PUBLIC_CONTENT_LAST_UPDATED = "August 26, 2026";
 
 export type PublicFaqItem = {
   question: string;
@@ -17,6 +17,13 @@ export type PublicSupportTopic = {
   title: string;
   body: string;
   links?: Array<{ label: string; href: string }>;
+};
+
+export type PublicProductUpdate = {
+  date: string;
+  title: string;
+  summary: string;
+  bullets: string[];
 };
 
 export const publicFaqSections: PublicFaqSection[] = [
@@ -86,6 +93,16 @@ export const publicFaqSections: PublicFaqSection[] = [
         answer:
           "Use the public support page or contact alphaSource at info@alphasourceai.com with the buyer email, company name, and a short description of the setup issue.",
       },
+      {
+        question: "Can client users sign in with a passkey?",
+        answer:
+          "Yes. Client dashboard users can optionally add a passkey from Profile & security and then use a supported device unlock method or security key at sign-in. Password sign-in remains available as a fallback.",
+      },
+      {
+        question: "Where do client users manage profile and security settings?",
+        answer:
+          "After signing in, open the account menu from the initial in the upper-right corner and choose Profile & security. That page includes name, verified email, appearance, passkey, and password-reset controls.",
+      },
     ],
   },
   {
@@ -96,6 +113,11 @@ export const publicFaqSections: PublicFaqSection[] = [
         question: "How are candidate links sent and managed?",
         answer:
           "Hiring teams create roles and invite candidates through role-specific screening links or dashboard workflows. Teams should verify candidate email addresses and manage communication consistently with their hiring process.",
+      },
+      {
+        question: "What interview-access verification options can candidates use?",
+        answer:
+          "Email verification is available. When Text Message is offered for an eligible U.S. mobile number, the candidate can choose it after reviewing the consent disclosure. Text-message consent is optional, and Email remains available as the alternative.",
       },
       {
         question: "What happens after a candidate completes an interview?",
@@ -156,11 +178,6 @@ export const publicFaqSections: PublicFaqSection[] = [
     intro: "How alphaScreen fits specialized and multi-location teams.",
     items: [
       {
-        question: "Can managers use alphaScreen across multiple locations or entities?",
-        answer:
-          "Authorized parent-level managers can work across assigned client or entity scopes. Access depends on the membership account structure and role permissions configured for that user.",
-      },
-      {
         question: "How does alphaScreen evaluate candidates?",
         answer:
           "alphaScreen combines role criteria, resume information, structured interview responses, and available interview signals into organized reports and scores. The output is designed to help hiring teams review candidates more consistently, not to make final hiring decisions automatically.",
@@ -170,6 +187,40 @@ export const publicFaqSections: PublicFaqSection[] = [
 ];
 
 export const publicFaqItems: PublicFaqItem[] = publicFaqSections.flatMap((section) => section.items);
+
+export const publicProductUpdates: PublicProductUpdate[] = [
+  {
+    date: "August 2026",
+    title: "Passkeys and profile settings",
+    summary: "Client users now have one place to manage personal account settings and optional passkey sign-in.",
+    bullets: [
+      "Update a name or verified email from Profile & security",
+      "Choose Light, Dark, or System appearance",
+      "Add, rename, or remove supported passkeys",
+      "Continue using a password as a fallback",
+    ],
+  },
+  {
+    date: "August 2026",
+    title: "Optional text-message verification",
+    summary: "Candidate interview-access verification now supports another optional delivery method when it is available.",
+    bullets: [
+      "Eligible candidates may choose Email or Text Message when both are offered",
+      "Text-message consent is optional and shown before requesting a code",
+      "Email remains available if text delivery cannot be confirmed",
+    ],
+  },
+  {
+    date: "August 2026",
+    title: "Dashboard and support improvements",
+    summary: "The client workspace and support paths were refreshed for clearer navigation and help.",
+    bullets: [
+      "Updated dashboard overview and navigation",
+      "Talk with Support remains available inside the client workspace",
+      "Public phone and email support guidance is easier to find",
+    ],
+  },
+];
 
 export const publicSupportTopics: PublicSupportTopic[] = [
   {
@@ -182,9 +233,9 @@ export const publicSupportTopics: PublicSupportTopic[] = [
     ],
   },
   {
-    title: "Account and password setup",
+    title: "Account, password, and passkey setup",
     body:
-      "If a setup email does not arrive, check spam or junk first, then contact alphaSource with the buyer email and company name. Do not share password setup links publicly.",
+      "If a setup email does not arrive, check spam or junk first, then contact alphaSource with the buyer email and company name. Existing client users can manage optional passkeys from Profile & security. Do not share password setup links publicly.",
   },
   {
     title: "Memberships, billing, and first-role prepay",
@@ -229,6 +280,16 @@ export const publicSupportQuestions: PublicFaqItem[] = [
     question: "What should I do if the account or password setup email is missing?",
     answer:
       "Check spam or junk first. If it still is not available, contact support with the buyer email and company name so alphaSource can review the setup status.",
+  },
+  {
+    question: "Where do I set up a passkey?",
+    answer:
+      "Sign in with your password, open the account menu from the initial in the upper-right corner, choose Profile & security, and then choose Add a passkey. Password sign-in remains available as a fallback.",
+  },
+  {
+    question: "What if a candidate does not receive a verification code?",
+    answer:
+      "For Email, check spam or junk and use the available resend option. If Text Message was selected and delivery cannot be confirmed, choose Email instead. Contact support if the candidate still cannot continue.",
   },
   {
     question: "How do I get help with membership or billing questions?",

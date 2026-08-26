@@ -391,16 +391,16 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
     path: "/about",
   },
   "/support": {
-    title: "alphaScreen Support | Setup, Billing, Candidate Links, and Recovery",
+    title: "alphaScreen Support | Setup, Passkeys, Verification, and Product Updates",
     description:
-      "Get alphaScreen public support guidance for account setup, memberships, billing, first-role prepay, role creation, candidate links, agreement recovery, and security questions.",
+      "Get alphaScreen public support guidance for account setup, passkeys, candidate verification, memberships, billing, product updates, recovery, and security questions.",
     path: "/support",
     jsonLd: [
       SUPPORT_FAQ_SCHEMA,
       publicWebPageSchema(
         "/support",
         "alphaScreen Support",
-        "Public alphaScreen support guidance for setup, account access, memberships, billing, candidate links, and agreement recovery.",
+        "Public alphaScreen support guidance for setup, account access, passkeys, candidate verification, product updates, billing, and recovery.",
       ),
       breadcrumbSchema([
         { name: "Home", path: "/" },
@@ -409,16 +409,16 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
     ],
   },
   "/faq": {
-    title: "alphaScreen FAQ | Pricing, Security, Candidate Links, and Human Review",
+    title: "alphaScreen FAQ | Pricing, Passkeys, Verification, Security, and Human Review",
     description:
-      "Read common alphaScreen questions about memberships, pricing, first-role prepay, candidate links, candidate reports, security, accommodations, and human hiring decisions.",
+      "Read common alphaScreen questions about memberships, pricing, passkeys, candidate verification, reports, security, accommodations, and human hiring decisions.",
     path: "/faq",
     jsonLd: [
       FAQ_SCHEMA,
       publicWebPageSchema(
         "/faq",
         "alphaScreen Frequently Asked Questions",
-        "Public alphaScreen FAQ covering pricing, memberships, first-role prepay, candidate screening, security, accommodations, and human review.",
+        "Public alphaScreen FAQ covering pricing, memberships, passkeys, candidate verification, screening, security, accommodations, and human review.",
       ),
       breadcrumbSchema([
         { name: "Home", path: "/" },

@@ -42,7 +42,7 @@ export default function FaqPage() {
               alphaScreen frequently asked questions
             </h1>
             <p className="mt-4 max-w-3xl text-base leading-relaxed text-[#0A1547]/65 lg:text-lg">
-              Clear answers about alphaScreen memberships, pricing, first-role prepay, candidate links, security, human review, and setup support.
+              Clear answers about alphaScreen memberships, pricing, candidate verification, passkeys, security, human review, and setup support.
             </p>
             <p className="mt-4 text-sm font-semibold text-[#0A1547]/45">
               Last updated {PUBLIC_CONTENT_LAST_UPDATED}. {publicFaqItems.length} public questions answered.
@@ -146,7 +146,7 @@ export default function FaqPage() {
         >
           <h2 className="text-2xl font-black text-[#0A1547]">Need help after purchase?</h2>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#0A1547]/65">
-            The support page covers account setup, password setup, billing questions, first-role prepay, role creation, candidate links, and agreement or checkout recovery.
+            The support page covers account and passkey setup, candidate verification, billing questions, first-role prepay, role creation, product updates, and agreement or checkout recovery.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <a href="/support" className="rounded-full bg-[#0A1547] px-5 py-3 text-sm font-black text-white">

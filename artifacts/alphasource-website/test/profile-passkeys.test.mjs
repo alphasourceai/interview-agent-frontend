@@ -24,10 +24,11 @@ test("profile settings are routed outside sidebar navigation", () => {
   assert.doesNotMatch(layout, /label:\s*"Profile Settings"/);
 });
 
-test("account menu owns Profile Settings and Sign Out while support and tour stay in the sidebar", () => {
+test("account menu makes profile security and passkeys discoverable while support and tour stay in the sidebar", () => {
   const layout = read("src/components/DashboardLayout.tsx");
   assert.match(layout, /aria-label="Open account menu"/);
-  assert.match(layout, />\s*Profile Settings\s*</);
+  assert.match(layout, /Profile &amp; security/);
+  assert.match(layout, /Profile, appearance, and passkeys/);
   assert.match(layout, />\s*Sign Out\s*</);
   assert.match(layout, /<SupportVoicePopover/);
   assert.match(layout, /Need a refresher\?/);

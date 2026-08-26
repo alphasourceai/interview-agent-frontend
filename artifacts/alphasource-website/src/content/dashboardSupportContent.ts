@@ -1,6 +1,6 @@
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 
-export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-08-10.1";
+export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-08-26.1";
 
 export const faqSections = [
   {
@@ -17,6 +17,27 @@ export const faqSections = [
       {
         question: "Who should have dashboard access?",
         answer: "Give access only to team members who need to manage roles, review candidates, view reports, or support the hiring process. Keep access limited to the right people.",
+      },
+    ],
+  },
+  {
+    title: "Profile and account security",
+    items: [
+      {
+        question: "Where can I update my profile or sign-in settings?",
+        answer: "Open the account menu from your initial in the upper-right corner, then choose Profile & security. From there you can update your name and verified email, choose Light, Dark, or System appearance, manage passkeys, or request a password reset email.",
+      },
+      {
+        question: "How do I add and use a passkey?",
+        answer: "Open Profile & security and choose Add a passkey. Follow your device prompt to use Face ID, Touch ID, Windows Hello, a device PIN, or a security key. After setup, choose Sign in with a passkey on the alphaSource sign-in form. Only add passkeys on devices or password managers you control.",
+      },
+      {
+        question: "Does adding a passkey remove my password?",
+        answer: "No. Your password remains available as a fallback. You can sign in with either method and can rename or remove saved passkeys from Profile & security.",
+      },
+      {
+        question: "What happens when I change my account email?",
+        answer: "For account protection, both your current inbox and the new inbox must confirm the change. Your current email remains active until both confirmations are complete.",
       },
     ],
   },
@@ -94,8 +115,12 @@ export const faqSections = [
         answer: "Candidates use the screening interview link or flow provided for the role. They submit their information, verify access when prompted, and then start the AI screening interview.",
       },
       {
-        question: "What if a candidate says they did not receive an OTP or verification email?",
-        answer: "Ask them to check spam or junk first. If they still cannot access the screening interview, verify the email address and try the available resend or support process. If the issue continues, contact support with the candidate name, email, and role.",
+        question: "What verification choices are available to candidates?",
+        answer: "Email verification is available for interview access. When Text Message is offered for an eligible U.S. mobile number, the candidate may choose it and review the consent disclosure before requesting a code. Text-message consent is optional, and Email remains available as the fallback.",
+      },
+      {
+        question: "What if a candidate says they did not receive a one-time code?",
+        answer: "For Email, ask the candidate to check spam or junk, confirm the address, and use the available resend option. For Text Message, confirm the displayed destination is correct and let the candidate choose Email if delivery cannot be confirmed. If the issue continues, contact support with the candidate name, email, role, approximate time, and selected delivery method.",
       },
       {
         question: "Can a candidate retake a screening interview?",
@@ -248,7 +273,14 @@ export const faqSections = [
   },
 ];
 
-export const guidanceCards = [
+export interface SupportGuidanceCard {
+  title: string;
+  body: string;
+  href?: string;
+  linkLabel?: string;
+}
+
+export const guidanceCards: SupportGuidanceCard[] = [
   {
     title: "Getting started",
     body: "Confirm your profile, team access, billing status, and active roles before sending candidates into the screening interview flow.",
@@ -268,6 +300,12 @@ export const guidanceCards = [
   {
     title: "Billing, capacity, and team access",
     body: "Review membership status, screening interview capacity, and team permissions so the right users can support the hiring workflow.",
+  },
+  {
+    title: "Profile and account security",
+    body: "Use Profile & security to update your identity, choose an appearance mode, manage passkeys, or request a password reset.",
+    href: "/dashboard/profile",
+    linkLabel: "Open profile & security",
   },
 ];
 
@@ -301,6 +339,39 @@ export const dataPracticeSections = [
 ];
 
 export const productUpdates = [
+  {
+    version: "alphaScreen v2.0",
+    title: "Profile and Passkey Security",
+    summary: "Added a focused client profile area with optional passwordless sign-in.",
+    bullets: [
+      "Profile & security is available from the account menu in the upper-right corner",
+      "Client users can update their name and verified email",
+      "Passkeys can use supported device unlock methods or security keys",
+      "Password sign-in remains available as a fallback",
+    ],
+  },
+  {
+    version: "alphaScreen v1.9",
+    title: "Optional Text-Message Verification",
+    summary: "Expanded candidate interview-access verification while preserving Email as the default alternative.",
+    bullets: [
+      "Eligible candidates may choose Email or Text Message when both options are offered",
+      "Text-message consent is optional and shown before a code is requested",
+      "Email remains available when text delivery cannot be confirmed",
+      "Clearer resend and recovery guidance keeps candidates in the same interview flow",
+    ],
+  },
+  {
+    version: "alphaScreen v1.8",
+    title: "Dashboard and Support Refresh",
+    summary: "Refreshed the client workspace and expanded guided support access.",
+    bullets: [
+      "Updated Overview and dashboard navigation for clearer day-to-day work",
+      "Talk with Support remains available without leaving the client workspace",
+      "The dashboard tour remains available from the sidebar quick guide",
+      "Public phone and email support guidance is easier to find",
+    ],
+  },
   {
     version: "alphaScreen v1.7",
     title: "Entity Import and Archive Support",

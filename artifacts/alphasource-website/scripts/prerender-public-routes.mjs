@@ -10,7 +10,7 @@ const routingManifestPath = path.join(projectRoot, "render-routes.json");
 const supportContactPath = path.join(projectRoot, "src", "lib", "support-contact.json");
 
 const SITE_URL = "https://www.alphasourceai.com";
-const LAST_UPDATED = "June 2026";
+const LAST_UPDATED = "August 26, 2026";
 const supportContact = JSON.parse(fs.readFileSync(supportContactPath, "utf8"));
 const AI_SUPPORT_PHONE_DISPLAY = supportContact.display;
 const AI_SUPPORT_PHONE_URI = supportContact.uri;
@@ -121,9 +121,24 @@ const faqItems = [
       "Use the public support page or contact alphaSource at info@alphasourceai.com with the buyer email, company name, and a short description of the setup issue.",
   },
   {
+    question: "Can client users sign in with a passkey?",
+    answer:
+      "Yes. Client dashboard users can optionally add a passkey from Profile & security and then use a supported device unlock method or security key at sign-in. Password sign-in remains available as a fallback.",
+  },
+  {
+    question: "Where do client users manage profile and security settings?",
+    answer:
+      "After signing in, open the account menu from the initial in the upper-right corner and choose Profile & security. That page includes name, verified email, appearance, passkey, and password-reset controls.",
+  },
+  {
     question: "How are candidate links sent and managed?",
     answer:
       "Hiring teams create roles and invite candidates through role-specific screening links or dashboard workflows. Teams should verify candidate email addresses and manage communication consistently with their hiring process.",
+  },
+  {
+    question: "What interview-access verification options can candidates use?",
+    answer:
+      "Email verification is available. When Text Message is offered for an eligible U.S. mobile number, the candidate can choose it after reviewing the consent disclosure. Text-message consent is optional, and Email remains available as the alternative.",
   },
   {
     question: "What happens after a candidate completes an interview?",
@@ -177,6 +192,16 @@ const supportQuestions = [
     question: "What should I do if the account or password setup email is missing?",
     answer:
       "Check spam or junk first. If it still is not available, contact support with the buyer email and company name so alphaSource can review the setup status.",
+  },
+  {
+    question: "Where do I set up a passkey?",
+    answer:
+      "Sign in with your password, open the account menu from the initial in the upper-right corner, choose Profile & security, and then choose Add a passkey. Password sign-in remains available as a fallback.",
+  },
+  {
+    question: "What if a candidate does not receive a verification code?",
+    answer:
+      "For Email, check spam or junk and use the available resend option. If Text Message was selected and delivery cannot be confirmed, choose Email instead. Contact support if the candidate still cannot continue.",
   },
   {
     question: "How do I get help with membership or billing questions?",
@@ -665,13 +690,13 @@ console.log(`Prerendered ${publicRoutes.length} public route HTML snapshots.`);
 
 function faqRoute() {
   return {
-    title: "alphaScreen FAQ | Pricing, Security, Candidate Links, and Human Review",
+    title: "alphaScreen FAQ | Pricing, Passkeys, Verification, Security, and Human Review",
     description:
-      "Read common alphaScreen questions about memberships, pricing, first-role prepay, candidate links, candidate reports, security, accommodations, and human hiring decisions.",
+      "Read common alphaScreen questions about memberships, pricing, passkeys, candidate verification, reports, security, accommodations, and human hiring decisions.",
     eyebrow: "alphaScreen FAQ",
     h1: "alphaScreen frequently asked questions",
     intro:
-      "Clear answers about alphaScreen memberships, pricing, first-role prepay, candidate links, security, human review, and setup support.",
+      "Clear answers about alphaScreen memberships, pricing, candidate verification, passkeys, security, human review, and setup support.",
     sections: [
       {
         heading: "Common alphaScreen questions",
@@ -695,7 +720,7 @@ function faqRoute() {
       organizationSchema,
       websiteSchema,
       faqSchema,
-      publicWebPageSchema("/faq", "alphaScreen Frequently Asked Questions", "Public alphaScreen FAQ covering pricing, memberships, first-role prepay, candidate screening, security, accommodations, and human review."),
+      publicWebPageSchema("/faq", "alphaScreen Frequently Asked Questions", "Public alphaScreen FAQ covering pricing, memberships, passkeys, candidate verification, screening, security, accommodations, and human review."),
       breadcrumbSchema([
         ["Home", "/"],
         ["FAQ", "/faq"],
@@ -706,13 +731,13 @@ function faqRoute() {
 
 function supportRoute() {
   return {
-    title: "alphaScreen Support | Setup, Billing, Candidate Links, and Recovery",
+    title: "alphaScreen Support | Setup, Passkeys, Verification, and Product Updates",
     description:
-      "Get alphaScreen public support guidance for account setup, memberships, billing, first-role prepay, role creation, candidate links, agreement recovery, and security questions.",
+      "Get alphaScreen public support guidance for account setup, passkeys, candidate verification, memberships, billing, product updates, recovery, and security questions.",
     eyebrow: "alphaScreen Support",
     h1: "alphaScreen support and setup help",
     intro:
-      "Public guidance for setup help, account access, memberships, billing, first-role prepay, role creation, candidate links, agreement recovery, and support contact.",
+      "Public guidance for setup help, account access, passkeys, candidate verification, memberships, billing, product updates, and support contact.",
     sections: [
       section("Contact support", [
         `Call AI Customer Support at ${AI_SUPPORT_PHONE_DISPLAY}.`,
@@ -721,8 +746,8 @@ function supportRoute() {
       section("Setup help", [
         "Use support when the buyer cannot finish account setup, does not know the next step after checkout, or needs help understanding the first role workflow.",
       ]),
-      section("Account and password setup", [
-        "If a setup email does not arrive, check spam or junk first, then contact alphaSource with the buyer email and company name.",
+      section("Account, password, and passkey setup", [
+        "If a setup email does not arrive, check spam or junk first, then contact alphaSource with the buyer email and company name. Existing client users can manage optional passkeys from Profile & security.",
       ]),
       section("Memberships, billing, and first-role prepay", [
         "Support can help explain membership cadence, role fees, additional interviews, and first-role prepay status. Billing access remains limited to authorized account users.",
@@ -735,6 +760,11 @@ function supportRoute() {
       ]),
       section("Security and privacy questions", [
         "Use the public security and privacy pages for high-level review. Specific legal, privacy, or security questions can be routed to alphaSource support before purchase.",
+      ]),
+      section("What's new in alphaScreen", [
+        "Passkeys and profile settings: client users can manage identity, appearance, optional passkeys, and password recovery from Profile & security.",
+        "Optional text-message verification: eligible candidates may choose Email or Text Message when both are offered, and Email remains available as the alternative.",
+        "Dashboard and support improvements: refreshed client navigation, in-dashboard support, and clearer public phone and email guidance.",
       ]),
       {
         heading: "Common setup and recovery questions",
@@ -754,7 +784,7 @@ function supportRoute() {
       organizationSchema,
       websiteSchema,
       supportFaqSchema,
-      publicWebPageSchema("/support", "alphaScreen Support", "Public alphaScreen support guidance for setup, account access, memberships, billing, candidate links, and agreement recovery."),
+      publicWebPageSchema("/support", "alphaScreen Support", "Public alphaScreen support guidance for setup, account access, passkeys, candidate verification, product updates, billing, and recovery."),
       breadcrumbSchema([
         ["Home", "/"],
         ["Support", "/support"],
