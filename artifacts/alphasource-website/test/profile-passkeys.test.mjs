@@ -34,6 +34,7 @@ test("account menu makes profile security and passkeys discoverable while suppor
   assert.match(layout, /Need a refresher\?/);
   assert.match(layout, /Start tour/);
   assert.doesNotMatch(layout, /Sign out and version/);
+  assert.doesNotMatch(layout, /alphaScreen · QA/);
 });
 
 test("profile offers identity, System-default appearance, password fallback, and passkey management", () => {

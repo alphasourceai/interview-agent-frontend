@@ -689,7 +689,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
         {!collapsed && (
           <div className="flex-shrink-0 px-4 pb-4">
             <div className="border-t border-white/10 pt-3">
-              <span className="text-[10px] font-semibold text-white/40">alphaScreen · QA</span>
+              <span className="text-[10px] font-semibold text-white/40">alphaScreen</span>
             </div>
           </div>
         )}
