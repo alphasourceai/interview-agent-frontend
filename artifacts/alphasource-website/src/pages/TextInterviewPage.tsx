@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, FileText, MessageSquareText, Trash2, Upload } from "lucide-react";
-import { alphaSourceLogo } from "@/assets/branding";
+import CandidateHeader from "@/components/CandidateHeader";
 
 type TextSession = {
   request_id?: string;
@@ -296,12 +296,7 @@ export default function TextInterviewPage({ params }: { params?: { token?: strin
 
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex flex-col" style={{ fontFamily: "'Raleway', sans-serif" }}>
-      <header
-        className="bg-white flex-shrink-0 flex items-center px-6 h-14"
-        style={{ borderBottom: "1px solid rgba(10,21,71,0.07)" }}
-      >
-        <img src={alphaSourceLogo} alt="alphaSource AI" className="h-8 w-auto" />
-      </header>
+      <CandidateHeader />
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div

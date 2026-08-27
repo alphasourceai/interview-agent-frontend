@@ -13,11 +13,11 @@ export default function DashboardBrand({ mode, variant }: DashboardBrandProps) {
   return (
     <AlphaScreenLockup
       compact={isCompact}
-      treatment="duotone"
+      treatment="teal"
       wordmarkTone={mode === "dark" ? "white" : "navy"}
-      className={isCompact ? "h-8 w-8" : undefined}
-      markClassName="h-8 w-8"
-      wordmarkClassName="text-[17px]"
+      className={isCompact ? "h-9 w-9" : undefined}
+      markClassName={isCompact ? "h-9 w-9" : "h-10 w-10"}
+      wordmarkClassName="text-lg"
     />
   );
 }

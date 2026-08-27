@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
 import { ChevronDown } from "lucide-react";
-import { alphaSourceLogo } from "@/assets/branding";
+import CandidateHeader from "@/components/CandidateHeader";
 import {
   candidatePhoneCountries,
   getCandidatePhoneError,
@@ -195,12 +195,7 @@ export default function AccommodationRequestPage({ params }: { params?: { role_t
 
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex flex-col" style={{ fontFamily: "'Raleway', sans-serif" }}>
-      <header
-        className="bg-white flex-shrink-0 flex items-center px-6 h-14"
-        style={{ borderBottom: "1px solid rgba(10,21,71,0.07)" }}
-      >
-        <img src={alphaSourceLogo} alt="alphaSource AI" className="h-8 w-auto" />
-      </header>
+      <CandidateHeader />
 
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div

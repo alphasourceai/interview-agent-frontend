@@ -14,7 +14,8 @@ import {
 import { getCandidateFlowError } from "../lib/candidateFlowErrors";
 import { clearCandidateSubmissionKey, getOrCreateCandidateSubmissionKey } from "../lib/candidateSubmission";
 import { postCandidateSubmission } from "../lib/candidateSubmissionTransport";
-import { alphaSourceLogo } from "@/assets/branding";
+import { alphaScreenMark08Teal } from "@/assets/branding";
+import CandidateHeader from "@/components/CandidateHeader";
 import {
   SMS_CONSENT_COPY_VERSION,
   SMS_CONSENT_DISCLOSURE,
@@ -446,7 +447,7 @@ export default function InterviewPage() {
     setNetworkCheck({ checking: true, bars: 0, latencyMs: null });
 
     try {
-      const response = await fetch(`${alphaSourceLogo}?network_check=${Date.now()}`, {
+      const response = await fetch(`${alphaScreenMark08Teal}?network_check=${Date.now()}`, {
         cache: "no-store",
         signal: controller.signal,
       });
@@ -1104,12 +1105,7 @@ export default function InterviewPage() {
       )}
 
       {/* ── Header ───────────────────────────────────────────── */}
-      <header
-        className="bg-white flex-shrink-0 flex items-center px-6 h-14"
-        style={{ borderBottom: "1px solid rgba(10,21,71,0.07)" }}
-      >
-        <img src={alphaSourceLogo} alt="alphaSource AI" className="h-8 w-auto" />
-      </header>
+      <CandidateHeader />
 
       {/* ── Centered workflow area ────────────────────────────── */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">

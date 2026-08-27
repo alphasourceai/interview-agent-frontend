@@ -14,8 +14,8 @@ import LeadCaptureForm from "@/components/LeadCaptureForm";
 import { trackEvent } from "@/lib/analytics";
 import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
 import PatentPendingBadge from "@/components/PatentPendingBadge";
+import { AlphaScreenBreathingLockup, AlphaScreenMark } from "@/components/AlphaScreenBrand";
 import { getPublicBackendBase, joinUrl } from "@/lib/urlConfig";
-import { alphaSourceSymbol } from "@/assets/branding";
 
 type PackageLoadState = "loading" | "ready" | "fallback";
 type PurchaseIntentStatus = "idle" | "submitting" | "success";
@@ -1900,11 +1900,14 @@ export default function AlphaScreenPricingPage() {
         }} />
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-6 pb-16 pt-10 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pb-20">
           <div>
+            <div className="mb-6">
+              <AlphaScreenBreathingLockup
+                treatment="teal"
+                markClassName="h-12 w-12 lg:h-14 lg:w-14"
+                wordmarkClassName="text-4xl lg:text-5xl"
+              />
+            </div>
             <div className="mb-6 flex flex-wrap items-center gap-2">
-              <span className="inline-flex min-h-7 items-center gap-2 rounded-full border border-[#A380F6]/25 bg-white px-3 py-1.5 text-sm font-bold text-[#A380F6] shadow-sm">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#02D99D]" />
-                alphaScreen memberships
-              </span>
               <PatentPendingBadge />
             </div>
             <h1 className="max-w-3xl text-5xl font-black leading-[1.04] tracking-normal text-[#0A1547] lg:text-6xl">
@@ -1930,7 +1933,7 @@ export default function AlphaScreenPricingPage() {
           <div className="rounded-lg border border-[#0A1547]/10 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between border-b border-[#0A1547]/8 pb-4">
               <div className="flex items-center gap-3">
-                <img src={alphaSourceSymbol} alt="" className="h-9 w-9" />
+                <AlphaScreenMark geometry="08" treatment="teal" alt="" aria-hidden="true" className="h-9 w-9" />
                 <div>
                   <p className="text-sm font-black text-[#0A1547]">alphaScreen memberships</p>
                   <p className="text-xs font-bold text-[#0A1547]/45">Membership pricing preview</p>

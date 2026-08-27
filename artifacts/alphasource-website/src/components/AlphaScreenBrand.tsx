@@ -3,15 +3,17 @@ import {
   alphaScreenMark08Duotone,
   alphaScreenMark08Gradient,
   alphaScreenMark08Navy,
+  alphaScreenMark08Teal,
   alphaScreenMark08White,
   alphaScreenMark09Duotone,
   alphaScreenMark09Gradient,
   alphaScreenMark09Navy,
+  alphaScreenMark09Teal,
   alphaScreenMark09White,
 } from "@/assets/branding";
 import { cn } from "@/lib/utils";
 
-export type AlphaScreenMarkTreatment = "duotone" | "gradient" | "navy" | "white";
+export type AlphaScreenMarkTreatment = "duotone" | "gradient" | "navy" | "teal" | "white";
 export type AlphaScreenMarkGeometry = "08" | "09";
 
 const MARK_SOURCES: Record<
@@ -22,12 +24,14 @@ const MARK_SOURCES: Record<
     duotone: alphaScreenMark08Duotone,
     gradient: alphaScreenMark08Gradient,
     navy: alphaScreenMark08Navy,
+    teal: alphaScreenMark08Teal,
     white: alphaScreenMark08White,
   },
   "09": {
     duotone: alphaScreenMark09Duotone,
     gradient: alphaScreenMark09Gradient,
     navy: alphaScreenMark09Navy,
+    teal: alphaScreenMark09Teal,
     white: alphaScreenMark09White,
   },
 };
@@ -60,6 +64,7 @@ type AlphaScreenLockupProps = {
   wordmarkClassName?: string;
   treatment?: AlphaScreenMarkTreatment;
   wordmarkTone?: "navy" | "white";
+  wordmarkWeight?: "extralight" | "medium";
   compact?: boolean;
 };
 
@@ -69,6 +74,7 @@ export function AlphaScreenLockup({
   wordmarkClassName,
   treatment = "duotone",
   wordmarkTone = "navy",
+  wordmarkWeight = "medium",
   compact = false,
 }: AlphaScreenLockupProps) {
   if (compact) {
@@ -83,7 +89,6 @@ export function AlphaScreenLockup({
 
   return (
     <span
-      aria-label="alphaScreen"
       className={cn("inline-flex items-center gap-2.5", className)}
     >
       <AlphaScreenMark
@@ -94,10 +99,10 @@ export function AlphaScreenLockup({
         className={cn("h-9 w-9", markClassName)}
       />
       <span
-        aria-hidden="true"
+        data-alphascreen-wordmark="true"
         className={cn(
           "whitespace-nowrap font-sans text-xl leading-none tracking-[-0.03em]",
-          "font-medium",
+          wordmarkWeight === "extralight" ? "font-[200] tracking-[0.01em]" : "font-medium",
           wordmarkTone === "white" ? "text-white" : "text-[#0A1547]",
           wordmarkClassName,
         )}
@@ -113,6 +118,7 @@ type AlphaScreenBreathingMarkProps = {
   imageClassName?: string;
   treatment?: AlphaScreenMarkTreatment;
   label?: string;
+  decorative?: boolean;
 };
 
 export function AlphaScreenBreathingMark({
@@ -120,6 +126,7 @@ export function AlphaScreenBreathingMark({
   imageClassName,
   treatment = "duotone",
   label = "alphaScreen is processing",
+  decorative = false,
 }: AlphaScreenBreathingMarkProps) {
   const animationStyle = {
     "--alphascreen-breath-duration": "2400ms",
@@ -127,8 +134,9 @@ export function AlphaScreenBreathingMark({
 
   return (
     <span
-      role="status"
-      aria-label={label}
+      role={decorative ? undefined : "status"}
+      aria-label={decorative ? undefined : label}
+      aria-hidden={decorative ? "true" : undefined}
       className={cn("alphascreen-breathing-mark relative inline-grid", className)}
       style={animationStyle}
     >
@@ -152,6 +160,44 @@ export function AlphaScreenBreathingMark({
           imageClassName,
         )}
       />
+    </span>
+  );
+}
+
+type AlphaScreenBreathingLockupProps = {
+  className?: string;
+  markClassName?: string;
+  wordmarkClassName?: string;
+  treatment?: AlphaScreenMarkTreatment;
+  wordmarkTone?: "navy" | "white";
+};
+
+export function AlphaScreenBreathingLockup({
+  className,
+  markClassName,
+  wordmarkClassName,
+  treatment = "teal",
+  wordmarkTone = "navy",
+}: AlphaScreenBreathingLockupProps) {
+  return (
+    <span
+      className={cn("inline-flex items-center gap-3", className)}
+    >
+      <AlphaScreenBreathingMark
+        decorative
+        treatment={treatment}
+        className={cn("h-12 w-12 shrink-0", markClassName)}
+      />
+      <span
+        data-alphascreen-wordmark="true"
+        className={cn(
+          "whitespace-nowrap font-sans text-4xl font-[200] leading-none tracking-[0.01em]",
+          wordmarkTone === "white" ? "text-white" : "text-[#0A1547]",
+          wordmarkClassName,
+        )}
+      >
+        alphaScreen
+      </span>
     </span>
   );
 }

@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
 import PatentPendingBadge from "@/components/PatentPendingBadge";
-import { AlphaScreenLockup } from "@/components/AlphaScreenBrand";
+import { AlphaScreenBreathingLockup, AlphaScreenLockup } from "@/components/AlphaScreenBrand";
 import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
 
 const EASE_OUT = "easeOut" as const;
@@ -52,8 +52,8 @@ function HeroSection() {
               className="mb-4"
             >
               <h1>
-                <AlphaScreenLockup
-                  treatment="gradient"
+                <AlphaScreenBreathingLockup
+                  treatment="teal"
                   markClassName="h-12 w-12 lg:h-14 lg:w-14"
                   wordmarkClassName="text-4xl lg:text-5xl"
                 />

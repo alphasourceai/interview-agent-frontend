@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Check, Mail, MessageSquareText, ShieldCheck } from "lucide-react";
-import { alphaSourceLogo } from "@/assets/branding";
+import CandidateHeader from "@/components/CandidateHeader";
 import { SMS_CONSENT_COPY_VERSION, SMS_CONSENT_DISCLOSURE } from "../lib/smsOtp";
 
 type DeliveryChannel = "email" | "sms";
@@ -69,12 +69,11 @@ export default function SmsConsentEvidencePage() {
       style={{ fontFamily: "'Raleway', sans-serif" }}
       data-consent-copy-version={SMS_CONSENT_COPY_VERSION}
     >
-      <header className="flex h-16 items-center border-b border-[#0A1547]/[0.07] bg-white px-5 sm:px-8">
-        <img src={alphaSourceLogo} alt="alphaSource AI" className="h-8 w-auto" />
+      <CandidateHeader className="h-16 px-5 sm:px-8">
         <span className="ml-auto rounded-full bg-[#0A1547]/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#0A1547]/55">
           Carrier review preview
         </span>
-      </header>
+      </CandidateHeader>
 
       <main className="mx-auto flex w-full max-w-5xl flex-col items-center px-4 py-8 sm:px-8 sm:py-12">
         <div className="mb-6 flex items-center gap-2 rounded-full border border-[#F1C75B]/50 bg-[#FFF9E9] px-4 py-2 text-xs font-bold text-[#765711]">

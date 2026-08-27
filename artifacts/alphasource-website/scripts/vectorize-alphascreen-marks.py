@@ -22,8 +22,13 @@ def main() -> None:
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
     for geometry in ("08", "09"):
-        for treatment in ("gradient", "navy", "white", "duotone"):
-            source = source_root / f"mark-{geometry}-{treatment}.png"
+        for treatment in ("gradient", "navy", "white", "duotone", "teal"):
+            source_name = (
+                f"lockup-icon-{geometry}-white.png"
+                if treatment == "teal"
+                else f"mark-{geometry}-{treatment}.png"
+            )
+            source = source_root / source_name
             output = OUTPUT_ROOT / f"alphascreen-mark-{geometry}-{treatment}.svg"
 
             if not source.exists():

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { alphaSourceLogo } from "@/assets/branding";
+import CandidateHeader from "@/components/CandidateHeader";
 
 type LiveSessionState = {
   conversation_url: string;
@@ -5026,12 +5026,7 @@ export default function InterviewCviPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FD] flex flex-col" style={{ fontFamily: "'Raleway', sans-serif" }}>
-      <header
-        className="bg-white flex-shrink-0 flex items-center px-6 h-14"
-        style={{ borderBottom: "1px solid rgba(10,21,71,0.07)" }}
-      >
-        <img src={alphaSourceLogo} alt="alphaSource AI" className="h-8 w-auto" />
-      </header>
+      <CandidateHeader />
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12">
         <div
