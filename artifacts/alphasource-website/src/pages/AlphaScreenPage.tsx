@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import LeadCaptureForm from "@/components/LeadCaptureForm";
-import PatentPendingBadge from "@/components/PatentPendingBadge";
 import { AlphaScreenBreathingLockup, AlphaScreenLockup } from "@/components/AlphaScreenBrand";
 import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
 
@@ -29,34 +28,28 @@ function HeroSection() {
       />
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-20 lg:py-24 w-full">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="grid gap-12 lg:grid-cols-2 lg:items-start lg:gap-16">
           {/* Left — text */}
           <div>
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="mb-6 flex flex-wrap items-center gap-2"
-            >
-              <span className="inline-flex min-h-7 items-center gap-2 rounded-full border border-[#A380F6]/30 bg-white px-3 py-1.5 text-sm font-medium text-[#A380F6] shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#02D99D] animate-pulse" />
-                AI Interview Agent
-              </span>
-              <PatentPendingBadge />
-            </motion.div>
-
-            <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.6 }}
+              transition={{ duration: 0.6 }}
               className="mb-4"
             >
-              <h1>
+              <h1 className="relative inline-flex max-w-full items-end pb-4 lg:pb-0">
                 <AlphaScreenBreathingLockup
                   treatment="teal"
-                  markClassName="h-12 w-12 lg:h-14 lg:w-14"
-                  wordmarkClassName="text-4xl lg:text-5xl"
+                  className="gap-2 min-[360px]:gap-2.5 sm:gap-3.5"
+                  markClassName="h-[3.125rem] w-[3.125rem] min-[360px]:h-[3.75rem] min-[360px]:w-[3.75rem] sm:h-[4rem] sm:w-[4rem] lg:h-[4.625rem] lg:w-[4.625rem]"
+                  wordmarkClassName="text-[2.275rem] min-[360px]:text-[2.7rem] sm:text-[2.975rem] lg:text-[3.975rem]"
                 />
+                <span
+                  className="absolute bottom-0 right-0 whitespace-nowrap text-[0.6rem] font-black leading-none tracking-[0.04em] text-[#7657C8] lg:static lg:mb-1.5 lg:ml-2.5 lg:text-[0.65rem]"
+                  data-testid="alphascreen-patent-subscript"
+                >
+                  Patent Pending
+                </span>
               </h1>
             </motion.div>
 
@@ -131,6 +124,7 @@ function HeroSection() {
             initial={{ opacity: 0, x: 30, scale: 0.97 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             transition={{ delay: 0.3, duration: 0.7, ease: "easeOut" }}
+            className="lg:mt-4"
           >
             <div
               className="bg-white rounded-2xl overflow-hidden"
