@@ -13,6 +13,7 @@
     "verify:alphascreen-brand": "node scripts/verify-alphascreen-brand.mjs",
     "verify:html": "node scripts/verify-html-integrity.mjs",
     "verify:sms-candidate-ui": "node scripts/verify-sms-candidate-ui.mjs",
+    "verify:sms-retail-ui": "node scripts/verify-sms-retail-ui.mjs",
     "verify:candidate-submit-reliability": "node scripts/verify-candidate-submit-reliability.mjs",
     "verify:sms-consent-evidence": "node scripts/verify-sms-consent-evidence.mjs",
     "verify:recovery-core-ui": "node scripts/verify-recovery-core-ui.mjs"

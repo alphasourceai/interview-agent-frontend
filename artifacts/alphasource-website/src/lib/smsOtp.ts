@@ -8,6 +8,10 @@ export function isCandidateSmsUiEnabled(env: Record<string, unknown>): boolean {
   return String(env.VITE_SMS_OTP_UI_ENABLED || "").trim().toLowerCase() === "true";
 }
 
+export function isRetailSmsUiEnabled(env: Record<string, unknown>): boolean {
+  return String(env.VITE_SMS_RETAIL_OTP_UI_ENABLED || "").trim().toLowerCase() === "true";
+}
+
 export function maskSmsDestination(value: string): string {
   const digits = String(value || "").replace(/\D/g, "");
   const suffix = digits.slice(-4);
