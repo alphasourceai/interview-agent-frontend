@@ -160,3 +160,25 @@ export function initSentry() {
 export function isSentryEnabled(): boolean {
   return initialized;
 }
+
+const SUPPORT_VOICE_STAGES = new Set([
+  "readiness", "microphone", "authentication", "session_create", "websocket", "provider_attestation", "media",
+]);
+const SUPPORT_VOICE_CATEGORIES = new Set([
+  "network", "unavailable", "permission_denied", "device_unavailable", "missing_session",
+  "unauthorized", "forbidden", "conflict", "rate_limited", "service_unavailable",
+  "unexpected_status", "invalid_response", "socket_error", "closed_before_ready",
+  "provider_rejected", "protocol_error", "capture_backpressure", "playback_error",
+]);
+
+export function captureSupportVoiceFailure(stage: string, category: string) {
+  if (!initialized || !SUPPORT_VOICE_STAGES.has(stage) || !SUPPORT_VOICE_CATEGORIES.has(category)) return;
+  Sentry.captureMessage("support_voice_failure", {
+    level: "warning",
+    tags: {
+      feature: "support_voice",
+      support_voice_stage: stage,
+      support_voice_category: category,
+    },
+  });
+}

@@ -21,6 +21,7 @@ import {
   nextSupportVoicePlaybackWindow,
 } from "@/lib/supportVoicePlaybackQueue";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { captureSupportVoiceFailure } from "@/lib/sentry";
 
 const env = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {}) as Record<string, unknown>;
 const PRODUCTION_API_ORIGIN = "https://api.alphasourceai.com";
@@ -37,6 +38,7 @@ type ClientCloseReason =
   | "client_capture_backpressure"
   | "client_network_error"
   | "client_setup_error";
+type ProviderReadiness = "checking" | "ready" | "unavailable";
 
 function resolveBackendOrigin(): string | null {
   const raw = String(env.VITE_BACKEND_URL || "").trim();
@@ -71,6 +73,7 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
   const [state, setState] = useState<VoiceState>("idle");
   const [serviceWorkerSafe, setServiceWorkerSafe] = useState(false);
   const [serviceWorkerChecked, setServiceWorkerChecked] = useState(false);
+  const [providerReadiness, setProviderReadiness] = useState<ProviderReadiness>("checking");
   const websocketRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
@@ -89,9 +92,35 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
   const assistantPlaybackActiveRef = useRef(false);
   const abandonNeededRef = useRef(false);
   const lifecycleEpochRef = useRef(0);
+  const startPendingRef = useRef(false);
   const mountedRef = useRef(true);
   const backendOrigin = resolveBackendOrigin();
-  const available = FEATURE_ENABLED && Boolean(backendOrigin) && serviceWorkerChecked && serviceWorkerSafe && typeof window !== "undefined" && Boolean(window.AudioContext) && Boolean(navigator.mediaDevices?.getUserMedia);
+  const browserReady = FEATURE_ENABLED && Boolean(backendOrigin) && serviceWorkerChecked && serviceWorkerSafe && typeof window !== "undefined" && Boolean(window.AudioContext) && Boolean(navigator.mediaDevices?.getUserMedia);
+  const available = browserReady && providerReadiness === "ready";
+
+  const checkProviderReadiness = useCallback(async (): Promise<boolean> => {
+    if (!backendOrigin) {
+      setProviderReadiness("unavailable");
+      captureSupportVoiceFailure("readiness", "unavailable");
+      return false;
+    }
+    setProviderReadiness("checking");
+    try {
+      const response = await fetch(`${backendOrigin}/api/support/voice/health`, {
+        cache: "no-store",
+        credentials: "omit",
+      });
+      const payload = await response.json().catch(() => null) as { available?: unknown } | null;
+      const ready = response.ok && payload?.available === true;
+      setProviderReadiness(ready ? "ready" : "unavailable");
+      if (!ready) captureSupportVoiceFailure("readiness", "unavailable");
+      return ready;
+    } catch {
+      setProviderReadiness("unavailable");
+      captureSupportVoiceFailure("readiness", "network");
+      return false;
+    }
+  }, [backendOrigin]);
 
   const stopPlayback = useCallback(() => {
     playbackEpochRef.current += 1;
@@ -201,6 +230,7 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
         source.start(window.startsAt);
       }
     } catch {
+      captureSupportVoiceFailure("media", "playback_error");
       endConversation("error", "client_media_error");
     }
   }, [endConversation, finishPlaybackIfDrained]);
@@ -210,7 +240,10 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
   const scheduleAudio = useCallback((encoded: unknown) => {
     const context = contextRef.current;
     const samples = standardBase64ToPcm16(encoded);
-    if (!context || !samples || samples.byteLength === 0) return endConversation("error", "client_media_error");
+    if (!context || !samples || samples.byteLength === 0) {
+      captureSupportVoiceFailure("media", "playback_error");
+      return endConversation("error", "client_media_error");
+    }
     if (!responseActiveRef.current) { samples.fill(0); return; }
     const admission = playbackQueueRef.current.enqueue(samples);
     if (admission !== "queued") {
@@ -237,7 +270,10 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
         const chunk = new Int16Array(pcmQueueRef.current.splice(0, SUPPORT_VOICE_CHUNK_SAMPLES));
         const frame = JSON.stringify({ type: "input_audio_buffer.append", audio: pcm16ToStandardBase64(chunk) });
         chunk.fill(0);
-        if (socket.bufferedAmount > 256 * 1024 || new TextEncoder().encode(frame).byteLength > 48 * 1024) return endConversation("error", "client_capture_backpressure");
+        if (socket.bufferedAmount > 256 * 1024 || new TextEncoder().encode(frame).byteLength > 48 * 1024) {
+          captureSupportVoiceFailure("media", "capture_backpressure");
+          return endConversation("error", "client_capture_backpressure");
+        }
         socket.send(frame);
       }
     };
@@ -247,8 +283,11 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
     processorRef.current = processor;
   }, [endConversation]);
 
-  const startConversation = useCallback(() => {
-    if (!available || !backendOrigin || state === "requesting" || state === "connecting" || state === "listening" || state === "speaking" || state === "muted") return;
+  const startConversation = useCallback(async () => {
+    if (!browserReady || !backendOrigin || startPendingRef.current || state === "requesting" || state === "connecting" || state === "listening" || state === "speaking" || state === "muted") return;
+    startPendingRef.current = true;
+    try {
+      if (!await checkProviderReadiness()) return;
     signalDashboardActivity();
     const context = new AudioContext({ sampleRate: SUPPORT_VOICE_SAMPLE_RATE });
     const lifecycleEpoch = lifecycleEpochRef.current + 1;
@@ -256,14 +295,17 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
     contextRef.current = context;
     void context.resume();
     setState("requesting");
-    const mediaPromise = navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: false,
-    });
-
-    void (async () => {
-      try {
-        const stream = await mediaPromise;
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false,
+          });
+        } catch (mediaError) {
+          const denied = mediaError instanceof DOMException && ["NotAllowedError", "SecurityError"].includes(mediaError.name);
+          captureSupportVoiceFailure("microphone", denied ? "permission_denied" : "device_unavailable");
+          return endConversation("error", "client_media_error");
+        }
         if (lifecycleEpoch !== lifecycleEpochRef.current) {
           for (const track of stream.getTracks()) track.stop();
           return;
@@ -271,7 +313,10 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
         streamRef.current = stream;
         const { data, error } = await supabase.auth.getSession();
         const token = data.session?.access_token;
-        if (error || !token) throw new Error("auth");
+        if (error || !token) {
+          captureSupportVoiceFailure("authentication", "missing_session");
+          return endConversation("error", "client_setup_error");
+        }
         if (lifecycleEpoch !== lifecycleEpochRef.current) return releaseMedia();
         setState("connecting");
         let response: Response;
@@ -285,25 +330,39 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
           });
         } catch {
           abandonNeededRef.current = true;
-          throw new Error("create_network");
+          captureSupportVoiceFailure("session_create", "network");
+          return endConversation("error", "client_network_error");
         }
         if (lifecycleEpoch !== lifecycleEpochRef.current) {
           abandonNeededRef.current = response.status === 201;
           return endConversation("ended", "client_cancelled");
         }
         if (response.status === 409) {
+          captureSupportVoiceFailure("session_create", "conflict");
           releaseMedia();
           return setState("conflict");
         }
+        if (!response.ok) {
+          const category = response.status === 401 ? "unauthorized"
+            : response.status === 403 ? "forbidden"
+              : response.status === 429 ? "rate_limited"
+                : response.status === 503 ? "service_unavailable"
+                  : "unexpected_status";
+          captureSupportVoiceFailure("session_create", category);
+        }
         if (response.status === 201) abandonNeededRef.current = true;
         const body = await response.json().catch(() => null) as { session_id?: unknown; credential?: unknown; expires_at?: unknown } | null;
-        if (!response.ok || !body || typeof body.session_id !== "string" || typeof body.credential !== "string" || typeof body.expires_at !== "string" || Object.keys(body).sort().join(",") !== "credential,expires_at,session_id") throw new Error("create");
+        if (!response.ok || !body || typeof body.session_id !== "string" || typeof body.credential !== "string" || typeof body.expires_at !== "string" || Object.keys(body).sort().join(",") !== "credential,expires_at,session_id") {
+          if (response.ok) captureSupportVoiceFailure("session_create", "invalid_response");
+          return endConversation("error", "client_setup_error");
+        }
         abandonNeededRef.current = true;
         let credential = body.credential;
         body.credential = "";
         body.session_id = "";
         const wsUrl = `${backendOrigin.replace(/^https:/, "wss:")}/api/support/voice`;
         const socket = new WebSocket(wsUrl, "alphascreen-support-v1");
+        let reachedReady = false;
         websocketRef.current = socket;
         socket.addEventListener("open", () => {
           if (lifecycleEpoch !== lifecycleEpochRef.current) {
@@ -312,6 +371,9 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
           }
           try {
             socket.send(JSON.stringify({ type: "authenticate", credential }));
+          } catch {
+            captureSupportVoiceFailure("websocket", "socket_error");
+            return endConversation("error", "client_network_error");
           } finally {
             credential = "";
           }
@@ -319,13 +381,23 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
           startCapture(context, stream, socket);
         }, { once: true });
         socket.addEventListener("message", (event) => {
-          if (typeof event.data !== "string") return endConversation("error", "client_protocol_error");
+          if (typeof event.data !== "string") {
+            captureSupportVoiceFailure("websocket", "protocol_error");
+            return endConversation("error", "client_protocol_error");
+          }
           let decoded: unknown;
-          try { decoded = JSON.parse(event.data); } catch { return endConversation("error", "client_protocol_error"); }
+          try { decoded = JSON.parse(event.data); } catch {
+            captureSupportVoiceFailure("websocket", "protocol_error");
+            return endConversation("error", "client_protocol_error");
+          }
           const message = parseSupportVoiceServerMessage(decoded);
-          if (!message) return endConversation("error", "client_protocol_error");
+          if (!message) {
+            captureSupportVoiceFailure("websocket", "protocol_error");
+            return endConversation("error", "client_protocol_error");
+          }
           if (message.type !== "audio_delta") signalDashboardActivity();
           if (message.type === "ready") {
+            reachedReady = true;
             canSendRef.current = true;
             mutedRef.current = false;
             return setState((current) => nextSupportVoiceState(current, message, mutedRef.current));
@@ -347,22 +419,31 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
           }
           if (message.type === "audio_delta") return scheduleAudio(message.audio);
           if (message.type === "ended") return endConversation("ended", "server_ended");
-          if (message.type === "error") return endConversation("error", "client_network_error");
+          if (message.type === "error") {
+            captureSupportVoiceFailure("provider_attestation", "provider_rejected");
+            return endConversation("error", "client_network_error");
+          }
         });
         socket.addEventListener("close", (event) => {
           credential = "";
+          if (!reachedReady && lifecycleEpoch === lifecycleEpochRef.current) {
+            captureSupportVoiceFailure("websocket", "closed_before_ready");
+          }
           if (websocketRef.current === socket) websocketRef.current = null;
           releaseMedia();
           if (mountedRef.current) setState((current) => nextSupportVoiceStateAfterClose(current, event.code, event.reason));
         });
         socket.addEventListener("error", () => {
           credential = "";
+          captureSupportVoiceFailure("websocket", "socket_error");
         }, { once: true });
       } catch {
+        captureSupportVoiceFailure("websocket", "protocol_error");
         endConversation("error", "client_setup_error");
+      } finally {
+        startPendingRef.current = false;
       }
-    })();
-  }, [available, backendOrigin, endConversation, finishPlaybackIfDrained, releaseMedia, scheduleAudio, startCapture, state]);
+  }, [backendOrigin, browserReady, checkProviderReadiness, endConversation, finishPlaybackIfDrained, releaseMedia, scheduleAudio, startCapture, state]);
 
   const toggleMute = useCallback(() => {
     mutedRef.current = !mutedRef.current;
@@ -394,6 +475,7 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
         setServiceWorkerChecked(true);
       }
     })();
+    void checkProviderReadiness();
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") endConversation("ended", "signed_out");
     });
@@ -402,13 +484,13 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
       data.subscription.unsubscribe();
       endConversation("ended", "component_unmounted");
     };
-  }, [endConversation]);
+  }, [checkProviderReadiness, endConversation]);
 
   if (!FEATURE_ENABLED) return null;
 
   const active = ["requesting", "connecting", "listening", "speaking", "muted"].includes(state);
   return (
-    <Popover open={open} onOpenChange={(next) => { setOpen(next); if (!next && active) endConversation("ended", "popover_closed"); }}>
+    <Popover open={open} onOpenChange={(next) => { setOpen(next); if (next) void checkProviderReadiness(); if (!next && active) endConversation("ended", "popover_closed"); }}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -432,14 +514,14 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
           </div>
           <div className="min-w-0">
             <p className="text-sm font-black">alphaSource Support</p>
-            <p className="mt-1 text-xs leading-relaxed" aria-live="polite" style={{ color: "var(--as-text)", opacity: 0.68 }}>{statusText(!serviceWorkerChecked ? "connecting" : available ? state : "error")}</p>
+            <p className="mt-1 text-xs leading-relaxed" aria-live="polite" style={{ color: "var(--as-text)", opacity: 0.68 }}>{statusText(!serviceWorkerChecked || providerReadiness === "checking" ? "connecting" : available ? state : "error")}</p>
           </div>
         </div>
         <p className="mt-4 rounded-lg border p-3 text-xs leading-relaxed" style={{ borderColor: "var(--as-border)", color: "var(--as-text)", opacity: 0.72, backgroundColor: "var(--as-surface-muted)" }}>
           Your voice is processed by our AI support provider. alphaScreen does not store recordings or transcripts in this phase. Do not share candidate information, payment details, passwords, one-time codes, or other sensitive information.
         </p>
         {!active && state !== "conflict" && (
-          <button type="button" disabled={!available} onClick={startConversation} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#7252C7] px-4 text-sm font-black text-white transition-colors hover:bg-[#6242B5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7252C7]/50 focus-visible:ring-offset-2">
+          <button type="button" disabled={!available} onClick={() => { void startConversation(); }} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#7252C7] px-4 text-sm font-black text-white transition-colors hover:bg-[#6242B5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7252C7]/50 focus-visible:ring-offset-2">
             {state === "requesting" || state === "connecting" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
             Start support conversation
           </button>

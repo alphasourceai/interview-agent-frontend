@@ -9,6 +9,7 @@ import {
   Clock3,
   Eye,
   Filter,
+  Headphones,
   Loader2,
   RefreshCw,
   RotateCcw,
@@ -96,6 +97,17 @@ interface ListPayload {
     roles?: FilterOption[];
   };
   items: ReliabilityRow[];
+}
+
+interface SupportVoiceHealth {
+  enabled: boolean;
+  configured: boolean;
+  available: boolean;
+  provider_contract_ok: boolean;
+  provider_last_attempt_at: string | null;
+  provider_last_success_at: string | null;
+  provider_last_failure_category: string | null;
+  provider_consecutive_failures: number;
 }
 
 interface TechnicalDetails {
@@ -216,6 +228,16 @@ const backendBase = firstBase(
   (env as Record<string, unknown>).PUBLIC_BACKEND_URL,
   (env as Record<string, unknown>).BACKEND_URL,
 );
+
+const SUPPORT_VOICE_FAILURE_CATEGORIES = new Set([
+  "timeout", "socket_error", "provider_closed", "invalid_frame", "unexpected_event", "provider_attestation",
+]);
+
+function boundedIsoTimestamp(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== "string" || value.length > 35 || Number.isNaN(Date.parse(value))) return undefined;
+  return value;
+}
 
 const surfaceStyle = {
   backgroundColor: "var(--as-surface)",
@@ -561,6 +583,8 @@ export default function AdminInterviewReliabilityPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [supportVoiceHealth, setSupportVoiceHealth] = useState<SupportVoiceHealth | null>(null);
+  const [supportVoiceHealthError, setSupportVoiceHealthError] = useState(false);
   const urlSyncStartedRef = useRef(false);
   const restoringHistoryRef = useRef(false);
 
@@ -602,9 +626,46 @@ export default function AdminInterviewReliabilityPage() {
     }
   }, [filters, getToken, selectedClientId]);
 
+  const loadSupportVoiceHealth = useCallback(async () => {
+    if (!backendBase) return;
+    try {
+      const response = await fetch(`${backendBase}/api/support/voice/health`, {
+        cache: "no-store",
+        credentials: "omit",
+      });
+      const raw = await response.json().catch(() => null) as Record<string, unknown> | null;
+      const lastAttempt = boundedIsoTimestamp(raw?.provider_last_attempt_at);
+      const lastSuccess = boundedIsoTimestamp(raw?.provider_last_success_at);
+      const failureCategory = raw?.provider_last_failure_category;
+      const failureCount = raw?.provider_consecutive_failures;
+      if (!response.ok || !raw || typeof raw.enabled !== "boolean" || typeof raw.configured !== "boolean" ||
+          typeof raw.available !== "boolean" || typeof raw.provider_contract_ok !== "boolean" ||
+          lastAttempt === undefined || lastSuccess === undefined ||
+          !(failureCategory === null || (typeof failureCategory === "string" && SUPPORT_VOICE_FAILURE_CATEGORIES.has(failureCategory))) ||
+          !Number.isSafeInteger(failureCount) || Number(failureCount) < 0 || Number(failureCount) > 1_000_000) {
+        throw new Error("invalid_support_voice_health");
+      }
+      setSupportVoiceHealth({
+        enabled: raw.enabled,
+        configured: raw.configured,
+        available: raw.available,
+        provider_contract_ok: raw.provider_contract_ok,
+        provider_last_attempt_at: lastAttempt,
+        provider_last_success_at: lastSuccess,
+        provider_last_failure_category: failureCategory,
+        provider_consecutive_failures: Number(failureCount),
+      });
+      setSupportVoiceHealthError(false);
+    } catch {
+      setSupportVoiceHealth(null);
+      setSupportVoiceHealthError(true);
+    }
+  }, []);
+
   useEffect(() => {
     void loadList();
-  }, [loadList, refreshNonce]);
+    void loadSupportVoiceHealth();
+  }, [loadList, loadSupportVoiceHealth, refreshNonce]);
 
   useEffect(() => {
     setDraftFilters((current) => ({ ...current, roleId: "", page: 1 }));
@@ -749,6 +810,37 @@ export default function AdminInterviewReliabilityPage() {
             Refresh
           </button>
         </div>
+
+        <section aria-label="Support voice reliability" className="rounded-xl border p-4" style={surfaceStyle}>
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#A380F6]/10 text-[#7659C5] dark:text-[#C8B8FF]">
+                <Headphones className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="text-sm font-black" style={textStyle}>Dashboard support voice</h3>
+                <p className="mt-1 text-xs font-semibold" style={mutedTextStyle}>
+                  Cached no-audio provider contract check. No prompts, credentials, audio, or user identity are displayed.
+                </p>
+              </div>
+            </div>
+            <StatusBadge value={supportVoiceHealth?.available ? "available" : supportVoiceHealthError ? "health unavailable" : "unavailable"} />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-5">
+            {[
+              ["Configured", supportVoiceHealth?.configured ? "Yes" : "No"],
+              ["Provider contract", supportVoiceHealth?.provider_contract_ok ? "Passing" : "Failing"],
+              ["Last successful check", formatDateTime(supportVoiceHealth?.provider_last_success_at)],
+              ["Consecutive failures", supportVoiceHealth?.provider_consecutive_failures ?? "—"],
+              ["Failure category", titleCase(supportVoiceHealth?.provider_last_failure_category || "none")],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-lg border px-3 py-2.5" style={mutedStyle}>
+                <p className="text-[10px] font-black uppercase leading-tight" style={subtleTextStyle}>{label}</p>
+                <p className="mt-1 break-words text-xs font-black" style={textStyle}>{value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section aria-label="Reliability summary" className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
           {summaryItems.map(([label, value, Icon]) => (
