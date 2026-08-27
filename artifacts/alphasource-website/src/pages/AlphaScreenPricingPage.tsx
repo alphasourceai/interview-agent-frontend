@@ -1930,28 +1930,25 @@ export default function AlphaScreenPricingPage() {
             </a>
           </div>
 
-          <div className="rounded-lg border border-[#0A1547]/10 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between border-b border-[#0A1547]/8 pb-4">
+          <div className="rounded-lg border border-white/10 bg-[#0A1547] p-5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-3">
-                <AlphaScreenMark geometry="08" treatment="teal" alt="" aria-hidden="true" className="h-9 w-9" />
+                <AlphaScreenMark geometry="08" treatment="duotone" alt="" aria-hidden="true" className="h-9 w-9" />
                 <div>
-                  <p className="text-sm font-black text-[#0A1547]">alphaScreen memberships</p>
-                  <p className="text-xs font-bold text-[#0A1547]/45">Membership pricing preview</p>
+                  <p className="text-sm font-black text-white">alphaScreen memberships</p>
+                  <p className="text-xs font-bold text-white/55">Included interview volume</p>
                 </div>
               </div>
               <ShieldCheck className="h-5 w-5 text-[#02D99D]" />
             </div>
             <div className="mt-5 grid gap-3">
               {[
-                ["Basic", "$299/mo or $3,299/year + $399/role", "20 interviews, 10-minute cap, $30 additional interviews"],
-                ["Pro", "$599/mo or $6,499/year + $699/role", "30 interviews, 12-minute cap, $35 additional interviews"],
-                ["Enterprise", "Custom membership", "Talk to sales for custom volume"],
-              ].map(([name, price, detail]) => (
-                <div key={name} className="grid grid-cols-[1fr_auto] gap-3 rounded-lg bg-[#F8F9FD] px-4 py-3">
-                  <div>
-                    <p className="text-sm font-black text-[#0A1547]">{name}</p>
-                    <p className="text-xs font-semibold text-[#0A1547]/50">{price}</p>
-                  </div>
+                ["Basic", "20 interviews, 10-minute cap"],
+                ["Pro", "30 interviews, 12-minute cap"],
+                ["Enterprise", "Talk to sales for a custom plan"],
+              ].map(([name, detail]) => (
+                <div key={name} className="grid min-h-16 grid-cols-[1fr_auto] items-center gap-3 rounded-lg bg-[#F8F9FD] px-4 py-3">
+                  <p className="text-sm font-black text-[#0A1547]">{name}</p>
                   <p className="self-center text-right text-xs font-black text-[#0A1547]/60">{detail}</p>
                 </div>
               ))}
