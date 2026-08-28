@@ -33,6 +33,10 @@ type EmailVerificationStatus = "idle" | "loading" | "sending" | "sent" | "verify
 type BillingCadenceKey = "monthly" | "annual";
 type EmailVerificationOperation = "send" | "verify" | "status";
 
+const EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = 60;
+const SMS_VERIFICATION_RESEND_COOLDOWN_SECONDS = 120;
+const SMS_EMAIL_FALLBACK_REVEAL_SECONDS = 60;
+
 type BillingCadence = {
   key?: string;
   display_name?: string;
@@ -903,6 +907,9 @@ function PurchaseIntentPanel({
     const codeEntryVisible = emailVerificationStatus === "sent" || emailVerifyLoading;
     const channelLabel = verificationChannel === "sms" ? "mobile number" : "email";
     const maskedDestination = verificationChannel === "sms" ? maskSmsDestination(form.buyer_phone) : maskEmail(form.buyer_email);
+    const showDelayedSmsFallback = verificationChannel === "sms"
+      && emailVerificationStatus === "sent"
+      && resendCooldownSeconds <= SMS_EMAIL_FALLBACK_REVEAL_SECONDS;
     return (
       <div className="rounded-lg border border-[#02D99D]/35 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -1129,6 +1136,22 @@ function PurchaseIntentPanel({
               <p id="retail-email-verification-help" className="mt-2 text-xs font-semibold text-[#0A1547]/55">
                 Enter the code from the {verificationChannel === "sms" ? "text message" : "verification email"}. It expires in 10 minutes.
               </p>
+              {showDelayedSmsFallback ? (
+                <div className="mt-4 rounded-lg border border-[#A380F6]/25 bg-white p-3">
+                  <p className="text-sm font-black text-[#0A1547]">Text taking longer than expected?</p>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed text-[#0A1547]/55">
+                    Mobile carriers can occasionally delay a code. You can switch to email now without sending another text.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onVerificationChannelChange("email")}
+                    disabled={emailSendLoading || emailVerifyLoading}
+                    className="mt-3 text-sm font-black text-[#7554CE] transition-colors hover:text-[#0A1547] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Use email instead
+                  </button>
+                </div>
+              ) : null}
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
                   type="button"
@@ -1144,10 +1167,12 @@ function PurchaseIntentPanel({
                   disabled={resendCooldownSeconds > 0 || emailSendLoading || emailVerifyLoading}
                   className="text-sm font-black text-[#A380F6] transition-colors hover:text-[#0A1547] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Send a new code
+                  {verificationChannel === "sms" ? "Send another text" : "Send a new code"}
                 </button>
                 <span className="text-xs font-semibold text-[#0A1547]/55">
-                  {resendCooldownSeconds > 0 ? `You can request another code in ${resendCooldownSeconds} seconds.` : "You can request a new code now."}
+                  {resendCooldownSeconds > 0
+                    ? `${verificationChannel === "sms" ? "Another text" : "Another code"} is available in ${resendCooldownSeconds} seconds.`
+                    : `${verificationChannel === "sms" ? "Another text" : "A new code"} is available now.`}
                 </span>
               </div>
               <button type="button" onClick={onBackToSignup} className="mt-4 text-sm font-black text-[#A380F6] transition-colors hover:text-[#0A1547]">
@@ -1905,7 +1930,10 @@ export default function AlphaScreenPricingPage() {
       const verified = verification?.verified === true;
       setEmailVerificationStatus(verified ? "verified" : "sent");
       setEmailVerificationCode("");
-      setResendCooldownSeconds(retryAfterSeconds(verification?.resend_cooldown_seconds || 60));
+      const defaultCooldownSeconds = verificationChannel === "sms"
+        ? SMS_VERIFICATION_RESEND_COOLDOWN_SECONDS
+        : EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS;
+      setResendCooldownSeconds(retryAfterSeconds(verification?.resend_cooldown_seconds ?? defaultCooldownSeconds));
       trackEvent("signup_step_completed", {
         plan: selectedPlanKey,
         step: `${verificationChannel}_verification_code_sent`,

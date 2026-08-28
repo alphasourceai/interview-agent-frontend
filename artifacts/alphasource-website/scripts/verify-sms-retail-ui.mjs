@@ -20,6 +20,10 @@ const required = [
   "consent_copy_version",
   "U.S. mobile numbers only",
   "Verify the buyer by email or text message",
+  "Text taking longer than expected?",
+  "Use email instead",
+  "SMS_VERIFICATION_RESEND_COOLDOWN_SECONDS = 120",
+  "SMS_EMAIL_FALLBACK_REVEAL_SECONDS = 60",
 ];
 
 const missing = required.filter((value) => !source.includes(value));
@@ -39,8 +43,8 @@ if (!pricing.includes('const [verificationChannel, setVerificationChannel] = use
 if (!/verificationChannel === "sms"[\s\S]{0,160}body: JSON\.stringify\(\{ consent_copy_version: SMS_CONSENT_COPY_VERSION \}\)/.test(pricing)) {
   throw new Error("Retail SMS send must submit the approved consent-copy version");
 }
-if (!product.includes('markClassName="h-[3.45rem] w-[3.45rem] lg:h-[4.025rem] lg:w-[4.025rem]"')
-  || !product.includes('wordmarkClassName="text-[2.5875rem] lg:text-[3.45rem]"')) {
+if (!product.includes('markClassName="h-[3.125rem] w-[3.125rem] min-[360px]:h-[3.75rem] min-[360px]:w-[3.75rem] sm:h-[4rem] sm:w-[4rem] lg:h-[4.625rem] lg:w-[4.625rem]"')
+  || !product.includes('wordmarkClassName="text-[2.275rem] min-[360px]:text-[2.7rem] sm:text-[2.975rem] lg:text-[3.975rem]"')) {
   throw new Error("Main alphaScreen hero lockup must retain the requested 15 percent size increase");
 }
 
