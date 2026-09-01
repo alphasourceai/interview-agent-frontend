@@ -4,6 +4,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import AdminLayout from "@/components/AdminLayout";
 import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
+import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 
 /* ── Types ───────────────────────────────────────────────────── */
 interface LineItem {
@@ -1593,9 +1594,9 @@ export default function AdminBillingPage() {
                   value={agreementForm.membershipTier}
                   onChange={(e) => updateAgreementField("membershipTier", e.target.value as AgreementFormValues["membershipTier"])}
                 >
-                  <option value="basic">basic</option>
-                  <option value="pro">pro</option>
-                  <option value="enterprise">enterprise</option>
+                  <option value="basic">Essential</option>
+                  <option value="pro">Pro</option>
+                  <option value="enterprise">Enterprise</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
               </div>
@@ -2332,7 +2333,7 @@ export default function AdminBillingPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <p style={mutedTextStyle}>
                   <span className="font-black" style={primaryTextStyle}>Current Tier:</span>{" "}
-                  {agreementReplacementDetails?.membership_tier || "—"}
+                  {getMembershipPlanLabel(agreementReplacementDetails?.membership_tier)}
                 </p>
                 <p style={mutedTextStyle}>
                   <span className="font-black" style={primaryTextStyle}>Initial Term Start:</span>{" "}

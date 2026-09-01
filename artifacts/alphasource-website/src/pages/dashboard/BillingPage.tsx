@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useClient } from "@/context/ClientContext";
 import InfoTooltip from "@/components/InfoTooltip";
 import { supabase } from "@/lib/supabaseClient";
+import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 
 interface BillingSummary {
   plan_tier: string;
@@ -879,7 +880,7 @@ export default function BillingPage() {
 
   const billing = useMemo(
     () => ({
-      planTier: toDisplayText(billingSummary?.plan_tier),
+      planTier: getMembershipPlanLabel(billingSummary?.plan_tier),
       billingStatus: toDisplayText(billingSummary?.billing_status),
       billingCycle: toDisplayText(billingSummary?.billing_interval),
       autoRenew:

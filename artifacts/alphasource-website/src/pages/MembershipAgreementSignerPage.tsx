@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2, RefreshCw, X } from "lucide-react";
+import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 
 interface SignerPageProps {
   params?: {
@@ -792,7 +793,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                 </div>
                 <div className="rounded-xl border border-emerald-200 bg-white/70 px-3.5 py-3">
                   <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/70">Membership</p>
-                  <p className="mt-1 text-sm font-bold text-emerald-800">{toDisplayText(session.membership_tier)}</p>
+                  <p className="mt-1 text-sm font-bold text-emerald-800">{getMembershipPlanLabel(session.membership_tier)}</p>
                   <p className="text-[11px] text-emerald-800/75">Billing: {toDisplayText(session.billing_option)}</p>
                 </div>
               </div>
@@ -848,7 +849,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                 </div>
                 <div className="rounded-xl border border-emerald-200 bg-white/70 px-3.5 py-3">
                   <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/70">Membership</p>
-                  <p className="mt-1 text-sm font-bold text-emerald-800">{toDisplayText(session.membership_tier)}</p>
+                  <p className="mt-1 text-sm font-bold text-emerald-800">{getMembershipPlanLabel(session.membership_tier)}</p>
                   <p className="text-[11px] text-emerald-800/75">Billing: {toDisplayText(session.billing_option)}</p>
                 </div>
               </div>
@@ -922,7 +923,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                 </div>
                 <div className="rounded-xl border border-gray-200 px-3.5 py-3">
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Membership</p>
-                  <p className="mt-1 text-sm font-bold text-[#0A1547]">{toDisplayText(session.membership_tier)}</p>
+                  <p className="mt-1 text-sm font-bold text-[#0A1547]">{getMembershipPlanLabel(session.membership_tier)}</p>
                   <p className="text-[11px] text-[#0A1547]/55">Billing: {toDisplayText(session.billing_option)}</p>
                 </div>
                 <div className="rounded-xl border border-gray-200 px-3.5 py-3">

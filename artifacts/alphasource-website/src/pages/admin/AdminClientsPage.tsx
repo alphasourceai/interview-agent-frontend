@@ -5,6 +5,7 @@ import {
 import AdminLayout from "@/components/AdminLayout";
 import { useAdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
+import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 
 /* ── Types ───────────────────────────────────────────────────── */
 type PlanTier    = "basic" | "pro" | "enterprise" | null;
@@ -288,7 +289,7 @@ function PlanBadge({ tier }: { tier: PlanTier }) {
       className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold capitalize"
       style={{ backgroundColor: c.bg, color: c.text }}
     >
-      {tier}
+      {getMembershipPlanLabel(tier)}
     </span>
   );
 }
@@ -1504,7 +1505,7 @@ export default function AdminClientsPage() {
                             <p className="text-xs font-black mb-2" style={primaryTextStyle}>Membership details</p>
                             <div className="space-y-1.5">
                               {[
-                                ["Membership tier",     client.planTier ?? "—"],
+                                ["Membership tier",     getMembershipPlanLabel(client.planTier)],
                                 ["Billing status", <span className="font-bold" style={{ color: baselineStatus === "active" ? "#02D99D" : "#FF6B6B" }}>{baselineStatus}</span>],
                                 ["Stripe membership", client.stripeMembership ?? "—"],
                                 ["Billing cycle",      client.billingCycle ?? "—"],
