@@ -7,7 +7,7 @@ This fixture reviews the authoritative TypeScript frontend contract without host
 ### Core
 
 - Example role: Operations Coordinator
-- Membership: Basic — 10 minutes, 5 scored questions
+- Membership: Essential — 10 minutes, 5 scored questions
 - Interview type: Core — broad experience, judgment, ownership, communication, and readiness
 - Tooltip: Broad screening of relevant experience, judgment, ownership, communication, adaptability, and role readiness.
 - Submitted value: `core`

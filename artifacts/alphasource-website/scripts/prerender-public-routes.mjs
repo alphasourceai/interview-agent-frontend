@@ -10,7 +10,7 @@ const routingManifestPath = path.join(projectRoot, "render-routes.json");
 const supportContactPath = path.join(projectRoot, "src", "lib", "support-contact.json");
 
 const SITE_URL = "https://www.alphasourceai.com";
-const LAST_UPDATED = "August 26, 2026";
+const LAST_UPDATED = "September 1, 2026";
 const supportContact = JSON.parse(fs.readFileSync(supportContactPath, "utf8"));
 const AI_SUPPORT_PHONE_DISPLAY = supportContact.display;
 const AI_SUPPORT_PHONE_URI = supportContact.uri;
@@ -98,12 +98,12 @@ const faqItems = [
   {
     question: "How does pricing work?",
     answer:
-      "Public Basic and Pro memberships include a platform membership fee plus a per-role fee. Basic is listed at $299 monthly or $3,299 annually plus $399 per role. Pro is listed at $599 monthly or $6,499 annually plus $699 per role.",
+      "Public Essential and Pro memberships include a platform membership fee plus a per-role fee. Essential is listed at $299 monthly or $3,299 annually plus $399 per role. Pro is listed at $599 monthly or $6,499 annually plus $699 per role.",
   },
   {
     question: "What is included in a membership?",
     answer:
-      "Basic includes 20 interviews per role with a 10-minute interview cap. Pro includes 30 interviews per role with a 12-minute interview cap. Additional interviews are listed publicly at $30 for Basic and $35 for Pro.",
+      "Essential includes 20 interviews per role with a 10-minute interview cap. Pro includes 30 interviews per role with a 12-minute interview cap. Additional interviews are listed publicly at $30 for Essential and $35 for Pro.",
   },
   {
     question: "How do billing and role fees work?",
@@ -273,7 +273,7 @@ const softwareSchema = {
     "Resume and interview review support",
     "Candidate scoring and report summaries",
     "Hiring team review workflow",
-    "Basic, Pro, and Enterprise membership options",
+    "Essential, Pro, and Enterprise membership options",
   ],
   publisher: {
     "@type": "Organization",
@@ -294,13 +294,13 @@ const pricingSchema = {
   },
   category: "AI-assisted candidate screening software",
   description:
-    "Public alphaScreen Basic and Pro membership pricing for structured AI-assisted candidate screening.",
+    "Public alphaScreen Essential and Pro membership pricing for structured AI-assisted candidate screening.",
   url: routeUrl("/alphascreen/pricing"),
   offers: [
-    offer("alphaScreen Basic monthly membership", "299", "monthly platform membership"),
-    offer("alphaScreen Basic annual membership", "3299", "annual platform membership"),
-    offer("alphaScreen Basic role fee", "399", "per role"),
-    offer("alphaScreen Basic first-role prepay", "359", "one-time discounted first role"),
+    offer("alphaScreen Essential monthly membership", "299", "monthly platform membership"),
+    offer("alphaScreen Essential annual membership", "3299", "annual platform membership"),
+    offer("alphaScreen Essential role fee", "399", "per role"),
+    offer("alphaScreen Essential first-role prepay", "359", "one-time discounted first role"),
     offer("alphaScreen Pro monthly membership", "599", "monthly platform membership"),
     offer("alphaScreen Pro annual membership", "6499", "annual platform membership"),
     offer("alphaScreen Pro role fee", "699", "per role"),
@@ -428,7 +428,7 @@ const routeContent = {
         "Teams set up a membership, create a role, invite candidates, review structured reports, and decide whether to advance, pause, or reject each candidate.",
       ]),
       section("How does alphaScreen pricing work?", [
-        "Basic and Pro memberships include a platform membership fee plus a standard role fee. New self-serve buyers can optionally prepay the first role during signup and save 10% on that first role.",
+        "Essential and Pro memberships include a platform membership fee plus a standard role fee. New self-serve buyers can optionally prepay the first role during signup and save 10% on that first role.",
       ]),
     ],
     links: [
@@ -452,20 +452,20 @@ const routeContent = {
   "/alphascreen/pricing": {
     title: "alphaScreen Pricing | AI Interview Screening Memberships",
     description:
-      "Compare alphaScreen Basic, Pro, and Enterprise membership options for structured AI-assisted interview screening, included interviews, duration caps, and additional interview pricing.",
+      "Compare alphaScreen Essential, Pro, and Enterprise membership options for structured AI-assisted interview screening, included interviews, duration caps, and additional interview pricing.",
     eyebrow: "alphaScreen pricing",
     h1: "Compare alphaScreen memberships and get started.",
     intro:
-      "Basic and Pro self-serve memberships include a platform membership fee, role fees, included interviews per role, and optional first-role prepay during signup.",
+      "Essential and Pro self-serve memberships include a platform membership fee, role fees, included interviews per role, and optional first-role prepay during signup.",
     sections: [
       section("How does alphaScreen pricing work?", [
-        "Basic is listed at $299 monthly or $3,299 annually plus $399 per role. Pro is listed at $599 monthly or $6,499 annually plus $699 per role.",
+        "Essential is listed at $299 monthly or $3,299 annually plus $399 per role. Pro is listed at $599 monthly or $6,499 annually plus $699 per role.",
       ]),
       section("What is first-role prepay?", [
-        "New self-serve buyers can optionally add their first role to the initial checkout at a one-time 10% discount: $359 for Basic or $629 for Pro. Additional roles use the standard role fee.",
+        "New self-serve buyers can optionally add their first role to the initial checkout at a one-time 10% discount: $359 for Essential or $629 for Pro. Additional roles use the standard role fee.",
       ]),
       section("What is included in a membership?", [
-        "Basic includes 20 interviews per role with a 10-minute interview cap. Pro includes 30 interviews per role with a 12-minute interview cap. Enterprise options are available for custom volume or rollout needs.",
+        "Essential includes 20 interviews per role with a 10-minute interview cap. Pro includes 30 interviews per role with a 12-minute interview cap. Enterprise options are available for custom volume or rollout needs.",
       ]),
     ],
     links: [
@@ -634,7 +634,7 @@ const routeContent = {
   "/alphascreen/roi": {
     title: "alphaScreen Value Estimator | Screening Time and Membership Cost",
     description:
-      "Estimate manual screening time, initial-screening labor cost, membership platform cost, role fees, and additional interview fees for alphaScreen Basic and Pro memberships.",
+      "Estimate manual screening time, initial-screening labor cost, membership platform cost, role fees, and additional interview fees for alphaScreen Essential and Pro memberships.",
     eyebrow: "Value estimator",
     h1: "Estimate screening time, labor cost, and alphaScreen membership cost.",
     intro:

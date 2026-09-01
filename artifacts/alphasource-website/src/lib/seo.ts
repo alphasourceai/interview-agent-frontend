@@ -108,7 +108,7 @@ const ALPHASCREEN_FEATURES = [
   "Resume and interview review support",
   "Candidate scoring and report summaries",
   "Hiring team review workflow",
-  "Basic, Pro, and Enterprise membership options",
+  "Essential, Pro, and Enterprise membership options",
 ];
 
 const ALPHASCREEN_SOFTWARE_SCHEMA = {
@@ -132,11 +132,11 @@ const ALPHASCREEN_SOFTWARE_SCHEMA = {
 const PRICING_OFFERS = [
   {
     "@type": "Offer",
-    name: "alphaScreen Basic monthly membership",
+    name: "alphaScreen Essential monthly membership",
     url: routeUrl("/alphascreen/pricing"),
     priceCurrency: "USD",
     description:
-      "Basic monthly membership: $299 monthly platform membership plus $399 per role. Includes 20 interviews per role and $30 additional interviews.",
+      "Essential monthly membership: $299 monthly platform membership plus $399 per role. Includes 20 interviews per role and $30 additional interviews.",
     priceSpecification: [
       { "@type": "UnitPriceSpecification", price: "299", priceCurrency: "USD", unitText: "monthly platform membership" },
       { "@type": "UnitPriceSpecification", price: "399", priceCurrency: "USD", unitText: "per role" },
@@ -145,11 +145,11 @@ const PRICING_OFFERS = [
   },
   {
     "@type": "Offer",
-    name: "alphaScreen Basic annual membership",
+    name: "alphaScreen Essential annual membership",
     url: routeUrl("/alphascreen/pricing"),
     priceCurrency: "USD",
     description:
-      "Basic annual membership: $3,299 annual platform membership plus $399 per role. Includes 20 interviews per role and $30 additional interviews.",
+      "Essential annual membership: $3,299 annual platform membership plus $399 per role. Includes 20 interviews per role and $30 additional interviews.",
     priceSpecification: [
       { "@type": "UnitPriceSpecification", price: "3299", priceCurrency: "USD", unitText: "annual platform membership" },
       { "@type": "UnitPriceSpecification", price: "399", priceCurrency: "USD", unitText: "per role" },
@@ -196,7 +196,7 @@ const ALPHASCREEN_PRICING_SCHEMA = {
   },
   category: "AI-assisted candidate screening software",
   description:
-    "Public alphaScreen Basic and Pro membership pricing for structured AI-assisted candidate screening.",
+    "Public alphaScreen Essential and Pro membership pricing for structured AI-assisted candidate screening.",
   url: routeUrl("/alphascreen/pricing"),
   featureList: ALPHASCREEN_FEATURES,
   offers: PRICING_OFFERS,
@@ -283,7 +283,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
   "/alphascreen/pricing": {
     title: "alphaScreen Pricing | AI Interview Screening Memberships",
     description:
-      "Compare alphaScreen Basic, Pro, and Enterprise membership options for structured AI-assisted interview screening, included interviews, duration caps, and additional interview pricing.",
+      "Compare alphaScreen Essential, Pro, and Enterprise membership options for structured AI-assisted interview screening, included interviews, duration caps, and additional interview pricing.",
     path: "/alphascreen/pricing",
     jsonLd: [
       ALPHASCREEN_PRICING_SCHEMA,
@@ -369,7 +369,7 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
   "/alphascreen/roi": {
     title: "alphaScreen Value Estimator | Screening Time and Membership Cost",
     description:
-      "Estimate manual screening time, initial-screening labor cost, membership platform cost, role fees, and additional interview fees for alphaScreen Basic and Pro memberships.",
+      "Estimate manual screening time, initial-screening labor cost, membership platform cost, role fees, and additional interview fees for alphaScreen Essential and Pro memberships.",
     path: "/alphascreen/roi",
     jsonLd: [
       alphaScreenWebPageSchema(

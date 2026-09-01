@@ -1,9 +1,9 @@
 {
-  "backend_contract_commit": "0e75f1d9e7ef40be1690da4cc16aab9ae7d83d80",
+  "backend_contract_commit": "8d4963d9a62c2be1c350f92eaf7c2644aeb9dced",
   "memberships": {
     "basic": {
       "membership_level": "basic",
-      "display_name": "Basic",
+      "display_name": "Essential",
       "interview_duration_minutes": 10,
       "max_interview_minutes": 10,
       "scored_question_count": 5

@@ -4,7 +4,7 @@ Membership and interview type are independent settings.
 
 ## Membership capacity
 
-- Basic: 10-minute interview with 5 scored questions.
+- Essential: 10-minute interview with 5 scored questions.
 - Pro: 12-minute interview with 6 scored questions.
 - Enterprise: 15-minute interview with 7 scored questions.
 
@@ -38,11 +38,11 @@ Do not select Technical merely because the role uses software or tools.
 
 ### What determines interview length?
 
-Membership determines interview length. Basic interviews are 10 minutes, Pro interviews are 12 minutes, and Enterprise interviews are 15 minutes.
+Membership determines interview length. Essential interviews are 10 minutes, Pro interviews are 12 minutes, and Enterprise interviews are 15 minutes.
 
 ### What determines the number of questions?
 
-Membership determines the number of scored questions. Basic includes 5, Pro includes 6, and Enterprise includes 7.
+Membership determines the number of scored questions. Essential includes 5, Pro includes 6, and Enterprise includes 7.
 
 ### What does interview type control?
 

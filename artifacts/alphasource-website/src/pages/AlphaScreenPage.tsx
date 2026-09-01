@@ -285,7 +285,7 @@ function DirectAnswerSection() {
 function PricingSignupSection() {
   const memberships = [
     {
-      name: "Basic",
+      name: "Essential",
       description: "For teams that want consistent screening for focused hiring needs.",
       details: "20 interviews per role · 10-minute interviews",
     },
@@ -311,7 +311,7 @@ function PricingSignupSection() {
               Choose the membership that best fits your team.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-[#0A1547]/60">
-              Start with Basic or Pro, then complete agreement review and secure checkout when you are ready. Each membership includes structured AI-assisted interviews, candidate scoring, and on-demand reports for your hiring team.
+              Start with Essential or Pro, then complete agreement review and secure checkout when you are ready. Each membership includes structured AI-assisted interviews, candidate scoring, and on-demand reports for your hiring team.
             </p>
             <div className="mt-6">
               <a
@@ -363,7 +363,7 @@ function PricingSignupSection() {
               <span className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span>
                   <span className="block text-base font-black tracking-normal">See memberships and pricing</span>
-                  <span className="mt-1 block text-sm font-semibold text-white/65">Compare Basic, Pro, and Enterprise options.</span>
+                  <span className="mt-1 block text-sm font-semibold text-white/65">Compare Essential, Pro, and Enterprise options.</span>
                 </span>
                 <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover:bg-white group-hover:text-[#0A1547]">
                   <ArrowRight className="h-4 w-4" />

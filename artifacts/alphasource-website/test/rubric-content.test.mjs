@@ -17,8 +17,8 @@ const REPO_ROOT = path.resolve(ROOT, "../..");
 test("FAQ contains every approved concise answer", () => {
   assert.equal(RUBRIC_FAQ.length, 8);
   const faq = Object.fromEntries(RUBRIC_FAQ.map((item) => [item.question, item.answer]));
-  assert.equal(faq["What determines interview length?"], "Membership determines interview length. Basic interviews are 10 minutes, Pro interviews are 12 minutes, and Enterprise interviews are 15 minutes.");
-  assert.equal(faq["What determines the number of questions?"], "Membership determines the number of scored questions. Basic includes 5, Pro includes 6, and Enterprise includes 7.");
+  assert.equal(faq["What determines interview length?"], "Membership determines interview length. Essential interviews are 10 minutes, Pro interviews are 12 minutes, and Enterprise interviews are 15 minutes.");
+  assert.equal(faq["What determines the number of questions?"], "Membership determines the number of scored questions. Essential includes 5, Pro includes 6, and Enterprise includes 7.");
   assert.match(faq["What does interview type control?"], /Core, Leadership, or Technical/);
   assert.match(faq["What is a Core interview?"], /not limited to entry-level roles/);
   assert.match(faq["Why does the interview begin with a warm-up?"], /not scored and is not used in hiring recommendations/);

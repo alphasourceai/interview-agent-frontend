@@ -155,7 +155,7 @@ const CHECKOUT_BACK_LINK_CLASS =
 const FALLBACK_PACKAGES: AlphaScreenPackage[] = [
   {
     plan_key: "basic",
-    display_name: "Basic",
+    display_name: "Essential",
     platform_monthly_fee: 299,
     platform_monthly_fee_cents: 29900,
     platform_annual_fee: 3299,
@@ -595,7 +595,7 @@ function cadenceLabel(plan: AlphaScreenPackage | null, key: string): string {
 }
 
 function validatePurchaseForm(form: PurchaseIntentForm, selectedPlan: AlphaScreenPackage | null): string {
-  if (!selectedPlan) return "Choose Basic or Pro before starting membership signup.";
+  if (!selectedPlan) return "Choose Essential or Pro before starting membership signup.";
   if (!cleanText(form.company_legal_name, 120)) return "Company legal name is required.";
   if (!cleanText(form.buyer_first_name, 80)) return "Buyer first name is required.";
   if (!cleanText(form.buyer_last_name, 80)) return "Buyer last name is required.";
@@ -879,7 +879,7 @@ function PurchaseIntentPanel({
   if (!selectedPlan) {
     return (
       <div className="rounded-lg border border-dashed border-[#0A1547]/18 bg-white px-6 py-8 text-center">
-        <h3 className="text-xl font-black text-[#0A1547]">Choose Basic or Pro to start membership signup.</h3>
+        <h3 className="text-xl font-black text-[#0A1547]">Choose Essential or Pro to start membership signup.</h3>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-[#0A1547]/60">
           No payment is collected in this step. You will review and sign the membership agreement before secure checkout.
         </p>
@@ -1758,7 +1758,7 @@ export default function AlphaScreenPricingPage() {
     });
 
     if (validationMessage || !selectedPlan) {
-      setPurchaseError(validationMessage || "Choose Basic or Pro before submitting.");
+      setPurchaseError(validationMessage || "Choose Essential or Pro before submitting.");
       trackEvent("lead_form_submit_failed", {
         form_id: "alphascreen-signup-profile",
         form_type: "signup_profile",
@@ -2113,7 +2113,7 @@ export default function AlphaScreenPricingPage() {
               Start with the membership that fits your hiring volume.
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[#0A1547]/65">
-              Choose Basic or Pro for structured AI-assisted candidate screening, or talk to sales for Enterprise volume and rollout support.
+              Choose Essential or Pro for structured AI-assisted candidate screening, or talk to sales for Enterprise volume and rollout support.
             </p>
             <p className="mt-4 text-sm font-semibold text-[#0A1547]/45">
               Last updated {PUBLIC_CONTENT_LAST_UPDATED}
@@ -2142,7 +2142,7 @@ export default function AlphaScreenPricingPage() {
             </div>
             <div className="mt-5 grid gap-3">
               {[
-                ["Basic", "20 interviews, 10-minute cap"],
+                ["Essential", "20 interviews, 10-minute cap"],
                 ["Pro", "30 interviews, 12-minute cap"],
                 ["Enterprise", "Talk to sales for a custom plan"],
               ].map(([name, detail]) => (
@@ -2165,7 +2165,7 @@ export default function AlphaScreenPricingPage() {
                 Choose the membership that fits your hiring needs.
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#0A1547]/60">
-                Select Basic or Pro to start membership signup, or choose Enterprise for custom volume and rollout support.
+                Select Essential or Pro to start membership signup, or choose Enterprise for custom volume and rollout support.
               </p>
             </div>
             <div className="rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-1">
@@ -2199,7 +2199,7 @@ export default function AlphaScreenPricingPage() {
             <EnterpriseCard />
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-relaxed text-[#0A1547]/55">
-            Annual platform pricing is discounted and billed upfront. Role fees are billed separately when roles are created. Basic additional interviews are fixed at $30 each. Pro additional interviews are fixed at $35 each. Secure checkout opens after agreement signing.
+            Annual platform pricing is discounted and billed upfront. Role fees are billed separately when roles are created. Essential additional interviews are fixed at $30 each. Pro additional interviews are fixed at $35 each. Secure checkout opens after agreement signing.
             {" "}
             New self-serve buyers can optionally prepay their first role during signup and save 10% on that first role.
             {" "}
@@ -2307,7 +2307,7 @@ export default function AlphaScreenPricingPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {[
-                ["1", "Start membership signup", "Select Basic, Pro, or talk to sales for custom terms."],
+                ["1", "Start membership signup", "Select Essential, Pro, or talk to sales for custom terms."],
                 ["2", "Review agreement", "Review and sign your membership agreement."],
                 ["3", "Complete Stripe Checkout", "Continue to secure payment after signing."],
                 ["4", "Set your password", "Finish account setup and access the dashboard."],

@@ -1620,7 +1620,7 @@ export default function AdminClientsPage() {
                                   }
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <option value="basic">Basic</option>
+                                  <option value="basic">Essential</option>
                                   <option value="pro">Pro</option>
                                   <option value="enterprise">Enterprise</option>
                                 </select>

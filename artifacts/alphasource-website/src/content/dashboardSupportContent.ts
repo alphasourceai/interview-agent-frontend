@@ -1,6 +1,6 @@
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 
-export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-08-26.1";
+export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-09-01.1";
 
 export const faqSections = [
   {
@@ -339,6 +339,16 @@ export const dataPracticeSections = [
 ];
 
 export const productUpdates = [
+  {
+    version: "alphaScreen v2.1",
+    title: "Essential Membership Naming",
+    summary: "Updated the entry membership name across client, purchase, billing, agreement, and support surfaces.",
+    bullets: [
+      "Membership pricing, capacity, duration, and role fees are unchanged",
+      "Existing client access and billing continue without migration",
+      "New checkout and agreement records show Essential consistently",
+    ],
+  },
   {
     version: "alphaScreen v2.0",
     title: "Profile and Passkey Security",

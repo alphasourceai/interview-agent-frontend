@@ -13,7 +13,7 @@ test("pricing hero preview uses the approved navy and duotone treatment", () => 
 });
 
 test("pricing hero preview preserves plan volume and interview time caps", () => {
-  assert.match(pricing, /\["Basic", "20 interviews, 10-minute cap"\]/);
+  assert.match(pricing, /\["Essential", "20 interviews, 10-minute cap"\]/);
   assert.match(pricing, /\["Pro", "30 interviews, 12-minute cap"\]/);
 });
 

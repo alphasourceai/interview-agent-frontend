@@ -44,7 +44,7 @@ const alphaScreenLinks = [
 
 const pricing = {
   basic: {
-    name: "Basic",
+    name: "Essential",
     monthly: 299,
     annual: 3299,
     role: 399,
@@ -206,7 +206,7 @@ function CardGrid({
 
 export function AlphaScreenHowItWorksPage() {
   const steps = [
-    ["1", "Choose a membership", "Compare Basic, Pro, or Enterprise options and select the membership that fits your hiring volume."],
+    ["1", "Choose a membership", "Compare Essential, Pro, or Enterprise options and select the membership that fits your hiring volume."],
     ["2", "Add role needs", "Enter the company and buyer details needed to prepare the membership signup workflow."],
     ["3", "Sign agreement", "Review and sign the membership agreement before payment is collected."],
     ["4", "Complete Stripe Checkout", "Finish secure checkout after agreement signing."],
@@ -569,7 +569,7 @@ export function AlphaScreenRoiPage() {
                       onChange={(event) => setMembership(event.target.value as MembershipKey)}
                       className="min-h-11 rounded-lg border border-[#0A1547]/12 bg-white px-3 text-sm font-bold text-[#0A1547] outline-none transition-colors focus:border-[#A380F6]"
                     >
-                      <option value="basic">Basic</option>
+                      <option value="basic">Essential</option>
                       <option value="pro">Pro</option>
                     </select>
                   </label>

@@ -1,6 +1,6 @@
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 
-export const PUBLIC_CONTENT_LAST_UPDATED = "August 26, 2026";
+export const PUBLIC_CONTENT_LAST_UPDATED = "September 1, 2026";
 
 export type PublicFaqItem = {
   question: string;
@@ -65,12 +65,12 @@ export const publicFaqSections: PublicFaqSection[] = [
       {
         question: "How does pricing work?",
         answer:
-          "Public Basic and Pro memberships include a platform membership fee plus a per-role fee. Basic is listed at $299 monthly or $3,299 annually plus $399 per role. Pro is listed at $599 monthly or $6,499 annually plus $699 per role.",
+          "Public Essential and Pro memberships include a platform membership fee plus a per-role fee. Essential is listed at $299 monthly or $3,299 annually plus $399 per role. Pro is listed at $599 monthly or $6,499 annually plus $699 per role.",
       },
       {
         question: "What is included in a membership?",
         answer:
-          "Basic includes 20 interviews per role with a 10-minute interview cap. Pro includes 30 interviews per role with a 12-minute interview cap. Additional interviews are listed publicly at $30 for Basic and $35 for Pro.",
+          "Essential includes 20 interviews per role with a 10-minute interview cap. Pro includes 30 interviews per role with a 12-minute interview cap. Additional interviews are listed publicly at $30 for Essential and $35 for Pro.",
       },
       {
         question: "How do billing and role fees work?",
@@ -189,6 +189,16 @@ export const publicFaqSections: PublicFaqSection[] = [
 export const publicFaqItems: PublicFaqItem[] = publicFaqSections.flatMap((section) => section.items);
 
 export const publicProductUpdates: PublicProductUpdate[] = [
+  {
+    date: "September 2026",
+    title: "Essential membership naming",
+    summary: "The entry alphaScreen membership now uses the clearer Essential name across signup, billing, and support.",
+    bullets: [
+      "Pricing, included interviews, duration caps, and role fees are unchanged",
+      "Existing memberships continue without any account or billing migration",
+      "Checkout and agreement screens now show Essential consistently",
+    ],
+  },
   {
     date: "August 2026",
     title: "Passkeys and profile settings",

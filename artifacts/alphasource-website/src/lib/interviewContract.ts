@@ -1,4 +1,4 @@
-export const BACKEND_CONTRACT_COMMIT = "0e75f1d9e7ef40be1690da4cc16aab9ae7d83d80";
+export const BACKEND_CONTRACT_COMMIT = "8d4963d9a62c2be1c350f92eaf7c2644aeb9dced";
 
 export type InterviewType = "core" | "leadership" | "technical";
 export type InterviewTypeLabel = "Core" | "Leadership" | "Technical";
@@ -14,7 +14,7 @@ export interface InterviewTypeOption {
 
 export interface MembershipCapacity {
   membership_level: MembershipLevel;
-  label: "Basic" | "Pro" | "Enterprise";
+  label: "Essential" | "Pro" | "Enterprise";
   duration_minutes: number;
   scored_question_count: number;
 }
@@ -67,15 +67,16 @@ const INTERVIEW_TYPE_ALIASES: Readonly<Record<string, InterviewType>> = Object.f
 });
 
 export const MEMBERSHIP_CAPACITY: Readonly<Record<MembershipLevel, Readonly<MembershipCapacity>>> = Object.freeze({
-  basic: Object.freeze({ membership_level: "basic", label: "Basic", duration_minutes: 10, scored_question_count: 5 }),
+  basic: Object.freeze({ membership_level: "basic", label: "Essential", duration_minutes: 10, scored_question_count: 5 }),
   pro: Object.freeze({ membership_level: "pro", label: "Pro", duration_minutes: 12, scored_question_count: 6 }),
   enterprise: Object.freeze({ membership_level: "enterprise", label: "Enterprise", duration_minutes: 15, scored_question_count: 7 }),
 });
 
 export function normalizeMembershipLevel(value: unknown): MembershipLevel | null {
   const normalized = String(value || "").trim().toLowerCase();
-  return Object.prototype.hasOwnProperty.call(MEMBERSHIP_CAPACITY, normalized)
-    ? normalized as MembershipLevel
+  const canonical = normalized === "essential" ? "basic" : normalized;
+  return Object.prototype.hasOwnProperty.call(MEMBERSHIP_CAPACITY, canonical)
+    ? canonical as MembershipLevel
     : null;
 }
 

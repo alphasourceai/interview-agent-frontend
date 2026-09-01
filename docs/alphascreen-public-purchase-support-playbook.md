@@ -18,7 +18,7 @@ Do not use spreadsheets, inbox notes, or memory as the daily source of truth for
 
 Pricing page > Membership signup > Purchase intent > Membership agreement > Stripe Checkout > Webhook activation > Client and member setup > Password setup > Dashboard access
 
-The buyer starts from the public alphaScreen pricing experience, chooses a Basic or Pro membership and billing cadence, enters buyer and company details, signs the membership agreement, completes secure Stripe Checkout, then sets a password before entering the dashboard.
+The buyer starts from the public alphaScreen pricing experience, chooses an Essential or Pro membership and billing cadence, enters buyer and company details, signs the membership agreement, completes secure Stripe Checkout, then sets a password before entering the dashboard.
 
 Support should help the buyer resume the current step. Support should not skip agreement signing, bypass Stripe Checkout, override webhook activation, or create billing state manually.
 
@@ -86,7 +86,7 @@ Use the admin page for self-serve purchase review and recovery. The page is admi
 ### What the page shows
 
 - Buyer and company details, including buyer name, email, phone, and title when available.
-- Membership and cadence, including Basic or Pro membership, monthly or annual cadence, platform fee, per-role fee, included interviews, duration cap, and additional interview price when available.
+- Membership and cadence, including Essential or Pro membership, monthly or annual cadence, platform fee, per-role fee, included interviews, duration cap, and additional interview price when available.
 - First-role prepay state when available: not selected, selected with unused credit, or selected with used role id and used time.
 - Source path showing where the buyer started the purchase.
 - Agreement status, sent/opened/signed timing, and checkout status tied to the agreement.

@@ -843,7 +843,7 @@ export default function AdminPublicPurchasesPage() {
                 style={fieldStyle}
               >
                 <option value="all">All memberships</option>
-                <option value="basic">Basic</option>
+                <option value="basic">Essential</option>
                 <option value="pro">Pro</option>
                 <option value="enterprise">Enterprise</option>
               </select>

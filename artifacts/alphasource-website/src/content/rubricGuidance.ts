@@ -14,11 +14,11 @@ export interface InterviewTypeGuide {
 export const RUBRIC_FAQ: readonly Readonly<RubricFaqItem>[] = Object.freeze([
   Object.freeze({
     question: "What determines interview length?",
-    answer: "Membership determines interview length. Basic interviews are 10 minutes, Pro interviews are 12 minutes, and Enterprise interviews are 15 minutes.",
+    answer: "Membership determines interview length. Essential interviews are 10 minutes, Pro interviews are 12 minutes, and Enterprise interviews are 15 minutes.",
   }),
   Object.freeze({
     question: "What determines the number of questions?",
-    answer: "Membership determines the number of scored questions. Basic includes 5, Pro includes 6, and Enterprise includes 7.",
+    answer: "Membership determines the number of scored questions. Essential includes 5, Pro includes 6, and Enterprise includes 7.",
   }),
   Object.freeze({
     question: "What does interview type control?",

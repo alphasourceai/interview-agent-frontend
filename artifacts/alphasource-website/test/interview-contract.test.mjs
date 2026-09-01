@@ -38,8 +38,9 @@ test("legacy reads normalize without changing membership terminology", () => {
   assert.equal(normalizeInterviewTypeForRead("technical"), "technical");
   assert.equal(getInterviewTypeLabel("basic"), "Core");
   assert.equal(getInterviewTypeLabel("detailed"), "Leadership");
+  assert.equal(normalizeMembershipLevel("Essential"), "basic");
   assert.equal(normalizeMembershipLevel("Basic"), "basic");
-  assert.equal(MEMBERSHIP_CAPACITY.basic.label, "Basic");
+  assert.equal(MEMBERSHIP_CAPACITY.basic.label, "Essential");
 });
 
 test("new writes emit only canonical lowercase values", () => {
@@ -52,10 +53,10 @@ test("new writes emit only canonical lowercase values", () => {
 });
 
 test("membership owns the exact duration and scored-question count", () => {
-  assert.deepEqual(MEMBERSHIP_CAPACITY.basic, { membership_level: "basic", label: "Basic", duration_minutes: 10, scored_question_count: 5 });
+  assert.deepEqual(MEMBERSHIP_CAPACITY.basic, { membership_level: "basic", label: "Essential", duration_minutes: 10, scored_question_count: 5 });
   assert.deepEqual(MEMBERSHIP_CAPACITY.pro, { membership_level: "pro", label: "Pro", duration_minutes: 12, scored_question_count: 6 });
   assert.deepEqual(MEMBERSHIP_CAPACITY.enterprise, { membership_level: "enterprise", label: "Enterprise", duration_minutes: 15, scored_question_count: 7 });
-  assert.equal(formatMembershipCapacity("basic"), "Basic — 10 minutes, 5 scored questions");
+  assert.equal(formatMembershipCapacity("basic"), "Essential — 10 minutes, 5 scored questions");
   assert.equal(formatMembershipCapacity("pro"), "Pro — 12 minutes, 6 scored questions");
   assert.equal(formatMembershipCapacity("enterprise"), "Enterprise — 15 minutes, 7 scored questions");
 });
@@ -71,7 +72,7 @@ for (const membership of ["basic", "pro", "enterprise"]) {
 }
 
 test("backend fixture is pinned to the approved commit and matches the shared contract", () => {
-  const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, "test/fixtures/backend-plan-capacity-0e75f1d.json"), "utf8"));
+  const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, "test/fixtures/backend-plan-capacity-8d4963d.json"), "utf8"));
   assert.equal(fixture.backend_contract_commit, BACKEND_CONTRACT_COMMIT);
   for (const [membership, backend] of Object.entries(fixture.memberships)) {
     assert.equal(backend.interview_duration_minutes, MEMBERSHIP_CAPACITY[membership].duration_minutes);
