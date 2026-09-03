@@ -66,6 +66,8 @@ interface Candidate {
   role: string;
   resume: number | null;
   interview: number | null;
+  interviewState?: "not_started" | "no_response" | "tech_issue" | "processing" | "incomplete" | "scored";
+  interviewStateLabel?: "Not started" | "No response" | "Tech issue" | "Processing" | "Incomplete" | "Scored";
   overall: number | null;
   created: string;
   resumeSubs: SubScore[];
@@ -150,6 +152,22 @@ const primaryTextStyle = { color: "var(--as-text)" };
 const mutedTextStyle = { color: "var(--as-text-muted)" };
 const subtleTextStyle = { color: "var(--as-text-subtle)" };
 const progressTrackStyle = { backgroundColor: "var(--as-surface-muted)" };
+const ALLOWED_INTERVIEW_STATES = new Set<NonNullable<Candidate["interviewState"]>>([
+  "not_started",
+  "no_response",
+  "tech_issue",
+  "processing",
+  "incomplete",
+  "scored",
+]);
+const ALLOWED_INTERVIEW_STATE_LABELS = new Set<NonNullable<Candidate["interviewStateLabel"]>>([
+  "Not started",
+  "No response",
+  "Tech issue",
+  "Processing",
+  "Incomplete",
+  "Scored",
+]);
 
 function extractErrorMessage(text: string): string {
   if (!text) return "Failed to load candidates.";
@@ -430,6 +448,12 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
       interviewSummaryLower.includes("before substantive responses were captured") ||
       interviewSummaryLower.includes("insufficient data")
     );
+  const rawInterviewState = String(item.interview_state || "").trim();
+  const rawInterviewStateLabel = String(item.interview_state_label || "").trim();
+  const fallbackInterviewState = insufficientInterview ? "no_response" : interviewId ? "processing" : "not_started";
+  const fallbackInterviewStateLabel = insufficientInterview ? "No response" : interviewId ? "Processing" : "Not started";
+  const interviewState = (ALLOWED_INTERVIEW_STATES.has(rawInterviewState as NonNullable<Candidate["interviewState"]>) ? rawInterviewState : fallbackInterviewState) as NonNullable<Candidate["interviewState"]>;
+  const interviewStateLabel = (ALLOWED_INTERVIEW_STATE_LABELS.has(rawInterviewStateLabel as NonNullable<Candidate["interviewStateLabel"]>) ? rawInterviewStateLabel : fallbackInterviewStateLabel) as NonNullable<Candidate["interviewStateLabel"]>;
   const hasInterview = interviewScore !== null || Object.keys(transcriptScores).length > 0 || insufficientInterview;
   const displayedInterviewScore = insufficientInterview ? null : interviewScore;
   const displayedOverallScore = insufficientInterview ? null : overallScore;
@@ -462,6 +486,8 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
     role: String(role.title || "").trim() || "—",
     resume: resumeScore,
     interview: displayedInterviewScore,
+    interviewState,
+    interviewStateLabel,
     overall: displayedOverallScore,
     insufficientInterview,
     created: formatCreated(item.created_at),
@@ -764,7 +790,30 @@ function ScoreBar({ label, score, barColor }: SubScore & { barColor: string }) {
   );
 }
 
-function ScoreCell({ score }: { score: number | null }) {
+const interviewStateTone: Record<NonNullable<Candidate["interviewState"]>, { backgroundColor: string; color: string }> = {
+  not_started: { backgroundColor: "var(--as-surface-muted)", color: "var(--as-text-muted)" },
+  no_response: { backgroundColor: "rgba(240,165,0,0.13)", color: "#A66F00" },
+  tech_issue: { backgroundColor: "rgba(255,107,107,0.13)", color: "#D44545" },
+  processing: { backgroundColor: "rgba(2,171,224,0.13)", color: "#087EAA" },
+  incomplete: { backgroundColor: "rgba(163,128,246,0.13)", color: "#7554C2" },
+  scored: { backgroundColor: "rgba(2,217,157,0.13)", color: "#007F61" },
+};
+
+function ScoreCell({ score, emptyState, emptyLabel }: {
+  score: number | null;
+  emptyState?: Candidate["interviewState"];
+  emptyLabel?: Candidate["interviewStateLabel"];
+}) {
+  if (score === null && emptyState && emptyLabel) {
+    return (
+      <span
+        className="inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-black"
+        style={interviewStateTone[emptyState]}
+      >
+        {emptyLabel}
+      </span>
+    );
+  }
   if (score === null) return <span className="text-sm font-semibold" style={subtleTextStyle}>—</span>;
   const color = scoreColor(score);
   return (
@@ -1923,7 +1972,9 @@ export default function CandidatesPage() {
                         <td className="px-4 py-4"><ScoreCell score={c.resume} /></td>
 
                         {/* Interview score */}
-                        <td className="px-4 py-4"><ScoreCell score={c.interview} /></td>
+                        <td className="px-4 py-4">
+                          <ScoreCell score={c.interview} emptyState={c.interviewState} emptyLabel={c.interviewStateLabel} />
+                        </td>
 
                         {/* Overall score */}
                         <td className="px-4 py-4">
