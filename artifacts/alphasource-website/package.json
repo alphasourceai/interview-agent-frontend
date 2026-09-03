@@ -16,7 +16,8 @@
     "verify:sms-retail-ui": "node scripts/verify-sms-retail-ui.mjs",
     "verify:candidate-submit-reliability": "node scripts/verify-candidate-submit-reliability.mjs",
     "verify:sms-consent-evidence": "node scripts/verify-sms-consent-evidence.mjs",
-    "verify:recovery-core-ui": "node scripts/verify-recovery-core-ui.mjs"
+    "verify:recovery-core-ui": "node scripts/verify-recovery-core-ui.mjs",
+    "verify:interview-status": "node --test src/lib/interviewStatus.test.mjs"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",

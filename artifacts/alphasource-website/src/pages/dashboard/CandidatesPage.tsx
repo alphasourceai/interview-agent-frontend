@@ -16,6 +16,12 @@ import DashboardLayout from "@/components/DashboardLayout";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useClient } from "@/context/ClientContext";
 import { buildEntityFilterOptions, defaultEntityFilterValue, entityFilterHelpText, entityFilterQueryValue, type EntityFilterValue } from "@/lib/entityFilters";
+import {
+  interviewStateLabel,
+  normalizeInterviewState,
+  type InterviewState,
+  type InterviewStateLabel,
+} from "@/lib/interviewStatus";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ── Types ──────────────────────────────────────────── */
@@ -66,8 +72,8 @@ interface Candidate {
   role: string;
   resume: number | null;
   interview: number | null;
-  interviewState?: "not_started" | "no_response" | "tech_issue" | "processing" | "incomplete" | "scored";
-  interviewStateLabel?: "Not started" | "No response" | "Tech issue" | "Processing" | "Incomplete" | "Scored";
+  interviewState?: InterviewState;
+  interviewStateLabel?: InterviewStateLabel;
   overall: number | null;
   created: string;
   resumeSubs: SubScore[];
@@ -152,23 +158,6 @@ const primaryTextStyle = { color: "var(--as-text)" };
 const mutedTextStyle = { color: "var(--as-text-muted)" };
 const subtleTextStyle = { color: "var(--as-text-subtle)" };
 const progressTrackStyle = { backgroundColor: "var(--as-surface-muted)" };
-const ALLOWED_INTERVIEW_STATES = new Set<NonNullable<Candidate["interviewState"]>>([
-  "not_started",
-  "no_response",
-  "tech_issue",
-  "processing",
-  "incomplete",
-  "scored",
-]);
-const ALLOWED_INTERVIEW_STATE_LABELS = new Set<NonNullable<Candidate["interviewStateLabel"]>>([
-  "Not started",
-  "No response",
-  "Tech issue",
-  "Processing",
-  "Incomplete",
-  "Scored",
-]);
-
 function extractErrorMessage(text: string): string {
   if (!text) return "Failed to load candidates.";
   try {
@@ -393,7 +382,7 @@ function formatCreated(value: unknown): string {
   return `${date} · ${normalizedTime.includes("CST") ? normalizedTime : `${normalizedTime} CST`}`;
 }
 
-function mapRowToCandidate(item: Record<string, unknown>, index: number): Candidate {
+export function mapRowToCandidate(item: Record<string, unknown>, index: number): Candidate {
   const candidate = item.candidate && typeof item.candidate === "object"
     ? (item.candidate as Record<string, unknown>)
     : {};
@@ -440,23 +429,12 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
   const perceptionMode = String(perceptionScores.mode || "").trim().toLowerCase();
   const isTextInterview = perceptionMode === "text" || perceptionScores.unavailable === true;
   const perceptionUnavailable = perceptionMode === "text" || perceptionScores.unavailable === true;
-  const interviewSummaryLower = interviewSummaryRaw.toLowerCase();
-  const insufficientInterview =
-    !isTextInterview &&
-    (
-      interviewSummaryLower.includes("before any substantive responses were recorded") ||
-      interviewSummaryLower.includes("before substantive responses were captured") ||
-      interviewSummaryLower.includes("insufficient data")
-    );
-  const rawInterviewState = String(item.interview_state || "").trim();
-  const rawInterviewStateLabel = String(item.interview_state_label || "").trim();
-  const fallbackInterviewState = insufficientInterview ? "no_response" : interviewId ? "processing" : "not_started";
-  const fallbackInterviewStateLabel = insufficientInterview ? "No response" : interviewId ? "Processing" : "Not started";
-  const interviewState = (ALLOWED_INTERVIEW_STATES.has(rawInterviewState as NonNullable<Candidate["interviewState"]>) ? rawInterviewState : fallbackInterviewState) as NonNullable<Candidate["interviewState"]>;
-  const interviewStateLabel = (ALLOWED_INTERVIEW_STATE_LABELS.has(rawInterviewStateLabel as NonNullable<Candidate["interviewStateLabel"]>) ? rawInterviewStateLabel : fallbackInterviewStateLabel) as NonNullable<Candidate["interviewStateLabel"]>;
+  const interviewState = normalizeInterviewState(item.interview_state);
+  const interviewStateLabelValue = interviewStateLabel(interviewState);
+  const insufficientInterview = !isTextInterview && (interviewState === "no_response" || interviewState === "tech_issue");
   const hasInterview = interviewScore !== null || Object.keys(transcriptScores).length > 0 || insufficientInterview;
-  const displayedInterviewScore = insufficientInterview ? null : interviewScore;
-  const displayedOverallScore = insufficientInterview ? null : overallScore;
+  const displayedInterviewScore = interviewScore;
+  const displayedOverallScore = overallScore;
   const clarityScore = insufficientInterview || perceptionUnavailable ? null : toScoreOrNull(interviewAnalysis.clarity);
   const confidenceScore = insufficientInterview || perceptionUnavailable ? null : toScoreOrNull(interviewAnalysis.confidence);
   const engagementFromInterview = toScoreOrNull(interviewAnalysis.engagement);
@@ -487,7 +465,7 @@ function mapRowToCandidate(item: Record<string, unknown>, index: number): Candid
     resume: resumeScore,
     interview: displayedInterviewScore,
     interviewState,
-    interviewStateLabel,
+    interviewStateLabel: interviewStateLabelValue,
     overall: displayedOverallScore,
     insufficientInterview,
     created: formatCreated(item.created_at),
@@ -799,15 +777,16 @@ const interviewStateTone: Record<NonNullable<Candidate["interviewState"]>, { bac
   scored: { backgroundColor: "rgba(2,217,157,0.13)", color: "#007F61" },
 };
 
-function ScoreCell({ score, emptyState, emptyLabel }: {
+export function ScoreCell({ score, emptyState }: {
   score: number | null;
   emptyState?: Candidate["interviewState"];
-  emptyLabel?: Candidate["interviewStateLabel"];
 }) {
+  const emptyLabel = interviewStateLabel(emptyState);
   if (score === null && emptyState && emptyLabel) {
     return (
       <span
-        className="inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-black"
+        aria-label={`Interview status: ${emptyLabel}`}
+        className="inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-black"
         style={interviewStateTone[emptyState]}
       >
         {emptyLabel}
@@ -1973,7 +1952,7 @@ export default function CandidatesPage() {
 
                         {/* Interview score */}
                         <td className="px-4 py-4">
-                          <ScoreCell score={c.interview} emptyState={c.interviewState} emptyLabel={c.interviewStateLabel} />
+                          <ScoreCell score={c.interview} emptyState={c.interviewState} />
                         </td>
 
                         {/* Overall score */}
