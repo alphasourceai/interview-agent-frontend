@@ -34,6 +34,8 @@ const CHECKLIST = [
 ];
 
 type Step = "info" | "otp" | "ready" | "live";
+type OtpResendOutcome = "sent" | "restart" | "failed";
+const OTP_LAUNCH_HEADER = "X-AlphaScreen-OTP-Launch";
 
 /* ── Step progress bar ───────────────────────────────────────────── */
 const STEPS = [
@@ -232,6 +234,7 @@ export default function InterviewPage() {
     candidate_id: recoveryOtpSeed.candidate_id,
     role_id: "",
     challenge_id: recoveryOtpSeed.challenge_id,
+    launch_capability: "",
     email: recoveryOtpSeed.email,
     role_token: readRoleToken(),
   });
@@ -576,6 +579,7 @@ export default function InterviewPage() {
         candidate_id: String(data?.candidate_id || "").trim(),
         role_id: String(data?.role_id || "").trim(),
         challenge_id: challengeId,
+        launch_capability: "",
         email: verifiedEmail,
         role_token: roleToken,
       });
@@ -605,17 +609,32 @@ export default function InterviewPage() {
     }
   }
 
-  async function requestOtpResend(channel: OtpDeliveryChannel) {
+  function returnToInformationForFreshVerification() {
+    setInterviewAuth((prev) => ({ ...prev, challenge_id: "", launch_capability: "" }));
+    setOtp("");
+    setOtpError("");
+    setResendMessage("");
+    setResendError("");
+    setDeviceModalOpen(false);
+    setStep("info");
+    setErrors((current) => ({
+      ...current,
+      submit: "Your secure verification session ended. Review your information and submit again to receive a new code.",
+    }));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function requestOtpResend(channel: OtpDeliveryChannel): Promise<OtpResendOutcome> {
     const resendEmail = String(interviewAuth.email || email).trim().toLowerCase();
     if (!resendEmail || !interviewAuth.challenge_id) {
       setResendMessage("");
       setResendError("Could not resend the code. Please try again.");
-      return;
+      return "failed";
     }
     if (!backendBase) {
       setResendMessage("");
       setResendError("Could not resend the code. Please try again.");
-      return;
+      return "failed";
     }
 
     setResendLoading(true);
@@ -635,21 +654,25 @@ export default function InterviewPage() {
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
         setResendError("Could not resend the code. Please try again.");
-        return;
+        return "failed";
       }
       const nextChallengeId = String(data?.challenge_id || "").trim();
       if (nextChallengeId) {
         setInterviewAuth((prev) => ({ ...prev, challenge_id: nextChallengeId }));
       }
+      if (!nextChallengeId && !data?.delivery_channel) {
+        returnToInformationForFreshVerification();
+        return "restart";
+      }
       const accepted = acceptedDeliveryOutcome(data?.delivery_outcome);
       if (channel === "sms" && !accepted) {
         setSmsFallbackRequired(true);
         setResendError("The text message could not be confirmed. Choose Email to continue.");
-        return;
+        return "failed";
       }
       if (!nextChallengeId) {
-        setResendError("Could not resend the code. Please try again.");
-        return;
+        returnToInformationForFreshVerification();
+        return "restart";
       }
       setActiveOtpChannel(channel);
       setOtpChannel(channel);
@@ -658,8 +681,10 @@ export default function InterviewPage() {
       setResendMessage(channel === "sms"
         ? "A new code was requested. Please check your text messages."
         : "A new code was sent. Please check your email.");
+      return "sent";
     } catch {
       setResendError("Could not resend the code. Please try again.");
+      return "failed";
     } finally {
       setResendLoading(false);
     }
@@ -717,10 +742,22 @@ export default function InterviewPage() {
       }
 
       const verifiedEmail = String(data?.email || verifyEmail).trim();
+      const launchCapability = String(data?.launch_capability || "").trim();
+      if (!launchCapability) {
+        setOtp("");
+        const resendOutcome = await requestOtpResend(activeOtpChannel);
+        if (resendOutcome !== "restart") {
+          setOtpError(resendOutcome === "sent"
+            ? "Please enter the new code to finish verification."
+            : "Could not establish a secure interview session. Request a new code and try again.");
+        }
+        return;
+      }
       setInterviewAuth((prev) => ({
         candidate_id: String(data?.candidate_id || prev.candidate_id).trim(),
         role_id: String(data?.role_id || prev.role_id).trim(),
         challenge_id: prev.challenge_id,
+        launch_capability: launchCapability,
         email: verifiedEmail,
         role_token: prev.role_token,
       }));
@@ -745,8 +782,9 @@ export default function InterviewPage() {
     const roleId = String(interviewAuth.role_id || "").trim();
     const candidateEmail = String(interviewAuth.email || email).trim();
     const roleToken = String(interviewAuth.role_token || "").trim();
+    const launchCapability = String(interviewAuth.launch_capability || "").trim();
 
-    if (!candidateId || !roleId || !candidateEmail || !roleToken) {
+    if (!candidateId || !roleId || !candidateEmail || !roleToken || !launchCapability) {
       setStartError("Missing interview session data. Please submit and verify again.");
       return;
     }
@@ -758,7 +796,10 @@ export default function InterviewPage() {
       const resp = await fetch(joinUrl(backendBase, "/create-tavus-interview"), {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          [OTP_LAUNCH_HEADER]: launchCapability,
+        },
         body: JSON.stringify({
           candidate_id: candidateId,
           role_id: roleId,
@@ -769,6 +810,20 @@ export default function InterviewPage() {
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
+        if (String(data?.code || "").trim().toUpperCase() === "OTP_LAUNCH_CAPABILITY_REQUIRED") {
+          setInterviewAuth((prev) => ({ ...prev, launch_capability: "" }));
+          setOtp("");
+          setDeviceModalOpen(false);
+          setStep("otp");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          const resendOutcome = await requestOtpResend(activeOtpChannel);
+          if (resendOutcome !== "restart") {
+            setOtpError(resendOutcome === "sent"
+              ? "Your secure verification window ended. Enter the new code to continue."
+              : "Your secure verification window ended. Request a new code to continue.");
+          }
+          return;
+        }
         setStartError(getCandidateFlowError(data, "Could not start interview."));
         return;
       }

@@ -24,11 +24,25 @@ test("candidate application, verification, and launch routes remain wired", () =
   assert.match(access, /backendBase \? joinUrl\(backendBase, "\/api\/candidate"\)/);
   assert.match(access, /joinUrl\(candidateApiBase, "\/verify-otp"\)/);
   assert.match(access, /\/create-tavus-interview/);
+  assert.match(access, /X-AlphaScreen-OTP-Launch/);
+  assert.match(access, /data\?\.launch_capability/);
+  assert.match(access, /OTP_LAUNCH_CAPABILITY_REQUIRED/);
+  assert.match(access, /await requestOtpResend\(activeOtpChannel\)/);
+  assert.match(access, /returnToInformationForFreshVerification\(\)/);
+  assert.match(access, /Review your information and submit again to receive a new code/);
+  assert.doesNotMatch(access, /OTP_LAUNCH_CAPABILITY_REQUIRED[\s\S]{0,1200}handleStartInterview\(\)/);
   assert.match(access, /Before you start your interview/);
   assert.doesNotMatch(access, /3 uninterrupted minutes to complete the interview/);
   assert.doesNotMatch(access, /preStartMaxInterviewMinutes/);
   assert.match(access, /data\?\.max_interview_minutes/);
   assert.match(access, /max_interview_minutes: maxInterviewMinutes/);
+});
+
+test("OTP launch capability remains memory-only and never enters interview session storage", () => {
+  const liveStateStart = access.indexOf("window.sessionStorage.setItem(");
+  const liveStateEnd = access.indexOf('setLocation("/interview-cvi")', liveStateStart);
+  assert.ok(liveStateStart >= 0 && liveStateEnd > liveStateStart);
+  assert.doesNotMatch(access.slice(liveStateStart, liveStateEnd), /launch_capability|OTP_LAUNCH_HEADER/);
 });
 
 test("candidate readiness has no competing spoken introduction or fixed warm-up", () => {
