@@ -18,7 +18,6 @@ import { useAppearance } from "@/context/AppearanceContext";
 const EMPTY_OPTIONAL_TRACKING_SELECTION: OptionalTrackingSelection = {
   analytics: false,
   marketingAttribution: false,
-  visitorChat: false,
 };
 
 type TrackingConsentNoticeProps = {
@@ -94,7 +93,6 @@ export default function TrackingConsentNotice({ visible }: TrackingConsentNotice
       setDraft({
         analytics: preferences?.analytics ?? false,
         marketingAttribution: preferences?.marketingAttribution ?? false,
-        visitorChat: preferences?.visitorChat ?? false,
       });
     }
   }, [preferences, preferencesOpen]);
@@ -118,7 +116,7 @@ export default function TrackingConsentNotice({ visible }: TrackingConsentNotice
             <div className="max-w-3xl">
               <h2 className="text-sm font-semibold text-[#0A1547]">Privacy choices</h2>
               <p className="mt-1 text-sm leading-5 text-[#38415E]">
-                We use optional analytics, marketing attribution, and visitor chat tools. You can allow all
+                We use optional analytics and marketing attribution tools. You can allow all
                 optional technologies or choose which categories to enable. Essential sign-in and security
                 functions always remain active.
               </p>
@@ -192,13 +190,6 @@ export default function TrackingConsentNotice({ visible }: TrackingConsentNotice
                 onCheckedChange={(marketingAttribution) =>
                   setDraft((current) => ({ ...current, marketingAttribution }))
                 }
-              />
-              <PreferenceRow
-                checked={draft.visitorChat}
-                description="Enables the optional public chat tool so visitors can contact us while browsing the site."
-                id="visitor-chat"
-                label="Visitor chat"
-                onCheckedChange={(visitorChat) => setDraft((current) => ({ ...current, visitorChat }))}
               />
             </div>
 

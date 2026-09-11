@@ -75,7 +75,8 @@ const snapshot = {
   },
 };
 
-const json = `${JSON.stringify(snapshot, null, 2)}\n`;
+// Compact generated JSON keeps the full help content within the bounded voice prompt.
+const json = `${JSON.stringify(snapshot)}\n`;
 const hash = crypto.createHash("sha256").update(json, "utf8").digest("hex");
 const output = outputArg("--output", DEFAULT_OUTPUT);
 const hashOutput = outputArg("--hash-output", DEFAULT_HASH_OUTPUT);

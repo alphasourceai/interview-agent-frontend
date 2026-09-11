@@ -19,15 +19,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AppearanceProvider, useAppearance } from "@/context/AppearanceContext";
-import {
-  TrackingConsentProvider,
-  useTrackingConsent,
-} from "@/context/TrackingConsentContext";
+import { TrackingConsentProvider } from "@/context/TrackingConsentContext";
 import { ClientProvider } from "@/context/ClientContext";
 import { AdminClientProvider } from "@/context/AdminClientContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import PublicTawkWidget from "@/components/PublicTawkWidget";
 import Seo from "@/components/Seo";
 import PageAnalytics from "@/components/PageAnalytics";
 import IDPixelLoader from "@/components/IDPixelLoader";
@@ -99,9 +95,6 @@ import AdminAuditLogsPage from "@/pages/admin/AdminAuditLogsPage";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
-const env =
-  typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
-const PUBLIC_TAWK_ROUTES = new Set(["/", "/about", "/alphascreen", "/support", "/faq"]);
 const PUBLIC_CHECKOUT_FALLBACK_MESSAGE = "We could not load this step. Please refresh or contact support.";
 const DASHBOARD_TAB_ROUTE: Record<string, string> = {
   roles: "/dashboard/roles",
@@ -581,8 +574,6 @@ function InterviewCompletePage() {
 /* ── Router ─────────────────────────────────────────────── */
 function Router() {
   const [location] = useLocation();
-  const { visitorChatEnabled } = useTrackingConsent();
-  const normalizedLocation = location.length > 1 ? location.replace(/\/+$/, "") : location;
   const isDashboard = location === "/dashboard" || location.startsWith("/dashboard/");
   const isAdmin     = location === "/admin"     || location.startsWith("/admin/");
   const isAutomationDigestApproval = location === "/automation/digest-approval" || location.startsWith("/automation/digest-approval/");
@@ -606,7 +597,7 @@ function Router() {
     location.startsWith("/accommodation-request/") ||
     location === "/interview-cvi" ||
     location === "/interview-complete";
-  const isPublicTawkRoute = PUBLIC_TAWK_ROUTES.has(normalizedLocation);
+
   let content: ReactNode;
 
   if (isDashboard) {
@@ -702,23 +693,6 @@ function Router() {
             </main>
             <Footer />
             <TrackingConsentNotice visible />
-            {isPublicTawkRoute && (
-              <PublicTawkWidget
-                enabled={
-                  visitorChatEnabled &&
-                  (env as Record<string, unknown>).VITE_TAWK_PUBLIC_ENABLED ===
-                    "true"
-                }
-                propertyId={String(
-                  (env as Record<string, unknown>)
-                    .VITE_TAWK_PUBLIC_PROPERTY_ID || "",
-                )}
-                widgetId={String(
-                  (env as Record<string, unknown>).VITE_TAWK_PUBLIC_WIDGET_ID ||
-                    "",
-                )}
-              />
-            )}
           </div>
         </PublicSiteShell>
       </AppearanceProvider>

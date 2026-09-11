@@ -99,7 +99,7 @@ test("ending remains user-controlled or server-controlled and close reasons are 
   assert.match(voice, /Ends after two minutes without voice activity, or when you choose End\./);
   assert.doesNotMatch(voice, /socket\.close\([^)]*,\s*(?:event|decoded|message|encoded|audio)/);
   assert.doesNotMatch(voice, /console\.(?:log|warn|error)\([^)]*(?:encoded|samples|audio|transcript)/);
-  assert.match(voice, /socket\.addEventListener\("error", \(\) => \{\s*credential = "";\s*\}, \{ once: true \}\);/);
+  assert.match(voice, /socket\.addEventListener\("error", \(\) => \{\s*credential = "";\s*captureSupportVoiceFailure\("websocket", "socket_error"\);\s*\}, \{ once: true \}\);/);
 });
 
 test("assistant playback owns the microphone and speaking state until the queue drains", () => {

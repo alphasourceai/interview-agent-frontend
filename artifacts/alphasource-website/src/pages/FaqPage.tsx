@@ -103,7 +103,7 @@ export default function FaqPage() {
             </p>
             <h2 className="mb-3 text-2xl font-black text-[#0A1547]">Public alphaScreen FAQ</h2>
             <p className="max-w-3xl text-sm leading-relaxed text-[#0A1547]/60">
-              Short, extractable answers for AI search, buyer review, and public alphaScreen education.
+              Practical answers about choosing a membership, preparing candidates, understanding scores, and getting help.
             </p>
           </div>
 

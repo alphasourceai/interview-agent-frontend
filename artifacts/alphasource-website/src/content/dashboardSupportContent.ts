@@ -1,6 +1,7 @@
+import { capacityFaq, membershipTermFaq, firstRolePrepayAnswer, deviceCheckFaq, launchRecoveryFaq, microphoneRecoveryFaq, scoringFaqs, interviewStatusFaq, septemberUpdates } from "@/content/supportGuidance";
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 
-export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-09-01.1";
+export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-09-11.4";
 
 export const faqSections = [
   {
@@ -95,11 +96,11 @@ export const faqSections = [
       },
       {
         question: "Can I edit a role after it is created?",
-        answer: "If role editing is available in your dashboard, use it carefully. Changes may affect future candidates. Avoid changing core requirements after candidates have already started screening interviews unless your hiring team understands the impact.",
+        answer: "On Roles, the action menu provides Replace job description for eligible roles and explains when replacement is blocked. Replacement rebuilds the role configuration. Review the new requirements before inviting candidates, and contact support about changes once screening is underway. Do not assume historical interviews will be automatically rescored.",
       },
       {
         question: "What happens when a role reaches its screening interview capacity?",
-        answer: "Candidate access may be limited until additional screening interview capacity is available or the role/client plan is updated. If a candidate cannot start because of capacity, check billing, role settings, or contact support.",
+        answer: "Check the role's remaining capacity on Roles. Authorized billing users can open Billing and use Purchase Additional Interviews for the intended role. Candidate starts may be blocked until capacity is available. Check the correct client/entity scope and payment status; contact support if access remains blocked.",
       },
     ],
   },
@@ -110,6 +111,9 @@ export const faqSections = [
   {
     title: "Candidates",
     items: [
+      deviceCheckFaq,
+      launchRecoveryFaq,
+      microphoneRecoveryFaq,
       {
         question: "How do candidates start a screening interview?",
         answer: "Candidates use the screening interview link or flow provided for the role. They submit their information, verify access when prompted, and then start the AI screening interview.",
@@ -120,15 +124,15 @@ export const faqSections = [
       },
       {
         question: "What if a candidate says they did not receive a one-time code?",
-        answer: "For Email, ask the candidate to check spam or junk, confirm the address, and use the available resend option. For Text Message, confirm the displayed destination is correct and let the candidate choose Email if delivery cannot be confirmed. If the issue continues, contact support with the candidate name, email, role, approximate time, and selected delivery method.",
+        answer: "For Email, check spam or junk, confirm the address, and follow the displayed resend timer. For Text Message, check the masked destination and choose Email if delivery is delayed or cannot be confirmed. Use a newly requested code rather than an older one. For persistent issues, email support with the role, time, browser, delivery method, and error text. Never send the code itself.",
       },
       {
         question: "Can a candidate retake a screening interview?",
-        answer: "Retakes should be handled carefully and consistently. If your dashboard supports retakes or re-invites, follow your company's policy. If not, contact support.",
+        answer: "Contact the hiring team or support before retrying an ended or completed interview. Retakes require a consistent hiring policy and the appropriate account workflow. Do not create a duplicate candidate record to bypass an access or completion restriction.",
       },
       {
         question: "What should candidates know before a screening interview?",
-        answer: "Candidates should be in a quiet place, use a stable internet connection, allow camera and microphone permissions, and answer naturally. They should not rely on outside help during the screening interview.",
+        answer: "Use the device check before starting, choose a quiet place and stable connection, and answer naturally from your own experience. Warm-up is unscored. Use on-screen recovery instructions if access or audio fails, and contact the hiring team about accommodations or an interrupted interview.",
       },
     ],
   },
@@ -166,11 +170,11 @@ export const faqSections = [
       },
       {
         question: "What if the candidate has technical issues during the screening interview?",
-        answer: "Ask the candidate to refresh, check camera and microphone permissions, confirm internet stability, and try again if appropriate. If the issue continues, contact support with the candidate, role, screening interview time, and any error message.",
+        answer: "Follow the on-screen recovery instructions. For an audio warning, use Try microphone when offered and check permissions and input selection. Avoid refreshing the whole interview as the first step: refresh does not guarantee resuming the same attempt. If recovery fails, contact support with the role, time, browser/device, and error text before arranging a retry.",
       },
       {
         question: "What if the screening interview ends early?",
-        answer: "Review the candidate record to see whether a transcript or report was generated. If the screening interview did not complete or the report is missing, contact support.",
+        answer: "Check the interview status and available transcript/report on Candidates. No response, Tech issue, Processing, and Incomplete require different follow-up; none is a hiring decision. An explicitly identified no-substantive-response attempt has no Interview Score and does not use role capacity. Substantive interrupted interviews may still count. Contact support before arranging a retake.",
       },
       {
         question: "What if the candidate asks a question the AI cannot answer?",
@@ -181,13 +185,16 @@ export const faqSections = [
   {
     title: "Reports and scoring",
     items: [
+      ...scoringFaqs,
+      interviewStatusFaq,
+      { question: "Can I request a review of an older score?", answer: "Contact support with the role and reason for review. Changes to scoring do not automatically recalculate all historical interviews. Any approved rescore is controlled by the alphaSource team; there is no general client self-service rescore action. Previously downloaded PDFs stay unchanged." },
       {
         question: "What does the candidate report include?",
         answer: "Reports may include resume analysis, screening interview analysis, transcript-based scoring, perception-related signals, summary notes, and structured recommendations for review.",
       },
       {
         question: "What do the scores mean?",
-        answer: "Scores are decision-support signals. They help your team compare candidate responses more consistently, but they should be reviewed alongside the resume, screening interview context, role requirements, and your hiring judgment.",
+        answer: "Scores summarize evidence for human review. Resume measures job-description alignment; Interview averages scorable role-specific answers; Overall equally weights both when available. Read the scoring explanations below and the actual evidence. A dash is unavailable, not zero, and a score alone should not determine a hiring decision.",
       },
       {
         question: "Does alphaScreen automatically reject candidates?",
@@ -195,24 +202,27 @@ export const faqSections = [
       },
       {
         question: "What should I do if a report seems incomplete?",
-        answer: "Check whether the screening interview completed recently. Reports may take a short time to process. If the report remains incomplete, contact support with the candidate name, role, and screening interview time.",
+        answer: "Check the status on Candidates. Processing means a scored result is not yet available; revisit a recent attempt and contact support if it remains stuck. No response, Tech issue, or Incomplete may need review instead of more waiting. Include the role, interview time, status, and error text in your support email. Previously downloaded PDFs do not change when a record is updated.",
       },
       {
         question: "Can I download or share reports?",
-        answer: "If your dashboard includes PDF or report-sharing functionality, use it according to your company's privacy and hiring policies. Do not share candidate data with people who do not need access.",
+        answer: "Open Candidates, expand the candidate, and use the available report/PDF controls for an authorized record. Generate or download a current report after an approved record update; an already downloaded PDF stays unchanged. Share reports only with authorized hiring reviewers under your company's privacy policy.",
       },
     ],
   },
   {
     title: "Billing and capacity",
     items: [
+      capacityFaq,
+      membershipTermFaq,
+      { question: "How does first-role prepay work?", answer: firstRolePrepayAnswer },
       {
         question: "Where do I see my plan or membership status?",
-        answer: "Use the Billing or Account area of the dashboard if available. It may show your current plan, role capacity, screening interview usage, and available options.",
+        answer: "Open Billing to review membership, agreement, payment, and additional-interview options available to your permission level. Billing is managed under the parent billing account. Check role-specific remaining capacity on Roles. If you cannot access Billing, ask your account administrator or support.",
       },
       {
         question: "What happens if we need more screening interviews?",
-        answer: "Depending on your plan, you may be able to purchase additional screening interview capacity or update your membership. If you do not see the option you need, contact support.",
+        answer: "Authorized billing users can open Billing and select Purchase Additional Interviews for the intended role. Check the selected client/entity and role before paying. If the control is unavailable or capacity does not update after payment, contact support before purchasing again.",
       },
       {
         question: "Why can't a candidate start even though the role is active?",
@@ -225,7 +235,7 @@ export const faqSections = [
     items: [
       {
         question: "How do I add or remove team members?",
-        answer: "Use the Members or Account area if available. Only give access to users who need it. If you need help changing access, contact support.",
+        answer: "Authorized users manage team access on Members. Select the intended client/entity scope and review the user's role and direct assignments before saving changes. If Members or a required control is unavailable to your account, contact your account administrator or support.",
       },
       {
         question: "What is the difference between an admin and a client member?",
@@ -255,11 +265,11 @@ export const faqSections = [
     items: [
       {
         question: "How do I contact support?",
-        answer: "Contact alphaSource support through the support process provided to your organization. Include the role, candidate, email address, and a short description of the issue.",
+        answer: "Email support@alphasourceai.com for team follow-up, or call AI Customer Support at (605) 599-8008. In the dashboard, Talk with Support provides AI guidance. When email escalation is available, the assistant offers a phone contact route or a message to support. It asks you to confirm your name, reply email, and a brief issue summary before sending. Only an explicit submission confirmation means the request was submitted. The browser assistant cannot transfer the browser call, inspect your account, change records, or promise a response time. Do not share candidate records, passwords, codes, private links, or payment details.",
       },
       {
         question: "What information should I include when reporting a problem?",
-        answer: "Include your company name, role name, candidate name and email if relevant, approximate time of the issue, what the user was trying to do, and any error message. For entity import mistakes, include the CSV filename, affected entity names, and whether member assignments were created.",
+        answer: "In a support email, include your company, role, approximate time and time zone, browser/device, visible status, and exact error text. Provide account or candidate identifiers only as needed through the approved support channel. Do not share passwords, one-time codes, payment details, or private access links. Do not give candidate or account details to browser AI support.",
       },
       {
         question: "When should I contact support before trying again?",
@@ -267,7 +277,7 @@ export const faqSections = [
       },
       {
         question: "What happens after I leave a support message?",
-        answer: "The support team will review the message and follow up. If the issue is urgent, include that clearly in your message.",
+        answer: "If you email the team, they can review the request and follow up through that support channel. Browser Talk with Support is informational and does not create a ticket, send a team message, or promise a callback. Keep a copy of your email and describe urgent impact clearly; no response-time guarantee is stated here.",
       },
     ],
   },
@@ -281,6 +291,7 @@ export interface SupportGuidanceCard {
 }
 
 export const guidanceCards: SupportGuidanceCard[] = [
+  { title: "Interview troubleshooting", body: "Check candidate status, use device checks before starting, and follow verification or Try microphone recovery when offered. Contact support if recovery fails.", href: "#common-questions", linkLabel: "Find troubleshooting answers" },
   {
     title: "Getting started",
     body: "Confirm your profile, team access, billing status, and active roles before sending candidates into the screening interview flow.",
@@ -339,6 +350,7 @@ export const dataPracticeSections = [
 ];
 
 export const productUpdates = [
+  ...septemberUpdates.map(({ date, ...update }) => ({ version: date, ...update })),
   {
     version: "alphaScreen v2.1",
     title: "Essential Membership Naming",
@@ -363,9 +375,10 @@ export const productUpdates = [
   {
     version: "alphaScreen v1.9",
     title: "Optional Text-Message Verification",
-    summary: "Expanded candidate interview-access verification while preserving Email as the default alternative.",
+    summary: "Expanded eligible candidate and buyer signup verification while preserving Email as an alternative.",
     bullets: [
-      "Eligible candidates may choose Email or Text Message when both options are offered",
+      "Eligible candidates and buyers may choose Email or Text Message when offered",
+      "Buyer signup shows resend timing and a delayed-text email fallback",
       "Text-message consent is optional and shown before a code is requested",
       "Email remains available when text delivery cannot be confirmed",
       "Clearer resend and recovery guidance keeps candidates in the same interview flow",

@@ -85,7 +85,7 @@ export default function SupportPage() {
               </a>
             </div>
             <p className="text-sm leading-relaxed text-[#0A1547]/65">
-              Email <a href="mailto:info@alphasourceai.com" className="font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4">info@alphasourceai.com</a> with your company name, buyer email, role name if relevant, and a short description of the issue. Do not send passwords, setup tokens, or private candidate details unless support specifically requests them through an approved channel.
+              Email <a href="mailto:support@alphasourceai.com" className="font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4">support@alphasourceai.com</a> with your company name, buyer email, role name if relevant, and a short description of the issue. Do not send passwords, setup tokens, or private candidate details unless support specifically requests them through an approved channel.
             </p>
           </div>
           <nav aria-label="Support quick links" className="rounded-lg border border-[#A380F6]/20 bg-[#F8F9FD] p-5">

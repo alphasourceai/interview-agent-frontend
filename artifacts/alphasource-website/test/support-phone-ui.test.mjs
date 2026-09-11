@@ -90,7 +90,7 @@ test("logged-in dashboard no longer shows the support phone number", () => {
 test("dashboard voice control requires an explicit microphone action", () => {
   assert.match(browserVoice, /Start support conversation/);
   assert.match(browserVoice, /getUserMedia/);
-  assert.match(browserVoice, /onClick=\{startConversation\}/);
+  assert.match(browserVoice, /onClick=\{\(\) => \{ void startConversation\(\); \}\}/);
 });
 
 test("dashboard panel retains keyboard and Escape closing through Radix", () => {

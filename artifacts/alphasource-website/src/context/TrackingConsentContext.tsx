@@ -32,13 +32,12 @@ export const PUBLIC_OPTIONAL_TRACKING_ROUTES = new Set([
 export type OptionalTrackingPreferences = {
   analytics: boolean;
   marketingAttribution: boolean;
-  visitorChat: boolean;
   updatedAt: string;
 };
 
 export type OptionalTrackingSelection = Pick<
   OptionalTrackingPreferences,
-  "analytics" | "marketingAttribution" | "visitorChat"
+  "analytics" | "marketingAttribution"
 >;
 
 type LegacyTrackingConsentChoice = "granted" | "denied";
@@ -54,19 +53,16 @@ type TrackingConsentContextValue = {
   preferencesOpen: boolean;
   rejectOptionalTracking: () => void;
   savePreferences: (selection: OptionalTrackingSelection) => void;
-  visitorChatEnabled: boolean;
 };
 
 const EMPTY_OPTIONAL_TRACKING_SELECTION: OptionalTrackingSelection = {
   analytics: false,
   marketingAttribution: false,
-  visitorChat: false,
 };
 
 const ALL_OPTIONAL_TRACKING_SELECTION: OptionalTrackingSelection = {
   analytics: true,
   marketingAttribution: true,
-  visitorChat: true,
 };
 
 const TrackingConsentContext = createContext<TrackingConsentContextValue | null>(null);
@@ -97,13 +93,17 @@ function parseStoredPreferences(value: string | null): OptionalTrackingPreferenc
     if (
       typeof preferences.analytics !== "boolean" ||
       typeof preferences.marketingAttribution !== "boolean" ||
-      typeof preferences.visitorChat !== "boolean" ||
       !isValidUpdatedAt(preferences.updatedAt)
     ) {
       return null;
     }
 
-    return preferences as OptionalTrackingPreferences;
+    // Keep existing analytics and attribution choices; ignore retired categories.
+    return {
+      analytics: preferences.analytics,
+      marketingAttribution: preferences.marketingAttribution,
+      updatedAt: preferences.updatedAt,
+    };
   } catch {
     return null;
   }
@@ -182,7 +182,6 @@ export function TrackingConsentProvider({ children }: { children: ReactNode }) {
       const nextPreferences: OptionalTrackingPreferences = {
         analytics: Boolean(selection.analytics),
         marketingAttribution: Boolean(selection.marketingAttribution),
-        visitorChat: Boolean(selection.visitorChat),
         updatedAt: new Date().toISOString(),
       };
 
@@ -214,7 +213,6 @@ export function TrackingConsentProvider({ children }: { children: ReactNode }) {
       preferencesOpen,
       rejectOptionalTracking,
       savePreferences,
-      visitorChatEnabled: preferences?.visitorChat === true,
     }),
     [
       allowAllOptionalTracking,

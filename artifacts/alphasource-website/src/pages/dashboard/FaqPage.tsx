@@ -8,6 +8,7 @@ import {
 } from "@/content/dashboardSupportContent";
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 import { Link } from "wouter";
+import { AI_SUPPORT_PHONE_DISPLAY, AI_SUPPORT_PHONE_URI } from "@/lib/supportContact";
 import {
   Accordion,
   AccordionContent,
@@ -50,6 +51,19 @@ export default function DashboardFaqPage() {
         </p>
       </div>
 
+      <section aria-labelledby="support-contact-heading" className="rounded-2xl p-6 mb-5" style={surfaceCardStyle}>
+        <h2 id="support-contact-heading" className="text-base font-black" style={primaryTextStyle}>Contact support</h2>
+        <p className="mt-2 text-sm leading-relaxed" style={mutedTextStyle}>
+          Email the team for account-specific help. Talk with Support provides AI guidance and, when available, can submit a brief support message after you approve your name, reply email, and summary. It cannot inspect accounts, change settings, or transfer the browser call.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <a href="mailto:support@alphasourceai.com" className="rounded-full border px-4 py-2 text-sm font-bold" style={mutedPanelStyle}>Email the support team</a>
+          <a href={AI_SUPPORT_PHONE_URI} className="rounded-full border px-4 py-2 text-sm font-bold" style={mutedPanelStyle}>AI Customer Support: {AI_SUPPORT_PHONE_DISPLAY}</a>
+          <a href="#common-questions" className="rounded-full border px-4 py-2 text-sm font-bold" style={mutedPanelStyle}>Find an answer</a>
+        </div>
+        <p className="mt-3 text-xs leading-relaxed" style={mutedTextStyle}>Do not share passwords, verification codes, payment details, or private access links. Keep candidate and account details out of browser AI support.</p>
+      </section>
+
       <section
         className="rounded-2xl p-6 mb-5"
         style={surfaceCardStyle}
@@ -81,6 +95,42 @@ export default function DashboardFaqPage() {
           ))}
         </div>
       </section>
+
+      <div id="common-questions" className="mb-5 scroll-mt-24">
+        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>
+          Help Center
+        </p>
+        <h3 className="text-base font-black" style={primaryTextStyle}>Common questions</h3>
+      </div>
+
+      <div className="grid gap-5">
+        {faqSections.map((section) => (
+          <section
+            key={section.title}
+            className="rounded-2xl p-6"
+            style={surfaceCardStyle}
+          >
+            <h3 className="text-base font-black mb-4" style={primaryTextStyle}>{section.title}</h3>
+            <Accordion type="single" collapsible className="space-y-2">
+              {section.items.map((item) => (
+                <AccordionItem
+                  key={item.question}
+                  value={item.question}
+                  className="rounded-xl border px-4"
+                  style={mutedPanelStyle}
+                >
+                  <AccordionTrigger className="py-4 text-sm font-bold hover:no-underline" style={primaryTextStyle}>
+                    {item.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm leading-relaxed" style={mutedTextStyle}>
+                    {item.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </section>
+        ))}
+      </div>
 
       <section
         className="rounded-2xl p-6 mb-5"
@@ -156,41 +206,7 @@ export default function DashboardFaqPage() {
         </div>
       </section>
 
-      <div className="mb-5">
-        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={subtleTextStyle}>
-          Help Center
-        </p>
-        <h3 className="text-base font-black" style={primaryTextStyle}>Common questions</h3>
-      </div>
 
-      <div className="grid gap-5">
-        {faqSections.map((section) => (
-          <section
-            key={section.title}
-            className="rounded-2xl p-6"
-            style={surfaceCardStyle}
-          >
-            <h3 className="text-base font-black mb-4" style={primaryTextStyle}>{section.title}</h3>
-            <Accordion type="single" collapsible className="space-y-2">
-              {section.items.map((item) => (
-                <AccordionItem
-                  key={item.question}
-                  value={item.question}
-                  className="rounded-xl border px-4"
-                  style={mutedPanelStyle}
-                >
-                  <AccordionTrigger className="py-4 text-sm font-bold hover:no-underline" style={primaryTextStyle}>
-                    {item.question}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm leading-relaxed" style={mutedTextStyle}>
-                    {item.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </section>
-        ))}
-      </div>
     </DashboardLayout>
   );
 }

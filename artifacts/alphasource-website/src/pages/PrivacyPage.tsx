@@ -75,7 +75,7 @@ export default function PrivacyPage() {
 
           <Section number="5" title="COOKIES AND SIMILAR TECHNOLOGIES">
             <p>
-              Optional technologies are blocked until you enable the relevant category in Privacy choices. Analytics enables first-party public-site event measurement. Marketing attribution enables Identity Pixel when configured to understand where traffic originates and how visitors navigate through the public website. Visitor chat enables optional Tawk chat when it is configured for the public site.
+              Optional technologies are blocked until you enable the relevant category in Privacy choices. Analytics enables first-party public-site event measurement. Marketing attribution enables Identity Pixel when configured to understand where traffic originates and how visitors navigate through the public website.
             </p>
             <p>
               We store your category preferences using the first-party preference key <code>alphasource:tracking-preferences:v2</code>. Each optional technology remains blocked until its category is enabled. Turning off Analytics clears application-owned optional analytics identifiers where feasible. Changing a preference stops future application-controlled loading; cookies or storage already set by a third party may not be directly removable by this site.
