@@ -1,7 +1,7 @@
 import { capacityFaq, membershipTermFaq, firstRolePrepayAnswer, deviceCheckFaq, launchRecoveryFaq, microphoneRecoveryFaq, scoringFaqs, interviewStatusFaq, septemberUpdates } from "@/content/supportGuidance";
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 
-export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-09-11.4";
+export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-09-11.5";
 
 export const faqSections = [
   {
@@ -277,7 +277,7 @@ export const faqSections = [
       },
       {
         question: "What happens after I leave a support message?",
-        answer: "If you email the team, they can review the request and follow up through that support channel. Browser Talk with Support is informational and does not create a ticket, send a team message, or promise a callback. Keep a copy of your email and describe urgent impact clearly; no response-time guarantee is stated here.",
+        answer: "When available, Talk with Support can submit your confirmed name, reply email, and summary after you approve sending them. The team can review the message and reply by email. Submission does not create a ticket, guarantee delivery, or promise a callback or response time. If you decline, nothing is sent. If sending is unavailable or unconfirmed, email support@alphasourceai.com directly.",
       },
     ],
   },

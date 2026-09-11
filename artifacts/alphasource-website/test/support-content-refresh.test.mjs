@@ -12,7 +12,7 @@ test("client Help Center documents profile security, passkeys, candidate verific
   const content = read("src/content/dashboardSupportContent.ts");
   const page = read("src/pages/dashboard/FaqPage.tsx");
 
-  assert.match(content, /DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-09-11\.4"/);
+  assert.ok(content.includes(`DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "${JSON.parse(read("src/content/support-voice-knowledge.json")).knowledge_version}"`));
   assert.match(content, /Profile and account security/);
   assert.match(content, /How do I add and use a passkey\?/);
   assert.match(content, /What verification choices are available to candidates\?/);
