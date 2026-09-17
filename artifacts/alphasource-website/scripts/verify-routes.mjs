@@ -14,6 +14,7 @@ const errors = [];
 const routeMarkerChecks = [
   "/faq",
   "/support",
+  "/sales-sms-consent",
   "/privacy",
   "/terms",
   "/alphascreen/pricing",

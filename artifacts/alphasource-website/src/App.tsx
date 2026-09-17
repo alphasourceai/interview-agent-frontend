@@ -53,6 +53,7 @@ import FaqPage from "@/pages/FaqPage";
 import PublicSupportPage from "@/pages/SupportPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
+import SalesSmsConsentPage from "@/pages/SalesSmsConsentPage";
 import CandidateTermsPage from "@/pages/CandidateTermsPage";
 import SmsConsentEvidencePage from "@/pages/SmsConsentEvidencePage";
 import InterviewPage from "@/pages/InterviewPage";
@@ -680,6 +681,8 @@ function Router() {
           <Route path="/support"     component={PublicSupportPage} />
           <Route path="/faq/"        component={FaqPage} />
           <Route path="/faq"         component={FaqPage} />
+          <Route path="/sales-sms-consent/" component={SalesSmsConsentPage} />
+          <Route path="/sales-sms-consent" component={SalesSmsConsentPage} />
           <Route path="/privacy-policy/" component={PrivacyPage} />
           <Route path="/privacy-policy" component={PrivacyPage} />
           <Route path="/privacy/"    component={PrivacyPage} />

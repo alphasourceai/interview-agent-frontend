@@ -20,6 +20,7 @@ const TRAILING_SLASH_PUBLIC_PATHS = new Set([
   "/about",
   "/support",
   "/faq",
+  "/sales-sms-consent",
   "/privacy",
   "/terms",
   "/alphascreen",
@@ -425,6 +426,12 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
         { name: "FAQ", path: "/faq" },
       ]),
     ],
+  },
+  "/sales-sms-consent": {
+    title: "alphaScreen Sales SMS Verbal Consent | alphaSource AI",
+    description:
+      "Review the exact recorded-call prompt and evidence process used before alphaScreen sales representatives send requested text messages.",
+    path: "/sales-sms-consent",
   },
   "/terms": {
     title: "Terms and Conditions | alphaSource AI",

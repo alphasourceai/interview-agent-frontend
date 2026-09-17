@@ -17,7 +17,7 @@ export default function PrivacyPage() {
             <h1 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight mb-3">
               Privacy Policy
             </h1>
-            <p className="text-base text-[#0A1547]/50">Effective Date: 8/18/2026</p>
+            <p className="text-base text-[#0A1547]/50">Effective Date: 9/17/2026</p>
           </motion.div>
         </div>
       </div>
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
           style={{ color: "#0A1547" }}
         >
           <p className="text-[#0A1547]/70 leading-relaxed mb-8">
-            This Privacy Policy explains how alphaSource Network, LLC, doing business as alphaSource AI, collects and uses limited information through the public website, alphaScreen, and related product workflows. It focuses on public website analytics, contact and demo form behavior, and high-level product data practices.
+            This Privacy Policy explains how alphaSource Network LLC, operating as alphaSource AI, collects and uses limited information through the public website, alphaScreen, and related product workflows. It focuses on public website analytics, contact and demo form behavior, and high-level product data practices.
           </p>
 
           <Section number="1" title="OVERVIEW">
@@ -115,7 +115,19 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section number="9" title="SERVICE PROVIDERS AND DATA SHARING">
+          <Section number="9" title="SALES AND DEMO TEXT MESSAGES">
+            <p>
+              If you give clear verbal permission during a recorded sales call, alphaSource Network LLC may send text messages about alphaScreen to the mobile number you confirm. These messages may include information you requested, demo booking links, confirmations or reminders, responses to product questions, and occasional promotional follow-ups. Message frequency varies. Message and data rates may apply. Consent is not a condition of purchase.
+            </p>
+            <p>
+              We may retain the recorded call and contact-record details such as the consent date, time, representative, confirmed number, disclosure version, delivery status, and opt-out status to document and honor your choice. Reply STOP to opt out or HELP for help. If permission is declined, unclear, or withdrawn, sales text messages must not be sent.
+            </p>
+            <p>
+              Mobile information and SMS consent records are not sold or shared with third parties for their own marketing purposes. We disclose the minimum necessary information to contracted messaging providers, carriers, hosting providers, and service providers that help deliver messages, maintain records, prevent abuse, and honor opt-outs. Review the exact <a href="/sales-sms-consent/" className="text-[#A380F6] hover:underline">sales SMS verbal consent process</a>.
+            </p>
+          </Section>
+
+          <Section number="10" title="SERVICE PROVIDERS AND DATA SHARING">
             <p>
               alphaSource AI uses service providers for hosting, analytics infrastructure, email, database and storage, payment, AI and video services, error monitoring, support, security, and related operations. These providers help us operate the website and services.
             </p>
@@ -124,7 +136,7 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section number="10" title="USER CHOICES AND CONTACT">
+          <Section number="11" title="USER CHOICES AND CONTACT">
             <p>
               You may contact us with privacy questions, deletion requests, or requests not to be contacted. The best public contact method is email at{" "}
               <a href="mailto:info@alphasourceai.com" className="text-[#A380F6] hover:underline">
@@ -137,7 +149,7 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section number="11" title="CHANGES TO THIS NOTICE" last>
+          <Section number="12" title="CHANGES TO THIS NOTICE" last>
             <p>
               We may update this Privacy Policy as our website, products, services, and workflows evolve. The effective date above shows when this notice was last updated.
             </p>

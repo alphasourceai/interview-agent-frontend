@@ -18,7 +18,7 @@ export default function TermsPage() {
             <h1 className="text-4xl lg:text-5xl font-black text-[#0A1547] leading-tight mb-3">
               Terms &amp; Conditions
             </h1>
-            <p className="text-base text-[#0A1547]/50">Effective Date: 8/18/2026</p>
+            <p className="text-base text-[#0A1547]/50">Effective Date: 9/17/2026</p>
           </motion.div>
         </div>
       </div>
@@ -33,7 +33,7 @@ export default function TermsPage() {
           style={{ color: "#0A1547" }}
         >
           <p className="text-[#0A1547]/70 leading-relaxed mb-8">
-            These Terms &amp; Conditions ("Terms") govern your use of the AI Interviewer platform and related services ("Service") provided by alphaSource AI, LLC ("Company," "we," "our"). By accessing or using the Service—whether as a client/employer or as a candidate—you agree to these Terms. If you do not agree, do not use the Service.
+            These Terms &amp; Conditions ("Terms") govern your use of the AI Interviewer platform and related services ("Service") provided by alphaSource Network LLC, operating as alphaSource AI ("Company," "we," "our"). By accessing or using the Service—whether as a client/employer or as a candidate—you agree to these Terms. If you do not agree, do not use the Service.
           </p>
 
           <Section number="1" title="PURPOSE OF THE SERVICE">
@@ -115,13 +115,19 @@ export default function TermsPage() {
             <p>Text message consent is optional and is not required to use the Email verification alternative. Opting out affects text-message delivery; Email verification remains available. Delivery may depend on mobile carriers and alphaScreen&apos;s contracted messaging provider.</p>
           </Section>
 
-          <Section number="8" title="INTELLECTUAL PROPERTY">
+          <Section number="8" title="OPTIONAL SALES AND DEMO TEXT MESSAGES">
+            <p>When a business prospect gives clear verbal permission during a recorded sales call, alphaSource Network LLC may send text messages about alphaScreen to the confirmed mobile number.</p>
+            <p>Messages may include requested product information, demo booking links, confirmations or reminders, answers to product questions, and occasional promotional follow-ups. Message frequency varies. Message and data rates may apply. Consent is not a condition of purchase.</p>
+            <p>Reply STOP to opt out or HELP for help. Opting out affects text-message delivery and does not prevent communication through other channels. Delivery depends on mobile carriers and contracted messaging providers. The exact <a href="/sales-sms-consent/" className="text-[#A380F6] hover:underline">verbal consent prompt and recording process</a> is publicly available.</p>
+          </Section>
+
+          <Section number="9" title="INTELLECTUAL PROPERTY">
             <p>All platform software, scoring logic, models, prompts, workflows, and designs belong to the Company.</p>
             <p>Users receive a limited, revocable license to use the Service for legitimate business or interview participation only.</p>
             <p>Candidate-uploaded materials (e.g., resumes) remain the property of the candidate and are licensed to the employer and the Company for the purpose of providing the Service.</p>
           </Section>
 
-          <Section number="9" title="PROHIBITED USES">
+          <Section number="10" title="PROHIBITED USES">
             <p>No user may:</p>
             <ul>
               <li>Use the Service for automated decision-making unrelated to interviewing.</li>
@@ -132,19 +138,19 @@ export default function TermsPage() {
             <p>The Company may suspend or terminate access for violations.</p>
           </Section>
 
-          <Section number="10" title="SERVICE AVAILABILITY & MODIFICATIONS">
+          <Section number="11" title="SERVICE AVAILABILITY & MODIFICATIONS">
             <p>The Company may modify, update, or discontinue components of the Service at any time.</p>
             <p>We do not guarantee uninterrupted uptime or compatibility with all devices.</p>
           </Section>
 
-          <Section number="11" title="DISCLAIMERS">
+          <Section number="12" title="DISCLAIMERS">
             <p>THE SERVICE IS PROVIDED "AS-IS" AND "AS-AVAILABLE."</p>
             <p>WE DISCLAIM ALL WARRANTIES, INCLUDING FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, NON-INFRINGEMENT, AND RELIABILITY.</p>
             <p>AI-GENERATED OUTPUTS MAY CONTAIN ERRORS.</p>
             <p>USERS ACCEPT FULL RESPONSIBILITY FOR HOW THEY INTERPRET OR USE RESULTS.</p>
           </Section>
 
-          <Section number="12" title="LIMITATION OF LIABILITY">
+          <Section number="13" title="LIMITATION OF LIABILITY">
             <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW:</p>
             <p>IN NO EVENT SHALL WE BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION LOSS OF PROFITS, REVENUE, DATA, OR USE, OR THE COST OF SUBSTITUTE SERVICES, ARISING OUT OF OR RELATED TO THE PLATFORM, THE AI INTERVIEWER, ANY ASSESSMENTS OR RECOMMENDATIONS GENERATED, OR ANY HIRING DECISIONS MADE BY CLIENTS.</p>
             <p>OUR TOTAL AGGREGATE LIABILITY FOR ANY CLAIM ARISING OUT OF OR RELATED TO THESE TERMS OR THE USE OF THE PLATFORM SHALL NOT EXCEED THE TOTAL FEES PAID TO US BY THE CLIENT IN THE TWELVE (12) MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM. FOR CANDIDATE USERS, OUR TOTAL AGGREGATE LIABILITY SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS (USD $100).</p>
@@ -158,7 +164,7 @@ export default function TermsPage() {
             </ul>
           </Section>
 
-          <Section number="13" title="INDEMNIFICATION">
+          <Section number="14" title="INDEMNIFICATION">
             <p>Clients/employers agree to indemnify the Company against claims arising from:</p>
             <ul>
               <li>Their hiring decisions or compliance failures.</li>
@@ -172,24 +178,26 @@ export default function TermsPage() {
             </ul>
           </Section>
 
-          <Section number="14" title="TERMINATION">
+          <Section number="15" title="TERMINATION">
             <p>We may suspend or terminate access for any user at our discretion.</p>
             <p>Upon termination, all rights to use the Service cease immediately.</p>
           </Section>
 
-          <Section number="15" title="GOVERNING LAW">
+          <Section number="16" title="GOVERNING LAW">
             <p>These Terms are governed by the laws of the State of Wyoming.</p>
             <p>Disputes will be resolved exclusively in the courts located in Wyoming.</p>
           </Section>
 
-          <Section number="16" title="UPDATES TO THESE TERMS">
+          <Section number="17" title="UPDATES TO THESE TERMS">
             <p>We may update or revise these Terms at any time.</p>
             <p>Continued use of the Service constitutes acceptance of any updated Terms.</p>
           </Section>
 
-          <Section number="17" title="CONTACT INFORMATION" last>
-            <p>alphaSource Network, LLC (dba alphaSource AI)</p>
+          <Section number="18" title="CONTACT INFORMATION" last>
+            <p>alphaSource Network LLC (alphaSource AI)</p>
+            <p>30 N Gould St Ste R, Sheridan, WY 82801</p>
             <p>Email: <a href="mailto:info@alphasourceai.com" className="text-[#A380F6] hover:underline">info@alphasourceai.com</a></p>
+            <p>Phone: <a href="tel:+17207667817" className="text-[#A380F6] hover:underline">(720) 766-7817</a></p>
           </Section>
         </motion.div>
       </div>

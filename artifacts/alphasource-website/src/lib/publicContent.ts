@@ -1,7 +1,7 @@
 import { capacityFaq, membershipTermFaq, firstRolePrepayAnswer, deviceCheckFaq, launchRecoveryFaq, microphoneRecoveryFaq, buyerVerificationFaq, scoringFaqs, septemberUpdates } from "@/content/supportGuidance";
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 
-export const PUBLIC_CONTENT_LAST_UPDATED = "September 11, 2026";
+export const PUBLIC_CONTENT_LAST_UPDATED = "September 17, 2026";
 
 export type PublicFaqItem = {
   question: string;

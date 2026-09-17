@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200" role="img" aria-labelledby="title desc">
+  <title id="title">alphaScreen sales SMS verbal consent script</title>
+  <desc id="desc">The exact prompt alphaScreen sales representatives read during a recorded call before sending text messages.</desc>
+  <rect width="1600" height="1200" fill="#f8f9fd"/>
+  <rect x="100" y="90" width="1400" height="1020" rx="44" fill="#ffffff" stroke="#ddd6fe" stroke-width="4"/>
+  <circle cx="180" cy="178" r="36" fill="#a380f6"/>
+  <path d="M164 178l11 11 22-26" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="240" y="168" fill="#7554ce" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="2">EXACT RECORDED-CALL PROMPT</text>
+  <text x="240" y="215" fill="#0a1547" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="800">alphaScreen sales SMS verbal consent</text>
+  <rect x="160" y="275" width="1280" height="560" rx="28" fill="#f7f4ff" stroke="#a380f6" stroke-width="4"/>
+  <text x="220" y="345" fill="#0a1547" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700">
+    <tspan x="220" dy="0">“Before I text you, do you agree to receive text messages from</tspan>
+    <tspan x="220" dy="55">alphaSource Network LLC about alphaScreen, including the</tspan>
+    <tspan x="220" dy="55">information you requested, demo scheduling and reminders, and</tspan>
+    <tspan x="220" dy="55">occasional promotional follow-ups? Message frequency varies.</tspan>
+    <tspan x="220" dy="55">Message and data rates may apply. Consent is not a condition of</tspan>
+    <tspan x="220" dy="55">purchase. Reply STOP to opt out or HELP for help.</tspan>
+    <tspan x="220" dy="72" fill="#7554ce">Do I have your permission to text this number?”</tspan>
+  </text>
+  <text x="160" y="910" fill="#0a1547" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">Representative rule</text>
+  <text x="160" y="958" fill="#394269" font-family="Arial, Helvetica, sans-serif" font-size="25">
+    <tspan x="160" dy="0">Proceed only after an unambiguous yes and confirmation of the mobile number.</tspan>
+    <tspan x="160" dy="42">Index the consent date, time, representative, number, verbal source, and call recording.</tspan>
+    <tspan x="160" dy="42">The recorded call is the supporting consent evidence. No clear yes means no text.</tspan>
+  </text>
+  <text x="160" y="1072" fill="#7554ce" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">alphaSource Network LLC · alphaScreen · info@alphasourceai.com · (720) 766-7817</text>
+</svg>

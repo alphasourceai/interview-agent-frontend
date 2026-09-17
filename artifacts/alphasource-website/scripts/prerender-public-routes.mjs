@@ -73,6 +73,7 @@ const footerLinks = [
   ["ROI", "/alphascreen/roi"],
   ["FAQ", "/faq"],
   ["Support", "/support"],
+  ["SMS Consent", "/sales-sms-consent"],
   ["Privacy", "/privacy/"],
   ["Terms", "/terms/"],
 ];
@@ -265,6 +266,7 @@ const routeContent = {
   },
   "/faq": faqRoute(),
   "/support": supportRoute(),
+  "/sales-sms-consent": salesSmsConsentRoute(),
   "/privacy": privacyRoute(),
   "/terms": termsRoute(),
   "/alphascreen": {
@@ -653,12 +655,18 @@ function privacyRoute() {
         "If you select Text Message for interview-access verification, alphaScreen processes the mobile number and country you provide, selection evidence, a keyed destination fingerprint, delivery and opt-out status, line-type classification, and limited provider delivery metadata.",
         "This information is used only to deliver and secure the requested verification flow, prevent abuse and excess spend, honor STOP and related control requests, investigate bounded delivery failures, and maintain compliance evidence. Mobile information is not sold or shared with third parties for their own promotional or marketing purposes. Email verification remains available.",
       ]),
+      section("Sales and demo text messages", [
+        "If you give clear verbal permission during a recorded sales call, alphaSource Network LLC may send text messages about alphaScreen to the mobile number you confirm. Messages may include requested product information, demo booking links, confirmations or reminders, responses to product questions, and occasional promotional follow-ups. Message frequency varies. Message and data rates may apply. Consent is not a condition of purchase.",
+        "We may retain the recorded call and contact-record details such as the consent date, time, representative, confirmed number, disclosure version, delivery status, and opt-out status to document and honor your choice. Reply STOP to opt out or HELP for help. If permission is declined, unclear, or withdrawn, sales text messages must not be sent.",
+        "Mobile information and SMS consent records are not sold or shared with third parties for their own marketing purposes. We disclose the minimum necessary information to contracted messaging providers, carriers, hosting providers, and service providers that help deliver messages, maintain records, prevent abuse, and honor opt-outs.",
+      ]),
       section("Contact", [
         "Privacy questions, deletion requests, or requests not to be contacted can be sent to info@alphasourceai.com.",
       ]),
     ],
     links: [
       ["/terms/", "Terms & Conditions"],
+      ["/sales-sms-consent/", "Sales SMS verbal consent"],
       ["/support", "Support"],
       ["/faq", "FAQ"],
     ],
@@ -697,6 +705,11 @@ function termsRoute() {
         "When a candidate expressly selects Text Message, alphaScreen may send requested transactional interview-access verification codes to the provided mobile number. Message frequency varies based on verification requests and resends. Message and data rates may apply. Reply STOP to opt out or HELP for help.",
         "Text message consent is optional and is not required to use the Email verification alternative. Opting out affects text-message delivery; Email verification remains available.",
       ]),
+      section("Optional sales and demo text messages", [
+        "When a business prospect gives clear verbal permission during a recorded sales call, alphaSource Network LLC may send text messages about alphaScreen to the confirmed mobile number.",
+        "Messages may include requested product information, demo booking links, confirmations or reminders, answers to product questions, and occasional promotional follow-ups. Message frequency varies. Message and data rates may apply. Consent is not a condition of purchase.",
+        "Reply STOP to opt out or HELP for help. Opting out affects text-message delivery and does not prevent communication through other channels. Delivery depends on mobile carriers and contracted messaging providers.",
+      ]),
       section("AI-generated analysis and limitations", [
         "AI outputs may contain inaccuracies or omissions and should not be used as the sole basis for hiring decisions.",
       ]),
@@ -706,6 +719,7 @@ function termsRoute() {
     ],
     links: [
       ["/privacy/", "Privacy Policy"],
+      ["/sales-sms-consent/", "Sales SMS verbal consent"],
       ["/support", "Support"],
       ["/faq", "FAQ"],
     ],
@@ -716,6 +730,48 @@ function termsRoute() {
       breadcrumbSchema([
         ["Home", "/"],
         ["Terms & Conditions", "/terms"],
+      ]),
+    ],
+  };
+}
+
+function salesSmsConsentRoute() {
+  return {
+    title: "alphaScreen Sales SMS Verbal Consent | alphaSource AI",
+    description:
+      "Review the exact recorded-call prompt and evidence process used before alphaScreen sales representatives send requested text messages.",
+    eyebrow: "SMS consent reference",
+    h1: "alphaScreen sales SMS verbal consent",
+    intro:
+      "Sales representatives use this exact prompt during a recorded call before sending sales or demo-related text messages.",
+    sections: [
+      section("Exact recorded-call prompt", [
+        "Before I text you, do you agree to receive text messages from alphaSource Network LLC about alphaScreen, including the information you requested, demo scheduling and reminders, and occasional promotional follow-ups? Message frequency varies. Message and data rates may apply. Consent is not a condition of purchase. Reply STOP to opt out or HELP for help. Do I have your permission to text this number?",
+      ]),
+      section("Representative procedure", [
+        "The representative reads the prompt exactly, receives an unambiguous yes, confirms the mobile number, and records the consent date, time, representative, number, verbal source, and call recording reference in the contact record. The recorded call is the supporting consent evidence.",
+        "If the answer is no, unclear, or withdrawn, the representative does not text. STOP requests are honored immediately and HELP requests are routed to the sales or support team.",
+      ]),
+      section("Business information", [
+        "alphaSource Network LLC, 30 N Gould St Ste R, Sheridan, WY 82801. Email: info@alphasourceai.com. Phone: (720) 766-7817.",
+      ]),
+    ],
+    links: [
+      ["/privacy/", "Privacy Policy"],
+      ["/terms/", "Terms & Conditions"],
+      ["/support", "Support"],
+    ],
+    schemas: [
+      organizationSchema,
+      websiteSchema,
+      webPageSchema(
+        "/sales-sms-consent",
+        "alphaScreen Sales SMS Verbal Consent",
+        "Recorded-call consent prompt and evidence process for alphaScreen sales text messages.",
+      ),
+      breadcrumbSchema([
+        ["Home", "/"],
+        ["Sales SMS Verbal Consent", "/sales-sms-consent"],
       ]),
     ],
   };
