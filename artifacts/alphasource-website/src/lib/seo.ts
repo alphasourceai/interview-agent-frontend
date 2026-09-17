@@ -432,6 +432,17 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
     description:
       "Review the exact recorded-call prompt and evidence process used before alphaScreen sales representatives send requested text messages.",
     path: "/sales-sms-consent",
+    jsonLd: [
+      alphaScreenWebPageSchema(
+        "/sales-sms-consent",
+        "alphaScreen Sales SMS Verbal Consent",
+        "Recorded-call consent prompt and evidence process for alphaScreen sales text messages.",
+      ),
+      breadcrumbSchema([
+        { name: "Home", path: "/" },
+        { name: "Sales SMS Verbal Consent", path: "/sales-sms-consent" },
+      ]),
+    ],
   },
   "/terms": {
     title: "Terms and Conditions | alphaSource AI",

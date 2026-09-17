@@ -17,11 +17,23 @@ const app = read("src/App.tsx");
 const footer = read("src/components/Footer.tsx");
 const manifest = JSON.parse(read("render-routes.json"));
 const svg = read("public/sales-sms-verbal-consent-script.svg");
+const sitemap = read("public/sitemap.xml");
+const seo = read("src/lib/seo.ts");
 
 assertIncludes(page, exactPrompt, "React consent page exact prompt");
 assertIncludes(prerender, exactPrompt, "prerendered consent page exact prompt");
 assertIncludes(page, "call recording reference", "React evidence indexing rule");
 assertIncludes(prerender, "call recording reference", "prerender evidence indexing rule");
+assertIncludes(page, "HELP requests to the sales or support team", "React HELP routing rule");
+assertIncludes(prerender, "HELP requests are routed to the sales or support team", "prerender HELP routing rule");
+for (const [label, content] of [
+  ["React consent page", page],
+  ["prerendered consent page", prerender],
+  ["terms", terms],
+]) {
+  assertIncludes(content, "not sold or shared with third parties for their own marketing purposes", `${label} sharing restriction`);
+  assertIncludes(content, "may retain the recorded call and contact-record details", `${label} consent-record retention`);
+}
 assertIncludes(svg, "EXACT RECORDED-CALL PROMPT", "carrier image heading");
 assertIncludes(svg, "Do I have your permission to text this number?", "carrier image permission question");
 
@@ -42,6 +54,8 @@ assertIncludes(
 );
 assertIncludes(app, 'path="/sales-sms-consent/"', "React trailing-slash route");
 assertIncludes(footer, 'href="/sales-sms-consent/"', "public footer link");
+assertIncludes(sitemap, "https://www.alphasourceai.com/sales-sms-consent/", "public sitemap consent route");
+assertIncludes(seo, '"/sales-sms-consent",\n        "alphaScreen Sales SMS Verbal Consent"', "React consent-page structured data");
 
 assert(
   manifest.publicRoutes.includes("/sales-sms-consent"),

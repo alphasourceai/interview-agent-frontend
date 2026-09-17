@@ -32,7 +32,7 @@ test("public FAQ and Support publish only plain-language product updates", () =>
   const sitemap = read("public/sitemap.xml");
   const managerQuestionMatches = content.match(/Can managers use alphaScreen across multiple locations or entities\?/g) || [];
 
-  assert.match(content, /PUBLIC_CONTENT_LAST_UPDATED = "September 11, 2026"/);
+  assert.match(content, /PUBLIC_CONTENT_LAST_UPDATED = "September 17, 2026"/);
   assert.match(content, /Can client users sign in with a passkey\?/);
   assert.match(content, /What interview-access verification options can candidates use\?/);
   assert.match(content, /publicProductUpdates/);
@@ -49,6 +49,6 @@ test("public FAQ and Support publish only plain-language product updates", () =>
   assert.match(prerender, /Get alphaScreen public support guidance for account setup, passkeys, candidate verification, memberships, billing, product updates, recovery, and security questions\./);
   assert.match(seo, /Public alphaScreen FAQ covering pricing, memberships, passkeys, candidate verification, screening, security, accommodations, and human review\./);
   assert.match(seo, /Get alphaScreen public support guidance for account setup, passkeys, candidate verification, memberships, billing, product updates, recovery, and security questions\./);
-  assert.match(sitemap, /<loc>https:\/\/www\.alphasourceai\.com\/faq\/<\/loc>\s*<lastmod>2026-09-11<\/lastmod>/);
-  assert.match(sitemap, /<loc>https:\/\/www\.alphasourceai\.com\/support\/<\/loc>\s*<lastmod>2026-09-11<\/lastmod>/);
+  assert.match(sitemap, /<loc>https:\/\/www\.alphasourceai\.com\/faq\/<\/loc>\s*<lastmod>2026-09-17<\/lastmod>/);
+  assert.match(sitemap, /<loc>https:\/\/www\.alphasourceai\.com\/support\/<\/loc>\s*<lastmod>2026-09-17<\/lastmod>/);
 });

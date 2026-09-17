@@ -22,7 +22,7 @@ export default function SalesSmsConsentPage() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-4xl space-y-6 px-6 pb-24 lg:px-8">
+      <div className="mx-auto max-w-4xl space-y-6 px-6 pb-24 lg:px-8">
         <section className="rounded-3xl border border-[#A380F6]/20 bg-white p-7 shadow-[0_20px_60px_rgba(10,21,71,0.08)] sm:p-10">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#A380F6]/10 text-[#7554CE]">
@@ -56,6 +56,7 @@ export default function SalesSmsConsentPage() {
               <li>Record the consent date, time, representative, number, verbal source, and call recording reference in the contact record.</li>
               <li>Use the recorded call as the supporting consent evidence.</li>
               <li>If the answer is no, unclear, or withdrawn, do not text. Honor STOP immediately.</li>
+              <li>Route HELP requests to the sales or support team.</li>
             </ol>
           </div>
 
@@ -92,8 +93,11 @@ export default function SalesSmsConsentPage() {
               </p>
             </div>
           </div>
+          <p className="mt-6 text-sm font-semibold leading-relaxed text-white/75">
+            We may retain the recorded call and contact-record details to document and honor the prospect&apos;s choice. Mobile information and SMS consent records are not sold or shared with third parties for their own marketing purposes. We disclose only the minimum necessary information to contracted messaging providers, carriers, hosting providers, and service providers that help deliver messages, maintain records, prevent abuse, and honor opt-outs.
+          </p>
         </section>
-      </main>
+      </div>
     </div>
   );
 }

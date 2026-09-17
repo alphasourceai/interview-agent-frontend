@@ -709,6 +709,7 @@ function termsRoute() {
         "When a business prospect gives clear verbal permission during a recorded sales call, alphaSource Network LLC may send text messages about alphaScreen to the confirmed mobile number.",
         "Messages may include requested product information, demo booking links, confirmations or reminders, answers to product questions, and occasional promotional follow-ups. Message frequency varies. Message and data rates may apply. Consent is not a condition of purchase.",
         "Reply STOP to opt out or HELP for help. Opting out affects text-message delivery and does not prevent communication through other channels. Delivery depends on mobile carriers and contracted messaging providers.",
+        "We may retain the recorded call and contact-record details to document and honor the prospect's choice. Mobile information and SMS consent records are not sold or shared with third parties for their own marketing purposes. We disclose only the minimum necessary information to contracted messaging providers, carriers, hosting providers, and service providers that help deliver messages, maintain records, prevent abuse, and honor opt-outs.",
       ]),
       section("AI-generated analysis and limitations", [
         "AI outputs may contain inaccuracies or omissions and should not be used as the sole basis for hiring decisions.",
@@ -751,6 +752,10 @@ function salesSmsConsentRoute() {
       section("Representative procedure", [
         "The representative reads the prompt exactly, receives an unambiguous yes, confirms the mobile number, and records the consent date, time, representative, number, verbal source, and call recording reference in the contact record. The recorded call is the supporting consent evidence.",
         "If the answer is no, unclear, or withdrawn, the representative does not text. STOP requests are honored immediately and HELP requests are routed to the sales or support team.",
+      ]),
+      section("Consent records and privacy", [
+        "We may retain the recorded call and contact-record details to document and honor the prospect's choice.",
+        "Mobile information and SMS consent records are not sold or shared with third parties for their own marketing purposes. We disclose only the minimum necessary information to contracted messaging providers, carriers, hosting providers, and service providers that help deliver messages, maintain records, prevent abuse, and honor opt-outs.",
       ]),
       section("Business information", [
         "alphaSource Network LLC, 30 N Gould St Ste R, Sheridan, WY 82801. Email: info@alphasourceai.com. Phone: (720) 766-7817.",

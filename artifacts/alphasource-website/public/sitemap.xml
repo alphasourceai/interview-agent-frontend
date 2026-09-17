@@ -56,25 +56,31 @@
   </url>
   <url>
     <loc>https://www.alphasourceai.com/faq/</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-09-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.alphasourceai.com/support/</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-09-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.alphasourceai.com/terms</loc>
-    <lastmod>2026-06-19</lastmod>
+    <loc>https://www.alphasourceai.com/sales-sms-consent/</loc>
+    <lastmod>2026-09-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://www.alphasourceai.com/terms/</loc>
+    <lastmod>2026-09-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://www.alphasourceai.com/privacy</loc>
-    <lastmod>2026-06-20</lastmod>
+    <loc>https://www.alphasourceai.com/privacy/</loc>
+    <lastmod>2026-09-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>

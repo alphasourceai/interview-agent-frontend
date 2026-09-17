@@ -119,6 +119,7 @@ export default function TermsPage() {
             <p>When a business prospect gives clear verbal permission during a recorded sales call, alphaSource Network LLC may send text messages about alphaScreen to the confirmed mobile number.</p>
             <p>Messages may include requested product information, demo booking links, confirmations or reminders, answers to product questions, and occasional promotional follow-ups. Message frequency varies. Message and data rates may apply. Consent is not a condition of purchase.</p>
             <p>Reply STOP to opt out or HELP for help. Opting out affects text-message delivery and does not prevent communication through other channels. Delivery depends on mobile carriers and contracted messaging providers. The exact <a href="/sales-sms-consent/" className="text-[#A380F6] hover:underline">verbal consent prompt and recording process</a> is publicly available.</p>
+            <p>We may retain the recorded call and contact-record details to document and honor the prospect&apos;s choice. Mobile information and SMS consent records are not sold or shared with third parties for their own marketing purposes. We disclose only the minimum necessary information to contracted messaging providers, carriers, hosting providers, and service providers that help deliver messages, maintain records, prevent abuse, and honor opt-outs.</p>
           </Section>
 
           <Section number="9" title="INTELLECTUAL PROPERTY">
