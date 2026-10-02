@@ -313,7 +313,7 @@ const mockPromotion: PromotionCodeSummary = {
 const mockSalesApi: SalesApi = {
   async getMe() {
     await delay(120);
-    return { user_id: "sales-rep-demo", email: "michael@alphasourceai.com", display_name: "Michael Afesi", access_role: "sales_rep" };
+    return { user_id: "sales-rep-demo", email: "sales.qa@example.invalid", display_name: "Sales QA Rep", access_role: "sales_rep" };
   },
   async getPackages() {
     await delay();
