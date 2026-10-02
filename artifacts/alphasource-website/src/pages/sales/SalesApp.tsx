@@ -39,21 +39,10 @@ function AccessDenied({ message }: { message: string }) {
 }
 
 export default function SalesApp() {
-  const { isLoggedIn, clientAuthReady, salesLoginLoading, logout } = useAuth();
+  const { isLoggedIn, clientAuthReady, salesLoginLoading } = useAuth();
   const [rep, setRep] = useState<SalesRep | null>(null);
   const [checking, setChecking] = useState(true);
   const [accessError, setAccessError] = useState("");
-
-  useEffect(() => {
-    if (salesUsesMockApi || typeof window === "undefined") return;
-    const handleInvalidSalesAuth = () => {
-      setRep(null);
-      setAccessError("");
-      void logout();
-    };
-    window.addEventListener("alphasource:sales-auth-invalid", handleInvalidSalesAuth);
-    return () => window.removeEventListener("alphasource:sales-auth-invalid", handleInvalidSalesAuth);
-  }, [logout]);
 
   useEffect(() => {
     if ((!clientAuthReady || salesLoginLoading) && !salesUsesMockApi) return;
@@ -73,9 +62,8 @@ export default function SalesApp() {
       .catch((error) => {
         if (!active) return;
         if (error instanceof SalesApiError && (error.status === 401 || error.status === 403)) {
-          logout();
           setRep(null);
-          setAccessError("");
+          setAccessError(error.status === 403 ? "Your account does not have sales access." : "Sales access could not be verified. Your account remains signed in.");
           return;
         }
         const message = error instanceof Error ? error.message : "Sales access could not be verified.";

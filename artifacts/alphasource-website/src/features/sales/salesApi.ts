@@ -91,11 +91,6 @@ async function requestJson<T>(path: string, init: RequestInit = {}, idempotencyK
     const retry = Number(record.retry_after_seconds);
     const fields = record.fields && typeof record.fields === "object" ? record.fields as Record<string, unknown> : {};
     const dealId = typeof fields.deal_id === "string" && fields.deal_id.trim() ? fields.deal_id.trim() : null;
-    if ((response.status === 401 || response.status === 403) && typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("alphasource:sales-auth-invalid", {
-        detail: { status: response.status, code },
-      }));
-    }
     throw new SalesApiError(detail, response.status, code, Number.isFinite(retry) ? retry : null, dealId);
   }
   return payload as T;
