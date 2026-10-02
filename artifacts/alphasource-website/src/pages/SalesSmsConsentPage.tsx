@@ -11,13 +11,13 @@ export default function SalesSmsConsentPage() {
         <div className="relative mx-auto max-w-4xl px-6 lg:px-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#A380F6]/25 bg-white px-3 py-1.5 text-sm font-bold text-[#7554CE] shadow-sm">
             <ShieldCheck className="h-4 w-4" />
-            SMS consent reference
+            SMS consent and your choices
           </div>
           <h1 className="mt-5 text-4xl font-black leading-tight lg:text-5xl">
-            alphaScreen sales SMS verbal consent
+            Text messages from alphaScreen sales
           </h1>
           <p className="mt-4 max-w-3xl text-base font-medium leading-relaxed text-[#0A1547]/65">
-            Sales representatives use this exact prompt during a recorded call before sending sales or demo-related text messages.
+            If you speak with us about alphaScreen, we may ask whether you would like a text with product information or demo details. We text only after you clearly agree and confirm your mobile number. Visiting this page does not opt you in.
           </p>
         </div>
       </section>
@@ -29,8 +29,8 @@ export default function SalesSmsConsentPage() {
               <PhoneCall className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7554CE]">Exact call script</p>
-              <h2 className="mt-1 text-2xl font-black">Ask before sending any text</h2>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7554CE]">What you will hear on a call</p>
+              <h2 className="mt-1 text-2xl font-black">We ask for permission first</h2>
             </div>
           </div>
           <blockquote className="mt-6 rounded-2xl border-l-4 border-[#A380F6] bg-[#F7F4FF] p-6 text-base font-bold leading-8 text-[#0A1547]">
@@ -40,7 +40,7 @@ export default function SalesSmsConsentPage() {
             href="/sales-sms-verbal-consent-script.png"
             className="mt-5 inline-flex text-sm font-black text-[#7554CE] underline underline-offset-4"
           >
-            Open the carrier-review script image
+            View a copy of the spoken consent prompt
           </a>
         </section>
 
@@ -48,26 +48,22 @@ export default function SalesSmsConsentPage() {
           <div className="rounded-3xl border border-[#0A1547]/10 bg-white p-7">
             <div className="flex items-center gap-2 text-[#7554CE]">
               <CheckCircle2 className="h-5 w-5" />
-              <h2 className="text-lg font-black text-[#0A1547]">Representative procedure</h2>
+              <h2 className="text-lg font-black text-[#0A1547]">Your choice and our records</h2>
             </div>
-            <ol className="mt-5 list-decimal space-y-3 pl-5 text-sm font-medium leading-relaxed text-[#0A1547]/70">
-              <li>Read the prompt exactly during the recorded call.</li>
-              <li>Receive an unambiguous yes and confirm the mobile number to be texted.</li>
-              <li>Record the consent date, time, representative, number, verbal source, and call recording reference in the contact record.</li>
-              <li>Use the recorded call as the supporting consent evidence.</li>
-              <li>If the answer is no, unclear, or withdrawn, do not text. Honor STOP immediately.</li>
-              <li>Route HELP requests to the sales or support team.</li>
-            </ol>
+            <div className="mt-5 space-y-3 text-sm font-medium leading-relaxed text-[#0A1547]/70">
+              <p>Texting is optional. If you say no, your answer is unclear, or you withdraw consent, we will not text you. You can reply STOP at any time to opt out; we honor STOP requests immediately. Reply HELP for help.</p>
+              <p>After a clear yes, we confirm your mobile number. We document the consent date, time, representative, number, verbal source, and call recording reference in our contact record. The recorded call supports that record. HELP requests go to our sales or support team.</p>
+            </div>
           </div>
 
           <div className="rounded-3xl border border-[#0A1547]/10 bg-white p-7">
             <div className="flex items-center gap-2 text-[#7554CE]">
               <MessageSquareText className="h-5 w-5" />
-              <h2 className="text-lg font-black text-[#0A1547]">Messages covered</h2>
+              <h2 className="text-lg font-black text-[#0A1547]">Messages you can expect</h2>
             </div>
             <ul className="mt-5 list-disc space-y-3 pl-5 text-sm font-medium leading-relaxed text-[#0A1547]/70">
-              <li>Product information requested during the call.</li>
-              <li>Demo booking links, confirmations, reminders, and rescheduling.</li>
+              <li>Information you requested about alphaScreen.</li>
+              <li>Demo scheduling and reminders.</li>
               <li>Occasional promotional follow-ups about alphaScreen.</li>
               <li>Message frequency varies. Message and data rates may apply.</li>
               <li>Consent is optional and is not a condition of purchase.</li>

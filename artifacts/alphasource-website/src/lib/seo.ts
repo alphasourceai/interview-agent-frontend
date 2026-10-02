@@ -430,13 +430,13 @@ const PUBLIC_ROUTES: Record<string, Omit<SeoConfig, "robots" | "imagePath" | "ty
   "/sales-sms-consent": {
     title: "alphaScreen Sales SMS Verbal Consent | alphaSource AI",
     description:
-      "Review the exact recorded-call prompt and evidence process used before alphaScreen sales representatives send requested text messages.",
+      "Learn how alphaScreen sales asks for verbal SMS consent, what messages you may receive, and how to opt out.",
     path: "/sales-sms-consent",
     jsonLd: [
       alphaScreenWebPageSchema(
         "/sales-sms-consent",
         "alphaScreen Sales SMS Verbal Consent",
-        "Recorded-call consent prompt and evidence process for alphaScreen sales text messages.",
+        "Verbal consent, message types, and opt-out choices for alphaScreen sales text messages.",
       ),
       breadcrumbSchema([
         { name: "Home", path: "/" },

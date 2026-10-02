@@ -22,10 +22,16 @@ const seo = read("src/lib/seo.ts");
 
 assertIncludes(page, exactPrompt, "React consent page exact prompt");
 assertIncludes(prerender, exactPrompt, "prerendered consent page exact prompt");
-assertIncludes(page, "call recording reference", "React evidence indexing rule");
-assertIncludes(prerender, "call recording reference", "prerender evidence indexing rule");
-assertIncludes(page, "HELP requests to the sales or support team", "React HELP routing rule");
-assertIncludes(prerender, "HELP requests are routed to the sales or support team", "prerender HELP routing rule");
+for (const [label, content] of [["React consent page", page], ["prerendered consent page", prerender]]) {
+  assertIncludes(content, "Visiting this page does not opt you in", `${label} no web opt-in clarification`);
+  assertIncludes(content, "call recording reference", `${label} evidence indexing rule`);
+  assertIncludes(content, "we honor STOP requests immediately", `${label} immediate STOP handling`);
+  assertIncludes(content, "HELP requests go to our sales or support team", `${label} HELP routing rule`);
+  assertIncludes(content.toLowerCase(), "information you requested about alphascreen", `${label} requested information category`);
+  assertIncludes(content.toLowerCase(), "demo scheduling and reminders", `${label} demo message category`);
+  assertIncludes(content.toLowerCase(), "occasional promotional follow-ups about alphascreen", `${label} promotional message category`);
+  assert(!content.includes("Representative procedure"), `${label} has no internal procedure heading`);
+}
 for (const [label, content] of [
   ["React consent page", page],
   ["prerendered consent page", prerender],

@@ -739,19 +739,23 @@ function termsRoute() {
 function salesSmsConsentRoute() {
   return {
     title: "alphaScreen Sales SMS Verbal Consent | alphaSource AI",
+    updatedAt: "October 1, 2026",
     description:
-      "Review the exact recorded-call prompt and evidence process used before alphaScreen sales representatives send requested text messages.",
-    eyebrow: "SMS consent reference",
-    h1: "alphaScreen sales SMS verbal consent",
+      "Learn how alphaScreen sales asks for verbal SMS consent, what messages you may receive, and how to opt out.",
+    eyebrow: "SMS consent and your choices",
+    h1: "Text messages from alphaScreen sales",
     intro:
-      "Sales representatives use this exact prompt during a recorded call before sending sales or demo-related text messages.",
+      "If you speak with us about alphaScreen, we may ask whether you would like a text with product information or demo details. We text only after you clearly agree and confirm your mobile number. Visiting this page does not opt you in.",
     sections: [
-      section("Exact recorded-call prompt", [
+      section("What you will hear on a call", [
         "Before I text you, do you agree to receive text messages from alphaSource Network LLC about alphaScreen, including the information you requested, demo scheduling and reminders, and occasional promotional follow-ups? Message frequency varies. Message and data rates may apply. Consent is not a condition of purchase. Reply STOP to opt out or HELP for help. Do I have your permission to text this number?",
       ]),
-      section("Representative procedure", [
-        "The representative reads the prompt exactly, receives an unambiguous yes, confirms the mobile number, and records the consent date, time, representative, number, verbal source, and call recording reference in the contact record. The recorded call is the supporting consent evidence.",
-        "If the answer is no, unclear, or withdrawn, the representative does not text. STOP requests are honored immediately and HELP requests are routed to the sales or support team.",
+      section("Your choice and our records", [
+        "Texting is optional. If you say no, your answer is unclear, or you withdraw consent, we will not text you. You can reply STOP at any time to opt out; we honor STOP requests immediately. Reply HELP for help.",
+        "After a clear yes, we confirm your mobile number. We document the consent date, time, representative, number, verbal source, and call recording reference in our contact record. The recorded call supports that record. HELP requests go to our sales or support team.",
+      ]),
+      section("Messages you can expect", [
+        "Information you requested about alphaScreen, demo scheduling and reminders, and occasional promotional follow-ups about alphaScreen. Message frequency varies. Message and data rates may apply. Consent is optional and is not a condition of purchase.",
       ]),
       section("Consent records and privacy", [
         "We may retain the recorded call and contact-record details to document and honor the prospect's choice.",
@@ -772,7 +776,7 @@ function salesSmsConsentRoute() {
       webPageSchema(
         "/sales-sms-consent",
         "alphaScreen Sales SMS Verbal Consent",
-        "Recorded-call consent prompt and evidence process for alphaScreen sales text messages.",
+        "Verbal consent, message types, and opt-out choices for alphaScreen sales text messages.",
       ),
       breadcrumbSchema([
         ["Home", "/"],
@@ -871,7 +875,7 @@ function renderSnapshot(route, content) {
           <p class="as-eyebrow">${escapeHtml(content.eyebrow)}</p>
           <h1>${escapeHtml(content.h1)}</h1>
           <p class="as-intro">${escapeHtml(content.intro)}</p>
-          <p class="as-updated">Last updated: ${LAST_UPDATED}</p>
+          <p class="as-updated">Last updated: ${content.updatedAt ?? LAST_UPDATED}</p>
         </section>
         ${content.sections.map(renderContentSection).join("\n")}
         ${renderRelatedLinks(content.links)}
