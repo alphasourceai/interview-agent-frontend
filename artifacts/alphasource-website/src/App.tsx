@@ -83,6 +83,7 @@ import AdminMetricsPage from "@/pages/admin/AdminMetricsPage";
 import AdminInterviewReliabilityPage from "@/pages/admin/AdminInterviewReliabilityPage";
 import AdminSmsMonitoringPage from "@/pages/admin/AdminSmsMonitoringPage";
 import AdminSalesTeamPage from "@/pages/admin/AdminSalesTeamPage";
+import AdminSalesPayrollPage from "@/pages/admin/AdminSalesPayrollPage";
 import AdminPublicAnalyticsPage from "@/pages/admin/AdminPublicAnalyticsPage";
 import AdminPublicPurchasesPage from "@/pages/admin/AdminPublicPurchasesPage";
 import AdminPublicPurchasePlaybookPage from "@/pages/admin/AdminPublicPurchasePlaybookPage";
@@ -538,6 +539,7 @@ function AdminGuard() {
           <Route path="/admin/interview-reliability" component={AdminInterviewReliabilityPage} />
           <Route path="/admin/sms-monitoring" component={AdminSmsMonitoringPage} />
           <Route path="/admin/sales-team" component={AdminSalesTeamPage} />
+          <Route path="/admin/sales-payroll" component={AdminSalesPayrollPage} />
           <Route path="/admin/public-analytics" component={AdminPublicAnalyticsPage} />
           <Route path="/admin/public-purchases/playbook" component={AdminPublicPurchasePlaybookPage} />
           <Route path="/admin/public-purchases" component={AdminPublicPurchasesPage} />

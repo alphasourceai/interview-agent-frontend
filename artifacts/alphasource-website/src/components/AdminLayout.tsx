@@ -24,6 +24,7 @@ import {
   RadioTower,
   MessageSquareText,
   Headset,
+  WalletCards,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAppearance } from "@/context/AppearanceContext";
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { label: "Interview Reliability", href: "/admin/interview-reliability", icon: RadioTower },
   { label: "SMS Monitoring",       href: "/admin/sms-monitoring",       icon: MessageSquareText },
   { label: "Sales Team",           href: "/admin/sales-team",           icon: Headset },
+  { label: "Sales Payroll",        href: "/admin/sales-payroll",        icon: WalletCards },
   { label: "Leads & Public Analytics", href: "/admin/public-analytics",   icon: MousePointerClick },
   { label: "Public Purchases",      href: "/admin/public-purchases",      icon: ShoppingCart },
   { label: "Clients",               href: "/admin/clients",              icon: Building2 },
