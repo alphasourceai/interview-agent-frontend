@@ -60,6 +60,8 @@
     { "source": "/checkout/subscription-success/index.html", "destination": "/checkout/subscription-success/index.html", "status": 200 }
   ],
   "dynamicSpaRewrites": [
+    { "source": "/sales", "destination": "/index.html", "status": 200 },
+    { "source": "/sales/*", "destination": "/index.html", "status": 200 },
     { "source": "/checkout/*", "destination": "/index.html", "status": 200 },
     { "source": "/membership-agreement/*", "destination": "/index.html", "status": 200 },
     { "source": "/pwreset", "destination": "/index.html", "status": 200 },

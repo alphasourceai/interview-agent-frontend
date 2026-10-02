@@ -12,6 +12,10 @@ interface AdminLoginResult {
   error: string | null;
 }
 
+interface SalesLoginResult {
+  error: string | null;
+}
+
 interface AuthContextType {
   isLoggedIn: boolean;
   clientAuthReady: boolean;
@@ -22,9 +26,12 @@ interface AuthContextType {
   clientLoginError: string;
   adminLoginLoading: boolean;
   adminLoginError: string;
+  salesLoginLoading: boolean;
+  salesLoginError: string;
   login: (email: string, password: string) => Promise<ClientLoginResult>;
   loginWithPasskey: () => Promise<ClientLoginResult>;
   loginAdmin: (email: string, password: string) => Promise<AdminLoginResult>;
+  loginSales: (email: string, password: string) => Promise<SalesLoginResult>;
   resolveAdminAccess: () => Promise<boolean>;
   clearAdminLoginError: () => void;
   logout: () => void;
@@ -40,9 +47,12 @@ const AuthContext = createContext<AuthContextType>({
   clientLoginError: "",
   adminLoginLoading: false,
   adminLoginError: "",
+  salesLoginLoading: false,
+  salesLoginError: "",
   login: async () => ({ error: null }),
   loginWithPasskey: async () => ({ error: null }),
   loginAdmin: async () => ({ error: null }),
+  loginSales: async () => ({ error: null }),
   resolveAdminAccess: async () => false,
   clearAdminLoginError: () => {},
   logout: () => {},
@@ -116,6 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [clientLoginError, setClientLoginError]     = useState("");
   const [adminLoginLoading, setAdminLoginLoading]   = useState(false);
   const [adminLoginError, setAdminLoginError]       = useState("");
+  const [salesLoginLoading, setSalesLoginLoading]   = useState(false);
+  const [salesLoginError, setSalesLoginError]       = useState("");
   const adminProbeRef = useRef(0);
 
   const probeAdminAccess = useCallback(async (session: Session): Promise<{ ok: true } | { ok: false; error: string }> => {
@@ -171,6 +183,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ok: false,
         error: error instanceof Error ? error.message : "Could not verify admin access.",
       };
+    }
+  }, []);
+
+  const probeSalesAccess = useCallback(async (session: Session): Promise<{ ok: true } | { ok: false; error: string }> => {
+    const token = session?.access_token;
+    if (!token) return { ok: false, error: "Missing session token." };
+    if (!backendBase) return { ok: false, error: "Missing backend base URL configuration." };
+
+    try {
+      const response = await fetch(`${backendBase}/sales/me`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "omit",
+      });
+      const text = await response.text();
+      let data: unknown = null;
+      try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+      if (response.ok && data && typeof data === "object" && typeof (data as { user_id?: unknown }).user_id === "string") {
+        return { ok: true };
+      }
+      if (response.status === 401 || response.status === 403) {
+        return { ok: false, error: "Your account is not enabled for the alphaScreen sales workspace." };
+      }
+      const record = data && typeof data === "object" ? data as Record<string, unknown> : {};
+      const detail = record.detail ?? record.message ?? record.error;
+      return { ok: false, error: typeof detail === "string" && detail.trim() ? detail : "Could not verify sales access." };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Could not verify sales access." };
     }
   }, []);
 
@@ -421,6 +461,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginSales = async (email: string, password: string): Promise<SalesLoginResult> => {
+    const normalizedEmail = String(email || "").trim();
+    if (!normalizedEmail || !password) {
+      const message = "Email and password are required.";
+      setSalesLoginError(message);
+      return { error: message };
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      const message = "Please enter a valid email address.";
+      setSalesLoginError(message);
+      return { error: message };
+    }
+
+    setSalesLoginLoading(true);
+    setSalesLoginError("");
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+      if (error || !data.session) {
+        const message = error?.message || "Could not sign in.";
+        setSalesLoginError(message);
+        return { error: message };
+      }
+
+      const probe = await probeSalesAccess(data.session);
+      if (!probe.ok) {
+        clearDashboardActivity();
+        await supabase.auth.signOut();
+        setIsLoggedIn(false);
+        setCurrentUser(null);
+        setSalesLoginError(probe.error);
+        return { error: probe.error };
+      }
+
+      setIsLoggedIn(true);
+      setCurrentUser(data.user || null);
+      seedDashboardActivityNow();
+      setSalesLoginError("");
+      return { error: null };
+    } catch {
+      const message = "Could not sign in.";
+      setSalesLoginError(message);
+      clearDashboardActivity();
+      await supabase.auth.signOut().catch(() => {});
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      return { error: message };
+    } finally {
+      setSalesLoginLoading(false);
+    }
+  };
+
   const clearAdminLoginError = () => setAdminLoginError("");
 
   const logout = () => {
@@ -435,6 +526,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setClientLoginLoading(false);
     setAdminLoginError("");
     setAdminLoginLoading(false);
+    setSalesLoginError("");
+    setSalesLoginLoading(false);
   };
 
   return (
@@ -449,9 +542,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clientLoginError,
         adminLoginLoading,
         adminLoginError,
+        salesLoginLoading,
+        salesLoginError,
         login,
         loginWithPasskey,
         loginAdmin,
+        loginSales,
         resolveAdminAccess,
         clearAdminLoginError,
         logout,

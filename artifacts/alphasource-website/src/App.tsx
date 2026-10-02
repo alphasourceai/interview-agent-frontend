@@ -93,6 +93,9 @@ import AdminAccommodationsPage from "@/pages/admin/AdminAccommodationsPage";
 import AdminBillingPage from "@/pages/admin/AdminBillingPage";
 import AdminAuditLogsPage from "@/pages/admin/AdminAuditLogsPage";
 
+/* Sales workspace */
+import SalesApp from "@/pages/sales/SalesApp";
+
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -577,6 +580,7 @@ function Router() {
   const [location] = useLocation();
   const isDashboard = location === "/dashboard" || location.startsWith("/dashboard/");
   const isAdmin     = location === "/admin"     || location.startsWith("/admin/");
+  const isSales     = location === "/sales"     || location.startsWith("/sales/");
   const isAutomationDigestApproval = location === "/automation/digest-approval" || location.startsWith("/automation/digest-approval/");
   const isAutomationApproval = location === "/automation/approval" || location.startsWith("/automation/approval/");
   const isInterview =
@@ -605,6 +609,8 @@ function Router() {
     content = <DashboardGuard />;
   } else if (isAdmin) {
     content = <AdminGuard />;
+  } else if (isSales) {
+    content = <SalesApp />;
   } else if (isAutomationDigestApproval) {
     content = (
       <Switch>

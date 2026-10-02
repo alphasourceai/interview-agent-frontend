@@ -3,14 +3,14 @@ import { supabase } from "@/lib/supabaseClient";
 
 const RESET_ORIGIN_STORAGE_KEY = "pwreset_origin";
 
-type ResetOrigin = "admin" | "client" | "";
+type ResetOrigin = "admin" | "client" | "sales" | "";
 
 function readResetOrigin(): ResetOrigin {
   if (typeof window === "undefined") return "";
   try {
     const url = new URL(window.location.href);
     const originParam = String(url.searchParams.get("origin") || "").trim().toLowerCase();
-    if (originParam === "admin" || originParam === "client") {
+    if (originParam === "admin" || originParam === "client" || originParam === "sales") {
       try {
         window.localStorage.setItem(RESET_ORIGIN_STORAGE_KEY, originParam);
       } catch {
@@ -24,7 +24,7 @@ function readResetOrigin(): ResetOrigin {
 
   try {
     const stored = String(window.localStorage.getItem(RESET_ORIGIN_STORAGE_KEY) || "").trim().toLowerCase();
-    if (stored === "admin" || stored === "client") return stored;
+    if (stored === "admin" || stored === "client" || stored === "sales") return stored;
   } catch {
     // no-op
   }
@@ -49,9 +49,9 @@ export default function PwResetPage() {
   }, []);
 
   const resetOrigin = useMemo(() => readResetOrigin(), []);
-  const signInPath = resetOrigin === "admin" ? "/admin" : "/";
-  const successRedirectPath = resetOrigin === "admin" ? "/admin" : "/?setup=complete";
-  const signInLabel = resetOrigin === "admin" ? "Back to Admin Sign In" : "Back to Home";
+  const signInPath = resetOrigin === "admin" ? "/admin" : resetOrigin === "sales" ? "/sales" : "/";
+  const successRedirectPath = resetOrigin === "admin" ? "/admin" : resetOrigin === "sales" ? "/sales" : "/?setup=complete";
+  const signInLabel = resetOrigin === "admin" ? "Back to Admin Sign In" : resetOrigin === "sales" ? "Back to Sales Sign In" : "Back to Home";
 
   useEffect(() => {
     let alive = true;
