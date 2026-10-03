@@ -4,12 +4,12 @@ import AdminLayout from "@/components/AdminLayout";
 import { supabase } from "@/lib/supabaseClient";
 
 type Rep = { user_id: string; email: string; display_name: string; active: boolean };
-type Pending = { id: string; company_legal_name: string; selected_plan_key: string; selected_billing_cadence: string; created_by_user_id: string; activated_at: string };
+type ReviewCandidate = { id: string; company_legal_name: string; selected_plan_key: string; selected_billing_cadence: string; created_by_user_id: string; activated_at: string; reviewed_receipt_count: number };
 type Receipt = { id: string; purchase_intent_id: string; rep_user_id: string; provider: string; provider_payment_id: string; payment_kind: string; gross_membership_cents: number; discount_cents: number; provider_fee_cents: number; net_membership_cents: number; commission_cents: number; statement_week_start: string; reviewed_at: string; evidence_reference: string };
 type Adjustment = { id: string; receipt_id: string; adjustment_type: string; commission_delta_cents: number; statement_week_start: string };
 type Payout = { id: string; receipt_id: string; amount_cents: number; ach_reference: string; paid_at: string };
 type Overview = {
-  representatives: Rep[]; pending_evidence: Pending[]; receipts: Receipt[];
+  representatives: Rep[]; pending_evidence: ReviewCandidate[]; review_candidates: ReviewCandidate[]; receipts: Receipt[];
   adjustments: Adjustment[]; payouts: Payout[];
   departures: Array<{ rep_user_id: string; final_day: string }>;
   locked_statements: Array<{ rep_user_id: string; week_start: string; locked_at: string }>;
@@ -186,7 +186,7 @@ export default function AdminSalesPayrollPage() {
       {notice && <p role="status" className="rounded-lg border border-green-400/50 p-3 text-sm">{notice}</p>}
       {overview?.truncated && <p role="alert" className="rounded-lg border border-amber-400/50 p-3 text-sm">The ledger exceeds the display limit. Do not use these totals for payroll until the full ledger is exported and reconciled.</p>}
       <section className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border p-4"><p className="text-sm">Pending receipt evidence</p><p className="text-2xl font-bold">{overview?.pending_evidence.length ?? "—"}</p><p className="text-xs">No commission amount is assumed.</p></div>
+        <div className="rounded-xl border p-4"><p className="text-sm">Activated sales without a reviewed receipt</p><p className="text-2xl font-bold">{overview?.pending_evidence.length ?? "—"}</p><p className="text-xs">Recurring receipts require a fresh review each period.</p></div>
         <div className="rounded-xl border p-4"><p className="text-sm">Verified commission, net of adjustments</p><p className="text-2xl font-bold">{overview?.truncated ? "Incomplete" : money(totalVerified)}</p></div>
         <div className="rounded-xl border p-4"><p className="text-sm">Recorded ACH payouts</p><p className="text-2xl font-bold">{overview?.truncated ? "Incomplete" : money(totalPaid)}</p><p className="text-xs">Recording does not initiate ACH.</p></div>
       </section>
@@ -196,9 +196,10 @@ export default function AdminSalesPayrollPage() {
         <p className="mt-1 text-xs">{overview?.automation.reason || "Automation is not available."} The server rejects attempts to turn it on.</p>
       </section>
       <section className="rounded-xl border p-4">
-        <h2 className="font-bold">Activated sales awaiting a reviewed receipt</h2>
-        {!overview?.pending_evidence.length ? <p className="mt-2 text-sm">None in the current view.</p> : <ul className="mt-3 space-y-2 text-sm">{overview.pending_evidence.map((row) =>
-          <li key={row.id} className="flex flex-wrap justify-between gap-2 border-b pb-2"><span>{row.company_legal_name} · {row.selected_plan_key} {row.selected_billing_cadence} · {repNames.get(row.created_by_user_id) || "Attribution needs review"}</span><button type="button" className="underline" onClick={() => setIntentId(row.id)}>Review receipt</button></li>)}</ul>}
+        <h2 className="font-bold">Activated sales for provider receipt review</h2>
+        <p className="mt-1 text-xs">Every activated sale stays here for later monthly payments. Reconcile against the provider each period; this list does not detect a new payment automatically.</p>
+        {!overview?.review_candidates.length ? <p className="mt-2 text-sm">None in the current view.</p> : <ul className="mt-3 space-y-2 text-sm">{overview.review_candidates.map((row) =>
+          <li key={row.id} className="flex flex-wrap justify-between gap-2 border-b pb-2"><span>{row.company_legal_name} · {row.selected_plan_key} {row.selected_billing_cadence} · {repNames.get(row.created_by_user_id) || "Attribution needs review"} · {row.reviewed_receipt_count} reviewed receipt{row.reviewed_receipt_count === 1 ? "" : "s"}</span><button type="button" className="underline" onClick={() => setIntentId(row.id)}>Review {row.reviewed_receipt_count ? "another" : "first"} receipt</button></li>)}</ul>}
       </section>
       <form onSubmit={recordReceipt} className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
         <h2 className="font-bold sm:col-span-2">Approve a verified provider receipt</h2>
