@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { RefreshCw } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
+import AdminSalesPaymentsTab from "./AdminSalesPaymentsTab";
 import { supabase } from "@/lib/supabaseClient";
 
 type Rep = { user_id: string; email: string; display_name: string; active: boolean };
@@ -55,6 +56,7 @@ const buttonClass = "rounded-lg bg-[#9f75ef] px-4 py-2 text-sm font-semibold tex
 
 export default function AdminSalesPayrollPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [activeTab, setActiveTab] = useState<"ledger" | "payments">("ledger");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -184,6 +186,11 @@ export default function AdminSalesPayrollPage() {
       </header>
       {error && <p role="alert" className="rounded-lg border border-red-400/50 p-3 text-sm">{error}</p>}
       {notice && <p role="status" className="rounded-lg border border-green-400/50 p-3 text-sm">{notice}</p>}
+      <nav aria-label="Sales Payroll sections" className="flex gap-2 border-b pb-2">
+        <button type="button" onClick={() => setActiveTab("ledger")} aria-current={activeTab === "ledger" ? "page" : undefined} className={activeTab === "ledger" ? "rounded-lg bg-[#9f75ef] px-4 py-2 text-sm font-semibold text-white" : "rounded-lg border px-4 py-2 text-sm"}>Receipt ledger</button>
+        <button type="button" onClick={() => setActiveTab("payments")} aria-current={activeTab === "payments" ? "page" : undefined} className={activeTab === "payments" ? "rounded-lg bg-[#9f75ef] px-4 py-2 text-sm font-semibold text-white" : "rounded-lg border px-4 py-2 text-sm"}>Payments</button>
+      </nav>
+      {activeTab === "payments" ? <AdminSalesPaymentsTab request={request} reps={overview?.representatives || []} onRecorded={() => { void load(); }} /> : <>
       {overview?.truncated && <p role="alert" className="rounded-lg border border-amber-400/50 p-3 text-sm">The ledger exceeds the display limit. Do not use these totals for payroll until the full ledger is exported and reconciled.</p>}
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border p-4"><p className="text-sm">Activated sales without a reviewed receipt</p><p className="text-2xl font-bold">{overview?.pending_evidence.length ?? "—"}</p><p className="text-xs">Recurring receipts require a fresh review each period.</p></div>
@@ -265,6 +272,7 @@ export default function AdminSalesPayrollPage() {
         </form>
       </div>
       <p className="text-xs">No automatic receipt ingestion, refund execution, reconciliation, or ACH runs in this release. Automation remains off and cannot be enabled until a separate worker and review are complete.</p>
+      </>}
     </main>
   </AdminLayout>;
 }
