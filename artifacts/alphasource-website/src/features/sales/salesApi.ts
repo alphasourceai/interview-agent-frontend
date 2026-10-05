@@ -12,6 +12,7 @@ import type {
   SalesDealDraft,
   SalesPackage,
   SalesRep,
+  SalesHubMetrics,
 } from "@/features/sales/types";
 
 const env = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {}) as Record<string, unknown>;
@@ -104,6 +105,7 @@ function createIdempotencyKey(prefix: string): string {
 }
 
 const realSalesApi: SalesApi = {
+  getHubMetrics: () => requestJson<SalesHubMetrics>("/sales/hub-metrics"),
   getMe: () => requestJson<SalesRep>("/sales/me"),
   getPackages: () => requestJson<{ items: SalesPackage[] }>("/sales/packages").then((result) => result.items || []),
   listDeals: () => requestJson<{ items: SalesDeal[] }>("/sales/deals").then((result) => result.items || []),
@@ -306,6 +308,10 @@ const mockPromotion: PromotionCodeSummary = {
 };
 
 const mockSalesApi: SalesApi = {
+  async getHubMetrics() {
+    await delay();
+    return { ready: 1, in_progress: 4, activated: 3, activated_mtd: 2, generated_at: new Date().toISOString() };
+  },
   async getMe() {
     await delay(120);
     return { user_id: "sales-rep-demo", email: "sales.qa@example.invalid", display_name: "Sales QA Rep", access_role: "sales_rep" };

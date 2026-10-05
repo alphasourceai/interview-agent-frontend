@@ -1,0 +1,9 @@
+import type { SalesDeal, GhlSalesImport, SalesRep } from './types';
+export const playbookUrl: string;
+export const onboardingUrl: string;
+export const salesDriveUrl: string;
+export const ghlUrl: string;
+export const salesWonUrl: string;
+export function homeCounts(deals: SalesDeal[], imports: GhlSalesImport[]): {ready:number;open:number;payment:number;won:number;attention:number};
+export function formatBusinessPhone(value?: string | null): string;
+export function salesSignature(rep: SalesRep): {text:string;html:string};

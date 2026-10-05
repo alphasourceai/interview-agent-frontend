@@ -8,6 +8,7 @@ import { SalesApiError, salesApi, salesUsesMockApi } from "@/features/sales/sale
 import type { SalesRep } from "@/features/sales/types";
 import SalesSignInPage from "@/pages/sales/SalesSignInPage";
 import SalesDealsPage from "@/pages/sales/SalesDealsPage";
+import SalesHomePage from "@/pages/sales/SalesHomePage";
 import SalesNewDealPage from "@/pages/sales/SalesNewDealPage";
 import SalesEnterpriseHandoffPage from "@/pages/sales/SalesEnterpriseHandoffPage";
 import SalesDealDetailPage from "@/pages/sales/SalesDealDetailPage";
@@ -84,6 +85,8 @@ export default function SalesApp() {
     <AppearanceProvider>
       <SalesLayout rep={rep}>
         <Switch>
+          <Route path="/sales/home"><SalesHomePage rep={rep} /></Route>
+          <Route path="/sales/home/"><SalesHomePage rep={rep} /></Route>
           <Route path="/sales/new" component={SalesNewDealPage} />
           <Route path="/sales/new/" component={SalesNewDealPage} />
           <Route path="/sales/enterprise" component={SalesEnterpriseHandoffPage} />

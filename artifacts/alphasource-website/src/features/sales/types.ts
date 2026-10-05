@@ -24,6 +24,15 @@ export interface SalesRep {
   email: string;
   display_name: string;
   access_role: "sales_rep" | "global_admin";
+  business_phone_e164?: string | null;
+}
+
+export interface SalesHubMetrics {
+  ready: number;
+  in_progress: number;
+  activated: number;
+  activated_mtd: number;
+  generated_at: string;
 }
 
 export interface SalesPackage {
@@ -179,6 +188,7 @@ export interface EnterpriseHandoffResult {
 }
 
 export interface SalesApi {
+  getHubMetrics(): Promise<SalesHubMetrics>;
   getMe(): Promise<SalesRep>;
   getPackages(): Promise<SalesPackage[]>;
   listDeals(): Promise<SalesDeal[]>;

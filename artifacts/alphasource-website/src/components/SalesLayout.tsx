@@ -25,6 +25,7 @@ interface SalesLayoutProps {
 }
 
 const navigation = [
+  { label: "Sales hub", href: "/sales/home", icon: LayoutDashboard },
   { label: "My deals", href: "/sales", icon: LayoutList },
   { label: "New sale", href: "/sales/new", icon: Plus },
   { label: "Enterprise handoff", href: "/sales/enterprise", icon: Handshake },
@@ -82,7 +83,7 @@ export default function SalesLayout({ children, rep }: SalesLayoutProps) {
             <BriefcaseBusiness className="h-3.5 w-3.5" />
             Sales workspace
           </div>
-          <p className="mt-2 text-xs font-semibold leading-relaxed text-white/48">Agreements, payment progress, and handoffs.</p>
+          <p className="mt-2 text-xs font-semibold leading-relaxed text-white/48">Your resources, agreements, and handoffs.</p>
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-3" aria-label="Sales workspace">
