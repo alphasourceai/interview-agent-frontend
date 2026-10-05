@@ -7,3 +7,4 @@ export const salesWonUrl: string;
 export function homeCounts(deals: SalesDeal[], imports: GhlSalesImport[]): {ready:number;open:number;payment:number;won:number;attention:number};
 export function formatBusinessPhone(value?: string | null): string;
 export function salesSignature(rep: SalesRep): {text:string;html:string};
+export function signatureProfile(rep: SalesRep, user: {id:string;user_metadata?:Record<string,unknown>} | null): SalesRep;

@@ -2,9 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'wouter';
 import { ArrowUpRight, BookOpen, CheckCircle2, Clipboard, Clock3, FileSignature, FolderOpen, Handshake, Mail, MessageSquare, Phone, RefreshCw } from 'lucide-react';
 import { SalesPageHeading } from '@/components/SalesLayout';
+import { useAuth } from '@/context/AuthContext';
 import { salesApi } from '@/features/sales/salesApi';
 import type { SalesRep, SalesHubMetrics } from '@/features/sales/types';
-import { formatBusinessPhone, ghlUrl, onboardingUrl, playbookUrl, salesDriveUrl, salesSignature, salesWonUrl } from '@/features/sales/salesHome.mjs';
+import { formatBusinessPhone, ghlUrl, onboardingUrl, playbookUrl, salesDriveUrl, salesSignature, signatureProfile, salesWonUrl } from '@/features/sales/salesHome.mjs';
 
 function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <section className={`rounded-2xl border p-5 sm:p-6 ${className}`} style={{ backgroundColor: 'var(--as-surface)', borderColor: 'var(--as-border)' }}>{children}</section>;
@@ -31,6 +32,7 @@ const checks = [
 ];
 
 export default function SalesHomePage({ rep }: { rep: SalesRep }) {
+  const { currentUser } = useAuth();
   const [counts, setCounts] = useState<SalesHubMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,7 +40,7 @@ export default function SalesHomePage({ rep }: { rep: SalesRep }) {
   const [refresh, setRefresh] = useState(0);
   const [checked, setChecked] = useState<Record<number, boolean>>({});
   const [copyStatus, setCopyStatus] = useState('');
-  const signature = salesSignature(rep);
+  const signature = salesSignature(signatureProfile(rep, currentUser));
   const businessPhone = formatBusinessPhone(rep.business_phone_e164);
 
   useEffect(() => {
@@ -128,13 +130,11 @@ export default function SalesHomePage({ rep }: { rep: SalesRep }) {
       <Panel>
         <h2 className="text-lg font-black" style={{ color: 'var(--as-text)' }}>Your email signature</h2>
         <p className="mt-2 text-xs font-semibold leading-relaxed" style={{ color: 'var(--as-text-muted)' }}>Based on Jason’s brand layout, personalized with your company email and assigned business line.</p>
-        {rep.access_role === 'sales_rep' ? <>
           <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200 bg-white p-5 text-[#27304e]" dangerouslySetInnerHTML={{ __html: signature.html }} />
-          {!businessPhone ? <p className="mt-3 text-xs font-semibold text-amber-600">No active business line is assigned, so this signature omits a phone number. Ask your alphaSource contact before adding one.</p> : null}
+          {!businessPhone ? <p className="mt-3 text-xs font-semibold text-amber-600">Your account has no active business line assigned, so this signature omits a phone number.</p> : null}
           <button type="button" onClick={() => void copySignature()} className="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#0A1547] px-4 py-2.5 text-xs font-black text-white"><Clipboard className="h-4 w-4" />Copy signature</button>
           <p role="status" className="mt-3 text-xs font-semibold leading-relaxed" style={{ color: 'var(--as-text-muted)' }}>{copyStatus || 'Paste into Gmail signature settings, send yourself a test, and save changes.'}</p>
           <details className="mt-4 text-xs" style={{ color: 'var(--as-text-muted)' }}><summary className="cursor-pointer font-bold">Plain-text version</summary><pre className="mt-3 whitespace-pre-wrap rounded-lg border p-3 font-sans" style={{ borderColor: 'var(--as-border)' }}>{signature.text}</pre></details>
-        </> : <p className="mt-5 text-sm font-semibold" style={{ color: 'var(--as-text-muted)' }}>Sign in as a sales representative to view that account’s signature and business line. Admin access does not expose other representatives’ profiles here.</p>}
       </Panel>
       <Panel>
         <h2 className="text-lg font-black" style={{ color: 'var(--as-text)' }}>First-day essentials</h2>

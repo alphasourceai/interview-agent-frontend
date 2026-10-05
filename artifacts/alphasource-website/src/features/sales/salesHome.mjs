@@ -22,13 +22,23 @@ function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[ch]));
 }
 
+export function signatureProfile(rep, user) {
+  if (rep.access_role !== 'global_admin') return rep;
+  const metadata = user?.id === rep.user_id ? user.user_metadata : null;
+  // Metadata is untrusted display text only, never a role/email/phone authority.
+  const name = [metadata?.full_name, metadata?.name, metadata?.display_name]
+    .find(value => typeof value === 'string' && value.trim());
+  return { ...rep, display_name: name?.trim().slice(0, 120) || rep.display_name, business_phone_e164: null };
+}
+
 export function salesSignature(rep) {
   const name = String(rep.display_name || '').trim();
   const email = String(rep.email || '').trim();
-  const phone = formatBusinessPhone(rep.business_phone_e164);
-  const text = [name, 'Independent Sales Representative | alphaSource', ...(phone ? [phone] : []), email, 'alphasourceai.com'].join('\n');
+  const phone = rep.access_role === 'global_admin' ? '' : formatBusinessPhone(rep.business_phone_e164);
+  const title = rep.access_role === 'global_admin' ? 'alphaSource' : 'Independent Sales Representative | alphaSource';
+  const text = [name, title, ...(phone ? [phone] : []), email, 'alphasourceai.com'].join('\n');
   // No arbitrary URL interpolation: only the validated business phone becomes a link.
   const phoneHtml = phone ? `<a href="tel:${escapeHtml(rep.business_phone_e164)}" style="color:#27304e;text-decoration:none">${phone}</a> | ` : '';
-  const html = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;color:#27304e;font-size:13px"><tr><td style="padding-right:18px;vertical-align:middle"><img src="https://www.alphasourceai.com/logo-dark-text-clear.png" width="150" alt="alphaSource" style="display:block;width:150px;height:auto"></td><td style="padding-left:18px;border-left:2px solid #02abe0;line-height:1.6"><strong style="font-size:15px">${escapeHtml(name)}</strong><br>Independent Sales Representative | alphaSource<br>${phoneHtml}<a href="https://www.alphasourceai.com" style="color:#27304e;text-decoration:none">alphasourceai.com</a><br>${escapeHtml(email)}</td></tr></table>`;
+  const html = `<table role="presentation" cellpadding="0" cellspacing="0" style="font-family:Arial,sans-serif;color:#27304e;font-size:13px"><tr><td style="padding-right:18px;vertical-align:middle"><img src="https://www.alphasourceai.com/logo-dark-text-clear.png" width="150" alt="alphaSource" style="display:block;width:150px;height:auto"></td><td style="padding-left:18px;border-left:2px solid #02abe0;line-height:1.6"><strong style="font-size:15px">${escapeHtml(name)}</strong><br>${title}<br>${phoneHtml}<a href="https://www.alphasourceai.com" style="color:#27304e;text-decoration:none">alphasourceai.com</a><br>${escapeHtml(email)}</td></tr></table>`;
   return { text, html };
 }
