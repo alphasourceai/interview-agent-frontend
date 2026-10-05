@@ -4,6 +4,7 @@ import DashboardBrand from "@/components/DashboardBrand";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { buildPwResetUrl } from "@/lib/urlConfig";
+import { useLocation } from "wouter";
 
 export default function SalesSignInPage() {
   const [email, setEmail] = useState("");
@@ -14,6 +15,7 @@ export default function SalesSignInPage() {
   const [resetSent, setResetSent] = useState(false);
   const resetInFlightRef = useRef(false);
   const { loginSales, salesLoginLoading, salesLoginError } = useAuth();
+  const [, setLocation] = useLocation();
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -41,7 +43,8 @@ export default function SalesSignInPage() {
       }
       return;
     }
-    await loginSales(email, password);
+    const result = await loginSales(email, password);
+    if (!result.error) setLocation("/sales/home");
   };
 
   return (
