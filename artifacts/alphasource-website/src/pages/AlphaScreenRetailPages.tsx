@@ -50,7 +50,7 @@ const pricing = {
     role: 399,
     included: 20,
     cap: 10,
-    additional: 30,
+    additional: 25,
   },
   pro: {
     name: "Pro",
@@ -59,7 +59,7 @@ const pricing = {
     role: 699,
     included: 30,
     cap: 12,
-    additional: 35,
+    additional: 30,
   },
 };
 

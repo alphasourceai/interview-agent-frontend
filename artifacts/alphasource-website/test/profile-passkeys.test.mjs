@@ -20,7 +20,7 @@ const passkeyErrors = await import(`data:text/javascript;base64,${Buffer.from(bu
 test("profile settings are routed outside sidebar navigation", () => {
   const app = read("src/App.tsx");
   const layout = read("src/components/DashboardLayout.tsx");
-  assert.match(app, /path="\/dashboard\/profile"\s+component=\{ProfileSettingsPage\}/);
+  assert.match(app, /path="\/dashboard\/profile">\{\(\) => <DemoManagerRoute page="profile"><ProfileSettingsPage \/><\/DemoManagerRoute>/);
   assert.doesNotMatch(layout, /label:\s*"Profile Settings"/);
 });
 
@@ -30,7 +30,7 @@ test("account menu makes profile security and passkeys discoverable while suppor
   assert.match(layout, /Profile &amp; security/);
   assert.match(layout, /Profile, appearance, and passkeys/);
   assert.match(layout, />\s*Sign Out\s*</);
-  assert.match(layout, /<SupportVoicePopover/);
+  assert.match(layout, /<EligibleSupportVoice/);
   assert.match(layout, /Need a refresher\?/);
   assert.match(layout, /Start tour/);
   assert.doesNotMatch(layout, /Sign out and version/);

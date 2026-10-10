@@ -67,7 +67,7 @@ test("one phone entry is rendered in the shared footer", () => {
 });
 
 test("dashboard renders the approved Talk with Support browser control", () => {
-  assert.match(dashboard, /<SupportVoicePopover \/>/);
+  assert.match(dashboard, /<EligibleSupportVoice/);
   assert.match(browserVoice, /aria-label="Talk with Support"/);
   assert.match(browserVoice, /<span>Talk with Support<\/span>/);
 });

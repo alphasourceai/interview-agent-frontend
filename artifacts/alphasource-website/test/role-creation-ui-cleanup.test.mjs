@@ -20,7 +20,7 @@ function between(source, start, end) {
 
 const dashboardRoles = read("src/pages/dashboard/RolesPage.tsx");
 const adminRoles = read("src/pages/admin/AdminRolesPage.tsx");
-const dashboardCreate = between(dashboardRoles, "{canManageRoles && (", "{/* Search */}");
+const dashboardCreate = between(dashboardRoles, "{canManageRoles && !selectedClient.is_sales_demo && (", "{/* Search */}");
 const adminCreate = between(adminRoles, "{/* ── Create role form", "{/* ── Search");
 const guidance = read("src/components/RubricGuidancePanel.tsx");
 const interviewTypeField = read("src/components/InterviewTypeField.tsx");

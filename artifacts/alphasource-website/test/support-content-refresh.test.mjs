@@ -32,7 +32,7 @@ test("public FAQ and Support publish only plain-language product updates", () =>
   const sitemap = read("public/sitemap.xml");
   const managerQuestionMatches = content.match(/Can managers use alphaScreen across multiple locations or entities\?/g) || [];
 
-  assert.match(content, /PUBLIC_CONTENT_LAST_UPDATED = "September 17, 2026"/);
+  assert.match(content, /PUBLIC_CONTENT_LAST_UPDATED = "October 10, 2026"/);
   assert.match(content, /Can client users sign in with a passkey\?/);
   assert.match(content, /What interview-access verification options can candidates use\?/);
   assert.match(content, /publicProductUpdates/);

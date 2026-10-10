@@ -3,9 +3,11 @@ import { ChevronDown, ShoppingCart, CreditCard, ExternalLink, X } from "lucide-r
 import CurrentScopeBanner from "@/components/CurrentScopeBanner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useClient } from "@/context/ClientContext";
+import { useAuth } from "@/context/AuthContext";
 import InfoTooltip from "@/components/InfoTooltip";
 import { supabase } from "@/lib/supabaseClient";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
+import BillingModelPanel from "@/components/BillingModelPanel";
 
 interface BillingSummary {
   plan_tier: string;
@@ -23,6 +25,7 @@ interface BillingRole {
   id: string;
   title: string;
   purchased_interviews: number;
+  billing_model: unknown;
 }
 
 interface AdditionalInterviewsCheckoutResponse {
@@ -249,6 +252,12 @@ function InfoCard({
 }
 
 export default function BillingPage() {
+  const { currentUser } = useAuth();
+  const { selectedClientId, selectedClient } = useClient();
+  return <ScopedBillingPage key={`${currentUser?.id}:${selectedClientId}:${JSON.stringify(selectedClient.permissions ?? {})}`} />;
+}
+
+function ScopedBillingPage() {
   const { selectedClient, selectedClientId, loading: clientLoading, error: clientError, memberships, isGlobalAdmin } = useClient();
   const selectedMembershipRole = String(
     memberships.find((membership) => membership.client_id === selectedClientId)?.role ||
@@ -294,7 +303,7 @@ export default function BillingPage() {
   const [selectedRole, setSelectedRole] = useState("");
   const [quantity, setQuantity]         = useState(1);
 
-  const canPurchase = canPurchaseInterviews && selectedRole !== "" && Number.isInteger(quantity) && quantity >= 1 && !rolesLoading && !purchaseBusy;
+  const canPurchase = canPurchaseInterviews && roles.some(role => role.id === selectedRole && (role.billing_model === "fixed" || role.billing_model === "rollover")) && Number.isInteger(quantity) && quantity >= 1 && !rolesLoading && !purchaseBusy;
 
   useEffect(() => {
     let alive = true;
@@ -561,6 +570,7 @@ export default function BillingPage() {
             id: String(item.id || "").trim(),
             title: String(item.title || "").trim() || "Untitled role",
             purchased_interviews: toWholeNonNegative(item.purchased_interviews),
+            billing_model: item.billing_model,
           }))
           .filter((item) => Boolean(item.id));
 
@@ -805,7 +815,7 @@ export default function BillingPage() {
   };
 
   const startAdditionalInterviewsCheckout = async () => {
-    if (!canPurchaseInterviews || !selectedClientId || !selectedRole || !Number.isInteger(quantity) || quantity <= 0 || purchaseBusy) return;
+    if (!canPurchase || !selectedClientId) return;
     setActionNotice(null);
     setPurchaseBusy(true);
     try {
@@ -931,6 +941,7 @@ export default function BillingPage() {
   return (
     <DashboardLayout title="Billing">
       <CurrentScopeBanner client={selectedClient} />
+      {!clientLoading && !clientError && canViewLegalBilling && <BillingModelPanel clientId={selectedClientId} />}
 
       {canViewLegalBilling && (
         <>
@@ -1057,7 +1068,7 @@ export default function BillingPage() {
         </>
       )}
 
-      {canPurchaseInterviews && (
+      {canPurchaseInterviews && roles.some(role => role.billing_model === "fixed" || role.billing_model === "rollover") && (
         <div
           className="rounded-2xl p-6 mb-6"
           style={surfaceCardStyle}
@@ -1097,7 +1108,7 @@ export default function BillingPage() {
                   <option value="">
                     {rolesLoading ? "Loading roles…" : "Select a role…"}
                   </option>
-                  {roles.map((role) => (
+                  {roles.filter(role => role.billing_model === "fixed" || role.billing_model === "rollover").map((role) => (
                     <option key={role.id} value={role.id}>
                       {role.title}
                     </option>

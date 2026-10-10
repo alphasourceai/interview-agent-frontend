@@ -165,9 +165,9 @@ const FALLBACK_PACKAGES: AlphaScreenPackage[] = [
     included_interviews_per_role: 20,
     interview_duration_minutes: 10,
     max_interview_minutes: 10,
-    additional_interview_price: 30,
-    additional_interview_fee: 30,
-    overage_price: 30,
+    additional_interview_price: 25,
+    additional_interview_fee: 25,
+    overage_price: 25,
     per_role_fee: 399,
     first_role_prepay: {
       enabled: true,
@@ -197,9 +197,9 @@ const FALLBACK_PACKAGES: AlphaScreenPackage[] = [
     included_interviews_per_role: 30,
     interview_duration_minutes: 12,
     max_interview_minutes: 12,
-    additional_interview_price: 35,
-    additional_interview_fee: 35,
-    overage_price: 35,
+    additional_interview_price: 30,
+    additional_interview_fee: 30,
+    overage_price: 30,
     per_role_fee: 699,
     first_role_prepay: {
       enabled: true,
@@ -751,7 +751,7 @@ function EnterpriseCard() {
         </div>
       </div>
       <p className="text-sm leading-relaxed text-white/70">
-        For teams that need custom interview volume, enterprise onboarding, advanced scoring options, or custom membership terms.
+        Fully customizable to your organization’s needs, with a dedicated Client Support Agent. Tailor interview volume, enterprise onboarding, advanced scoring options, and membership terms.
       </p>
       <div className="mt-6 grid gap-3">
         {[
@@ -759,7 +759,7 @@ function EnterpriseCard() {
           "15-minute interview cap",
           "Volume discounts",
           "Advanced scoring models available",
-          "Dedicated Support Agent",
+          "Dedicated Client Support Agent",
         ].map((item) => (
           <div key={item} className="flex items-center gap-3 text-sm font-bold text-white/85">
             <CheckCircle className="h-4 w-4 flex-shrink-0 text-[#02D99D]" />
@@ -2199,7 +2199,7 @@ export default function AlphaScreenPricingPage() {
             <EnterpriseCard />
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-relaxed text-[#0A1547]/55">
-            Annual platform pricing is discounted and billed upfront. Role fees are billed separately when roles are created. Essential additional interviews are fixed at $30 each. Pro additional interviews are fixed at $35 each. Secure checkout opens after agreement signing.
+            Annual platform pricing is discounted and billed upfront. Role fees are billed separately when roles are created. Essential additional interviews are $25 each and Pro additional interviews are $30 each at current catalog rates; client-specific signed terms apply. Secure checkout opens after agreement signing.
             {" "}
             New self-serve buyers can optionally prepay their first role during signup and save 10% on that first role.
             {" "}

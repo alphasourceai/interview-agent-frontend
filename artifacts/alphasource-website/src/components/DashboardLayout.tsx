@@ -29,7 +29,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppearance } from "@/context/AppearanceContext";
 import { useClient, type Client } from "@/context/ClientContext";
 import DashboardBrand from "@/components/DashboardBrand";
-import SupportVoicePopover from "@/components/SupportVoicePopover";
+import EligibleSupportVoice from "@/components/EligibleSupportVoice";
 import SalesDemoBanner from "@/components/SalesDemoBanner";
 import {
   DropdownMenu,
@@ -662,7 +662,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
         </nav>
 
         <div className={`flex-shrink-0 ${collapsed ? "px-3" : "px-5"}`}>
-          {clientAuthReady && currentUser && !clientsLoading && selectedClient.id && !selectedClient.is_sales_demo && !currentUser.app_metadata?.sales_demo_client_id && (collapsed ? <SupportVoicePopover placement="sidebar" collapsed /> : <SupportVoicePopover />)}
+          {clientAuthReady && currentUser && !clientsLoading && !clientsError && selectedClient.id && !selectedClient.archived_at && !selectedClient.is_sales_demo && !currentUser.app_metadata?.sales_demo_client_id && <EligibleSupportVoice key={`${currentUser.id}:${selectedClient.id}`} clientId={selectedClient.id} collapsed={collapsed} />}
           {collapsed && (
             <button
               type="button"

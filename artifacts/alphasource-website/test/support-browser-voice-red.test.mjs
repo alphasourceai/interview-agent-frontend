@@ -10,7 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "u
 test("dashboard offers the approved Talk with Support browser voice control", () => {
   const dashboard = read("src/components/DashboardLayout.tsx");
   const voice = read("src/components/SupportVoicePopover.tsx");
-  assert.match(dashboard, /<SupportVoicePopover \/>/);
+  assert.match(dashboard, /<EligibleSupportVoice/);
   assert.match(voice, />Talk with Support</);
   assert.doesNotMatch(dashboard, /AI_SUPPORT_PHONE_URI|AI_SUPPORT_PHONE_DISPLAY/);
 });

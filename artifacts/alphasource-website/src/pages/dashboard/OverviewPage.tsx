@@ -21,6 +21,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useClient } from "@/context/ClientContext";
 import { getInterviewTypeLabel, type InterviewTypeLabel } from "@/lib/interviewContract";
 import { supabase } from "@/lib/supabaseClient";
+import { roleCapacity, summarizeRoleCapacity, capacityLabel, type RoleCapacity } from "@/lib/billingDisplay";
 
 const timeframes = ["7d", "30d", "MTD", "6m", "YTD", "1y"] as const;
 type Timeframe = (typeof timeframes)[number];
@@ -40,6 +41,7 @@ interface RoleItem {
   type: InterviewTypeLabel;
   left: number | null;
   used: number | null;
+  capacity: RoleCapacity;
 }
 
 interface DashboardRowItem {
@@ -285,6 +287,7 @@ export default function OverviewPage() {
             type: getInterviewTypeLabel(item.interview_type) as InterviewTypeLabel,
             left: toWholeNonNegativeOrNull(item.remaining_interviews),
             used: toWholeNonNegativeOrNull(item.used_interviews),
+            capacity: roleCapacity(item),
           }))
           .filter((item) => Boolean(item.id));
         const rowsPayload = parseJsonSafe(rowsText);
@@ -330,7 +333,7 @@ export default function OverviewPage() {
   const periodRows = useMemo(() => rows.filter((row) => row.createdAtMs >= selectedWindow.start && row.createdAtMs < selectedWindow.end), [rows, selectedWindow]);
   const completedRows = useMemo(() => periodRows.filter((row) => row.interviewScore !== null || row.overallScore !== null || ["completed", "complete", "ended"].includes(row.interviewStatus)), [periodRows]);
   const completionRate = periodRows.length ? Math.round((completedRows.length / periodRows.length) * 100) : 0;
-  const remainingCapacity = roles.reduce((sum, role) => sum + (role.left ?? 0), 0);
+  const remainingCapacity = summarizeRoleCapacity(roles.map(role => role.capacity));
   const sortedRows = useMemo(() => [...rows].sort((a, b) => b.createdAtMs - a.createdAtMs), [rows]);
   const queueRows = useMemo(() => sortedRows
     .filter((row) => queueFilter === "all" || row.overallScore !== null)
@@ -339,7 +342,7 @@ export default function OverviewPage() {
 
   const metricDefinitions = useMemo<MetricDefinition[]>(() => [
     { key: "roles", label: "Roles added", value: String(stats.roles), detail: `${stats.rolesDelta >= 0 ? "+" : ""}${stats.rolesDelta} vs prior period`, positive: stats.rolesDelta >= 0, icon: Briefcase, color: "#4F7DF3" },
-    { key: "capacity", label: "Open capacity", value: roles.some((role) => role.left !== null) ? String(remainingCapacity) : "—", detail: roles.some((role) => role.left !== null) ? "interviews remaining" : "usage unavailable", positive: true, icon: FileCheck2, color: "#4F7DF3" },
+    { key: "capacity", label: "Role-owned capacity", value: remainingCapacity.value, detail: remainingCapacity.detail, positive: true, icon: FileCheck2, color: "#4F7DF3" },
     { key: "candidates", label: "Candidates added", value: String(stats.candidates), detail: `${stats.candidatesDelta >= 0 ? "+" : ""}${stats.candidatesDelta} vs prior period`, positive: stats.candidatesDelta >= 0, icon: Users, color: "#A380F6" },
     { key: "screen", label: "Time to first screen", value: stats.avgDays > 0 ? `${stats.avgDays.toFixed(1)}d` : "—", detail: stats.avgDays > 0 ? "for roles in period" : "not enough data", positive: true, icon: Clock3, color: "#02D99D" },
     { key: "completion", label: "Interview completion", value: periodRows.length ? `${completionRate}%` : "—", detail: periodRows.length ? `${completedRows.length} completed interviews` : "no candidates in period", positive: true, icon: CheckCircle2, color: "#02ABE0" },
@@ -351,7 +354,7 @@ export default function OverviewPage() {
       const candidateCount = roleRows.length;
       const total = (role.left ?? 0) + (role.used ?? 0);
       const utilization = total > 0 ? Math.round(((role.used ?? 0) / total) * 100) : 0;
-      const status = role.left === 0 && role.used !== null ? { label: "At risk", tone: "warning" as const } : candidateCount === 0 ? { label: "Attention", tone: "warning" as const } : { label: "Healthy", tone: "success" as const };
+      const status = role.capacity.model === "usage" ? { label: "Metered", tone: "success" as const } : !role.capacity.model || role.capacity.own === null ? { label: "Capacity unknown", tone: "warning" as const } : role.left === 0 && role.used !== null ? { label: "At risk", tone: "warning" as const } : candidateCount === 0 ? { label: "Attention", tone: "warning" as const } : { label: "Healthy", tone: "success" as const };
       const trend = Array.from({ length: 4 }, (_, index) => {
         const end = Date.now() - (3 - index) * 7 * DAY_MS;
         return { value: roleRows.filter((row) => row.createdAtMs <= end).length };
@@ -467,7 +470,7 @@ export default function OverviewPage() {
                     {roleHealth.length === 0 && <EmptyState>No role health data is available yet.</EmptyState>}
                     {roleHealth.map((role) => (
                       <div key={role.id} className="grid min-h-9 grid-cols-[minmax(0,1.5fr)_36px_50px_54px_76px] items-center text-[10px]">
-                        <span className="truncate pr-2 font-black">{role.title}</span><span style={{ color: "var(--as-text-muted)" }}>{role.left ?? "—"}</span><span style={{ color: "var(--as-text-muted)" }}>{role.candidateCount}</span>
+                        <span className="truncate pr-2 font-black">{role.title}</span><span style={{ color: "var(--as-text-muted)" }} title={capacityLabel(role.capacity)}>{role.capacity.model === "usage" ? "Metered" : role.capacity.own ?? "—"}</span><span style={{ color: "var(--as-text-muted)" }}>{role.candidateCount}</span>
                         <span className="h-7 w-12"><ResponsiveContainer width="100%" height="100%"><LineChart data={role.trend}><Line type="monotone" dataKey="value" stroke={role.status.tone === "success" ? "#02A57A" : "#E54872"} strokeWidth={2} dot={false} isAnimationActive={false} /></LineChart></ResponsiveContainer></span>
                         <StatusBadge label={role.status.label} tone={role.status.tone} />
                       </div>

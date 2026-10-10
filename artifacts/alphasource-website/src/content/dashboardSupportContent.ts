@@ -1,7 +1,7 @@
 import { capacityFaq, membershipTermFaq, firstRolePrepayAnswer, deviceCheckFaq, launchRecoveryFaq, microphoneRecoveryFaq, scoringFaqs, interviewStatusFaq, septemberUpdates } from "@/content/supportGuidance";
 import { RUBRIC_FAQ } from "@/content/rubricGuidance";
 
-export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-09-11.5";
+export const DASHBOARD_SUPPORT_KNOWLEDGE_VERSION = "2026-10-10.1";
 
 export const faqSections = [
   {
@@ -222,7 +222,7 @@ export const faqSections = [
       },
       {
         question: "What happens if we need more screening interviews?",
-        answer: "Authorized billing users can open Billing and select Purchase Additional Interviews for the intended role. Check the selected client/entity and role before paying. If the control is unavailable or capacity does not update after payment, contact support before purchasing again.",
+        answer: "Roles shows role-owned allowances. Billing shows shared rollover credits/expiry or an Enterprise pool for authorized users. Metered usage is not unlimited or free; previews are not amounts due. Top-ups apply only to supported per-role models. Signed terms govern; ask support about unknown capacity or pricing.",
       },
       {
         question: "Why can't a candidate start even though the role is active?",
@@ -265,7 +265,7 @@ export const faqSections = [
     items: [
       {
         question: "How do I contact support?",
-        answer: "Email support@alphasourceai.com for team follow-up, or call AI Customer Support at (605) 599-8008. In the dashboard, Talk with Support provides AI guidance. When email escalation is available, the assistant offers a phone contact route or a message to support. It asks you to confirm your name, reply email, and a brief issue summary before sending. Only an explicit submission confirmation means the request was submitted. The browser assistant cannot transfer the browser call, inspect your account, change records, or promise a response time. Do not share candidate records, passwords, codes, private links, or payment details.",
+        answer: "Email support@alphasourceai.com for team follow-up, or call AI Customer Support at (605) 599-8008. Eligible Pro/Enterprise clients get dashboard AI guidance. Essential uses Help Center/email support. When email escalation is available, the assistant offers a phone contact route or a message to support. It asks you to confirm your name, reply email, and a brief issue summary before sending. Only an explicit submission confirmation means the request was submitted. The browser assistant cannot transfer the browser call, inspect your account, change records, or promise a response time. Do not share candidate records, passwords, codes, private links, or payment details.",
       },
       {
         question: "What information should I include when reporting a problem?",

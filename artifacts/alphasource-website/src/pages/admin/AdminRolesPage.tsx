@@ -22,6 +22,7 @@ import {
 } from "@/lib/interviewContract";
 import { normalizeRoleJdReplacementEligibility, type RoleJdReplacementEligibility } from "@/lib/roleJdReplacementEligibility";
 import { supabase } from "@/lib/supabaseClient";
+import { roleCapacity, capacityLabel, type RoleCapacity } from "@/lib/billingDisplay";
 
 /* ── Types ───────────────────────────────────────────────────── */
 type SortKey  = "name" | "entity" | "created" | "type";
@@ -50,6 +51,7 @@ interface Role {
   purchasedInterviews: number | null;
   usedInterviews: number | null;
   remainingInterviews: number | null;
+  capacity: RoleCapacity;
   status?: string | null;
   closedAt?: string | null;
   closedBy?: string | null;
@@ -387,6 +389,7 @@ export default function AdminRolesPage() {
               purchasedInterviews: toWholeNonNegative(item.purchased_interviews),
               usedInterviews: toWholeNonNegative(item.used_interviews),
               remainingInterviews: toWholeNonNegative(item.remaining_interviews),
+              capacity: roleCapacity(item),
               status,
               closedAt: String(item.closed_at || "").trim() || null,
               closedBy: String(item.closed_by || "").trim() || null,
@@ -1054,9 +1057,9 @@ export default function AdminRolesPage() {
                   {/* Usage */}
                   <div className={roleTableAlignmentClass("usage")}>
                     <p className="text-center text-xs font-bold" style={mutedTextStyle}>
-                      {role.remainingInterviews == null || role.usedInterviews == null
-                        ? "—"
-                        : `${role.remainingInterviews} left / ${role.usedInterviews} used`}
+                      {capacityLabel(role.capacity)}
+                      {role.capacity.model === "rollover" && <span className="block font-medium mt-1">Shared credits are separate; see Billing</span>}
+                      {role.capacity.model === "usage" && <span className="block font-medium mt-1">Shared pool is separate; see Billing</span>}
                     </p>
                   </div>
 

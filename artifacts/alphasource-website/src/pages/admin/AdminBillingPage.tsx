@@ -4,6 +4,8 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import AdminLayout from "@/components/AdminLayout";
 import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
+import BillingModelPanel from "@/components/BillingModelPanel";
+import EnterpriseModelPreparation from "@/components/EnterpriseModelPreparation";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -1413,6 +1415,7 @@ export default function AdminBillingPage() {
 
   return (
     <AdminLayout title="Billing">
+      <BillingModelPanel clientId={selectedClientId} admin />
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-black" style={primaryTextStyle}>Billing</h2>
         <span className="text-xs font-medium italic" style={{ color: "var(--as-text)", opacity: 0.35 }}>
@@ -1675,6 +1678,7 @@ export default function AdminBillingPage() {
           </div>
           {agreementForm.membershipTier === "enterprise" ? (
             <div className="space-y-3 pt-1">
+              <EnterpriseModelPreparation />
               <p className="px-1 text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
                 Enterprise Pricing Configuration
               </p>

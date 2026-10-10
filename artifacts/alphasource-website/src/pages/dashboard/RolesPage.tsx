@@ -31,6 +31,7 @@ import {
 } from "@/lib/interviewContract";
 import { normalizeRoleJdReplacementEligibility, type RoleJdReplacementEligibility } from "@/lib/roleJdReplacementEligibility";
 import { supabase } from "@/lib/supabaseClient";
+import { roleCapacity as parseRoleCapacity, capacityLabel, type RoleCapacity } from "@/lib/billingDisplay";
 
 type RoleSortKey = "name" | "entity" | "type" | "left" | "used" | "date";
 type SortDir = "asc" | "desc";
@@ -86,6 +87,7 @@ interface Role {
   scoredQuestionCount: number | null;
   left: number;
   used: number;
+  capacity: RoleCapacity;
   hasRubric: boolean;
   hasJD: boolean;
   sortDate: number;
@@ -850,6 +852,7 @@ export default function RolesPage() {
                 : null,
               left: toWholeNonNegative(item.remaining_interviews),
               used: toWholeNonNegative(item.used_interviews),
+              capacity: parseRoleCapacity(item),
               hasRubric: questions.length > 0,
               hasJD: Boolean(jobDescriptionUrl),
               sortDate: created.sortDate,
@@ -1377,7 +1380,7 @@ export default function RolesPage() {
                       style={mutedTextStyle}
                     >
                       Usage
-                      <InfoTooltip content="Interviews used vs. remaining quota for this role" />
+                      <InfoTooltip content="Role-owned allowance is separate from shared rollover credits or an Enterprise pool. Metered roles do not have a remaining usage quota." />
                       <SortIcon active={sortKey === "left"} dir={sortDir} />
                     </button>
                   </div>
@@ -1461,7 +1464,11 @@ export default function RolesPage() {
                   {/* Usage */}
                   <td className={`${ROLE_TABLE_CLIENT_COLUMNS.usage.horizontalPadding} py-4`}>
                     <div className={roleTableAlignmentClass("usage")}>
-                      <UsageBar left={role.left} used={role.used} />
+                      <div className="text-center text-xs font-bold" style={mutedTextStyle}>
+                        {capacityLabel(role.capacity)}
+                        {role.capacity.model === "rollover" && <p className="mt-1 text-[10px] font-medium">Shared credits are separate; see Billing</p>}
+                        {role.capacity.model === "usage" && <p className="mt-1 text-[10px] font-medium">{role.capacity.own ?? "—"} included left; pool separate</p>}
+                      </div>
                     </div>
                   </td>
 

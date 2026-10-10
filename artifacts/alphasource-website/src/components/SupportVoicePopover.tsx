@@ -22,9 +22,9 @@ import {
 } from "@/lib/supportVoicePlaybackQueue";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { captureSupportVoiceFailure } from "@/lib/sentry";
+import { supportVoiceOrigin } from "@/lib/supportVoiceOrigin";
 
 const env = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {}) as Record<string, unknown>;
-const QA_API_ORIGIN = "https://ia-backend-qa.onrender.com";
 const FEATURE_ENABLED = String(env.VITE_SUPPORT_VOICE_ENABLED || "").trim() === "true";
 type ClientCloseReason =
   | "user_end"
@@ -41,14 +41,7 @@ type ClientCloseReason =
 type ProviderReadiness = "checking" | "ready" | "unavailable";
 
 function resolveBackendOrigin(): string | null {
-  const raw = String(env.VITE_BACKEND_URL || "").trim();
-  try {
-    const url = new URL(raw);
-    if (raw !== QA_API_ORIGIN || url.origin !== raw || url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) return null;
-    return raw;
-  } catch {
-    return null;
-  }
+  return supportVoiceOrigin(env.VITE_BACKEND_URL, env.VITE_APP_ENV);
 }
 
 function statusText(state: VoiceState): string {
@@ -64,11 +57,12 @@ function statusText(state: VoiceState): string {
 }
 
 interface SupportVoicePopoverProps {
+  clientId: string;
   placement?: "header" | "sidebar";
   collapsed?: boolean;
 }
 
-export default function SupportVoicePopover({ placement = "sidebar", collapsed = false }: SupportVoicePopoverProps) {
+export default function SupportVoicePopover({ clientId, placement = "sidebar", collapsed = false }: SupportVoicePopoverProps) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<VoiceState>("idle");
   const [serviceWorkerSafe, setServiceWorkerSafe] = useState(false);
@@ -325,7 +319,7 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
         setState("connecting");
         let response: Response;
         try {
-          response = await fetch(`${backendOrigin}/api/support/voice/sessions`, {
+          response = await fetch(`${backendOrigin}/api/support/voice/sessions?client_id=${encodeURIComponent(clientId)}`, {
             method: "POST",
             body: undefined,
             cache: "no-store",
@@ -447,7 +441,7 @@ export default function SupportVoicePopover({ placement = "sidebar", collapsed =
       } finally {
         startPendingRef.current = false;
       }
-  }, [backendOrigin, browserReady, checkProviderReadiness, endConversation, finishPlaybackIfDrained, releaseMedia, scheduleAudio, startCapture, state]);
+  }, [clientId, backendOrigin, browserReady, checkProviderReadiness, endConversation, finishPlaybackIfDrained, releaseMedia, scheduleAudio, startCapture, state]);
 
   const toggleMute = useCallback(() => {
     mutedRef.current = !mutedRef.current;

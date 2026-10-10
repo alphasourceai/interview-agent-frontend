@@ -22,7 +22,7 @@ test("option three shell includes the tour card and sidebar support action", () 
   assert.match(layout, /Quick guide/i);
   assert.match(layout, /Need a refresher\?/);
   assert.match(layout, /Replay the dashboard tour/);
-  assert.match(layout, /<SupportVoicePopover \/>/);
+  assert.match(layout, /<EligibleSupportVoice/);
   assert.match(layout, /aria-label="Start dashboard tour"/);
   assert.match(layout, /min-h-0 flex-1 py-4/);
   assert.match(support, /placement = "sidebar"/);

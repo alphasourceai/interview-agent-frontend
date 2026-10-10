@@ -137,7 +137,7 @@ const PRICING_OFFERS = [
     url: routeUrl("/alphascreen/pricing"),
     priceCurrency: "USD",
     description:
-      "Essential monthly membership: $299 monthly platform membership plus $399 per role. Includes 20 interviews per role and $30 additional interviews.",
+      "Essential monthly membership: $299 monthly platform membership plus $399 per role. Includes 20 interviews per role and $25 additional interviews.",
     priceSpecification: [
       { "@type": "UnitPriceSpecification", price: "299", priceCurrency: "USD", unitText: "monthly platform membership" },
       { "@type": "UnitPriceSpecification", price: "399", priceCurrency: "USD", unitText: "per role" },
@@ -150,7 +150,7 @@ const PRICING_OFFERS = [
     url: routeUrl("/alphascreen/pricing"),
     priceCurrency: "USD",
     description:
-      "Essential annual membership: $3,299 annual platform membership plus $399 per role. Includes 20 interviews per role and $30 additional interviews.",
+      "Essential annual membership: $3,299 annual platform membership plus $399 per role. Includes 20 interviews per role and $25 additional interviews.",
     priceSpecification: [
       { "@type": "UnitPriceSpecification", price: "3299", priceCurrency: "USD", unitText: "annual platform membership" },
       { "@type": "UnitPriceSpecification", price: "399", priceCurrency: "USD", unitText: "per role" },
@@ -163,7 +163,7 @@ const PRICING_OFFERS = [
     url: routeUrl("/alphascreen/pricing"),
     priceCurrency: "USD",
     description:
-      "Pro monthly membership: $599 monthly platform membership plus $699 per role. Includes 30 interviews per role and $35 additional interviews.",
+      "Pro monthly membership: $599 monthly platform membership plus $699 per role. Includes 30 interviews per role and $30 additional interviews.",
     priceSpecification: [
       { "@type": "UnitPriceSpecification", price: "599", priceCurrency: "USD", unitText: "monthly platform membership" },
       { "@type": "UnitPriceSpecification", price: "699", priceCurrency: "USD", unitText: "per role" },
@@ -176,7 +176,7 @@ const PRICING_OFFERS = [
     url: routeUrl("/alphascreen/pricing"),
     priceCurrency: "USD",
     description:
-      "Pro annual membership: $6,499 annual platform membership plus $699 per role. Includes 30 interviews per role and $35 additional interviews.",
+      "Pro annual membership: $6,499 annual platform membership plus $699 per role. Includes 30 interviews per role and $30 additional interviews.",
     priceSpecification: [
       { "@type": "UnitPriceSpecification", price: "6499", priceCurrency: "USD", unitText: "annual platform membership" },
       { "@type": "UnitPriceSpecification", price: "699", priceCurrency: "USD", unitText: "per role" },

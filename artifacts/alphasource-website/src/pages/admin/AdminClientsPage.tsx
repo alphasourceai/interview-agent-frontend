@@ -5,6 +5,7 @@ import {
 import AdminLayout from "@/components/AdminLayout";
 import { useAdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
+import EnterpriseModelPreparation from "@/components/EnterpriseModelPreparation";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -1644,6 +1645,7 @@ export default function AdminClientsPage() {
                             </div>
 
                             {/* Enterprise extra fields */}
+                            {cpPlan === "enterprise" && <EnterpriseModelPreparation />}
                             {cpPlan === "enterprise" && (
                               <div className="grid grid-cols-2 gap-2 mb-2">
                                 {["Membership ($)", "Per-role fee ($)", "Included interviews", "Add'l Interview Fee ($)"].map((ph) => (
