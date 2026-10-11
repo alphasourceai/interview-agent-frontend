@@ -6,6 +6,8 @@ import AdminLayout from "@/components/AdminLayout";
 import { useAdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
 import EnterpriseModelPreparation from "@/components/EnterpriseModelPreparation";
+import { defaultEnterpriseAgreementFields, enterpriseAgreementFieldError, enterpriseAgreementSettingsPayload } from "@/lib/enterpriseAgreementFields";
+import type { EnterpriseAgreementFields } from "@/lib/enterpriseAgreementFields";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -349,6 +351,7 @@ export default function AdminClientsPage() {
   const [enterprisePerRoleFees, setEnterprisePerRoleFees] = useState<Record<string, string>>({});
   const [enterpriseIncludedInterviews, setEnterpriseIncludedInterviews] = useState<Record<string, string>>({});
   const [enterpriseAdditionalFees, setEnterpriseAdditionalFees] = useState<Record<string, string>>({});
+  const [enterpriseSettings, setEnterpriseSettings] = useState<Record<string, EnterpriseAgreementFields>>({});
   const [legacyCheckoutConfirmClientId, setLegacyCheckoutConfirmClientId] = useState<string | null>(null);
   const [entityModalParent, setEntityModalParent] = useState<Client | null>(null);
   const [entityCreateBusy, setEntityCreateBusy] = useState(false);
@@ -881,10 +884,17 @@ export default function AdminClientsPage() {
     };
 
     if (plan_tier === "enterprise") {
+      const settings = enterpriseSettings[clientId] || defaultEnterpriseAgreementFields();
+      const settingsError = enterpriseAgreementFieldError(settings);
+      if (settingsError) {
+        setActionNotice({ tone: "error", text: settingsError });
+        return;
+      }
+      const usage = settings.billingModel === "usage";
       const platform_fee = String(enterprisePlatformFees[clientId] ?? "").trim();
-      const per_role_fee = String(enterprisePerRoleFees[clientId] ?? "").trim();
-      const included_interviews_per_role = String(enterpriseIncludedInterviews[clientId] ?? "").trim();
-      const additional_interview_fee = String(enterpriseAdditionalFees[clientId] ?? "").trim();
+      const per_role_fee = usage ? "0" : String(enterprisePerRoleFees[clientId] ?? "").trim();
+      const included_interviews_per_role = usage ? "0" : String(enterpriseIncludedInterviews[clientId] ?? "").trim();
+      const additional_interview_fee = usage ? "0" : String(enterpriseAdditionalFees[clientId] ?? "").trim();
       if (!platform_fee || !per_role_fee || !included_interviews_per_role || !additional_interview_fee) {
         setActionNotice({ tone: "error", text: "All enterprise fee fields are required." });
         return;
@@ -893,6 +903,7 @@ export default function AdminClientsPage() {
       payload.per_role_fee = per_role_fee;
       payload.included_interviews_per_role = included_interviews_per_role;
       payload.additional_interview_fee = additional_interview_fee;
+      Object.assign(payload, enterpriseAgreementSettingsPayload(settings));
     }
 
     setActionNotice(null);
@@ -1645,10 +1656,15 @@ export default function AdminClientsPage() {
                             </div>
 
                             {/* Enterprise extra fields */}
-                            {cpPlan === "enterprise" && <EnterpriseModelPreparation />}
+                            {cpPlan === "enterprise" ? <EnterpriseModelPreparation
+                              value={enterpriseSettings[client.id] || defaultEnterpriseAgreementFields()}
+                              onChange={(next) => setEnterpriseSettings((previous) => ({ ...previous, [client.id]: next }))}
+                            /> : null}
                             {cpPlan === "enterprise" && (
                               <div className="grid grid-cols-2 gap-2 mb-2">
-                                {["Membership ($)", "Per-role fee ($)", "Included interviews", "Add'l Interview Fee ($)"].map((ph) => (
+                                {((enterpriseSettings[client.id]?.billingModel === "usage")
+                                  ? ["Membership ($)"]
+                                  : ["Membership ($)", "Per-role fee ($)", "Included interviews", "Add'l Interview Fee ($)"]).map((ph) => (
                                   <input
                                     key={ph}
                                     className={inputCls}

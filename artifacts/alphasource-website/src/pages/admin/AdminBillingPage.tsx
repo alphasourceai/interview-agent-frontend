@@ -6,6 +6,8 @@ import { useAdminClient, type AdminClient } from "@/context/AdminClientContext";
 import { supabase } from "@/lib/supabaseClient";
 import BillingModelPanel from "@/components/BillingModelPanel";
 import EnterpriseModelPreparation from "@/components/EnterpriseModelPreparation";
+import { defaultEnterpriseAgreementFields, enterpriseAgreementFieldError, enterpriseAgreementSettingsPayload } from "@/lib/enterpriseAgreementFields";
+import type { EnterpriseAgreementFields } from "@/lib/enterpriseAgreementFields";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 
 /* ── Types ───────────────────────────────────────────────────── */
@@ -527,6 +529,7 @@ export default function AdminBillingPage() {
   const [agreementClientMode, setAgreementClientMode] = useState<AgreementClientMode>("attach_existing_client");
   const [agreementAttachedClientId, setAgreementAttachedClientId] = useState("");
   const [agreementForm, setAgreementForm] = useState<AgreementFormValues>(defaultAgreementFormValues);
+  const [enterpriseFields, setEnterpriseFields] = useState<EnterpriseAgreementFields>(defaultEnterpriseAgreementFields);
   const [agreementFieldErrors, setAgreementFieldErrors] = useState<AgreementFieldErrors>({});
   const [agreementError, setAgreementError] = useState("");
   const [agreementSuccess, setAgreementSuccess] = useState("");
@@ -791,16 +794,17 @@ export default function AdminBillingPage() {
         : null,
     per_role_fee:
       agreementForm.membershipTier === "enterprise"
-        ? agreementForm.perRoleFee.trim()
+        ? enterpriseFields.billingModel === "usage" ? "0" : agreementForm.perRoleFee.trim()
         : null,
     additional_interview_fee:
       agreementForm.membershipTier === "enterprise"
-        ? agreementForm.additionalInterviewFee.trim()
+        ? enterpriseFields.billingModel === "usage" ? "0" : agreementForm.additionalInterviewFee.trim()
         : null,
     included_interviews_per_role:
       agreementForm.membershipTier === "enterprise"
-        ? agreementForm.includedInterviewsPerRole.trim()
+        ? enterpriseFields.billingModel === "usage" ? "0" : agreementForm.includedInterviewsPerRole.trim()
         : null,
+    ...(agreementForm.membershipTier === "enterprise" ? enterpriseAgreementSettingsPayload(enterpriseFields) : {}),
     initial_term_start: agreementForm.initialTermStart.trim(),
     initial_renewal_date: agreementForm.initialRenewalDate.trim(),
     billing_option: agreementForm.billingOption,
@@ -841,14 +845,20 @@ export default function AdminBillingPage() {
       errors.candidateAssistanceContact = "Candidate assistance contact is required.";
     }
     if (agreementForm.membershipTier === "enterprise") {
+      const settingsError = enterpriseAgreementFieldError(enterpriseFields);
+      if (settingsError) {
+        setAgreementError(settingsError);
+        return false;
+      }
       const platformFee = String(agreementForm.platformFee || "").trim();
       const perRoleFee = String(agreementForm.perRoleFee || "").trim();
       const additionalInterviewFee = String(agreementForm.additionalInterviewFee || "").trim();
       const includedInterviews = String(agreementForm.includedInterviewsPerRole || "").trim();
       if (!platformFee) errors.platformFee = "Membership fee is required for enterprise tier.";
-      else if (!Number.isFinite(Number(platformFee)) || Number(platformFee) < 0) {
+      else if (!Number.isFinite(Number(platformFee)) || Number(platformFee) <= 0) {
         errors.platformFee = "Enter a valid membership fee.";
       }
+      if (enterpriseFields.billingModel !== "usage") {
       if (!perRoleFee) errors.perRoleFee = "Per-role fee is required for enterprise tier.";
       else if (!Number.isFinite(Number(perRoleFee)) || Number(perRoleFee) < 0) {
         errors.perRoleFee = "Enter a valid per-role fee.";
@@ -860,8 +870,9 @@ export default function AdminBillingPage() {
       }
       if (!includedInterviews) {
         errors.includedInterviewsPerRole = "Included interviews is required for enterprise tier.";
-      } else if (!Number.isInteger(Number(includedInterviews)) || Number(includedInterviews) < 1) {
+      } else if (!Number.isInteger(Number(includedInterviews)) || Number(includedInterviews) < 0) {
         errors.includedInterviewsPerRole = "Enter a whole number of included interviews.";
+      }
       }
     }
 
@@ -1378,6 +1389,7 @@ export default function AdminBillingPage() {
     setAgreementReplacementModalOpen(false);
     setAgreementReplacementPendingAction(null);
     setAgreementReplacementDetails(null);
+    setEnterpriseFields(defaultEnterpriseAgreementFields());
   }, [agreementClientMode, scopedAgreementClientId]);
 
   const card = "rounded-2xl mb-5 overflow-hidden";
@@ -1386,6 +1398,7 @@ export default function AdminBillingPage() {
 
   const handleClearAgreementTextFields = () => {
     const defaults = defaultAgreementFormValues();
+    setEnterpriseFields(defaultEnterpriseAgreementFields());
     if (agreementClientMode === "attach_existing_client") {
       setAgreementAttachedClientId("");
     }
@@ -1678,7 +1691,11 @@ export default function AdminBillingPage() {
           </div>
           {agreementForm.membershipTier === "enterprise" ? (
             <div className="space-y-3 pt-1">
-              <EnterpriseModelPreparation />
+              <EnterpriseModelPreparation value={enterpriseFields} onChange={(next) => {
+                setEnterpriseFields(next);
+                setAgreementError("");
+                setAgreementFieldErrors({});
+              }} />
               <p className="px-1 text-[10px] font-black uppercase tracking-widest" style={mutedTextStyle}>
                 Enterprise Pricing Configuration
               </p>
@@ -1700,6 +1717,7 @@ export default function AdminBillingPage() {
                     <p className={fieldErrorCls}>{agreementFieldErrors.platformFee}</p>
                   ) : null}
                 </div>
+                {enterpriseFields.billingModel !== "usage" ? <>
                 <div className="space-y-1">
                   <p className={fieldLabelCls}>
                     Per-Role Fee<span className="text-red-500">{REQUIRED_MARK}</span>
@@ -1724,7 +1742,7 @@ export default function AdminBillingPage() {
                   <input
                     className={inputCls}
                     type="number"
-                    min="1"
+                    min="0"
                     step="1"
                     placeholder="0"
                     value={agreementForm.includedInterviewsPerRole}
@@ -1751,6 +1769,7 @@ export default function AdminBillingPage() {
                     <p className={fieldErrorCls}>{agreementFieldErrors.additionalInterviewFee}</p>
                   ) : null}
                 </div>
+                </> : null}
               </div>
             </div>
           ) : null}
