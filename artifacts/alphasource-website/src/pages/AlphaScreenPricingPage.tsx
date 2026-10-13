@@ -18,6 +18,10 @@ import { PUBLIC_CONTENT_LAST_UPDATED } from "@/lib/publicContent";
 import PatentPendingBadge from "@/components/PatentPendingBadge";
 import { AlphaScreenBreathingLockup, AlphaScreenMark } from "@/components/AlphaScreenBrand";
 import { getPublicBackendBase, joinUrl } from "@/lib/urlConfig";
+import { MembershipTermsSelector } from "@/components/MembershipTermsSelector";
+import { membershipMoney, selectedMembershipOffer, type MembershipOfferSelection } from "@/lib/membershipTerms";
+import { type MembershipQuoteCatalog, type RetailPlanDisplay } from "@/lib/membershipQuoteCatalog";
+import { verifiedPublicCatalog, publicRetailQuotePayload, savedPublicMembershipTerms } from "@/lib/publicMembershipQuote";
 import {
   SMS_CONSENT_COPY_VERSION,
   SMS_CONSENT_DISCLOSURE,
@@ -112,6 +116,14 @@ type PurchaseIntentResult = {
     additional_interview_fee?: number;
     per_role_fee?: number;
     first_role_prepay?: Partial<FirstRolePrepay>;
+    included_interviews_per_role?: number;
+    scored_question_count?: number;
+    commitment_months?: number;
+    payment_option?: string;
+    pricing_version?: string;
+    platform_commitment_total_cents?: number;
+    billing_model?: string;
+    rollover_days?: number | null;
   };
   email_verification?: {
     verified?: boolean;
@@ -398,8 +410,9 @@ function cleanText(value: string, max: number): string {
   return String(value || "").trim().slice(0, max);
 }
 
-function buildPurchasePayload(form: PurchaseIntentForm, selectedPlan: AlphaScreenPackage) {
-  return {
+function buildPurchasePayload(form: PurchaseIntentForm, selectedPlan: AlphaScreenPackage,
+  catalog: MembershipQuoteCatalog | null = null, selection: MembershipOfferSelection | null = null) {
+  const identity = {
     plan_key: selectedPlan.plan_key,
     billing_cadence: form.billing_cadence || defaultCadence(selectedPlan),
     company_legal_name: cleanText(form.company_legal_name, 120),
@@ -414,6 +427,7 @@ function buildPurchasePayload(form: PurchaseIntentForm, selectedPlan: AlphaScree
     agreement_acknowledged: form.agreement_acknowledged,
     contact_acknowledged: form.contact_acknowledged,
   };
+  return catalog ? publicRetailQuotePayload(identity, catalog, selection, selectedPlan.plan_key as "basic" | "pro") : identity;
 }
 
 function purchasePayloadKey(payload: ReturnType<typeof buildPurchasePayload>): string {
@@ -536,6 +550,20 @@ function normalizePackages(rawPackages: unknown): AlphaScreenPackage[] {
   return FALLBACK_PACKAGES.map((fallback) => byKey.get(fallback.plan_key) || fallback);
 }
 
+function retailDisplayPackage(plan: RetailPlanDisplay): AlphaScreenPackage {
+  // Legacy monthly/year fields are unused for v2; never translate a prepaid
+  // term into a legacy annual fee. All visible financial values come from offers.
+  return { plan_key: plan.plan_key, display_name: plan.display_name,
+    platform_monthly_fee: 0, platform_monthly_fee_cents: 0, platform_annual_fee: 0, platform_annual_fee_cents: 0,
+    annual_platform_fee_note: "", included_interviews: plan.included_interviews_per_role,
+    included_interviews_per_role: plan.included_interviews_per_role, interview_duration_minutes: plan.max_interview_minutes,
+    max_interview_minutes: plan.max_interview_minutes, additional_interview_price: plan.additional_interview_fee_cents / 100,
+    additional_interview_fee: plan.additional_interview_fee_cents / 100, overage_price: plan.additional_interview_fee_cents / 100,
+    per_role_fee: plan.per_role_fee_cents / 100, billing_cadences: [],
+    first_role_prepay: { enabled: true, selected: false, normal_role_fee_cents: plan.per_role_fee_cents,
+      discounted_credit_amount_cents: plan.first_role_prepay_price_cents, discount_percent: 0, non_refundable: true, expires: false } };
+}
+
 function formatUsd(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -632,11 +660,15 @@ function PlanCard({
   selected,
   billingCadence,
   onStart,
+  catalog,
+  available,
 }: {
   plan: AlphaScreenPackage;
   selected: boolean;
   billingCadence: BillingCadenceKey;
   onStart: (plan: AlphaScreenPackage) => void;
+  catalog: MembershipQuoteCatalog | null;
+  available: boolean;
 }) {
   const accent = PLAN_ACCENTS[plan.plan_key] || PLAN_ACCENTS.basic;
   const included = plan.included_interviews_per_role || plan.included_interviews;
@@ -666,14 +698,20 @@ function PlanCard({
 
       <div className="mb-5">
         <div className="flex items-end gap-2">
-          <span className="text-4xl font-black tracking-normal text-[#0A1547]">{formatPlatformFee(plan, billingCadence)}</span>
-          <span className="pb-1.5 text-sm font-bold text-[#0A1547]/55">{platformSuffix}</span>
+          <span className="text-4xl font-black tracking-normal text-[#0A1547]">{catalog ? "3 / 6 / 12" : formatPlatformFee(plan, billingCadence)}</span>
+          <span className="pb-1.5 text-sm font-bold text-[#0A1547]/55">{catalog ? "months" : platformSuffix}</span>
         </div>
+        {catalog ? <div className="mt-3 grid gap-1 text-sm font-bold text-[#0A1547]">
+          {catalog.offers.filter(offer => offer.plan_key === plan.plan_key).map(offer => <p key={offer.offer_key}>
+            {offer.commitment_months} months: {membershipMoney(offer.platform_payment_cents)} upfront
+          </p>)}
+        </div> : null}
         <p className="mt-2 text-sm font-black text-[#0A1547]">+ {formatUsd(plan.per_role_fee)} / role</p>
         <p className="mt-1 text-xs font-bold text-[#0A1547]/55">
-          New self-serve buyers can optionally prepay their first role during signup and save 10% on that first role.
+          {catalog ? `Optional first-role prepay: ${membershipMoney(catalog.plans[plan.plan_key as "basic" | "pro"].first_role_prepay_price_cents)}, once. It does not renew.`
+            : "New self-serve buyers can optionally prepay their first role during signup and save 10% on that first role."}
         </p>
-        {billingCadence === "annual" ? (
+        {!catalog && billingCadence === "annual" ? (
           <p className="mt-1 text-xs font-bold text-[#0A1547]/55">
             Annual platform pricing is discounted and billed upfront.
           </p>
@@ -700,7 +738,10 @@ function PlanCard({
       </div>
 
       <div className="mt-5 grid gap-2">
-        {["On-Demand PDF Reports", "Email support"].map((item) => (
+        {["On-Demand PDF Reports", "Email support", ...(catalog ? [
+          `${catalog.plans[plan.plan_key as "basic" | "pro"].scored_question_count} scored questions`,
+          plan.plan_key === "basic" ? "No support chat" : `${catalog.plans.pro.rollover_days}-day closed-role interview rollover`,
+        ] : [])].map((item) => (
           <div key={item} className="flex items-center gap-2 text-sm font-bold text-[#0A1547]/70">
             <CheckCircle className="h-4 w-4 flex-shrink-0" style={{ color: accent.color }} />
             <span>{item}</span>
@@ -712,7 +753,8 @@ function PlanCard({
         <button
           type="button"
           onClick={() => onStart(plan)}
-          className="min-h-12 w-full rounded-full px-4 py-3 text-sm font-black text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0"
+          disabled={!available}
+          className="min-h-12 w-full rounded-full px-4 py-3 text-sm font-black text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
           style={{
             backgroundColor: selected ? "#0A1547" : accent.color,
             boxShadow: selected ? "0 14px 28px rgba(10,21,71,0.22)" : `0 14px 28px ${accent.color}33`,
@@ -849,6 +891,10 @@ function PurchaseIntentPanel({
   onContinueToAgreement,
   onBackToPricing,
   onBackToSignup,
+  catalog,
+  selection,
+  onSelectionChange,
+  catalogAvailable,
 }: {
   selectedPlan: AlphaScreenPackage | null;
   form: PurchaseIntentForm;
@@ -875,6 +921,10 @@ function PurchaseIntentPanel({
   onContinueToAgreement: () => void;
   onBackToPricing: () => void;
   onBackToSignup: () => void;
+  catalog: MembershipQuoteCatalog | null;
+  selection: MembershipOfferSelection | null;
+  onSelectionChange: (selection: MembershipOfferSelection) => void;
+  catalogAvailable: boolean;
 }) {
   if (!selectedPlan) {
     return (
@@ -887,19 +937,38 @@ function PurchaseIntentPanel({
     );
   }
 
-  const included = selectedPlan.included_interviews_per_role || selectedPlan.included_interviews;
-  const duration = selectedPlan.max_interview_minutes || selectedPlan.interview_duration_minutes;
-  const overage = selectedPlan.additional_interview_fee || selectedPlan.additional_interview_price || selectedPlan.overage_price;
+  const savedPackage = agreementResult?.agreement?.selected_package ?? result?.selected_package;
+  if (result?.purchase_intent_id && (!savedPackage || typeof savedPackage.platform_fee_cents !== "number"
+    || !Number.isSafeInteger(savedPackage.platform_fee_cents) || savedPackage.platform_fee_cents <= 0)) {
+    return <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">Your saved membership summary could not be verified. Contact support to resume this signup. No new quote or payment has been created.</div>;
+  }
+  let savedTerms: ReturnType<typeof savedPublicMembershipTerms>;
+  try { savedTerms = savedPublicMembershipTerms(savedPackage); }
+  catch (_) { return <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700">Your saved membership summary could not be verified. Contact support with your signup details; no new quote or payment has been created.</div>; }
+  const savedQuoteLocked = Boolean(result?.purchase_intent_id);
+  const newRetail = savedQuoteLocked ? Boolean(savedTerms) : Boolean(catalog);
+  const offer = !savedQuoteLocked && catalog ? selectedMembershipOffer(catalog.offers, selection, selectedPlan.plan_key as "basic" | "pro") : null;
+  const currentMeta = !savedQuoteLocked && catalog ? catalog.plans[selectedPlan.plan_key as "basic" | "pro"] : null;
+  const months = savedTerms?.commitment_months ?? offer?.commitment_months;
+  const included = savedPackage?.included_interviews_per_role ?? savedPackage?.included_interviews ?? selectedPlan.included_interviews_per_role;
+  const duration = savedPackage?.max_interview_minutes ?? savedPackage?.interview_duration_minutes ?? selectedPlan.max_interview_minutes;
+  const overage = savedPackage?.additional_interview_fee ?? savedPackage?.additional_interview_price ?? selectedPlan.additional_interview_fee;
   const options = cadenceOptions(selectedPlan);
-  const planName = result?.selected_package?.display_name || selectedPlan.display_name;
+  const planName = savedPackage?.display_name || selectedPlan.display_name;
   const billingCadence = form.billing_cadence === "annual" ? "annual" : "monthly";
-  const selectedPlatformFee = result?.selected_package?.platform_fee ?? platformFeeForCadence(selectedPlan, billingCadence);
-  const selectedPlatformFeeLabel = formatUsd(selectedPlatformFee);
-  const standardFirstRoleFee = firstRoleStandardFee(selectedPlan);
-  const discountedFirstRoleFee = firstRolePrepayFee(selectedPlan);
+  const selectedPlatformFee = savedTerms ? savedTerms.platform_fee_cents / 100 : offer ? offer.platform_payment_cents / 100
+    : newRetail ? 0 : savedPackage?.platform_fee ?? platformFeeForCadence(selectedPlan, billingCadence);
+  const formatAmount = newRetail ? (value: number) => membershipMoney(Math.round(value * 100)) : formatUsd;
+  const selectedPlatformFeeLabel = newRetail && !months ? "Choose a term" : formatAmount(selectedPlatformFee);
+  const standardFirstRoleFee = savedPackage?.per_role_fee ?? selectedPlan.per_role_fee;
+  const discountedFirstRoleFee = savedTerms ? savedTerms.first_role_price_cents / 100 : currentMeta ? currentMeta.first_role_prepay_price_cents / 100
+    : savedPackage?.first_role_prepay?.discounted_credit_amount_cents ? savedPackage.first_role_prepay.discounted_credit_amount_cents / 100 : firstRolePrepayFee(selectedPlan);
   const firstRoleDiscount = firstRoleDiscountPercent(selectedPlan);
-  const prepaySelected = form.first_role_prepay_selected === true;
+  const prepaySelected = savedQuoteLocked ? savedPackage?.first_role_prepay?.selected === true : form.first_role_prepay_selected === true;
   const totalDueToday = selectedPlatformFee + (prepaySelected ? discountedFirstRoleFee : 0);
+  const termLabel = newRetail ? months ? `${months} months, prepaid` : "Choose a prepaid term"
+    : cadenceLabel(selectedPlan, savedPackage?.billing_cadence || form.billing_cadence);
+  const renewalCopy = newRetail ? `Your ${months || "selected"}-month term starts when your first payment succeeds. Auto-renew is on for the same term at your accepted platform price. You may turn it off any time before term end. Access lasts the full prepaid term; refunds are limited to exceptions in your accepted agreement.` : "";
 
   if (status === "success" && result) {
     const signingUrl = agreementSigningHref(agreementResult);
@@ -941,19 +1010,20 @@ function PurchaseIntentPanel({
           <div className="rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-4">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0A1547]/45">Membership</p>
             <p className="mt-2 text-sm font-black text-[#0A1547]">
-              {planName} membership - {cadenceLabel(selectedPlan, form.billing_cadence)}
+              {planName} membership - {termLabel}
             </p>
             <p className="mt-1 text-xs font-semibold text-[#0A1547]/55">
-              {selectedPlatformFeeLabel} platform, {formatUsd(selectedPlan.per_role_fee)} / role
+              {selectedPlatformFeeLabel} platform, {formatAmount(standardFirstRoleFee)} / role
             </p>
             <p className="mt-1 text-xs font-semibold text-[#0A1547]/55">
               {prepaySelected
-                ? `First role prepaid at ${formatUsd(discountedFirstRoleFee)} today.`
+                ? `First role prepaid at ${formatAmount(discountedFirstRoleFee)} today.`
                 : "First role billed later when opened."}
             </p>
             <p className="mt-1 text-xs font-semibold text-[#0A1547]/55">
-              {included} interviews, {duration}-minute cap, {formatUsd(overage)} additional interviews
+              {included} interviews, {duration}-minute cap, {formatAmount(overage)} additional interviews
             </p>
+            {newRetail ? <p className="mt-2 text-xs font-semibold text-[#0A1547]/55">{savedTerms?.scored_question_count} scored questions. {renewalCopy}</p> : null}
           </div>
           <div className="rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-4">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0A1547]/45">Company</p>
@@ -972,13 +1042,13 @@ function PurchaseIntentPanel({
           <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0A1547]/45">Order summary</p>
           <div className="mt-3 space-y-2 text-sm font-semibold text-[#0A1547]/65">
             <div className="flex items-center justify-between gap-3">
-              <span>{planName} membership - {cadenceLabel(selectedPlan, form.billing_cadence)}</span>
+              <span>{planName} membership - {termLabel}</span>
               <span className="font-black text-[#0A1547]">{selectedPlatformFeeLabel}</span>
             </div>
             {prepaySelected ? (
               <div className="flex items-center justify-between gap-3">
                 <span>Discounted first-role prepay</span>
-                <span className="font-black text-[#0A1547]">{formatUsd(discountedFirstRoleFee)}</span>
+                <span className="font-black text-[#0A1547]">{formatAmount(discountedFirstRoleFee)}</span>
               </div>
             ) : (
               <div className="flex items-center justify-between gap-3">
@@ -989,7 +1059,7 @@ function PurchaseIntentPanel({
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-[#0A1547]/10 pt-3">
             <span className="text-sm font-black text-[#0A1547]">Total due today</span>
-            <span className="text-base font-black text-[#0A1547]">{formatUsd(totalDueToday)}</span>
+            <span className="text-base font-black text-[#0A1547]">{formatAmount(totalDueToday)}</span>
           </div>
         </div>
         <div className="mt-6 grid gap-3 rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-4 md:grid-cols-3">
@@ -1215,16 +1285,18 @@ function PurchaseIntentPanel({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#A380F6]">Membership details</p>
-          <h3 className="mt-2 text-2xl font-black text-[#0A1547]">Start {selectedPlan.display_name} membership</h3>
+          <h3 className="mt-2 text-2xl font-black text-[#0A1547]">{savedQuoteLocked ? "Resume" : "Start"} {planName} membership</h3>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#0A1547]/60">
             Share the buyer and company details for agreement review. Payment is handled later through secure checkout.
           </p>
         </div>
         <div className="rounded-lg bg-[#F8F9FD] px-4 py-3 text-sm font-bold text-[#0A1547]/65">
-          {selectedPlatformFeeLabel} membership today - {prepaySelected ? `${formatUsd(discountedFirstRoleFee)} first role today` : `${formatUsd(selectedPlan.per_role_fee)} role fee later`}
+          {selectedPlatformFeeLabel} membership today - {prepaySelected ? `${formatAmount(discountedFirstRoleFee)} first role today` : `${formatAmount(standardFirstRoleFee)} role fee later`}
         </div>
       </div>
 
+      {savedQuoteLocked ? <p role="status" className="mt-5 text-sm font-bold text-[#0A1547]">These signup details and prices are saved. Continue to resume the same signup; the current catalog will not change it.</p> : null}
+      <fieldset disabled={savedQuoteLocked || status === "submitting"}>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <PurchaseTextField
           label="Company legal name"
@@ -1289,7 +1361,7 @@ function PurchaseIntentPanel({
           maxLength={100}
           autoComplete="organization-title"
         />
-        <label className="block">
+        {!newRetail ? <label className="block">
           <span className="mb-1.5 block text-sm font-black text-[#0A1547]">Billing cadence</span>
           <select
             value={form.billing_cadence}
@@ -1302,10 +1374,16 @@ function PurchaseIntentPanel({
               </option>
             ))}
           </select>
-        </label>
+        </label> : null}
       </div>
 
-      <div className="mt-6 grid gap-3 rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-4">
+      {newRetail && !savedQuoteLocked && catalog ? <div className="mt-6"><MembershipTermsSelector
+        offers={catalog.offers} audience="public" planKey={selectedPlan.plan_key as "basic" | "pro"}
+        selection={selection} onChange={onSelectionChange} disabled={status === "submitting"}
+        firstRoleSelected={prepaySelected} firstRolePriceCents={currentMeta?.first_role_prepay_price_cents}
+      /></div> : null}
+
+      {!savedQuoteLocked ? <div className="mt-6 grid gap-3 rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-4">
         <div>
           <p className="text-sm font-black text-[#0A1547]">First role payment</p>
           <p className="mt-1 text-xs font-semibold leading-relaxed text-[#0A1547]/55">
@@ -1344,14 +1422,15 @@ function PurchaseIntentPanel({
               <span className="block text-sm font-black text-[#0A1547]">
                 <span className="relative inline-flex px-2 text-[#0A1547]">
                   <span className="absolute -inset-x-0.5 inset-y-0 rounded-md bg-yellow-200/80" aria-hidden="true" />
-                  <span className="relative">Purchase first role now and save {firstRoleDiscount}%</span>
+                  <span className="relative">{newRetail ? "Prepay the first role once" : `Purchase first role now and save ${firstRoleDiscount}%`}</span>
                 </span>
               </span>
               <span className="mt-1 block text-xs font-semibold leading-relaxed text-[#0A1547]/60">
-                Add your first role to today&apos;s checkout at a one-time {firstRoleDiscount}% discount. Your first role will be prepaid, and additional roles are billed at the standard role fee.
+                {newRetail ? "Add a one-time first-role prepayment. It does not renew. Additional roles are billed at the standard role fee."
+                  : `Add your first role to today's checkout at a one-time ${firstRoleDiscount}% discount. Your first role will be prepaid, and additional roles are billed at the standard role fee.`}
               </span>
               <span className="mt-2 block text-xs font-black text-[#0A1547]">
-                {formatUsd(discountedFirstRoleFee)} now instead of {formatUsd(standardFirstRoleFee)}
+                {formatAmount(discountedFirstRoleFee)} now instead of {formatAmount(standardFirstRoleFee)}
               </span>
             </span>
           </label>
@@ -1359,19 +1438,19 @@ function PurchaseIntentPanel({
         <p className="text-xs font-semibold leading-relaxed text-[#0A1547]/55">
           If selected, your initial Stripe Checkout includes the membership fee plus the discounted first-role fee. This one-time website signup offer creates a non-refundable first-role credit with no expiration, usable by the parent or child entity under the same billing account.
         </p>
-      </div>
+      </div> : null}
 
       <div className="mt-6 rounded-lg border border-[#0A1547]/10 bg-white p-4">
         <p className="text-sm font-black text-[#0A1547]">Order summary</p>
         <div className="mt-3 space-y-2 text-sm font-semibold text-[#0A1547]/65">
           <div className="flex items-center justify-between gap-3">
-            <span>{selectedPlan.display_name} membership - {cadenceLabel(selectedPlan, form.billing_cadence)}</span>
+            <span>{planName} membership - {termLabel}</span>
             <span className="font-black text-[#0A1547]">{selectedPlatformFeeLabel}</span>
           </div>
           {prepaySelected ? (
             <div className="flex items-center justify-between gap-3">
               <span>Discounted first-role prepay</span>
-              <span className="font-black text-[#0A1547]">{formatUsd(discountedFirstRoleFee)}</span>
+              <span className="font-black text-[#0A1547]">{formatAmount(discountedFirstRoleFee)}</span>
             </div>
           ) : (
             <div className="flex items-center justify-between gap-3">
@@ -1382,13 +1461,14 @@ function PurchaseIntentPanel({
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-[#0A1547]/10 pt-3">
           <span className="text-sm font-black text-[#0A1547]">Total due today</span>
-          <span className="text-base font-black text-[#0A1547]">{formatUsd(totalDueToday)}</span>
+          <span className="text-base font-black text-[#0A1547]">{newRetail && !months ? "Choose a term" : formatAmount(totalDueToday)}</span>
         </div>
         <p className="mt-2 text-xs font-semibold leading-relaxed text-[#0A1547]/50">
           {prepaySelected
             ? "Today's checkout includes the membership fee and discounted first-role fee."
             : "Today's checkout includes the membership fee only. Role fees are billed when roles are opened."}
         </p>
+        {newRetail ? <p className="mt-3 text-xs leading-relaxed text-[#0A1547]/60">{renewalCopy}</p> : null}
       </div>
 
       <div className="mt-6 grid gap-3">
@@ -1412,6 +1492,8 @@ function PurchaseIntentPanel({
         </label>
       </div>
 
+      </fieldset>
+
       {error ? (
         <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">
           {error}
@@ -1421,7 +1503,7 @@ function PurchaseIntentPanel({
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <button
           type="submit"
-          disabled={status === "submitting"}
+          disabled={status === "submitting" || (!savedQuoteLocked && (!catalogAvailable || newRetail && !offer))}
           className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0A1547] px-6 py-3.5 text-sm font-black text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           data-analytics-cta="Continue with Signup"
           data-analytics-placement="signup-modal"
@@ -1453,10 +1535,10 @@ function LoadingNotice({ state }: { state: PackageLoadState }) {
 
   const isLoading = state === "loading";
   return (
-    <div className="mb-6 rounded-lg border border-[#0A1547]/10 bg-white px-4 py-3 text-sm font-semibold text-[#0A1547]/65">
+    <div role={isLoading ? "status" : "alert"} className="mb-6 rounded-lg border border-[#0A1547]/10 bg-white px-4 py-3 text-sm font-semibold text-[#0A1547]/65">
       {isLoading
         ? "Loading current alphaScreen membership configuration..."
-        : "Showing current membership defaults while live membership configuration is unavailable."}
+        : "Current pricing could not be verified. Signup is unavailable until pricing loads; displayed defaults are reference only."}
     </div>
   );
 }
@@ -1465,6 +1547,8 @@ export default function AlphaScreenPricingPage() {
   const retailSmsUiEnabled = isRetailSmsUiEnabled(import.meta.env as Record<string, unknown>);
   const [packages, setPackages] = useState<AlphaScreenPackage[]>(FALLBACK_PACKAGES);
   const [loadState, setLoadState] = useState<PackageLoadState>("loading");
+  const [retailCatalog, setRetailCatalog] = useState<MembershipQuoteCatalog | null>(null);
+  const [retailSelection, setRetailSelection] = useState<MembershipOfferSelection | null>(null);
   const purchaseFormStartedRef = useRef(false);
   const purchaseSubmitInFlightRef = useRef(false);
   const emailSendInFlightRef = useRef(false);
@@ -1498,11 +1582,16 @@ export default function AlphaScreenPricingPage() {
           signal: controller.signal,
         });
         if (!response.ok) throw new Error(`Package endpoint returned ${response.status}`);
-        const body = await response.json() as { packages?: unknown };
-        setPackages(normalizePackages(body.packages));
+        const body = await response.json();
+        const verified = verifiedPublicCatalog(body);
+        if (controller.signal.aborted) return;
+        setRetailCatalog(verified.catalog);
+        setPackages(verified.catalog ? Object.values(verified.catalog.plans).map(retailDisplayPackage)
+          : verified.packages.map(pkg => normalizePackage(pkg)!));
         setLoadState("ready");
       } catch (error) {
         if (controller.signal.aborted) return;
+        setRetailCatalog(null);
         setPackages(FALLBACK_PACKAGES);
         setLoadState("fallback");
       }
@@ -1512,7 +1601,7 @@ export default function AlphaScreenPricingPage() {
     return () => controller.abort();
   }, []);
 
-  const planCards = useMemo(() => normalizePackages(packages), [packages]);
+  const planCards = packages;
   const selectedPlan = useMemo(
     () => planCards.find((plan) => plan.plan_key === selectedPlanKey) || null,
     [planCards, selectedPlanKey],
@@ -1520,6 +1609,15 @@ export default function AlphaScreenPricingPage() {
   const smsVerificationAvailable = retailSmsUiEnabled && purchaseResult?.sms_verification?.available === true;
 
   const startPurchase = (plan: AlphaScreenPackage) => {
+    if (purchaseSubmitInFlightRef.current) return;
+    // A saved intent is commercial continuity, not a fresh quote. Closing/back
+    // navigation cannot clear it and sell today's cheaper catalog behind it.
+    if (purchaseResult?.purchase_intent_id) {
+      setPurchaseStatus("success");
+      setCheckoutModalOpen(true);
+      return;
+    }
+    if (loadState !== "ready") return;
     const cadence = planSupportsCadence(plan, selectedBillingCadence) ? selectedBillingCadence : defaultCadence(plan);
     setSelectedPlanKey(plan.plan_key);
     setCheckoutModalOpen(true);
@@ -1528,6 +1626,7 @@ export default function AlphaScreenPricingPage() {
     setPurchaseError("");
     setPurchaseResult(null);
     setPurchaseSubmissionKey("");
+    setRetailSelection(null);
     setAgreementStatus("idle");
     setAgreementError("");
     setAgreementResult(null);
@@ -1539,7 +1638,7 @@ export default function AlphaScreenPricingPage() {
     setEmailVerifyLoading(false);
     setVerificationChannel("email");
     clearCheckoutRecoveryState();
-    setPurchaseForm((prev) => ({ ...prev, billing_cadence: cadence }));
+    setPurchaseForm((prev) => ({ ...prev, billing_cadence: cadence, first_role_prepay_selected: false }));
     trackEvent("signup_started", { plan: plan.plan_key, step: "plan_selection" });
   };
 
@@ -1693,6 +1792,7 @@ export default function AlphaScreenPricingPage() {
   }, [resendCooldownSeconds]);
 
   const updateSelectedBillingCadence = (cadence: BillingCadenceKey) => {
+    if (purchaseResult?.purchase_intent_id || purchaseSubmitInFlightRef.current || retailCatalog) return;
     setSelectedBillingCadence(cadence);
     if (selectedPlan && planSupportsCadence(selectedPlan, cadence)) {
       setPurchaseForm((prev) => ({ ...prev, billing_cadence: cadence }));
@@ -1700,6 +1800,7 @@ export default function AlphaScreenPricingPage() {
   };
 
   const updatePurchaseField = <K extends keyof PurchaseIntentForm>(field: K, value: PurchaseIntentForm[K]) => {
+    if (purchaseResult?.purchase_intent_id || purchaseSubmitInFlightRef.current) return;
     if (!purchaseFormStartedRef.current) {
       purchaseFormStartedRef.current = true;
       trackEvent("lead_form_started", {
@@ -1750,6 +1851,21 @@ export default function AlphaScreenPricingPage() {
   const handlePurchaseSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (purchaseSubmitInFlightRef.current) return;
+    // Resume the existing record without rebuilding its commercial key, even
+    // when today's catalog is down, repriced, or a different cohort is enabled.
+    if (purchaseResult?.purchase_intent_id) {
+      setPurchaseStatus("success");
+      setPurchaseError("");
+      return;
+    }
+    if (loadState !== "ready") {
+      setPurchaseError("Current membership pricing could not be verified. Refresh before starting a new signup.");
+      return;
+    }
+    if (retailCatalog && !selectedMembershipOffer(retailCatalog.offers, retailSelection, selectedPlanKey as "basic" | "pro")) {
+      setPurchaseError("Choose a current prepaid membership term before continuing.");
+      return;
+    }
     const validationMessage = validatePurchaseForm(purchaseForm, selectedPlan);
     trackEvent("lead_form_submit_attempted", {
       form_id: "alphascreen-signup-profile",
@@ -1772,7 +1888,7 @@ export default function AlphaScreenPricingPage() {
     setPurchaseStatus("submitting");
     setPurchaseError("");
 
-    const payload = buildPurchasePayload(purchaseForm, selectedPlan);
+    const payload = buildPurchasePayload(purchaseForm, selectedPlan, retailCatalog, retailSelection);
     const nextSubmissionKey = purchasePayloadKey(payload);
 
     if (purchaseResult?.purchase_intent_id && purchaseSubmissionKey === nextSubmissionKey) {
@@ -2168,12 +2284,13 @@ export default function AlphaScreenPricingPage() {
                 Select Essential or Pro to start membership signup, or choose Enterprise for custom volume and rollout support.
               </p>
             </div>
-            <div className="rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-1">
+            {!retailCatalog ? <div className="rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-1">
               {(["monthly", "annual"] as BillingCadenceKey[]).map((cadence) => (
                 <button
                   key={cadence}
                   type="button"
                   onClick={() => updateSelectedBillingCadence(cadence)}
+                  disabled={loadState !== "ready" || Boolean(purchaseResult?.purchase_intent_id)}
                   className={`rounded-md px-4 py-2 text-sm font-black transition-colors ${
                     selectedBillingCadence === cadence
                       ? "bg-[#0A1547] text-white"
@@ -2183,7 +2300,7 @@ export default function AlphaScreenPricingPage() {
                   {cadence === "annual" ? "Annual" : "Monthly"}
                 </button>
               ))}
-            </div>
+            </div> : <p className="text-sm font-black text-[#0A1547]">Prepaid memberships · 3, 6 or 12 months</p>}
           </div>
           <LoadingNotice state={loadState} />
           <div className="grid gap-5 lg:grid-cols-3">
@@ -2194,14 +2311,15 @@ export default function AlphaScreenPricingPage() {
                 selected={selectedPlanKey === plan.plan_key}
                 billingCadence={selectedBillingCadence}
                 onStart={startPurchase}
+                catalog={retailCatalog}
+                available={Boolean(purchaseResult?.purchase_intent_id) || loadState === "ready"}
               />
             ))}
             <EnterpriseCard />
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-relaxed text-[#0A1547]/55">
-            Annual platform pricing is discounted and billed upfront. Role fees are billed separately when roles are created. Essential additional interviews are $25 each and Pro additional interviews are $30 each at current catalog rates; client-specific signed terms apply. Secure checkout opens after agreement signing.
-            {" "}
-            New self-serve buyers can optionally prepay their first role during signup and save 10% on that first role.
+            {retailCatalog ? "Choose a prepaid 3-, 6- or 12-month membership. Your term begins when payment succeeds and renews at the same accepted price and term unless you turn renewal off before it ends. Optional first-role prepayment is one-time, never part of renewal. Role and additional-interview fees are separate; signed terms apply. Secure checkout opens after agreement signing."
+              : "Annual platform pricing is discounted and billed upfront. Role fees are billed separately when roles are created. Essential additional interviews are $25 each and Pro additional interviews are $30 each at current catalog rates; client-specific signed terms apply. Secure checkout opens after agreement signing. New self-serve buyers can optionally prepay their first role during signup and save 10% on that first role."}
             {" "}
             For product and workflow questions, review the <a href="/faq" className="font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4 transition-colors hover:text-[#A380F6]">alphaScreen FAQ</a> or <a href="/alphascreen" className="font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4 transition-colors hover:text-[#A380F6]">alphaScreen overview</a>.
           </p>
@@ -2289,6 +2407,15 @@ export default function AlphaScreenPricingPage() {
                 onContinueToAgreement={handleContinueToAgreement}
                 onBackToPricing={backToPricing}
                 onBackToSignup={backToSignupForm}
+                catalog={retailCatalog}
+                selection={retailSelection}
+                onSelectionChange={(selection) => {
+                  if (!purchaseResult?.purchase_intent_id && !purchaseSubmitInFlightRef.current) {
+                    setRetailSelection(selection);
+                    setPurchaseError("");
+                  }
+                }}
+                catalogAvailable={loadState === "ready"}
               />
             </div>
           </div>
