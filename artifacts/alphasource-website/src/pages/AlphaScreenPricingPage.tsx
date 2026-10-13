@@ -2467,12 +2467,12 @@ export default function AlphaScreenPricingPage() {
       <section id="pricing-demo" className="bg-white py-16 lg:py-20">
         <div className="mx-auto grid max-w-6xl gap-8 px-6 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:px-8">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#02ABE0]">Demo and contact</p>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#02ABE0]">Contact Sales</p>
             <h2 className="mt-3 text-3xl font-black leading-tight text-[#0A1547] lg:text-4xl">
               Need a custom rollout or Enterprise volume?
             </h2>
             <p className="mt-4 text-sm leading-relaxed text-[#0A1547]/60">
-              Request a demo and the alphaSource team can help confirm membership fit, implementation timing, and onboarding options.
+              Contact Sales to confirm membership fit, monthly payment options, implementation timing, and onboarding.
             </p>
           </div>
           <div className="rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-6 shadow-sm">
@@ -2483,7 +2483,8 @@ export default function AlphaScreenPricingPage() {
               productInterest="alphascreen"
               successTitle="We'll be in touch!"
               successBody="Our team will reach out to discuss alphaScreen membership fit."
-              ctaLabel="Request pricing demo"
+              heading="Contact Sales"
+              ctaLabel="Contact Sales"
             />
           </div>
         </div>

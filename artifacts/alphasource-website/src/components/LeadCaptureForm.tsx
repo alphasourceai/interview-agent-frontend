@@ -11,6 +11,7 @@ type LeadCaptureFormProps = {
   successTitle: string;
   successBody: string;
   ctaLabel?: string;
+  heading?: string;
 };
 
 const emptyFields: LeadDraftFields = {
@@ -39,6 +40,7 @@ export default function LeadCaptureForm({
   successTitle,
   successBody,
   ctaLabel = "Submit",
+  heading = "Request a Demo",
 }: LeadCaptureFormProps) {
   const draftId = useMemo(() => getLeadDraftId(formId), [formId]);
   const formRef = useRef<HTMLFormElement>(null);
@@ -198,7 +200,7 @@ export default function LeadCaptureForm({
   return (
     <>
       <h3 className="text-xl font-bold text-[#0A1547] mb-2 dark:text-white">
-        Request a Demo
+        {heading}
       </h3>
       <p className="text-xs text-[#0A1547]/50 leading-relaxed mb-6 dark:text-[#B9C0D8]">
         We may save the business contact details you enter so we can respond,
