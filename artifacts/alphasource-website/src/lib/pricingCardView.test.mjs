@@ -38,7 +38,9 @@ test('actual card JSX displays only the selected term and both exact server pric
   assert.match(html,new RegExp('>'+months+'</span>'));
   assert.ok(html.includes(membershipMoney(months*100000)+' prepay'));
   assert.ok(html.includes(membershipMoney(catalog.monthly_payment_references[plan_key][months])+' monthly'));
-  assert.ok(html.includes('through sales'));assert.doesNotMatch(html,/3 \/ 6 \/ 12|Optional first-role prepay/);
+  assert.match(html,/class="text-4xl font-black tracking-normal text-\[#0A1547\]">months<\/span>/);
+  assert.match(html,/class="text-\[10px\] font-medium">\(contact sales for monthly\)<\/span>/);
+  assert.doesNotMatch(html,/through sales|3 \/ 6 \/ 12|Optional first-role prepay/);
   assert.match(html,new RegExp('class="mt-2 text-sm font-black text-\\[#0A1547\\]">\\+ \\$'+(plan_key==='basic'?399:699)+' / role'));
  }
 });

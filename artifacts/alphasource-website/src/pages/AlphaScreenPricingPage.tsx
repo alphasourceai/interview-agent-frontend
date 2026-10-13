@@ -702,12 +702,12 @@ function PlanCard({
       <div className="mb-5">
         <div className="flex items-end gap-2">
           <span className="text-4xl font-black tracking-normal text-[#0A1547]">{catalog ? commitmentMonths : formatPlatformFee(plan, billingCadence)}</span>
-          <span className="pb-1.5 text-sm font-bold text-[#0A1547]/55">{catalog ? "months" : platformSuffix}</span>
+          <span className={catalog ? "text-4xl font-black tracking-normal text-[#0A1547]" : "pb-1.5 text-sm font-bold text-[#0A1547]/55"}>{catalog ? "months" : platformSuffix}</span>
         </div>
         {cardPricing ? <div className="mt-3 grid gap-1 text-sm font-bold text-[#0A1547]">
           <p>{membershipMoney(cardPricing.offer.platform_payment_cents)} prepay</p>
           {cardPricing.monthlyPaymentCents !== null ? <p className="text-xs font-bold text-[#0A1547]/55">
-            {membershipMoney(cardPricing.monthlyPaymentCents)} monthly · through sales
+            {membershipMoney(cardPricing.monthlyPaymentCents)} monthly <span className="text-[10px] font-medium">(contact sales for monthly)</span>
           </p> : null}
         </div> : null}
         <p className="mt-2 text-sm font-black text-[#0A1547]">+ {formatUsd(plan.per_role_fee)} / role</p>
