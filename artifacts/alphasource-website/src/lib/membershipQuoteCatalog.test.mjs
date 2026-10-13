@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {createRequire} from 'node:module';
-import {parseMembershipQuoteCatalog,membershipInitialAmount} from './membershipQuoteCatalog.ts';
+import {parseMembershipQuoteCatalog,membershipInitialAmount,adminRetailQuotePayload} from './membershipQuoteCatalog.ts';
 const require=createRequire(import.meta.url);
 const backend=process.env.MEMBERSHIP_BACKEND_SOURCE ? require(process.env.MEMBERSHIP_BACKEND_SOURCE) : null;
 function fixture(plan,months,payment){return {schema_version:2,offer_version:'synthetic',offer_key:`${plan}-${months}-${payment}`,
@@ -37,4 +37,25 @@ test('partial mixed-version inconsistent-cap amount and role catalogs fail close
     const c=structuredClone(base);alter(c);assert.throws(()=>parseMembershipQuoteCatalog(c,'sales'));
   }
   assert.throws(()=>parseMembershipQuoteCatalog(base,'public'));
+});
+test('admin retail matrix sends identity and current selection keys only, never old term or money fields',()=>{
+  const c=parseMembershipQuoteCatalog(catalog('admin'),'admin');
+  const identity={client_id:'synthetic-parent',attached_client_id:'synthetic-parent',client_mode:'attach_existing_client',
+    confirm_replace_existing:true,client_legal_name:'Synthetic',dba_trade_name:'Synthetic',primary_admin_name:'QA',
+    admin_email:'buyer@example.invalid',candidate_assistance_contact:null,
+    platform_fee:1,per_role_fee:1,additional_interview_fee:1,included_interviews_per_role:99,
+    initial_term_start:'wrong-date',initial_renewal_date:'wrong-date',billing_option:'annual',auto_renew:false,notice_deadline_days:999};
+  let count=0;
+  for(const offer of c.offers)for(const role of [false,true]){
+    const payload=adminRetailQuotePayload(identity,c,{offerKey:offer.offer_key,offerVersion:offer.offer_version},offer.plan_key,role);
+    assert.equal(payload.commitment_months,offer.commitment_months);assert.equal(payload.payment_option,offer.payment_option);
+    assert.equal(payload.offer_version,offer.offer_version);assert.equal(payload.first_role_prepay_selected,role);
+    assert.equal(payload.client_id,identity.client_id);assert.equal(payload.confirm_replace_existing,true);
+    for(const key of ['platform_fee','per_role_fee','additional_interview_fee','included_interviews_per_role','initial_term_start',
+      'initial_renewal_date','billing_option','auto_renew','notice_deadline_days','package_snapshot','stripe_price_id'])assert.equal(Object.hasOwn(payload,key),false);
+    count++;
+  }
+  assert.equal(count,24);
+  assert.throws(()=>adminRetailQuotePayload(identity,c,null,'basic',false));
+  assert.throws(()=>adminRetailQuotePayload(identity,c,{offerKey:c.offers[0].offer_key,offerVersion:'old'},'basic',false));
 });

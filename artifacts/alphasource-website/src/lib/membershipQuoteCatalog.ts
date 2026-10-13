@@ -1,7 +1,8 @@
 // Server catalog projection for the EXISTING pricing/signup and staff forms.
 // Missing new catalog is legacy. A present bad catalog must never fall back to
 // old prices. No prices are duplicated here and no provider inputs are emitted.
-import { parseMembershipOffers, type MembershipAudience, type RetailMembershipOffer } from "./membershipTerms.ts";
+import { parseMembershipOffers, selectedMembershipOffer, membershipSelectionPayload, type MembershipOfferSelection,
+  type MembershipAudience, type RetailMembershipOffer } from "./membershipTerms.ts";
 
 export interface RetailPlanDisplay {
   plan_key: "basic" | "pro";
@@ -73,4 +74,14 @@ export function membershipInitialAmount(offer: RetailMembershipOffer, plan: Reta
   const amount = offer.platform_payment_cents + (firstRoleSelected ? plan.first_role_prepay_price_cents : 0);
   if (!positive(amount)) return invalid();
   return amount;
+}
+
+export function adminRetailQuotePayload(identity: Record<string, unknown>, catalog: MembershipQuoteCatalog,
+  selection: MembershipOfferSelection | null, planKey: "basic" | "pro", firstRoleSelected: boolean) {
+  const offer = selectedMembershipOffer(catalog.offers, selection, planKey);
+  if (!offer || offer.offer_version !== catalog.pricing_version) return invalid();
+  const fields = ["client_mode", "attached_client_id", "client_id", "confirm_replace_existing", "client_legal_name",
+    "dba_trade_name", "primary_admin_name", "admin_email", "candidate_assistance_contact"];
+  return { ...Object.fromEntries(fields.map(key => [key, identity[key]])), ...membershipSelectionPayload(offer),
+    membership_tier: planKey, first_role_prepay_selected: firstRoleSelected === true };
 }

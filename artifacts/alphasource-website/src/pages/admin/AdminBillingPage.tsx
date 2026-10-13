@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2, Plus, ChevronDown, RefreshCw, Search, X } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import AdminLayout from "@/components/AdminLayout";
@@ -9,6 +9,9 @@ import EnterpriseModelPreparation from "@/components/EnterpriseModelPreparation"
 import { defaultEnterpriseAgreementFields, enterpriseAgreementFieldError, enterpriseAgreementSettingsPayload } from "@/lib/enterpriseAgreementFields";
 import type { EnterpriseAgreementFields } from "@/lib/enterpriseAgreementFields";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
+import { MembershipTermsSelector } from "@/components/MembershipTermsSelector";
+import { adminRetailQuotePayload, parseMembershipQuoteCatalog, type MembershipQuoteCatalog } from "@/lib/membershipQuoteCatalog";
+import { membershipMoney, selectedMembershipOffer, type MembershipOfferSelection } from "@/lib/membershipTerms";
 
 /* ── Types ───────────────────────────────────────────────────── */
 interface LineItem {
@@ -530,6 +533,13 @@ export default function AdminBillingPage() {
   const [agreementAttachedClientId, setAgreementAttachedClientId] = useState("");
   const [agreementForm, setAgreementForm] = useState<AgreementFormValues>(defaultAgreementFormValues);
   const [enterpriseFields, setEnterpriseFields] = useState<EnterpriseAgreementFields>(defaultEnterpriseAgreementFields);
+  const [retailCatalog, setRetailCatalog] = useState<MembershipQuoteCatalog | null>(null);
+  const [retailCatalogLoading, setRetailCatalogLoading] = useState(true);
+  const [retailCatalogError, setRetailCatalogError] = useState("");
+  const [retailSelection, setRetailSelection] = useState<MembershipOfferSelection | null>(null);
+  const [retailFirstRoleSelected, setRetailFirstRoleSelected] = useState(false);
+  const previewInFlight = useRef(false);
+  const sendInFlight = useRef(false);
   const [agreementFieldErrors, setAgreementFieldErrors] = useState<AgreementFieldErrors>({});
   const [agreementError, setAgreementError] = useState("");
   const [agreementSuccess, setAgreementSuccess] = useState("");
@@ -560,6 +570,38 @@ export default function AdminBillingPage() {
   const agreementClientOptions = parentClientOptions;
   const scopedAgreementClientId =
     selectedClientId === "all" ? agreementAttachedClientId : selectedClientIsChild ? "" : selectedClientId;
+  const retailQuote = agreementForm.membershipTier !== "enterprise" && retailCatalog !== null;
+  const retailOffer = retailQuote ? selectedMembershipOffer(retailCatalog.offers, retailSelection,
+    agreementForm.membershipTier as "basic" | "pro") : null;
+  const agreementRevision = JSON.stringify({ agreementClientMode, scopedAgreementClientId, agreementForm, enterpriseFields,
+    retailSelection, retailFirstRoleSelected, retailQuote, retailCatalog, retailCatalogLoading, retailCatalogError });
+  const retailActionUnavailable = agreementForm.membershipTier !== "enterprise"
+    && (retailCatalogLoading || Boolean(retailCatalogError) || retailQuote && !retailOffer);
+  const agreementRevisionRef = useRef(agreementRevision);
+  agreementRevisionRef.current = agreementRevision;
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    setRetailCatalogLoading(true); setRetailCatalogError("");
+    void (async () => {
+      try {
+        if (!backendBase) throw new Error("Missing backend base URL configuration.");
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = String(session?.access_token || "").trim();
+        if (!token) throw new Error("Sign in to load current membership options.");
+        const response = await fetch(`${backendBase}/admin/billing/membership-options`, {
+          headers: { Authorization: `Bearer ${token}` }, credentials: "omit", signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Current membership options could not be loaded.");
+        const catalog = parseMembershipQuoteCatalog(await response.json(), "admin");
+        if (active) setRetailCatalog(catalog);
+      } catch (error) {
+        if (active) { setRetailCatalog(null); setRetailCatalogError(error instanceof Error ? error.message : "Membership options unavailable."); }
+      } finally { if (active) setRetailCatalogLoading(false); }
+    })();
+    return () => { active = false; controller.abort(); };
+  }, [refreshNonce]);
 
   const addLineItem = () =>
     setLineItems((prev) => [...prev, { id: _lineId++, description: "", qty: 1, unit: "" }]);
@@ -577,6 +619,8 @@ export default function AdminBillingPage() {
     key: K,
     value: AgreementFormValues[K],
   ) => {
+    if (sendInFlight.current) return;
+    if (key === "membershipTier") { setRetailSelection(null); setRetailFirstRoleSelected(false); }
     setAgreementForm((prev) => ({ ...prev, [key]: value }));
     const errorKeyByField: Partial<Record<keyof AgreementFormValues, AgreementFieldErrorKey>> = {
       clientLegalName: "clientLegalName",
@@ -773,7 +817,8 @@ export default function AdminBillingPage() {
     void loadPendingAgreements();
   }, [loadPendingAgreements, refreshNonce]);
 
-  const buildAgreementPayload = (confirmReplaceExisting = false) => ({
+  const buildAgreementPayload = (confirmReplaceExisting = false) => {
+    const legacy = {
     client_mode: agreementClientMode,
     attached_client_id: agreementClientMode === "attach_existing_client" ? scopedAgreementClientId || null : null,
     client_id: agreementClientMode === "attach_existing_client" ? scopedAgreementClientId || null : null,
@@ -810,9 +855,15 @@ export default function AdminBillingPage() {
     billing_option: agreementForm.billingOption,
     auto_renew: agreementForm.autoRenew === "yes",
     notice_deadline_days: Number.parseInt(agreementForm.noticeDeadlineDays, 10) || 30,
-  });
+    };
+    return retailQuote ? adminRetailQuotePayload(legacy, retailCatalog, retailSelection,
+      agreementForm.membershipTier as "basic" | "pro", retailFirstRoleSelected) : legacy;
+  };
 
   const validateAgreementForm = (): boolean => {
+    if (agreementForm.membershipTier !== "enterprise" && (retailCatalogLoading || retailCatalogError || retailQuote && !retailOffer)) {
+      setAgreementError(retailCatalogError || "Choose a verified current membership term before previewing or sending."); return false;
+    }
     if (agreementClientMode === "attach_existing_client" && selectedClientIsChild) {
       setAgreementFieldErrors({});
       setAgreementError(PARENT_ONLY_BILLING_NOTICE);
@@ -831,12 +882,12 @@ export default function AdminBillingPage() {
     if (!agreementForm.primaryAdmin.trim()) errors.primaryAdmin = "Primary admin is required.";
     if (!adminEmail) errors.adminEmail = "Admin email is required.";
     else if (!AGREEMENT_EMAIL_RE.test(adminEmail)) errors.adminEmail = "Enter a valid admin email.";
-    if (!agreementForm.initialTermStart.trim()) {
+    if (!retailQuote && !agreementForm.initialTermStart.trim()) {
       errors.initialTermStart = hasInitialTermInput
         ? "Enter a real date in MM / DD / YYYY."
         : "Initial term start is required.";
     }
-    if (!agreementForm.initialRenewalDate.trim()) {
+    if (!retailQuote && !agreementForm.initialRenewalDate.trim()) {
       errors.initialRenewalDate = hasInitialRenewalInput
         ? "Enter a real date in MM / DD / YYYY."
         : "Initial renewal date is required.";
@@ -958,6 +1009,7 @@ export default function AdminBillingPage() {
   };
 
   const handleGenerateAgreementPreview = async (confirmReplaceExisting = false) => {
+    if (previewInFlight.current || sendInFlight.current) return;
     if (!backendBase) {
       setAgreementSuccess("");
       setAgreementError("Missing backend base URL configuration.");
@@ -972,6 +1024,9 @@ export default function AdminBillingPage() {
     setAgreementError("");
     setAgreementSuccess("");
     setAgreementPreviewBusy(true);
+    previewInFlight.current = true;
+    const revision = agreementRevisionRef.current;
+    const requestPayload = buildAgreementPayload(confirmReplaceExisting);
 
     try {
       const {
@@ -986,12 +1041,13 @@ export default function AdminBillingPage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(buildAgreementPayload(confirmReplaceExisting)),
+        body: JSON.stringify(requestPayload),
         credentials: "omit",
       });
 
       if (!response.ok) {
         const text = await response.text();
+        if (revision !== agreementRevisionRef.current) return;
         const replacement = parseAgreementReplacementResponse(text);
         if (replacement.required) {
           setAgreementReplacementDetails(replacement.agreement);
@@ -1004,18 +1060,21 @@ export default function AdminBillingPage() {
       }
 
       const blob = await response.blob();
+      if (revision !== agreementRevisionRef.current) return;
       const nextUrl = URL.createObjectURL(blob);
       if (agreementPreviewPdfUrl) URL.revokeObjectURL(agreementPreviewPdfUrl);
       setAgreementPreviewPdfUrl(nextUrl);
       setAgreementPreviewOpen(true);
     } catch (error) {
-      setAgreementError(error instanceof Error ? error.message : "Could not generate agreement preview.");
+      if (revision === agreementRevisionRef.current) setAgreementError(error instanceof Error ? error.message : "Could not generate agreement preview.");
     } finally {
+      previewInFlight.current = false;
       setAgreementPreviewBusy(false);
     }
   };
 
   const handleSendAgreement = async (confirmReplaceExisting = false) => {
+    if (previewInFlight.current || sendInFlight.current) return;
     if (!backendBase) {
       setAgreementSuccess("");
       setAgreementError("Missing backend base URL configuration.");
@@ -1030,6 +1089,9 @@ export default function AdminBillingPage() {
     setAgreementSendBusy(true);
     setAgreementError("");
     setAgreementSuccess("");
+    sendInFlight.current = true;
+    const revision = agreementRevisionRef.current;
+    const requestPayload = buildAgreementPayload(confirmReplaceExisting);
 
     try {
       const {
@@ -1044,11 +1106,12 @@ export default function AdminBillingPage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(buildAgreementPayload(confirmReplaceExisting)),
+        body: JSON.stringify(requestPayload),
         credentials: "omit",
       });
 
       const text = await response.text();
+      if (revision !== agreementRevisionRef.current) return;
       if (!response.ok) {
         const replacement = parseAgreementReplacementResponse(text);
         if (replacement.required) {
@@ -1074,8 +1137,9 @@ export default function AdminBillingPage() {
       closeAgreementPreview();
       await loadPendingAgreements();
     } catch (error) {
-      setAgreementError(error instanceof Error ? error.message : "Could not send agreement.");
+      if (revision === agreementRevisionRef.current) setAgreementError(error instanceof Error ? error.message : "Could not send agreement.");
     } finally {
+      sendInFlight.current = false;
       setAgreementSendBusy(false);
     }
   };
@@ -1392,6 +1456,16 @@ export default function AdminBillingPage() {
     setEnterpriseFields(defaultEnterpriseAgreementFields());
   }, [agreementClientMode, scopedAgreementClientId]);
 
+  useEffect(() => {
+    setRetailSelection(null); setRetailFirstRoleSelected(false);
+  }, [agreementClientMode, scopedAgreementClientId]);
+
+  useEffect(() => {
+    setAgreementPreviewOpen(false);
+    setAgreementReplacementModalOpen(false); setAgreementReplacementPendingAction(null); setAgreementReplacementDetails(null);
+    if (agreementPreviewPdfUrl) { URL.revokeObjectURL(agreementPreviewPdfUrl); setAgreementPreviewPdfUrl(""); }
+  }, [agreementRevision]);
+
   const card = "rounded-2xl mb-5 overflow-hidden";
   const cardStyle = surfaceCardStyle;
   const enterpriseFeePeriod = agreementForm.billingOption === "annual" ? "per year" : "per month";
@@ -1456,6 +1530,8 @@ export default function AdminBillingPage() {
           {agreementSuccess ? (
             <p className="text-xs font-semibold text-emerald-600">{agreementSuccess}</p>
           ) : null}
+          {agreementForm.membershipTier !== "enterprise" && retailCatalogError ? <p role="alert" className="text-xs font-semibold text-red-500">{retailCatalogError} Retail quotes are unavailable until current options can be verified.</p> : null}
+          {agreementForm.membershipTier !== "enterprise" && retailCatalogLoading ? <p role="status" className="text-xs" style={mutedTextStyle}>Loading current membership options…</p> : null}
           <p className="text-[11px] font-semibold px-1" style={mutedTextStyle}>
             Fields marked<span className="text-red-500">{REQUIRED_MARK}</span> are required.
           </p>
@@ -1608,6 +1684,7 @@ export default function AdminBillingPage() {
                 <select
                   className={selectCls}
                   value={agreementForm.membershipTier}
+                  aria-label="Membership tier"
                   onChange={(e) => updateAgreementField("membershipTier", e.target.value as AgreementFormValues["membershipTier"])}
                 >
                   <option value="basic">Essential</option>
@@ -1617,6 +1694,7 @@ export default function AdminBillingPage() {
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={subtleTextStyle} />
               </div>
             </div>
+            {agreementForm.membershipTier === "enterprise" || !retailQuote && !retailCatalogLoading && !retailCatalogError ? <>
             <div className="space-y-1">
               <p className={fieldLabelCls}>Billing Option</p>
               <div className="relative">
@@ -1688,7 +1766,20 @@ export default function AdminBillingPage() {
                 onChange={(e) => updateAgreementField("noticeDeadlineDays", e.target.value)}
               />
             </div>
+            </> : null}
           </div>
+          {retailQuote && retailCatalog && agreementForm.membershipTier !== "enterprise" ? <div className="space-y-4 pt-2">
+            <MembershipTermsSelector offers={retailCatalog.offers} planKey={agreementForm.membershipTier} audience="admin"
+              selection={retailSelection} onChange={setRetailSelection} disabled={agreementPreviewBusy || agreementSendBusy}
+              firstRoleSelected={retailFirstRoleSelected} firstRolePriceCents={retailCatalog.plans[agreementForm.membershipTier].first_role_prepay_price_cents} />
+            <label className="flex items-start gap-3 rounded-xl border p-4" style={mutedPanelStyle}>
+              <input type="checkbox" checked={retailFirstRoleSelected} disabled={agreementPreviewBusy || agreementSendBusy}
+                onChange={event => setRetailFirstRoleSelected(event.target.checked)} className="mt-1 h-4 w-4 accent-[#A380F6]" />
+              <span className="text-sm font-bold" style={primaryTextStyle}>Add one-time first-role prepayment · {membershipMoney(retailCatalog.plans[agreementForm.membershipTier].first_role_prepay_price_cents)}
+                <span className="mt-1 block text-xs font-normal" style={mutedTextStyle}>This credit is created only after successful payment. It does not expire or renew. Additional roles use the accepted role fee.</span>
+              </span>
+            </label>
+          </div> : null}
           {agreementForm.membershipTier === "enterprise" ? (
             <div className="space-y-3 pt-1">
               <EnterpriseModelPreparation value={enterpriseFields} onChange={(next) => {
@@ -1778,11 +1869,11 @@ export default function AdminBillingPage() {
             <button
               type="button"
               onClick={() => { void handleGenerateAgreementPreview(); }}
-              disabled={agreementPreviewBusy || selectedClientIsChild}
+              disabled={agreementPreviewBusy || agreementSendBusy || selectedClientIsChild || retailActionUnavailable}
               className="px-6 py-2.5 rounded-full text-sm font-bold text-white transition-all"
               style={{
-                backgroundColor: agreementPreviewBusy || selectedClientIsChild ? "color-mix(in srgb, var(--as-text) 20%, transparent)" : "#A380F6",
-                cursor: agreementPreviewBusy || selectedClientIsChild ? "not-allowed" : "pointer",
+                backgroundColor: agreementPreviewBusy || agreementSendBusy || selectedClientIsChild || retailActionUnavailable ? "color-mix(in srgb, var(--as-text) 20%, transparent)" : "#A380F6",
+                cursor: agreementPreviewBusy || agreementSendBusy || selectedClientIsChild || retailActionUnavailable ? "not-allowed" : "pointer",
               }}
             >
               {agreementPreviewBusy ? "Generating..." : "Generate Agreement"}
@@ -2248,7 +2339,7 @@ export default function AdminBillingPage() {
                 <button
                   type="button"
                   onClick={() => { void handleSendAgreement(); }}
-                  disabled={agreementSendBusy}
+                  disabled={agreementSendBusy || agreementPreviewBusy || selectedClientIsChild || retailActionUnavailable}
                   className="px-4 py-2 text-xs font-bold text-white rounded-full transition-colors"
                   style={{
                     backgroundColor: agreementSendBusy ? "#8F73D1" : "#A380F6",
