@@ -94,6 +94,6 @@ export function membershipSelectionPayload(offer: RetailMembershipOffer) {
 }
 export function membershipObligationCopy(offer: RetailMembershipOffer): string {
   return offer.payment_option === "prepaid"
-    ? "Your membership stays active for the full prepaid term. Turning off renewal does not create a refund; exceptions follow the refund policy."
+    ? "Your membership stays active for the full prepaid term. Turning off renewal does not create a refund; exceptions are subject to the accepted agreement."
     : `All ${offer.commitment_months} monthly payments remain due for this term. Turning off renewal does not cancel remaining payments; access continues while payments are made.`;
 }

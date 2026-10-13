@@ -23,6 +23,7 @@ const origin = await server.ssrLoadModule("/src/lib/supportVoiceOrigin.ts");
 const enterprise = await server.ssrLoadModule(
   "/src/components/EnterpriseModelPreparation.tsx",
 );
+const enterpriseFields = await server.ssrLoadModule("/src/lib/enterpriseAgreementFields.ts");
 test("unknown/null is never zero; explicit zero and cents remain accurate", () => {
   for (const value of [
     null,
@@ -117,10 +118,17 @@ test("dev/staging support origins cannot be cross-wired, relaxed or authenticate
   ])
     assert.equal(origin.supportVoiceOrigin(bad, "development"), null);
 });
-test("Enterprise models start unselected and are clearly non-persistent", () => {
-  const html = renderToStaticMarkup(React.createElement(enterprise.default));
-  assert.match(html, /<option value="" selected="">Choose a model to preview/);
-  assert.match(html, /preview/i);
-  assert.doesNotMatch(html, /<input/);
-  assert.doesNotMatch(html, /<button[^>]*>.*(?:Save|Checkout)/);
+test("existing controlled Enterprise form retains Standard usage and rollover settings without payment actions", () => {
+  // The controlled form already existed at94eb187. The old preparation-only
+  // fixture omitted required props and described the retired read-only stub.
+  for (const billingModel of ["fixed", "rollover", "usage"]) {
+    const value = { ...enterpriseFields.defaultEnterpriseAgreementFields(), billingModel };
+    const html = renderToStaticMarkup(React.createElement(enterprise.default, { value, onChange: () => {} }));
+    assert.match(html, new RegExp(`<option value="${billingModel}" selected="">`));
+    assert.match(html, /Interview length \(minutes\)/); assert.match(html, /Scored questions/);
+    assert.match(html, /included in the generated agreement/); assert.match(html, /dedicated Client Support Agent/);
+    assert.equal(html.includes("Optional prepaid interview pool"), billingModel === "usage");
+    assert.equal(html.includes("Unused interview credit validity"), billingModel === "rollover");
+    assert.doesNotMatch(html, /<button[^>]*>.*(?:Save|Checkout)/);
+  }
 });

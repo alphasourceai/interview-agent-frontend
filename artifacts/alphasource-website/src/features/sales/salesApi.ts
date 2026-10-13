@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { parseMembershipQuoteCatalog } from "@/lib/membershipQuoteCatalog";
 import type {
   EnterpriseHandoffInput,
   EnterpriseHandoffResult,
@@ -113,6 +114,10 @@ const realSalesApi: SalesApi = {
   getHubMetrics: () => requestJson<SalesHubMetrics>("/sales/hub-metrics"),
   getMe: () => requestJson<SalesRep>("/sales/me"),
   getPackages: () => requestJson<{ items: SalesPackage[] }>("/sales/packages").then((result) => result.items || []),
+  getMembershipCatalog: async () => {
+    const response = await requestJson<{ items: SalesPackage[] }>("/sales/packages");
+    return { packages: response.items || [], catalog: parseMembershipQuoteCatalog(response, "sales") };
+  },
   listDeals: () => requestJson<{ items: SalesDeal[] }>("/sales/deals").then((result) => result.items || []),
   listImports: () => requestJson<{ items: GhlSalesImport[] }>("/sales/imports").then((result) => result.items || []),
   getImport: (importId) => requestJson<GhlSalesImport>(`/sales/imports/${encodeURIComponent(importId)}`),
@@ -325,6 +330,7 @@ const mockSalesApi: SalesApi = {
     await delay();
     return structuredClone(mockPackages);
   },
+  async getMembershipCatalog() { await delay(); return { packages: structuredClone(mockPackages), catalog: null }; },
   async listDeals() {
     await delay();
     return structuredClone(mockDeals);

@@ -19,6 +19,9 @@ import {
   UserRound,
 } from "lucide-react";
 import { SalesPageHeading } from "@/components/SalesLayout";
+import { MembershipTermsSelector } from "@/components/MembershipTermsSelector";
+import { selectedMembershipOffer, type MembershipOfferSelection } from "@/lib/membershipTerms";
+import type { MembershipQuoteCatalog } from "@/lib/membershipQuoteCatalog";
 import { SalesApiError, salesApi, salesUsesMockApi } from "@/features/sales/salesApi";
 import type {
   PromotionCodeSummary,
@@ -99,6 +102,9 @@ function salesDraftFingerprint(draft: SalesDealDraft): string {
     sales_note: normalizedText(draft.sales_note),
     plan_key: draft.plan_key,
     billing_cadence: draft.billing_cadence,
+    commitment_months: draft.commitment_months,
+    payment_option: draft.payment_option,
+    offer_version: draft.offer_version,
     first_role_prepay_selected: draft.first_role_prepay_selected,
     promotion_code: normalizedText(draft.promotion_code).toUpperCase(),
   });
@@ -109,6 +115,9 @@ function promotionEligibilityFingerprint(draft: SalesDealDraft): string {
     code: draft.promotion_code.trim().toUpperCase(),
     plan_key: draft.plan_key,
     billing_cadence: draft.billing_cadence,
+    commitment_months: draft.commitment_months,
+    payment_option: draft.payment_option,
+    offer_version: draft.offer_version,
     first_role_prepay_selected: draft.first_role_prepay_selected,
   });
 }
@@ -151,6 +160,8 @@ export default function SalesNewDealPage() {
   const [loadingGhlImport, setLoadingGhlImport] = useState(false);
   const [sameAssistanceContact, setSameAssistanceContact] = useState(true);
   const [packages, setPackages] = useState<SalesPackage[]>([]);
+  const [catalog, setCatalog] = useState<MembershipQuoteCatalog | null>(null);
+  const [selection, setSelection] = useState<MembershipOfferSelection | null>(null);
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [promotion, setPromotion] = useState<PromotionCodeSummary | null>(null);
   const [promotionBusy, setPromotionBusy] = useState(false);
@@ -165,8 +176,8 @@ export default function SalesNewDealPage() {
 
   useEffect(() => {
     let active = true;
-    void salesApi.getPackages()
-      .then((items) => { if (active) setPackages(items.filter((item) => ["basic", "pro"].includes(item.plan_key))); })
+    void salesApi.getMembershipCatalog()
+      .then((result) => { if (active) { setCatalog(result.catalog); setPackages(result.packages.filter((item) => ["basic", "pro"].includes(item.plan_key))); } })
       .catch((loadError) => { if (active) setError(loadError instanceof Error ? loadError.message : "Memberships could not be loaded."); })
       .finally(() => { if (active) setLoadingPackages(false); });
     return () => { active = false; };
@@ -199,6 +210,7 @@ export default function SalesNewDealPage() {
           candidate_assistance_email: item.buyer_email,
         };
         setGhlImport(item);
+        setSelection(null);
         setDraft(next);
         draftFingerprintRef.current = salesDraftFingerprint(next);
       })
@@ -209,16 +221,29 @@ export default function SalesNewDealPage() {
     return () => { active = false; };
   }, []);
 
-  const selectedPackage = packages.find((item) => item.plan_key === draft.plan_key) || null;
+  const selectedOffer = catalog ? selectedMembershipOffer(catalog.offers, selection, draft.plan_key) : null;
+  const displayPackages = catalog ? packages.map(pkg => {
+    const plan = catalog.plans[pkg.plan_key];
+    return { ...pkg, display_name: plan.display_name as SalesPackage["display_name"], per_role_fee_cents: plan.per_role_fee_cents,
+      included_interviews_per_role: plan.included_interviews_per_role, max_interview_minutes: plan.max_interview_minutes,
+      additional_interview_fee_cents: plan.additional_interview_fee_cents,
+      first_role_prepay: { enabled: true, amount_cents: plan.first_role_prepay_price_cents,
+        normal_role_fee_cents: plan.per_role_fee_cents, discount_label: "Fixed first-role prepay price" } };
+  }) : packages;
+  const selectedPackage = displayPackages.find((item) => item.plan_key === draft.plan_key) || null;
   const previewUrl = preview ? safePreviewUrl(preview.preview_url) : null;
 
   const setValue = <K extends keyof SalesDealDraft>(key: K, value: SalesDealDraft[K]) => {
     setDraft((current) => {
       const next = { ...current, [key]: value };
+      if (catalog && key === "plan_key") {
+        delete next.commitment_months; delete next.payment_option; delete next.offer_version;
+      }
       draftFingerprintRef.current = salesDraftFingerprint(next);
       return next;
     });
     setPreview(null);
+    if (catalog && key === "plan_key") setSelection(null);
     sendAttemptRef.current = null;
     setError("");
     if (["promotion_code", "plan_key", "billing_cadence", "first_role_prepay_selected"].includes(String(key))) {
@@ -226,6 +251,22 @@ export default function SalesNewDealPage() {
       setPromotionBusy(false);
       setPromotion(null);
     }
+  };
+
+  const chooseMembership = (nextSelection: MembershipOfferSelection) => {
+    if (!catalog) return;
+    const offer = selectedMembershipOffer(catalog.offers, nextSelection, draft.plan_key);
+    if (!offer) return;
+    setSelection(nextSelection);
+    setDraft(current => {
+      const next: SalesDealDraft = { ...current, commitment_months: offer.commitment_months,
+        payment_option: offer.payment_option, offer_version: offer.offer_version,
+        billing_cadence: offer.payment_option === "prepaid" ? "prepaid" : "monthly",
+        promotion_code: offer.payment_option === "prepaid" ? "" : current.promotion_code };
+      draftFingerprintRef.current = salesDraftFingerprint(next); return next;
+    });
+    setPreview(null); sendAttemptRef.current = null; setPromotion(null); setPromotionBusy(false);
+    promotionValidationRef.current += 1; setError("");
   };
 
   const toggleSameAssistance = (checked: boolean) => {
@@ -274,6 +315,9 @@ export default function SalesNewDealPage() {
       const customerError = validateCustomer();
       if (customerError) { setError(customerError); setStep(1); return; }
     }
+    if (next > 2 && (loadingPackages || !selectedPackage || catalog && !selectedOffer)) {
+      setError("Choose a verified current membership term before continuing."); setStep(2); return;
+    }
     if (next > 2 && draft.promotion_code.trim() && !promotion) {
       setError("Validate the promotion code or remove it before continuing.");
       setStep(2);
@@ -308,6 +352,9 @@ export default function SalesNewDealPage() {
   };
 
   const requestPreview = async () => {
+    if (loadingPackages || !selectedPackage || catalog && !selectedOffer) {
+      setError("Choose a verified current membership term before generating the agreement."); return;
+    }
     if (draft.promotion_code.trim() && !promotion) {
       setError("Validate the promotion code or remove it before generating the agreement.");
       return;
@@ -385,10 +432,11 @@ export default function SalesNewDealPage() {
         total: preview.pricing.initial_payment_cents,
       };
     }
-    const platform = draft.billing_cadence === "annual" ? selectedPackage.platform_annual_fee_cents : selectedPackage.platform_monthly_fee_cents;
+    if (catalog && !selectedOffer) return null;
+    const platform = selectedOffer ? selectedOffer.platform_payment_cents : draft.billing_cadence === "annual" ? selectedPackage.platform_annual_fee_cents : selectedPackage.platform_monthly_fee_cents;
     const firstRole = draft.first_role_prepay_selected ? selectedPackage.first_role_prepay.amount_cents : 0;
     return { platform, firstRole, discount: 0, total: platform + firstRole };
-  }, [draft.billing_cadence, draft.first_role_prepay_selected, preview, selectedPackage]);
+  }, [draft.billing_cadence, draft.first_role_prepay_selected, preview, selectedPackage, catalog, selectedOffer]);
 
   return (
     <div>
@@ -455,18 +503,21 @@ export default function SalesNewDealPage() {
               <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-[#02ABE0]/10 text-[#02ABE0]"><Sparkles className="h-5 w-5" /></div><div><h2 className="text-lg font-black" style={{ color: "var(--as-text)" }}>Membership</h2><p className="text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>Terms come from alphaScreen's server-controlled package catalog.</p></div></div>
               {loadingPackages ? <div className="mt-6 h-48 animate-pulse rounded-xl bg-[#0A1547]/[0.04]" /> : (
                 <div className="mt-6 grid gap-4 md:grid-cols-2">
-                  {packages.map((pkg) => {
+                  {displayPackages.map((pkg) => {
                     const selected = draft.plan_key === pkg.plan_key;
                     return <button key={pkg.plan_key} type="button" onClick={() => setValue("plan_key", pkg.plan_key)} className={`rounded-2xl border-2 p-5 text-left transition ${selected ? "border-[#A380F6] bg-[#A380F6]/[0.045] shadow-[0_12px_30px_rgba(163,128,246,0.13)]" : "hover:border-[#A380F6]/40"}`} style={!selected ? { borderColor: "var(--as-border)" } : undefined}>
                       <div className="flex items-center justify-between"><span className="text-base font-black" style={{ color: "var(--as-text)" }}>{pkg.display_name}</span>{selected ? <span className="grid h-6 w-6 place-items-center rounded-lg bg-[#A380F6] text-white"><Check className="h-3.5 w-3.5" /></span> : null}</div>
-                      <p className="mt-4 text-2xl font-black" style={{ color: "var(--as-text)" }}>{formatMoney(draft.billing_cadence === "annual" ? pkg.platform_annual_fee_cents : pkg.platform_monthly_fee_cents)}<span className="text-xs font-bold" style={{ color: "var(--as-text-muted)" }}>/{draft.billing_cadence === "annual" ? "year" : "month"}</span></p>
+                      {catalog ? <p className="mt-4 text-sm font-bold" style={{ color: "var(--as-text-muted)" }}>Choose a 3, 6 or 12-month term below</p> : <p className="mt-4 text-2xl font-black" style={{ color: "var(--as-text)" }}>{formatMoney(draft.billing_cadence === "annual" ? pkg.platform_annual_fee_cents : pkg.platform_monthly_fee_cents)}<span className="text-xs font-bold" style={{ color: "var(--as-text-muted)" }}>/{draft.billing_cadence === "annual" ? "year" : "month"}</span></p>}
                       <ul className="mt-4 space-y-2 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}><li>{pkg.included_interviews_per_role} interviews per role</li><li>Up to {pkg.max_interview_minutes} minutes per interview</li><li>{formatMoney(pkg.per_role_fee_cents)} per role</li></ul>
                     </button>;
                   })}
                 </div>
               )}
 
-              <div className="mt-6"><p className="text-xs font-black" style={{ color: "var(--as-text)" }}>Billing cadence</p><div className="mt-2 inline-flex rounded-[11px] border p-1" style={{ borderColor: "var(--as-border)" }}>{(["monthly", "annual"] as const).map((cadence) => <button key={cadence} type="button" onClick={() => setValue("billing_cadence", cadence)} className={`rounded-[8px] px-5 py-2 text-xs font-black capitalize transition ${draft.billing_cadence === cadence ? "bg-[#0A1547] text-white" : ""}`} style={draft.billing_cadence === cadence ? undefined : { color: "var(--as-text-muted)" }}>{cadence}{cadence === "annual" ? " · Save" : ""}</button>)}</div></div>
+              {catalog ? <div className="mt-6"><MembershipTermsSelector offers={catalog.offers} planKey={draft.plan_key} audience="sales"
+                selection={selection} onChange={chooseMembership} disabled={previewBusy || sendBusy}
+                firstRoleSelected={draft.first_role_prepay_selected} firstRolePriceCents={catalog.plans[draft.plan_key].first_role_prepay_price_cents} /></div>
+                : <div className="mt-6"><p className="text-xs font-black" style={{ color: "var(--as-text)" }}>Billing cadence</p><div className="mt-2 inline-flex rounded-[11px] border p-1" style={{ borderColor: "var(--as-border)" }}>{(["monthly", "annual"] as const).map((cadence) => <button key={cadence} type="button" onClick={() => setValue("billing_cadence", cadence)} className={`rounded-[8px] px-5 py-2 text-xs font-black capitalize transition ${draft.billing_cadence === cadence ? "bg-[#0A1547] text-white" : ""}`} style={draft.billing_cadence === cadence ? undefined : { color: "var(--as-text-muted)" }}>{cadence}{cadence === "annual" ? " · Save" : ""}</button>)}</div></div>}
 
               {selectedPackage?.first_role_prepay.enabled ? (
                 <label className={`mt-6 flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${draft.first_role_prepay_selected ? "border-emerald-300 bg-emerald-50/70" : ""}`} style={!draft.first_role_prepay_selected ? { borderColor: "var(--as-border)" } : undefined}>
@@ -476,12 +527,12 @@ export default function SalesNewDealPage() {
                 </label>
               ) : null}
 
-              <div className="mt-6 rounded-xl border p-4" style={{ borderColor: "var(--as-border)" }}>
+              {catalog && (!selectedOffer || selectedOffer.payment_option === "prepaid") ? <p className="mt-6 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>Prepaid prices cannot be combined with a promotion. Select monthly payments to use an eligible administrator-issued code.</p> : <div className="mt-6 rounded-xl border p-4" style={{ borderColor: "var(--as-border)" }}>
                 <div className="flex items-center gap-2"><Tag className="h-4 w-4 text-[#A380F6]" /><h3 className="text-sm font-black" style={{ color: "var(--as-text)" }}>Promotion code</h3><span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: "var(--as-text-subtle)" }}>Optional</span></div>
                 <p className="mt-1 text-xs font-semibold leading-relaxed" style={{ color: "var(--as-text-muted)" }}>Use only a code created by an administrator. Need a new code? Request it through Slack.</p>
                 <div className="mt-3 flex gap-2"><input aria-label="Promotion code" value={draft.promotion_code} onChange={(event) => setValue("promotion_code", event.target.value.toUpperCase())} className="h-10 min-w-0 flex-1 rounded-[9px] border bg-transparent px-3 text-sm font-black uppercase tracking-[0.08em] outline-none focus:border-[#A380F6] focus:ring-4 focus:ring-[#A380F6]/10" style={{ borderColor: "var(--as-border)", color: "var(--as-text)" }} placeholder={salesUsesMockApi ? "Try DEMO10" : "Enter code"} /><button type="button" onClick={() => void validatePromotion()} disabled={promotionBusy || !draft.promotion_code.trim()} className="rounded-[9px] bg-[#0A1547] px-4 text-xs font-black text-white disabled:opacity-45">{promotionBusy ? "Checking…" : "Validate"}</button></div>
                 {promotion ? <div className="mt-3 flex items-center gap-2 rounded-[9px] bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-800"><BadgeCheck className="h-4 w-4" /> {promotion.label}</div> : null}
-              </div>
+              </div>}
             </div>
           ) : null}
 
@@ -493,7 +544,7 @@ export default function SalesNewDealPage() {
                 <div className="rounded-xl border p-4" style={{ borderColor: "var(--as-border)" }}><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#02ABE0]" /><h3 className="text-xs font-black uppercase tracking-[0.12em]" style={{ color: "var(--as-text-muted)" }}>Membership</h3></div><p className="mt-3 text-sm font-black" style={{ color: "var(--as-text)" }}>{selectedPackage?.display_name} · <span className="capitalize">{draft.billing_cadence}</span></p><p className="mt-1 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>{selectedPackage ? `${formatMoney(selectedPackage.per_role_fee_cents)} per role` : ""}</p><p className="mt-1 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>{draft.first_role_prepay_selected ? "First-role prepayment included" : "First role billed when opened"}</p></div>
               </div>
 
-              <div className="mt-4 rounded-xl border border-[#02ABE0]/20 bg-[#02ABE0]/[0.055] p-4"><div className="flex gap-3"><Info className="mt-0.5 h-4 w-4 flex-none text-[#02ABE0]" /><div><h3 className="text-sm font-black text-[#0A1547]">Agreement dates are fixed when you preview</h3><p className="mt-1 text-xs font-semibold leading-relaxed text-[#0A1547]/55">The preview and signable agreement show the actual membership start and renewal dates. The buyer must sign and pay by the end of that day; after expiration, Resend agreement creates a newly dated agreement that must be signed again.</p>{preview ? <p className="mt-2 text-xs font-black text-[#0A1547]">Start: {formatAgreementDate(preview.agreement_effective_date)} · Renewal: {formatAgreementDate(preview.agreement_renewal_date)}</p> : null}</div></div></div>
+              {catalog ? <div className="mt-4 rounded-xl border border-[#02ABE0]/20 bg-[#02ABE0]/[0.055] p-4"><h3 className="text-sm font-black text-[#0A1547]">The term starts on successful payment</h3><p className="mt-1 text-xs font-semibold text-[#0A1547]/65">{selectedOffer?.commitment_months}-month commitment. Auto-renew defaults on for the same term at the accepted platform price. Sign and pay before the quote deadline; an expired quote requires a new preview.</p></div> : <div className="mt-4 rounded-xl border border-[#02ABE0]/20 bg-[#02ABE0]/[0.055] p-4"><div className="flex gap-3"><Info className="mt-0.5 h-4 w-4 flex-none text-[#02ABE0]" /><div><h3 className="text-sm font-black text-[#0A1547]">Agreement dates are fixed when you preview</h3><p className="mt-1 text-xs font-semibold leading-relaxed text-[#0A1547]/55">The preview and signable agreement show the actual membership start and renewal dates. The buyer must sign and pay by the end of that day; after expiration, Resend agreement creates a newly dated agreement that must be signed again.</p>{preview ? <p className="mt-2 text-xs font-black text-[#0A1547]">Start: {formatAgreementDate(preview.agreement_effective_date)} · Renewal: {formatAgreementDate(preview.agreement_renewal_date)}</p> : null}</div></div></div>}
 
               <div className="mt-5 rounded-xl border p-4 sm:p-5" style={{ borderColor: "var(--as-border)", backgroundColor: "var(--as-surface-muted)" }}>
                 <div className="flex items-center justify-between"><div><h3 className="text-sm font-black" style={{ color: "var(--as-text)" }}>Agreement preview</h3><p className="mt-1 text-xs font-semibold" style={{ color: "var(--as-text-muted)" }}>Preview must match the normalized terms used when sending.</p></div>{preview ? <CheckCircle2 className="h-5 w-5 text-emerald-500" /> : <FileSearch className="h-5 w-5 text-[#A380F6]" />}</div>
@@ -512,9 +563,10 @@ export default function SalesNewDealPage() {
         <aside className="h-fit rounded-2xl border p-5 xl:sticky xl:top-[94px]" style={{ borderColor: "var(--as-border)", backgroundColor: "var(--as-surface)", boxShadow: "var(--as-shadow)" }}>
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#A380F6]">Sale summary</p>
           <h2 className="mt-2 text-lg font-black" style={{ color: "var(--as-text)" }}>{selectedPackage?.display_name || "Select a membership"}</h2>
-          <p className="mt-1 text-xs font-semibold capitalize" style={{ color: "var(--as-text-muted)" }}>{draft.billing_cadence} membership</p>
+          <p className="mt-1 text-xs font-semibold capitalize" style={{ color: "var(--as-text-muted)" }}>{selectedOffer ? `${selectedOffer.commitment_months} months · ${selectedOffer.payment_option === "prepaid" ? "paid upfront" : "monthly payments"}` : catalog ? "Choose a membership term" : draft.billing_cadence + " membership"}</p>
           <div className="my-5 h-px" style={{ backgroundColor: "var(--as-border)" }} />
           <div className="space-y-3 text-xs font-semibold">
+            {selectedOffer ? <div className="flex justify-between gap-4"><span style={{ color: "var(--as-text-muted)" }}>Platform commitment total</span><span className="font-black" style={{ color: "var(--as-text)" }}>{formatMoney(selectedOffer.platform_commitment_total_cents)}</span></div> : null}
             <div className="flex justify-between gap-4"><span style={{ color: "var(--as-text-muted)" }}>Platform fee</span><span className="font-black" style={{ color: "var(--as-text)" }}>{estimate ? formatMoney(estimate.platform) : "—"}</span></div>
             {estimate?.firstRole ? <div className="flex justify-between gap-4"><span style={{ color: "var(--as-text-muted)" }}>First-role prepay</span><span className="font-black" style={{ color: "var(--as-text)" }}>{formatMoney(estimate.firstRole)}</span></div> : null}
             {estimate?.discount ? <div className="flex justify-between gap-4 text-emerald-700"><span>Promotion</span><span className="font-black">−{formatMoney(estimate.discount)}</span></div> : promotion ? <div className="flex justify-between gap-4 text-emerald-700"><span>Promotion</span><span className="font-black">Applied in preview</span></div> : null}

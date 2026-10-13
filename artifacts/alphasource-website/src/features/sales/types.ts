@@ -1,5 +1,6 @@
 export type SalesPlanKey = "basic" | "pro";
-export type SalesBillingCadence = "monthly" | "annual";
+import type { MembershipQuoteCatalog } from "@/lib/membershipQuoteCatalog";
+export type SalesBillingCadence = "monthly" | "annual" | "prepaid";
 
 export type SalesDealStatus =
   | "agreement_sent"
@@ -100,6 +101,9 @@ export interface PromotionCodeSummary {
 export interface SalesDealDraft extends SalesCustomerInput {
   plan_key: SalesPlanKey;
   billing_cadence: SalesBillingCadence;
+  commitment_months?: 3 | 6 | 12;
+  payment_option?: "prepaid" | "monthly_installments";
+  offer_version?: string;
   first_role_prepay_selected: boolean;
   promotion_code: string;
 }
@@ -191,6 +195,7 @@ export interface SalesApi {
   getHubMetrics(): Promise<SalesHubMetrics>;
   getMe(): Promise<SalesRep>;
   getPackages(): Promise<SalesPackage[]>;
+  getMembershipCatalog(): Promise<{ packages: SalesPackage[]; catalog: MembershipQuoteCatalog | null }>;
   listDeals(): Promise<SalesDeal[]>;
   listImports(): Promise<GhlSalesImport[]>;
   getImport(importId: string): Promise<GhlSalesImport>;

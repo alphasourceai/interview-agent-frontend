@@ -5,9 +5,11 @@ import { membershipMoney, membershipObligationCopy, selectedMembershipOffer,
 
 // Prepared shared selector, not mounted in checkout yet. The parent must supply
 // validated server offers and control both the offer key and accepted version.
-export function MembershipTermsSelector({ offers, planKey, audience, selection, onChange, disabled = false }: {
+export function MembershipTermsSelector({ offers, planKey, audience, selection, onChange, disabled = false,
+  firstRoleSelected = false, firstRolePriceCents = 0 }: {
   offers: RetailMembershipOffer[]; planKey: RetailMembershipOffer["plan_key"]; audience: MembershipAudience;
   selection: MembershipOfferSelection | null; onChange: (selection: MembershipOfferSelection) => void; disabled?: boolean;
+  firstRoleSelected?: boolean; firstRolePriceCents?: number;
 }) {
   const labelId = useId();
   const available = offers.filter(offer => offer.plan_key === planKey
@@ -55,9 +57,10 @@ export function MembershipTermsSelector({ offers, planKey, audience, selection, 
         <div className="rounded-[14px] border border-[#0A1547]/10 p-4" aria-live="polite">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-sm font-bold" style={{ color: "var(--as-text)" }}>Initial payment, before tax</span>
-            <span className="text-xl font-black" style={{ color: "var(--as-text)" }}>{membershipMoney(selected.initial_payment_cents)}</span>
+            <span className="text-xl font-black" style={{ color: "var(--as-text)" }}>{membershipMoney(selected.initial_payment_cents + (firstRoleSelected ? firstRolePriceCents : 0))}</span>
           </div>
           {selected.first_role_prepay.selected ? <p className="mt-2 text-xs" style={{ color: "var(--as-text-muted)" }}>Includes {membershipMoney(selected.first_role_prepay.amount_cents)} of one-time first-role prepayment. It does not renew.</p> : null}
+          {firstRoleSelected && !selected.first_role_prepay.selected ? <p className="mt-2 text-xs" style={{ color: "var(--as-text-muted)" }}>Includes {membershipMoney(firstRolePriceCents)} of one-time first-role prepayment. It does not renew.</p> : null}
           <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--as-text-muted)" }}>{membershipObligationCopy(selected)}</p>
           <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--as-text-muted)" }}>Auto-renew is on by default: the same {selected.commitment_months}-month term at your accepted platform price. You may turn it off any time before the term ends.</p>
           <p className="mt-2 text-xs" style={{ color: "var(--as-text-muted)" }}>Role and additional-interview charges are separate.</p>
