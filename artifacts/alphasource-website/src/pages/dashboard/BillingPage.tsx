@@ -896,7 +896,7 @@ function ScopedBillingPage() {
       planTier: getMembershipPlanLabel(billingSummary?.plan_tier),
       billingStatus: toDisplayText(billingSummary?.billing_status),
       billingCycle: billingSummary?.membership_terms
-        ? billingSummary.membership_terms.payment_option === "prepaid" ? "Paid in full" : "Monthly payments"
+        ? billingSummary.membership_terms.payment_option === "prepaid" ? "Prepaid" : "Monthly payments"
         : toDisplayText(billingSummary?.billing_interval),
       autoRenew:
         (billingSummary?.membership_terms?.auto_renew ?? billingSummary?.auto_renew) === true
@@ -1036,8 +1036,8 @@ function ScopedBillingPage() {
               {billingSummary.membership_terms && (
                 <p className="mt-4 text-sm leading-relaxed" style={mutedTextStyle}>
                   {billingSummary.membership_terms.payment_option === "prepaid"
-                    ? "Your membership covers the full prepaid term. Turning off renewal does not create a refund; exceptions follow the accepted agreement."
-                    : `All ${billingSummary.membership_terms.commitment_months} monthly payments remain due for this term. Turning off renewal does not cancel remaining payments; access continues while payments are made.`}
+                    ? `Your agreement sets a ${billingSummary.membership_terms.commitment_months}-month prepaid term. Turning off renewal does not create a refund; exceptions follow the accepted agreement.`
+                    : `Your agreement schedules ${billingSummary.membership_terms.commitment_months} monthly payments per term. Turning off renewal does not waive any unpaid installments.`}
                 </p>
               )}
               </>
