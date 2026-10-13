@@ -24,6 +24,23 @@ const enterprise = await server.ssrLoadModule(
   "/src/components/EnterpriseModelPreparation.tsx",
 );
 const enterpriseFields = await server.ssrLoadModule("/src/lib/enterpriseAgreementFields.ts");
+test("accepted client term projection keeps historical cents and refuses malformed obligations", () => {
+  for (const months of [3, 6, 12]) for (const payment of ["prepaid", "monthly_installments"]) {
+    const count = payment === "prepaid" ? 1 : months;
+    const value = { commitment_months: months, payment_option: payment, currency: "usd",
+      platform_payment_cents: 110017, platform_commitment_total_cents: 110017 * count, installment_count: count,
+      current_term_start_at: "2026-01-31T12:13:14Z", current_term_end_at: "2027-01-31T12:13:14Z", auto_renew: false };
+    assert.deepEqual(display.readClientMembershipTerms(value), value);
+    assert.equal(display.moneyCents(display.readClientMembershipTerms(value).platform_payment_cents), "$1,100.17");
+    for (const patch of [{ commitment_months: "3" }, { commitment_months: 9 }, { platform_payment_cents: null },
+      { platform_commitment_total_cents: 1 }, { installment_count: 0 }, { payment_option: "annual" },
+      { current_term_end_at: "bad" }, { current_term_end_at: "2020-01-01" }, { auto_renew: "false" }]) {
+      assert.throws(() => display.readClientMembershipTerms({ ...value, ...patch }), /could not be verified/);
+    }
+  }
+  assert.equal(display.readClientMembershipTerms(null), null);
+  assert.equal(display.readClientMembershipTerms(undefined), null);
+});
 test("unknown/null is never zero; explicit zero and cents remain accurate", () => {
   for (const value of [
     null,

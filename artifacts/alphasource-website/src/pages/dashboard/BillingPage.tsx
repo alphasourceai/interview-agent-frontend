@@ -8,6 +8,7 @@ import InfoTooltip from "@/components/InfoTooltip";
 import { supabase } from "@/lib/supabaseClient";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 import BillingModelPanel from "@/components/BillingModelPanel";
+import { moneyCents, readClientMembershipTerms, type ClientMembershipTerms } from "@/lib/billingDisplay";
 
 interface BillingSummary {
   plan_tier: string;
@@ -19,6 +20,7 @@ interface BillingSummary {
   subscription_status: string;
   access_override_mode: string;
   has_stripe_customer: boolean;
+  membership_terms: ClientMembershipTerms | null;
 }
 
 interface BillingRole {
@@ -392,6 +394,7 @@ function ScopedBillingPage() {
           subscription_status: String(first.subscription_status || "").trim(),
           access_override_mode: String(first.access_override_mode || "").trim(),
           has_stripe_customer: Boolean(first.has_stripe_customer),
+          membership_terms: readClientMembershipTerms(first.membership_terms),
         });
       } catch (error) {
         if (!alive) return;
@@ -892,14 +895,16 @@ function ScopedBillingPage() {
     () => ({
       planTier: getMembershipPlanLabel(billingSummary?.plan_tier),
       billingStatus: toDisplayText(billingSummary?.billing_status),
-      billingCycle: toDisplayText(billingSummary?.billing_interval),
+      billingCycle: billingSummary?.membership_terms
+        ? billingSummary.membership_terms.payment_option === "prepaid" ? "Paid in full" : "Monthly payments"
+        : toDisplayText(billingSummary?.billing_interval),
       autoRenew:
-        billingSummary?.auto_renew === true
+        (billingSummary?.membership_terms?.auto_renew ?? billingSummary?.auto_renew) === true
           ? "Yes"
-          : billingSummary?.auto_renew === false
+          : (billingSummary?.membership_terms?.auto_renew ?? billingSummary?.auto_renew) === false
             ? "No"
             : "—",
-      currentTermEnd: formatDate(billingSummary?.current_term_end),
+      currentTermEnd: formatDate(billingSummary?.membership_terms?.current_term_end_at || billingSummary?.current_term_end),
       contractEndDate: formatDate(billingSummary?.contract_end_at),
       membershipStatus: toDisplayText(billingSummary?.subscription_status),
       accessStatus: toDisplayText(billingSummary?.access_override_mode),
@@ -961,6 +966,7 @@ function ScopedBillingPage() {
             ) : !billingSummary ? (
               <p className="text-sm font-semibold" style={subtleTextStyle}>No billing summary available for this client.</p>
             ) : (
+              <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <InfoCard
                   label="Plan Tier"
@@ -976,31 +982,43 @@ function ScopedBillingPage() {
                   tooltip="Shows whether this client currently has active platform access, a pending checkout, a cancellation state, or an inactive billing status."
                 />
                 <InfoCard
-                  label="Billing Cycle"
+                  label={billingSummary.membership_terms ? "Payment Schedule" : "Billing Cycle"}
                   value={billing.billingCycle}
                   accent="#02ABE0"
                   badge
-                  tooltip="The billing period cadence used for renewals and membership timing."
+                  tooltip={billingSummary.membership_terms ? "How the platform fee is paid during the accepted membership commitment." : "The billing period cadence used for renewals and membership timing."}
                 />
+                {billingSummary.membership_terms && (
+                  <>
+                    <InfoCard label="Membership Commitment" value={`${billingSummary.membership_terms.commitment_months} months`} accent="#A380F6"
+                      tooltip="The commitment length in the accepted membership agreement." />
+                    <InfoCard label="Platform Payment" value={`${moneyCents(billingSummary.membership_terms.platform_payment_cents)} ${billingSummary.membership_terms.payment_option === "prepaid" ? "per term" : "per month"}`} accent="#02ABE0"
+                      tooltip="The accepted platform fee for each scheduled payment, excluding role fees, interview charges, and tax." />
+                    <InfoCard label="Platform Total for Term" value={moneyCents(billingSummary.membership_terms.platform_commitment_total_cents)} accent="#02D99D"
+                      tooltip="The platform commitment for the full term; this is not a statement of payments received or the balance remaining." />
+                  </>
+                )}
                 <InfoCard
                   label="Auto-Renew"
                   value={billing.autoRenew}
                   accent="#A380F6"
                   badge
-                  tooltip="Shows whether the current subscription is set to renew at the end of the billing period or cancel at term end."
+                  tooltip={billingSummary.membership_terms ? "The renewal preference for the next membership term. Renewal retains the accepted commitment and platform price." : "Shows whether the current subscription is set to renew at the end of the billing period or cancel at term end."}
                 />
                 <InfoCard
-                  label="Current Term End"
+                  label={billingSummary.membership_terms ? "Membership Term End" : "Current Term End"}
                   value={billing.currentTermEnd}
                   accent="#02ABE0"
-                  tooltip="The date the current billing period or membership term is scheduled to end or renew."
+                  tooltip={billingSummary.membership_terms ? "The end of the current accepted membership commitment, separate from Stripe's individual payment cycle." : "The date the current billing period or membership term is scheduled to end or renew."}
                 />
+                {!billingSummary.membership_terms && (
                 <InfoCard
                   label="Contract End Date"
                   value={billing.contractEndDate}
                   accent="#02D99D"
                   tooltip="The final date of the signed membership agreement terms associated with this client."
                 />
+                )}
                 <InfoCard
                   label="Membership Status"
                   value={billing.membershipStatus}
@@ -1015,6 +1033,14 @@ function ScopedBillingPage() {
                   tooltip="How dashboard access is granted; inherited access flows from the parent account."
                 />
               </div>
+              {billingSummary.membership_terms && (
+                <p className="mt-4 text-sm leading-relaxed" style={mutedTextStyle}>
+                  {billingSummary.membership_terms.payment_option === "prepaid"
+                    ? "Your membership covers the full prepaid term. Turning off renewal does not create a refund; exceptions follow the accepted agreement."
+                    : `All ${billingSummary.membership_terms.commitment_months} monthly payments remain due for this term. Turning off renewal does not cancel remaining payments; access continues while payments are made.`}
+                </p>
+              )}
+              </>
             )}
           </div>
 

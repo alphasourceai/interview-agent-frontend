@@ -1,4 +1,41 @@
 export type BillingModel = "fixed" | "rollover" | "usage" | null;
+
+export interface ClientMembershipTerms {
+  commitment_months: 3 | 6 | 12;
+  payment_option: "prepaid" | "monthly_installments";
+  currency: "usd";
+  platform_payment_cents: number;
+  platform_commitment_total_cents: number;
+  installment_count: number;
+  current_term_start_at: string;
+  current_term_end_at: string;
+  auto_renew: boolean;
+}
+
+export function readClientMembershipTerms(value: unknown): ClientMembershipTerms | null {
+  if (value == null) return null;
+  if (typeof value !== "object" || Array.isArray(value)) throw new Error("Membership terms could not be verified.");
+  const v = value as Record<string, unknown>;
+  const count = v.payment_option === "prepaid" ? 1 : v.commitment_months;
+  if (![3, 6, 12].includes(v.commitment_months as number)
+    || (v.payment_option !== "prepaid" && v.payment_option !== "monthly_installments")
+    || v.currency !== "usd" || typeof v.auto_renew !== "boolean"
+    || typeof v.platform_payment_cents !== "number" || !Number.isSafeInteger(v.platform_payment_cents) || v.platform_payment_cents <= 0
+    || typeof v.platform_commitment_total_cents !== "number" || !Number.isSafeInteger(v.platform_commitment_total_cents)
+    || v.installment_count !== count || v.platform_commitment_total_cents !== v.platform_payment_cents * Number(count)
+    || typeof v.current_term_start_at !== "string" || !Number.isFinite(Date.parse(v.current_term_start_at))
+    || typeof v.current_term_end_at !== "string" || !Number.isFinite(Date.parse(v.current_term_end_at))
+    || Date.parse(v.current_term_end_at) <= Date.parse(v.current_term_start_at)) {
+    throw new Error("Membership terms could not be verified.");
+  }
+  return {
+    commitment_months: v.commitment_months as ClientMembershipTerms["commitment_months"],
+    payment_option: v.payment_option, currency: "usd", platform_payment_cents: v.platform_payment_cents,
+    platform_commitment_total_cents: v.platform_commitment_total_cents, installment_count: Number(count),
+    current_term_start_at: v.current_term_start_at, current_term_end_at: v.current_term_end_at, auto_renew: v.auto_renew
+  };
+}
+
 export function billingModel(value: unknown): BillingModel {
   return value === "fixed" || value === "rollover" || value === "usage"
     ? value
