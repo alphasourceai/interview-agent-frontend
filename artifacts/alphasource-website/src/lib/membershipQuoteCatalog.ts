@@ -20,6 +20,7 @@ export interface MembershipQuoteCatalog {
   pricing_version: string;
   offers: RetailMembershipOffer[];
   plans: Record<"basic" | "pro", RetailPlanDisplay>;
+  monthly_payment_references?: Record<"basic" | "pro", Record<3 | 6 | 12, number>>;
 }
 function object(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -33,7 +34,7 @@ export function parseMembershipQuoteCatalog(value: unknown, audience: Membership
   if (!payload) return invalid();
   const markedItems = Array.isArray(payload.items) && payload.items.some(item => object(item)?.schema_version === 2);
   if (!Object.hasOwn(payload,"offers") && !Object.hasOwn(payload,"pricing_version")
-    && !Object.hasOwn(payload,"first_role_prepay_prices") && !markedItems) return null;
+    && !Object.hasOwn(payload,"first_role_prepay_prices") && !Object.hasOwn(payload,"monthly_payment_references") && !markedItems) return null;
   if (typeof payload.pricing_version !== "string" || !payload.pricing_version || !Array.isArray(payload.offers)) return invalid();
   const raw = payload.offers.map(item => object(item) ?? invalid());
   const offers = parseMembershipOffers(payload.offers, audience);
@@ -67,7 +68,28 @@ export function parseMembershipQuoteCatalog(value: unknown, audience: Membership
     }
     plans[plan] = projection;
   }
-  return { pricing_version: payload.pricing_version, offers, plans };
+  let monthlyReferences: MembershipQuoteCatalog["monthly_payment_references"];
+  if (Object.hasOwn(payload, "monthly_payment_references")) {
+    const references = object(payload.monthly_payment_references);
+    if (!references || Object.keys(references).sort().join(',') !== 'basic,pro') return invalid();
+    monthlyReferences = {} as NonNullable<MembershipQuoteCatalog["monthly_payment_references"]>;
+    for (const plan of ["basic", "pro"] as const) {
+      const prices = object(references[plan]);
+      if (!prices || Object.keys(prices).sort().join(',') !== '12,3,6'
+        || [3, 6, 12].some(months => !positive(prices[months]))) return invalid();
+      monthlyReferences[plan] = { 3: prices[3] as number, 6: prices[6] as number, 12: prices[12] as number };
+    }
+  }
+  return { pricing_version: payload.pricing_version, offers, plans,
+    ...(monthlyReferences ? { monthly_payment_references: monthlyReferences } : {}) };
+}
+
+// Read-only card projection. Monthly references never become selection payloads.
+export function membershipCardPricing(catalog: MembershipQuoteCatalog, planKey: "basic" | "pro", months: 3 | 6 | 12) {
+  const offer = catalog.offers.find(item => item.plan_key === planKey && item.commitment_months === months
+    && item.payment_option === "prepaid" && item.offer_version === catalog.pricing_version);
+  if (!offer) return invalid();
+  return { offer, monthlyPaymentCents: catalog.monthly_payment_references?.[planKey]?.[months] ?? null };
 }
 export function membershipInitialAmount(offer: RetailMembershipOffer, plan: RetailPlanDisplay, firstRoleSelected: boolean): number {
   if (offer.plan_key !== plan.plan_key || offer.first_role_prepay.selected) return invalid();

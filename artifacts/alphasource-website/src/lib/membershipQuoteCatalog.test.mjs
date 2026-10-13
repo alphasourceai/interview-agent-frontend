@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {createRequire} from 'node:module';
-import {parseMembershipQuoteCatalog,membershipInitialAmount,adminRetailQuotePayload} from './membershipQuoteCatalog.ts';
+import {parseMembershipQuoteCatalog,membershipInitialAmount,adminRetailQuotePayload,membershipCardPricing} from './membershipQuoteCatalog.ts';
 const require=createRequire(import.meta.url);
 const backend=process.env.MEMBERSHIP_BACKEND_SOURCE ? require(process.env.MEMBERSHIP_BACKEND_SOURCE) : null;
 function fixture(plan,months,payment){return {schema_version:2,offer_version:'synthetic',offer_key:`${plan}-${months}-${payment}`,
@@ -14,6 +14,30 @@ function catalog(audience){const offers=backend?backend.listRetailOffers({channe
   const role=Object.fromEntries(['basic','pro'].map(plan=>[plan,backend?backend.buildRetailOffer({channel:audience,planKey:plan,
     commitmentMonths:3,paymentOption:'prepaid',offerVersion:offers[0].offer_version,firstRolePrepaySelected:true}).first_role_prepay.amount_cents:9000]));
   return {pricing_version:offers[0].offer_version,offers,first_role_prepay_prices:role}}
+test('term cards use verified prepaid selections and optional server-only monthly references',()=>{
+  const raw=catalog('public');
+  raw.monthly_payment_references={basic:{3:44900,6:39900,12:34900},pro:{3:74900,6:69900,12:64900}};
+  const c=parseMembershipQuoteCatalog(raw,'public');
+  for(const plan of ['basic','pro'])for(const months of [3,6,12]){
+    const card=membershipCardPricing(c,plan,months);
+    assert.equal(card.offer.commitment_months,months);assert.equal(card.offer.payment_option,'prepaid');
+    assert.equal(card.monthlyPaymentCents,raw.monthly_payment_references[plan][months]);
+  }
+  const older=parseMembershipQuoteCatalog(catalog('public'),'public');
+  assert.equal(membershipCardPricing(older,'basic',3).monthlyPaymentCents,null);
+  assert.throws(()=>membershipCardPricing({...c,pricing_version:'stale'},'basic',3));
+  assert.equal(c.offers.length,6);
+});
+test('malformed monthly comparison never falls back to invented prices',()=>{
+  const base=catalog('public');
+  const refs={basic:{3:44900,6:39900,12:34900},pro:{3:74900,6:69900,12:64900}};
+  for(const mutate of [r=>delete r.basic[6],r=>r.pro[12]=0,r=>r.basic[3]='44900',r=>r.pro[6]=NaN,
+    r=>r.basic[4]=100,r=>r.extra={}]){
+    const r=structuredClone(refs);mutate(r);
+    assert.throws(()=>parseMembershipQuoteCatalog({...base,monthly_payment_references:r},'public'));
+  }
+  assert.throws(()=>parseMembershipQuoteCatalog({monthly_payment_references:refs},'public'));
+});
 test('absence selects existing legacy shape; malformed explicit catalog refuses instead of cheap fallback',()=>{
   assert.equal(parseMembershipQuoteCatalog({packages:[{plan_key:'basic'}]},'public'),null);
   assert.equal(parseMembershipQuoteCatalog({items:[{plan_key:'basic'}]},'sales'),null);

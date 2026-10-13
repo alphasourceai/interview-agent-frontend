@@ -20,7 +20,7 @@ import { AlphaScreenBreathingLockup, AlphaScreenMark } from "@/components/AlphaS
 import { getPublicBackendBase, joinUrl } from "@/lib/urlConfig";
 import { MembershipTermsSelector } from "@/components/MembershipTermsSelector";
 import { membershipMoney, selectedMembershipOffer, type MembershipOfferSelection } from "@/lib/membershipTerms";
-import { type MembershipQuoteCatalog, type RetailPlanDisplay } from "@/lib/membershipQuoteCatalog";
+import { membershipCardPricing, type MembershipQuoteCatalog, type RetailPlanDisplay } from "@/lib/membershipQuoteCatalog";
 import { verifiedPublicCatalog, publicRetailQuotePayload, savedPublicMembershipTerms } from "@/lib/publicMembershipQuote";
 import {
   SMS_CONSENT_COPY_VERSION,
@@ -662,6 +662,7 @@ function PlanCard({
   onStart,
   catalog,
   available,
+  commitmentMonths,
 }: {
   plan: AlphaScreenPackage;
   selected: boolean;
@@ -669,12 +670,14 @@ function PlanCard({
   onStart: (plan: AlphaScreenPackage) => void;
   catalog: MembershipQuoteCatalog | null;
   available: boolean;
+  commitmentMonths: 3 | 6 | 12;
 }) {
   const accent = PLAN_ACCENTS[plan.plan_key] || PLAN_ACCENTS.basic;
   const included = plan.included_interviews_per_role || plan.included_interviews;
   const duration = plan.max_interview_minutes || plan.interview_duration_minutes;
   const overage = plan.additional_interview_fee || plan.additional_interview_price || plan.overage_price;
   const platformSuffix = billingCadence === "annual" ? "/year platform" : "/mo platform";
+  const cardPricing = catalog ? membershipCardPricing(catalog, plan.plan_key as "basic" | "pro", commitmentMonths) : null;
 
   return (
     <article
@@ -698,19 +701,16 @@ function PlanCard({
 
       <div className="mb-5">
         <div className="flex items-end gap-2">
-          <span className="text-4xl font-black tracking-normal text-[#0A1547]">{catalog ? "3 / 6 / 12" : formatPlatformFee(plan, billingCadence)}</span>
+          <span className="text-4xl font-black tracking-normal text-[#0A1547]">{catalog ? commitmentMonths : formatPlatformFee(plan, billingCadence)}</span>
           <span className="pb-1.5 text-sm font-bold text-[#0A1547]/55">{catalog ? "months" : platformSuffix}</span>
         </div>
-        {catalog ? <div className="mt-3 grid gap-1 text-sm font-bold text-[#0A1547]">
-          {catalog.offers.filter(offer => offer.plan_key === plan.plan_key).map(offer => <p key={offer.offer_key}>
-            {offer.commitment_months} months: {membershipMoney(offer.platform_payment_cents)} upfront
-          </p>)}
+        {cardPricing ? <div className="mt-3 grid gap-1 text-sm font-bold text-[#0A1547]">
+          <p>{membershipMoney(cardPricing.offer.platform_payment_cents)} prepay</p>
+          {cardPricing.monthlyPaymentCents !== null ? <p className="text-xs font-bold text-[#0A1547]/55">
+            {membershipMoney(cardPricing.monthlyPaymentCents)} monthly · through sales
+          </p> : null}
         </div> : null}
         <p className="mt-2 text-sm font-black text-[#0A1547]">+ {formatUsd(plan.per_role_fee)} / role</p>
-        <p className="mt-1 text-xs font-bold text-[#0A1547]/55">
-          {catalog ? `Optional first-role prepay: ${membershipMoney(catalog.plans[plan.plan_key as "basic" | "pro"].first_role_prepay_price_cents)}, once. It does not renew.`
-            : "New self-serve buyers can optionally prepay their first role during signup and save 10% on that first role."}
-        </p>
         {!catalog && billingCadence === "annual" ? (
           <p className="mt-1 text-xs font-bold text-[#0A1547]/55">
             Annual platform pricing is discounted and billed upfront.
@@ -1549,6 +1549,7 @@ export default function AlphaScreenPricingPage() {
   const [loadState, setLoadState] = useState<PackageLoadState>("loading");
   const [retailCatalog, setRetailCatalog] = useState<MembershipQuoteCatalog | null>(null);
   const [retailSelection, setRetailSelection] = useState<MembershipOfferSelection | null>(null);
+  const [cardCommitmentMonths, setCardCommitmentMonths] = useState<3 | 6 | 12>(3);
   const purchaseFormStartedRef = useRef(false);
   const purchaseSubmitInFlightRef = useRef(false);
   const emailSendInFlightRef = useRef(false);
@@ -1626,7 +1627,8 @@ export default function AlphaScreenPricingPage() {
     setPurchaseError("");
     setPurchaseResult(null);
     setPurchaseSubmissionKey("");
-    setRetailSelection(null);
+    const cardOffer = retailCatalog ? membershipCardPricing(retailCatalog, plan.plan_key as "basic" | "pro", cardCommitmentMonths).offer : null;
+    setRetailSelection(cardOffer ? { offerVersion: cardOffer.offer_version, offerKey: cardOffer.offer_key } : null);
     setAgreementStatus("idle");
     setAgreementError("");
     setAgreementResult(null);
@@ -2300,7 +2302,15 @@ export default function AlphaScreenPricingPage() {
                   {cadence === "annual" ? "Annual" : "Monthly"}
                 </button>
               ))}
-            </div> : <p className="text-sm font-black text-[#0A1547]">Prepaid memberships · 3, 6 or 12 months</p>}
+            </div> : <div role="group" aria-label="Membership length" className="flex rounded-lg border border-[#0A1547]/10 bg-[#F8F9FD] p-1">
+              {([3, 6, 12] as const).map(months => <button key={months} type="button"
+                aria-pressed={cardCommitmentMonths === months}
+                onClick={() => setCardCommitmentMonths(months)}
+                disabled={loadState !== "ready" || Boolean(purchaseResult?.purchase_intent_id)}
+                className={`rounded-md px-4 py-2 text-sm font-black transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A380F6] ${
+                  cardCommitmentMonths === months ? "bg-[#0A1547] text-white" : "text-[#0A1547]/65 hover:text-[#A380F6]"
+                }`}>{months} months</button>)}
+            </div>}
           </div>
           <LoadingNotice state={loadState} />
           <div className="grid gap-5 lg:grid-cols-3">
@@ -2313,12 +2323,13 @@ export default function AlphaScreenPricingPage() {
                 onStart={startPurchase}
                 catalog={retailCatalog}
                 available={Boolean(purchaseResult?.purchase_intent_id) || loadState === "ready"}
+                commitmentMonths={cardCommitmentMonths}
               />
             ))}
             <EnterpriseCard />
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-relaxed text-[#0A1547]/55">
-            {retailCatalog ? "Choose a prepaid 3-, 6- or 12-month membership. Your term begins when payment succeeds and renews at the same accepted price and term unless you turn renewal off before it ends. Optional first-role prepayment is one-time, never part of renewal. Role and additional-interview fees are separate; signed terms apply. Secure checkout opens after agreement signing."
+            {retailCatalog ? "Choose a prepaid 3-, 6- or 12-month membership online, or contact sales for monthly installment payments for the same term. Your term begins when payment succeeds and renews at the same accepted price and term unless you turn renewal off before it ends. Canceling turns off auto-renewal; prepaid access continues through the full term, with refunds limited to applicable refund-policy exceptions. Role and additional-interview fees are separate; signed terms apply. Secure checkout opens after agreement signing."
               : "Annual platform pricing is discounted and billed upfront. Role fees are billed separately when roles are created. Essential additional interviews are $25 each and Pro additional interviews are $30 each at current catalog rates; client-specific signed terms apply. Secure checkout opens after agreement signing. New self-serve buyers can optionally prepay their first role during signup and save 10% on that first role."}
             {" "}
             For product and workflow questions, review the <a href="/faq" className="font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4 transition-colors hover:text-[#A380F6]">alphaScreen FAQ</a> or <a href="/alphascreen" className="font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4 transition-colors hover:text-[#A380F6]">alphaScreen overview</a>.
