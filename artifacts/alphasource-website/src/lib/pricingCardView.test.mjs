@@ -49,3 +49,32 @@ test('saved intent returns before applying a new card selection and the shared t
  assert.match(source,/aria-pressed=\{cardCommitmentMonths === months\}/);
  assert.match(start,/offerKey: cardOffer\.offer_key/);
 });
+const page=ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='AlphaScreenPricingPage');
+const startInitializer=page.body.statements.filter(ts.isVariableStatement).flatMap(s=>s.declarationList.declarations)
+ .find(d=>d.name.getText(ast)==='startPurchase').initializer.getText(ast);
+const handlerJs=ts.transpileModule('const startPurchase = '+startInitializer+'; startPurchase;',
+ {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+test('actual saved-intent handler resumes without resetting or selecting any current catalog offer',()=>{
+ const accepted={purchase_intent_id:'saved-synthetic',selected_package:{offer_version:'historical',platform_fee_cents:195017}};
+ const calls=[];
+ const handler=vm.runInNewContext(handlerJs,{purchaseSubmitInFlightRef:{current:false},purchaseResult:accepted,
+  setPurchaseStatus:v=>calls.push(['status',v]),setCheckoutModalOpen:v=>calls.push(['open',v])});
+ handler({plan_key:'pro'});
+ assert.deepEqual(calls,[['status','success'],['open',true]]);
+ assert.equal(accepted.selected_package.offer_version,'historical');assert.equal(accepted.selected_package.platform_fee_cents,195017);
+});
+test('actual new signup handler seeds the selected verified prepaid term, never the monthly reference',()=>{
+ for(const plan_key of ['basic','pro'])for(const months of [3,6,12]){
+  let selection=null;
+  const context={purchaseSubmitInFlightRef:{current:false},purchaseResult:null,loadState:'ready',
+   selectedBillingCadence:'monthly',retailCatalog:fixture(),cardCommitmentMonths:months,membershipCardPricing,
+   planSupportsCadence:()=>false,defaultCadence:()=> 'monthly',purchaseFormStartedRef:{current:true},
+   setRetailSelection:v=>selection=v,clearCheckoutRecoveryState:()=>{},trackEvent:()=>{}};
+  for(const setter of ['setSelectedPlanKey','setCheckoutModalOpen','setPurchaseStatus','setPurchaseError','setPurchaseResult',
+   'setPurchaseSubmissionKey','setAgreementStatus','setAgreementError','setAgreementResult','setEmailVerificationStatus',
+   'setEmailVerificationError','setEmailVerificationCode','setResendCooldownSeconds','setEmailSendLoading','setEmailVerifyLoading',
+   'setVerificationChannel','setPurchaseForm'])context[setter]=()=>{};
+  vm.runInNewContext(handlerJs,context)({plan_key});
+  assert.equal(selection.offerKey,`${plan_key}-${months}-prepaid`);assert.equal(selection.offerVersion,'fixture');
+ }
+});
