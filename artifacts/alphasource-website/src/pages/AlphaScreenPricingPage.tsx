@@ -793,14 +793,15 @@ function EnterpriseCard() {
         </div>
       </div>
       <p className="text-sm leading-relaxed text-white/70">
-        Fully customizable to your organization’s needs, with a dedicated Client Support Agent. Tailor interview volume, enterprise onboarding, advanced scoring options, and membership terms.
+        Fully customizable to your organization’s needs, with a dedicated Client Support Agent. Choose a standard platform-and-role membership or usage-based pricing with a platform fee and per-interview charges. Tailor interview volume, onboarding, and membership terms.
       </p>
       <div className="mt-6 grid gap-3">
         {[
           "Custom interviews included",
-          "15-minute interview cap",
+          "Custom Interview Duration",
+          "Usage-based membership options",
+          "Platform fee + per-interview pricing",
           "Volume discounts",
-          "Advanced scoring models available",
           "Dedicated Client Support Agent",
         ].map((item) => (
           <div key={item} className="flex items-center gap-3 text-sm font-bold text-white/85">

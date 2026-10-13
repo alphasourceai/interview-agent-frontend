@@ -11,13 +11,21 @@ import {membershipMoney} from './membershipTerms.ts';
 const require=createRequire(import.meta.url),ts=require('typescript');
 const source=fs.readFileSync(new URL('../pages/AlphaScreenPricingPage.tsx',import.meta.url),'utf8');
 const ast=ts.createSourceFile('pricing.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
-const fragments=['PackageMetric','PlanCard'].map(name=>ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text===name).getText(ast)).join('\n');
+const fragments=['PackageMetric','PlanCard','EnterpriseCard'].map(name=>ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text===name).getText(ast)).join('\n');
 const js=ts.transpileModule(fragments,{compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.CommonJS}}).outputText;
 const icon=()=>React.createElement('span');
-const PlanCard=vm.runInNewContext(js+'\nPlanCard;',{
+const {PlanCard,EnterpriseCard}=vm.runInNewContext(js+'\n({PlanCard,EnterpriseCard});',{
  React,membershipCardPricing,membershipMoney,formatUsd:n=>'$'+n,formatPlatformFee:()=>'$legacy',
  PLAN_ACCENTS:{basic:{color:'#02D99D'},pro:{color:'#A380F6'}},BEST_FOR:{basic:'Essential test',pro:'Pro test'},
- BriefcaseBusiness:icon,Layers3:icon,CheckCircle:icon,Clock3:icon,BadgeDollarSign:icon,ArrowRight:icon,
+ BriefcaseBusiness:icon,Layers3:icon,CheckCircle:icon,Clock3:icon,BadgeDollarSign:icon,ArrowRight:icon,Building2:icon,
+});
+test('actual Enterprise card describes custom duration and both membership models without old scoring or duration claims',()=>{
+ const html=renderToStaticMarkup(React.createElement(EnterpriseCard));
+ assert.match(html,/Custom Interview Duration/);assert.match(html,/Usage-based membership options/);
+ assert.match(html,/Platform fee \+ per-interview pricing/);assert.match(html,/standard platform-and-role membership/);
+ assert.match(html,/dedicated Client Support Agent/);assert.match(html,/Volume discounts/);
+ assert.match(html,/href="#pricing-demo"/);
+ assert.doesNotMatch(html,/15-minute interview cap|Advanced scoring models available|advanced scoring options/);
 });
 function fixture(){const refs={basic:{3:44900,6:39900,12:34900},pro:{3:74900,6:69900,12:64900}};
  const offers=['basic','pro'].flatMap(plan=>[3,6,12].map(months=>({schema_version:2,offer_version:'fixture',
