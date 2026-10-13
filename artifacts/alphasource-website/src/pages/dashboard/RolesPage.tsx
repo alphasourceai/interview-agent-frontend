@@ -104,6 +104,8 @@ interface Role {
 interface RoleCheckoutResponse {
   ok?: unknown;
   credit_applied?: unknown;
+  role_created?: unknown;
+  no_charge?: unknown;
   role_id?: unknown;
   message?: unknown;
   url?: unknown;
@@ -716,6 +718,19 @@ export default function RolesPage() {
       if (!response.ok) throw new Error(extractErrorMessage(text));
 
       const data = parseJsonSafe(text) as RoleCheckoutResponse | null;
+      if (data?.role_created === true && data?.no_charge === true) {
+        setRoleTitle("");
+        setInterviewType("core");
+        setJdFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        setRolesReloadNonce((value) => value + 1);
+        setActionNotice({
+          tone: "success",
+          text: "Role created. Interview usage is billed at your accepted Enterprise usage rate.",
+        });
+        return;
+      }
+
       if (data?.credit_applied === true) {
         setRoleTitle("");
         setInterviewType("core");
