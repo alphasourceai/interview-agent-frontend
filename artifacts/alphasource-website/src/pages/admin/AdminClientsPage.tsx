@@ -1204,7 +1204,7 @@ export default function AdminClientsPage() {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-black text-[#0A1547]" style={{ color: "var(--as-text)" }}>Clients</h2>
         <button
-          disabled={processRenewalsBusy}
+          disabled={isGuardedPricingDev || processRenewalsBusy}
           className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90"
           style={{ backgroundColor: "#A380F6" }}
           onClick={() => {
@@ -1444,7 +1444,7 @@ export default function AdminClientsPage() {
                       <span className="text-sm" style={subtleTextStyle}>—</span>
                     ) : (
                       <button
-                        disabled={autoRenewBusy[client.id] === true}
+                        disabled={isGuardedPricingDev || autoRenewBusy[client.id] === true}
                         className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all cursor-pointer hover:scale-105 ${
                           autoRenew
                             ? "border-[#A380F6] bg-[#A380F6]"
@@ -1576,7 +1576,7 @@ export default function AdminClientsPage() {
                         {canCancelContract && (
                           <div className="flex items-center gap-3">
                             <button
-                              disabled={cancelContractBusy[client.id] === true}
+                              disabled={isGuardedPricingDev || cancelContractBusy[client.id] === true}
                               className="px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 flex-shrink-0"
                               style={{ backgroundColor: "#A380F6" }}
                               onClick={(e) => {
@@ -1596,7 +1596,7 @@ export default function AdminClientsPage() {
                             <select
                               className={selectCls}
                               value={override}
-                              disabled={accessOverrideBusy[client.id] === true}
+                              disabled={isGuardedPricingDev || accessOverrideBusy[client.id] === true}
                               onChange={(e) => {
                                 const nextValue = e.target.value as AccessOverride;
                                 const previousValue = overrides[client.id] ?? normalizeAccessOverride(client.accessOverrideMode);
@@ -1701,7 +1701,7 @@ export default function AdminClientsPage() {
                             )}
 
                             <button
-                              disabled={subscriptionCheckoutBusy[client.id] === true}
+                              disabled={isGuardedPricingDev || subscriptionCheckoutBusy[client.id] === true}
                               className="w-full px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90"
                               style={{ backgroundColor: "#A380F6" }}
                               onClick={(e) => {
@@ -1777,7 +1777,7 @@ export default function AdminClientsPage() {
                                 <select
                                   className={selectCls}
                                   value={childOverride}
-                                  disabled={accessOverrideBusy[child.id] === true}
+                                  disabled={isGuardedPricingDev || accessOverrideBusy[child.id] === true}
                                   onChange={(e) => {
                                     const nextValue = e.target.value as AccessOverride;
                                     const previousValue = overrides[child.id] ?? normalizeAccessOverride(child.accessOverrideMode);
@@ -2113,6 +2113,7 @@ export default function AdminClientsPage() {
                 type="button"
                 className="px-4 py-2 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: "#A380F6" }}
+                disabled={isGuardedPricingDev}
                 onClick={continueLegacyCheckout}
               >
                 Continue anyway
@@ -2124,3 +2125,4 @@ export default function AdminClientsPage() {
     </AdminLayout>
   );
 }
+import { isGuardedPricingDev } from "@/lib/guardedPricingDev";

@@ -26,6 +26,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Seo from "@/components/Seo";
 import PageAnalytics from "@/components/PageAnalytics";
+import GuardedPricingDevBanner from "@/components/GuardedPricingDevBanner";
 import IDPixelLoader from "@/components/IDPixelLoader";
 import TrackingConsentNotice from "@/components/TrackingConsentNotice";
 import {
@@ -731,6 +732,7 @@ function App() {
           <TrackingConsentProvider>
             <AuthProvider>
               <Router />
+              <GuardedPricingDevBanner />
             </AuthProvider>
           </TrackingConsentProvider>
         </WouterRouter>

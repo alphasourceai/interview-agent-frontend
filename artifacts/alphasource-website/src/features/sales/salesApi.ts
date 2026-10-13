@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 import { parseMembershipQuoteCatalog } from "@/lib/membershipQuoteCatalog";
+import { guardedPricingDevMessage } from "@/lib/guardedPricingDev";
 import type {
   EnterpriseHandoffInput,
   EnterpriseHandoffResult,
@@ -88,7 +89,7 @@ async function requestJson<T>(path: string, init: RequestInit = {}, idempotencyK
   }
   if (!response.ok) {
     const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
-    const detail = String(record.detail || record.message || record.error || "The request could not be completed.");
+    const detail = record.code === "GUARDED_DEV_BILLING_HOLD" ? guardedPricingDevMessage : String(record.detail || record.message || record.error || "The request could not be completed.");
     const code = String(record.code || record.error || "sales_api_error");
     const retry = Number(record.retry_after_seconds);
     const fields = record.fields && typeof record.fields === "object" ? record.fields as Record<string, unknown> : {};

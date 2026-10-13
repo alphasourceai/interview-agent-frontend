@@ -613,7 +613,7 @@ export default function AdminBillingPage() {
     setLineItems((prev) => prev.map((li) => (li.id === id ? { ...li, [field]: value } : li)));
 
   const filledItems   = lineItems.filter((li) => li.description.trim() && li.unit.trim());
-  const canSendInvoice = !selectedClientIsChild && invCustomer && invTitle.trim() && filledItems.length > 0;
+  const canSendInvoice = !isGuardedPricingDev && !selectedClientIsChild && invCustomer && invTitle.trim() && filledItems.length > 0;
 
   const updateAgreementField = <K extends keyof AgreementFormValues>(
     key: K,
@@ -2339,7 +2339,7 @@ export default function AdminBillingPage() {
                 <button
                   type="button"
                   onClick={() => { void handleSendAgreement(); }}
-                  disabled={agreementSendBusy || agreementPreviewBusy || selectedClientIsChild || retailActionUnavailable}
+                  disabled={isGuardedPricingDev || agreementSendBusy || agreementPreviewBusy || selectedClientIsChild || retailActionUnavailable}
                   className="px-4 py-2 text-xs font-bold text-white rounded-full transition-colors"
                   style={{
                     backgroundColor: agreementSendBusy ? "#8F73D1" : "#A380F6",
@@ -2478,6 +2478,7 @@ export default function AdminBillingPage() {
               </button>
               <button
                 type="button"
+                disabled={isGuardedPricingDev && agreementReplacementPendingAction === "send"}
                 onClick={() => {
                   const pendingAction = agreementReplacementPendingAction;
                   setAgreementReplacementModalOpen(false);
@@ -2503,3 +2504,4 @@ export default function AdminBillingPage() {
     </AdminLayout>
   );
 }
+import { isGuardedPricingDev } from "@/lib/guardedPricingDev";
