@@ -1004,7 +1004,7 @@ function ScopedBillingPage() {
                   value={billing.autoRenew}
                   accent="#A380F6"
                   badge
-                  tooltip={billingSummary.membership_terms ? "The renewal preference for the next membership term. Renewal retains the accepted commitment and platform price." : "Shows whether the current subscription is set to renew at the end of the billing period or cancel at term end."}
+                  tooltip={billingSummary.membership_terms ? "The last confirmed renewal setting. A scheduled or unconfirmed request is shown separately below. Renewal retains the accepted commitment and platform price." : "Shows whether the current subscription is set to renew at the end of the billing period or cancel at term end."}
                 />
                 <InfoCard
                   label={billingSummary.membership_terms ? "Membership Term End" : "Current Term End"}
@@ -1012,6 +1012,11 @@ function ScopedBillingPage() {
                   accent="#02ABE0"
                   tooltip={billingSummary.membership_terms ? "The end of the current accepted membership commitment, separate from Stripe's individual payment cycle." : "The date the current billing period or membership term is scheduled to end or renew."}
                 />
+                {billingSummary.membership_terms?.stripe_renewal_billing_cutoff_at && (
+                  <InfoCard label="Stripe Renewal Billing Date"
+                    value={formatDate(billingSummary.membership_terms.stripe_renewal_billing_cutoff_at)} accent="#02D99D"
+                    tooltip="Turn off the next commitment renewal before this Stripe billing date. This is the full commitment boundary, not the next monthly installment or contractual term end." />
+                )}
                 {!billingSummary.membership_terms && (
                 <InfoCard
                   label="Contract End Date"
@@ -1039,6 +1044,18 @@ function ScopedBillingPage() {
                   {billingSummary.membership_terms.payment_option === "prepaid"
                     ? `Your agreement sets a ${billingSummary.membership_terms.commitment_months}-month prepaid term. Turning off renewal does not create a refund; exceptions follow the accepted agreement.`
                     : `Your agreement schedules ${billingSummary.membership_terms.commitment_months} monthly payments per term. Turning off renewal does not waive any unpaid installments.`}
+                </p>
+              )}
+              {billingSummary.membership_terms?.requested_auto_renew != null && (
+                <p className="mt-2 text-sm leading-relaxed" style={mutedTextStyle}>
+                  Requested renewal: {billingSummary.membership_terms.requested_auto_renew ? "On" : "Off"}.
+                  {billingSummary.membership_terms.renewal_request_status === "applied"
+                    ? " Confirmed with Stripe."
+                    : billingSummary.membership_terms.renewal_request_status === "waiting"
+                      ? " Scheduled; current-term monthly payments still continue."
+                      : billingSummary.membership_terms.renewal_request_status === "held"
+                        ? " Held for support review; the request has not been confirmed."
+                        : " Awaiting confirmation; the last confirmed setting still applies."}
                 </p>
               )}
               </>

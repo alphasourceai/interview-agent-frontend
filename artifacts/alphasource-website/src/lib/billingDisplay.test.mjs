@@ -64,6 +64,18 @@ test("unknown/null is never zero; explicit zero and cents remain accurate", () =
   assert.equal(display.moneyDollars(0), "$0.00");
   assert.equal(display.moneyDollars("299.25"), "$299.25");
 });
+test("renewal request and full Stripe cutoff stay separate from contractual end and confirmed preference", () => {
+  const value = { commitment_months: 3, payment_option: "monthly_installments", currency: "usd",
+    platform_payment_cents: 44900, platform_commitment_total_cents: 134700, installment_count: 3,
+    current_term_start_at: "2026-01-31T12:13:14Z", current_term_end_at: "2026-04-30T12:13:14Z", auto_renew: true,
+    stripe_renewal_billing_cutoff_at: "2026-04-30T11:59:59Z", renewal_request_status: "waiting",
+    requested_auto_renew: false, renewal_requested_at: "2026-02-15T10:00:00Z" };
+  assert.deepEqual(display.readClientMembershipTerms(value), value);
+  for (const patch of [{ stripe_renewal_billing_cutoff_at: "bad" }, { renewal_request_status: "successful" },
+    { requested_auto_renew: "false" }, { renewal_requested_at: "bad" }]) {
+    assert.throws(() => display.readClientMembershipTerms({ ...value, ...patch }), /could not be verified/);
+  }
+});
 test("exact server models only; metered is not depleted or unlimited", () => {
   assert.equal(display.billingModel("enterprise"), null);
   assert.equal(display.billingModel("Usage"), null);

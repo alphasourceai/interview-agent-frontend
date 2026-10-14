@@ -10,6 +10,10 @@ export interface ClientMembershipTerms {
   current_term_start_at: string;
   current_term_end_at: string;
   auto_renew: boolean;
+  stripe_renewal_billing_cutoff_at?: string;
+  renewal_request_status?: "none" | "waiting" | "claimed" | "unknown" | "applied" | "held";
+  requested_auto_renew?: boolean | null;
+  renewal_requested_at?: string | null;
 }
 
 export function readClientMembershipTerms(value: unknown): ClientMembershipTerms | null {
@@ -28,11 +32,24 @@ export function readClientMembershipTerms(value: unknown): ClientMembershipTerms
     || Date.parse(v.current_term_end_at) <= Date.parse(v.current_term_start_at)) {
     throw new Error("Membership terms could not be verified.");
   }
+  const renewal = v.stripe_renewal_billing_cutoff_at === undefined ? {} : (() => {
+    if (typeof v.stripe_renewal_billing_cutoff_at !== "string" || !Number.isFinite(Date.parse(v.stripe_renewal_billing_cutoff_at))
+      || !["none", "waiting", "claimed", "unknown", "applied", "held"].includes(String(v.renewal_request_status))
+      || (v.requested_auto_renew !== null && typeof v.requested_auto_renew !== "boolean")
+      || (v.renewal_requested_at !== null && (typeof v.renewal_requested_at !== "string" || !Number.isFinite(Date.parse(v.renewal_requested_at))))) {
+      throw new Error("Renewal preference could not be verified.");
+    }
+    return { stripe_renewal_billing_cutoff_at: v.stripe_renewal_billing_cutoff_at,
+      renewal_request_status: v.renewal_request_status as ClientMembershipTerms["renewal_request_status"],
+      requested_auto_renew: v.requested_auto_renew as boolean | null,
+      renewal_requested_at: v.renewal_requested_at as string | null };
+  })();
   return {
     commitment_months: v.commitment_months as ClientMembershipTerms["commitment_months"],
     payment_option: v.payment_option, currency: "usd", platform_payment_cents: v.platform_payment_cents,
     platform_commitment_total_cents: v.platform_commitment_total_cents, installment_count: Number(count),
-    current_term_start_at: v.current_term_start_at, current_term_end_at: v.current_term_end_at, auto_renew: v.auto_renew
+    current_term_start_at: v.current_term_start_at, current_term_end_at: v.current_term_end_at, auto_renew: v.auto_renew,
+    ...renewal
   };
 }
 
