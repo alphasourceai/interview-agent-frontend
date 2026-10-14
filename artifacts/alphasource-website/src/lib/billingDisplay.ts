@@ -185,3 +185,8 @@ export function summarizeRoleCapacity(capacities: RoleCapacity[]): {
       : "role-owned interviews; shared credits separate",
   };
 }
+export function usageInvoiceStatusLabel(status: unknown): string {
+  return status === "reserved" ? "Reserved · not invoiced"
+    : status === "paid" ? "Paid" : status === "invoiced_open" ? "Invoiced · awaiting payment"
+    : status == null ? "Invoiced" : "Status unavailable"; // Legacy ledger rows keep their description.
+}

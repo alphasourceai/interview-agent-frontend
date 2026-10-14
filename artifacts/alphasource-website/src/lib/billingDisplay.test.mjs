@@ -24,6 +24,13 @@ const enterprise = await server.ssrLoadModule(
   "/src/components/EnterpriseModelPreparation.tsx",
 );
 const enterpriseFields = await server.ssrLoadModule("/src/lib/enterpriseAgreementFields.ts");
+test("usage history distinguishes reserved, invoiced and recorded paid; unknown is not paid", () => {
+  assert.equal(display.usageInvoiceStatusLabel("reserved"), "Reserved · not invoiced");
+  assert.equal(display.usageInvoiceStatusLabel("invoiced_open"), "Invoiced · awaiting payment");
+  assert.equal(display.usageInvoiceStatusLabel("paid"), "Paid");
+  assert.equal(display.usageInvoiceStatusLabel(undefined), "Invoiced");
+  assert.equal(display.usageInvoiceStatusLabel("processing"), "Status unavailable");
+});
 test("accepted client term projection keeps historical cents and refuses malformed obligations", () => {
   for (const months of [3, 6, 12]) for (const payment of ["prepaid", "monthly_installments"]) {
     const count = payment === "prepaid" ? 1 : months;
