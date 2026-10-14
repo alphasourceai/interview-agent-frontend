@@ -1227,7 +1227,7 @@ export default function RolesPage() {
               {/* Create button */}
               <button
                 type="submit"
-                disabled={isGuardedPricingDev || createBusy}
+                disabled={isPricingPreviewOnly || createBusy}
                 className="px-6 py-2.5 text-sm font-bold text-white rounded-full transition-all hover:opacity-90 active:scale-[0.98] flex-shrink-0"
                 style={{ backgroundColor: "#A380F6" }}
               >
@@ -1805,7 +1805,7 @@ export default function RolesPage() {
                 {embeddedCheckout.fallbackUrl ? (
                   <button
                     type="button"
-                    disabled={isGuardedPricingDev}
+                    disabled={isPricingPreviewOnly}
                     onClick={() => {
                       const fallbackUrl = embeddedCheckout.fallbackUrl;
                       closeEmbeddedCheckout();
@@ -1825,4 +1825,4 @@ export default function RolesPage() {
     </DashboardLayout>
   );
 }
-import { isGuardedPricingDev } from "@/lib/guardedPricingDev";
+import { isPricingPreviewOnly } from "@/lib/guardedPricingDev";

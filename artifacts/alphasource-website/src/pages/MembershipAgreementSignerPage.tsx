@@ -808,7 +808,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                   onClick={() => {
                     void handleContinueToCheckout();
                   }}
-                  disabled={isGuardedPricingDev || checkoutBusy}
+                  disabled={isPricingPreviewOnly || checkoutBusy}
                   className="rounded-full px-5 py-2.5 text-sm font-bold text-white transition-all"
                   style={{
                     backgroundColor: checkoutBusy ? "rgba(10,21,71,0.25)" : "#A380F6",
@@ -864,7 +864,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                   onClick={() => {
                     void handleContinueToCheckout();
                   }}
-                  disabled={isGuardedPricingDev || checkoutBusy}
+                  disabled={isPricingPreviewOnly || checkoutBusy}
                   className="rounded-full px-5 py-2.5 text-sm font-bold text-white transition-all"
                   style={{
                     backgroundColor: checkoutBusy ? "rgba(10,21,71,0.25)" : "#A380F6",
@@ -1011,7 +1011,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                     onClick={() => {
                       void handleSubmit();
                     }}
-                    disabled={isGuardedPricingDev || submitBusy}
+                    disabled={isPricingPreviewOnly || submitBusy}
                     className="rounded-full px-5 py-2.5 text-sm font-bold text-white transition-all"
                     style={{
                       backgroundColor: submitBusy ? "rgba(10,21,71,0.25)" : "#A380F6",
@@ -1098,4 +1098,4 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
     </div>
   );
 }
-import { isGuardedPricingDev } from "@/lib/guardedPricingDev";
+import { isPricingPreviewOnly } from "@/lib/guardedPricingDev";

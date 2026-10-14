@@ -8,7 +8,7 @@ import InfoTooltip from "@/components/InfoTooltip";
 import { supabase } from "@/lib/supabaseClient";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 import BillingModelPanel from "@/components/BillingModelPanel";
-import { isGuardedPricingDev } from "@/lib/guardedPricingDev";
+import { isPricingPreviewOnly } from "@/lib/guardedPricingDev";
 import { moneyCents, readClientMembershipTerms, type ClientMembershipTerms } from "@/lib/billingDisplay";
 
 interface BillingSummary {
@@ -306,7 +306,7 @@ function ScopedBillingPage() {
   const [selectedRole, setSelectedRole] = useState("");
   const [quantity, setQuantity]         = useState(1);
 
-  const canPurchase = !isGuardedPricingDev && canPurchaseInterviews && roles.some(role => role.id === selectedRole && (role.billing_model === "fixed" || role.billing_model === "rollover")) && Number.isInteger(quantity) && quantity >= 1 && !rolesLoading && !purchaseBusy;
+  const canPurchase = !isPricingPreviewOnly && canPurchaseInterviews && roles.some(role => role.id === selectedRole && (role.billing_model === "fixed" || role.billing_model === "rollover")) && Number.isInteger(quantity) && quantity >= 1 && !rolesLoading && !purchaseBusy;
 
   useEffect(() => {
     let alive = true;
@@ -1283,7 +1283,7 @@ function ScopedBillingPage() {
           <button
             type="button"
             onClick={() => { void openBillingPortal(); }}
-            disabled={isGuardedPricingDev || !billingClientId || portalBusy || billingSummary?.has_stripe_customer === false}
+            disabled={isPricingPreviewOnly || !billingClientId || portalBusy || billingSummary?.has_stripe_customer === false}
             className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white rounded-full transition-all hover:opacity-90 active:scale-[0.97] flex-shrink-0"
             style={{ backgroundColor: "#A380F6" }}
           >
