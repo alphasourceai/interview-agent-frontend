@@ -14,9 +14,10 @@ const presentation=vm.runInNewContext(js+';pricingDevPresentation');
 const dev='https://interview-agent-dev-backend.onrender.com';
 test('actual presentation helper requires exact dev URL and exact build flag; not backend authority',()=>{
  for(const base of [dev,'https://ia-backend-qa.onrender.com','https://api.alphasourceai.com',dev+'.untrusted.invalid',dev+'/'])
-  for(const flag of [undefined,false,true,'TRUE','false','true']){
-   const p=presentation(base,flag),isDev=base===dev;
+  for(const flag of [undefined,false,true,'TRUE','false','true'])for(const mail of [undefined,true,'false','true']){
+   const p=presentation(base,flag,mail),isDev=base===dev;
    assert.equal(p.dev,isDev);assert.equal(p.sandbox,isDev&&flag==='true');assert.equal(p.previewOnly,isDev&&flag!=='true');
+   assert.equal(p.ownerMail,isDev&&flag==='true'&&mail==='true');
   }
  assert.match(lib,/import\.meta\.env\.VITE_DEV_PRICING_SANDBOX_ENABLED/);
  assert.match(lib,/API still refuses them unless its own startup verification passed/);
@@ -33,7 +34,7 @@ test('actual banner keeps preview warning and honestly labels only shown Sandbox
   assert.match(html,sandbox?/Dev Sandbox billing test/:/Dev pricing preview/);assert.match(html,/no live payments/);assert.match(html,/API still refuses unless verified/);
  }
 });
-test('only reviewed existing controls lift; email, public signup, sales and scheduler presentation stays held',()=>{
+test('billing controls and owner-mail controls lift separately; invoices, overrides and scheduler stay held',()=>{
  const read=p=>fs.readFileSync(new URL(p,import.meta.url),'utf8');
  const signer=read('../pages/MembershipAgreementSignerPage.tsx'),billing=read('../pages/dashboard/BillingPage.tsx'),roles=read('../pages/dashboard/RolesPage.tsx');
  assert.equal((signer.match(/disabled=\{isPricingPreviewOnly/g)||[]).length,3);
@@ -43,7 +44,12 @@ test('only reviewed existing controls lift; email, public signup, sales and sche
  assert.equal((clients.match(/disabled=\{isPricingPreviewOnly/g)||[]).length,4);
  assert.match(clients,/disabled=\{isGuardedPricingDev \|\| processRenewalsBusy/);
  assert.equal((clients.match(/disabled=\{isGuardedPricingDev \|\| accessOverrideBusy/g)||[]).length,2);
- for(const p of ['../pages/AlphaScreenPricingPage.tsx','../pages/sales/SalesNewDealPage.tsx','../pages/sales/SalesDealsPage.tsx','../pages/admin/AdminBillingPage.tsx']){
-  const s=read(p);assert.match(s,/isGuardedPricingDev/);assert.doesNotMatch(s,/isPricingPreviewOnly|isDevBillingSandbox/);
+ for(const p of ['../pages/AlphaScreenPricingPage.tsx','../pages/sales/SalesNewDealPage.tsx','../pages/sales/SalesDealsPage.tsx']){
+  const s=read(p);assert.match(s,/isPricingEmailHeld/);assert.doesNotMatch(s,/isPricingPreviewOnly|isDevBillingSandbox/);
  }
+ assert.match(read('../pages/AlphaScreenPricingPage.tsx'),/const smsVerificationAvailable = !isGuardedPricingDev &&/);
+ const admin=read('../pages/admin/AdminBillingPage.tsx');
+ assert.match(admin,/const canSendInvoice = !isGuardedPricingDev/);
+ assert.match(admin,/disabled=\{isPricingEmailHeld \|\| agreementSendBusy/);
+ assert.match(admin,/disabled=\{isPricingEmailHeld && agreementReplacementPendingAction === "send"\}/);
 });

@@ -1216,7 +1216,7 @@ function PurchaseIntentPanel({
                   <button
                     type="button"
                     onClick={() => onVerificationChannelChange("email")}
-                    disabled={isGuardedPricingDev || emailSendLoading || emailVerifyLoading}
+                    disabled={isPricingEmailHeld || emailSendLoading || emailVerifyLoading}
                     className="mt-3 text-sm font-black text-[#7554CE] transition-colors hover:text-[#0A1547] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Use email instead
@@ -1227,7 +1227,7 @@ function PurchaseIntentPanel({
                 <button
                   type="button"
                   onClick={onVerifyEmailVerification}
-                  disabled={isGuardedPricingDev || emailSendLoading || emailVerifyLoading || emailVerificationCode.length !== 6}
+                  disabled={isPricingEmailHeld || emailSendLoading || emailVerifyLoading || emailVerificationCode.length !== 6}
                   className="inline-flex items-center justify-center rounded-full bg-[#0A1547] px-5 py-3 text-sm font-black text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {emailVerifyLoading ? "Verifying..." : "Verify code"}
@@ -1235,7 +1235,7 @@ function PurchaseIntentPanel({
                 <button
                   type="button"
                   onClick={onSendEmailVerification}
-                  disabled={isGuardedPricingDev || resendCooldownSeconds > 0 || emailSendLoading || emailVerifyLoading}
+                  disabled={isPricingEmailHeld || resendCooldownSeconds > 0 || emailSendLoading || emailVerifyLoading}
                   className="text-sm font-black text-[#A380F6] transition-colors hover:text-[#0A1547] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {verificationChannel === "sms" ? "Send another text" : "Send a new code"}
@@ -1255,7 +1255,7 @@ function PurchaseIntentPanel({
               <button
                 type="button"
                 onClick={onSendEmailVerification}
-                disabled={isGuardedPricingDev || emailVerificationStatus === "loading" || emailSendLoading || emailVerifyLoading || resendCooldownSeconds > 0}
+                disabled={isPricingEmailHeld || emailVerificationStatus === "loading" || emailSendLoading || emailVerifyLoading || resendCooldownSeconds > 0}
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-[#8E6EE0] bg-[#A380F6] px-6 py-3.5 text-sm font-black text-white shadow-[0_10px_24px_rgba(163,128,246,0.26)] transition-colors hover:border-[#7B5FD4] hover:bg-[#8E6EE0] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {emailSendLoading ? "Sending code..." : emailVerificationStatus === "loading" ? "Checking verification..." : `Verify by ${verificationChannel === "sms" ? "text message" : "email"}`}
@@ -1504,7 +1504,7 @@ function PurchaseIntentPanel({
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <button
           type="submit"
-          disabled={isGuardedPricingDev || status === "submitting" || (!savedQuoteLocked && (!catalogAvailable || newRetail && !offer))}
+          disabled={isPricingEmailHeld || status === "submitting" || (!savedQuoteLocked && (!catalogAvailable || newRetail && !offer))}
           className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0A1547] px-6 py-3.5 text-sm font-black text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           data-analytics-cta="Continue with Signup"
           data-analytics-placement="signup-modal"
@@ -1608,7 +1608,7 @@ export default function AlphaScreenPricingPage() {
     () => planCards.find((plan) => plan.plan_key === selectedPlanKey) || null,
     [planCards, selectedPlanKey],
   );
-  const smsVerificationAvailable = retailSmsUiEnabled && purchaseResult?.sms_verification?.available === true;
+  const smsVerificationAvailable = !isGuardedPricingDev && retailSmsUiEnabled && purchaseResult?.sms_verification?.available === true;
 
   const startPurchase = (plan: AlphaScreenPackage) => {
     if (purchaseSubmitInFlightRef.current) return;
@@ -2493,4 +2493,4 @@ export default function AlphaScreenPricingPage() {
     </div>
   );
 }
-import { isGuardedPricingDev } from "@/lib/guardedPricingDev";
+import { isGuardedPricingDev, isPricingEmailHeld } from "@/lib/guardedPricingDev";

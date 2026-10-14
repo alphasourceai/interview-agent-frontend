@@ -342,7 +342,7 @@ export default function SalesDealsPage() {
                 <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
                   <p className="w-full text-[10px] font-black uppercase tracking-[0.14em] lg:hidden" style={{ color: "var(--as-text-subtle)" }}>Actions</p>
                   {deal.next_action !== "cancel" ? (
-                    <button type="button" onClick={() => void runAction(deal, deal.next_action)} disabled={Boolean(busyAction) || isGuardedPricingDev && ["resend_agreement", "send_payment_reminder", "cancel"].includes(deal.next_action)} className="inline-flex min-h-9 items-center gap-1.5 rounded-[9px] bg-[#0A1547] px-3 text-xs font-black text-white transition hover:bg-[#142365] disabled:opacity-50">
+                    <button type="button" onClick={() => void runAction(deal, deal.next_action)} disabled={Boolean(busyAction) || isPricingEmailHeld && ["resend_agreement", "send_payment_reminder", "cancel"].includes(deal.next_action)} className="inline-flex min-h-9 items-center gap-1.5 rounded-[9px] bg-[#0A1547] px-3 text-xs font-black text-white transition hover:bg-[#142365] disabled:opacity-50">
                       {busyAction === `${deal.id}:${deal.next_action}` ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : deal.next_action === "resend_agreement" ? <Send className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
                       {actionLabel[deal.next_action]}
                     </button>
@@ -350,7 +350,7 @@ export default function SalesDealsPage() {
                   {deal.available_actions.includes("cancel") ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <button type="button" disabled={isGuardedPricingDev || Boolean(busyAction)} className="inline-flex min-h-9 items-center gap-1.5 rounded-[9px] border px-3 text-xs font-black transition hover:border-red-200 hover:bg-red-50 hover:text-red-600" style={{ borderColor: "var(--as-border)", color: "var(--as-text-muted)" }} aria-label={`Cancel unpaid sale for ${deal.company_legal_name}`}>
+                        <button type="button" disabled={isPricingEmailHeld || Boolean(busyAction)} className="inline-flex min-h-9 items-center gap-1.5 rounded-[9px] border px-3 text-xs font-black transition hover:border-red-200 hover:bg-red-50 hover:text-red-600" style={{ borderColor: "var(--as-border)", color: "var(--as-text-muted)" }} aria-label={`Cancel unpaid sale for ${deal.company_legal_name}`}>
                           Cancel
                         </button>
                       </AlertDialogTrigger>
@@ -378,4 +378,4 @@ export default function SalesDealsPage() {
     </div>
   );
 }
-import { isGuardedPricingDev } from "@/lib/guardedPricingDev";
+import { isPricingEmailHeld } from "@/lib/guardedPricingDev";
