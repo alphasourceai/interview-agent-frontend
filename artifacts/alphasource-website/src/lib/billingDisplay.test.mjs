@@ -76,6 +76,19 @@ test("renewal request and full Stripe cutoff stay separate from contractual end 
     assert.throws(() => display.readClientMembershipTerms({ ...value, ...patch }), /could not be verified/);
   }
 });
+test("existing admin toggle never calls a scheduled, uncertain or retained-opposite request confirmed", () => {
+  const result = status => ({ renewal: { status, requested_auto_renew: false,
+    stripe_renewal_billing_cutoff_at: "2026-12-31T12:13:14Z" } });
+  for (const status of ["waiting", "claimed", "unknown", "held", "busy"]) {
+    const value = display.readAutoRenewUpdate(result(status), false);
+    assert.equal(value.confirmed, null); assert.match(value.notice, /unchanged/);
+  }
+  assert.equal(display.readAutoRenewUpdate(result("applied"), false).confirmed, false);
+  assert.equal(display.readAutoRenewUpdate(result("unknown"), true).confirmed, null);
+  assert.equal(display.readAutoRenewUpdate({ item: { auto_renew: true } }, false).confirmed, true);
+  for (const value of [null, { renewal: null }, result("fake"), { renewal: { status: "applied" } }])
+    assert.throws(() => display.readAutoRenewUpdate(value, false), /could not be verified/);
+});
 test("exact server models only; metered is not depleted or unlimited", () => {
   assert.equal(display.billingModel("enterprise"), null);
   assert.equal(display.billingModel("Usage"), null);

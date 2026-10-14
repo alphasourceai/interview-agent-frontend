@@ -1,5 +1,28 @@
 export type BillingModel = "fixed" | "rollover" | "usage" | null;
 
+export function readAutoRenewUpdate(value: unknown, requested: boolean): { confirmed: boolean | null; notice: string } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Renewal response could not be verified.");
+  const payload = value as Record<string, unknown>;
+  if (payload.renewal === undefined) {
+    const item = payload.item as { auto_renew?: unknown } | null | undefined;
+    return { confirmed: typeof item?.auto_renew === "boolean" ? item.auto_renew : requested, notice: "Auto-renew updated." };
+  }
+  const renewal = payload.renewal as Record<string, unknown>;
+  if (!renewal || typeof renewal !== "object" || Array.isArray(renewal)
+    || !["waiting", "claimed", "unknown", "applied", "held", "busy"].includes(String(renewal.status))
+    || typeof renewal.requested_auto_renew !== "boolean"
+    || typeof renewal.stripe_renewal_billing_cutoff_at !== "string" || !Number.isFinite(Date.parse(renewal.stripe_renewal_billing_cutoff_at))) {
+    throw new Error("Renewal response could not be verified.");
+  }
+  if (renewal.requested_auto_renew !== requested) return { confirmed: null,
+    notice: "The prior renewal request is still pending; this change has not been applied." };
+  if (renewal.status === "applied") return { confirmed: renewal.requested_auto_renew, notice: "Auto-renew confirmed with Stripe." };
+  return { confirmed: null, notice: renewal.status === "waiting"
+    ? "Renewal preference saved and scheduled. Current-term payments continue; the confirmed setting is unchanged."
+    : renewal.status === "held" ? "Renewal request is held for review. The confirmed setting is unchanged."
+      : "Renewal request is awaiting confirmation. The confirmed setting is unchanged." };
+}
+
 export interface ClientMembershipTerms {
   commitment_months: 3 | 6 | 12;
   payment_option: "prepaid" | "monthly_installments";

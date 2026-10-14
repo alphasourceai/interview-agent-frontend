@@ -9,6 +9,7 @@ import EnterpriseModelPreparation from "@/components/EnterpriseModelPreparation"
 import { defaultEnterpriseAgreementFields, enterpriseAgreementFieldError, enterpriseAgreementSettingsPayload } from "@/lib/enterpriseAgreementFields";
 import type { EnterpriseAgreementFields } from "@/lib/enterpriseAgreementFields";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
+import { readAutoRenewUpdate } from "@/lib/billingDisplay";
 
 /* ── Types ───────────────────────────────────────────────────── */
 type PlanTier    = "basic" | "pro" | "enterprise" | null;
@@ -816,10 +817,10 @@ export default function AdminClientsPage() {
       });
       const text = await response.text();
       if (!response.ok) throw new Error(extractErrorMessage(text, "Could not update auto-renew."));
-      const payload = parseJsonSafe(text) as { item?: { auto_renew?: unknown } } | null;
-      const updated = typeof payload?.item?.auto_renew === "boolean" ? payload.item.auto_renew : nextValue;
-      setAutoRenewStates((prev) => ({ ...prev, [clientId]: updated }));
-      setActionNotice({ tone: "success", text: "Auto-renew updated." });
+      const result = readAutoRenewUpdate(parseJsonSafe(text), nextValue);
+      const confirmed = result.confirmed;
+      if (confirmed !== null) setAutoRenewStates((prev) => ({ ...prev, [clientId]: confirmed }));
+      setActionNotice({ tone: "success", text: result.notice });
       requestReload();
     } catch (error) {
       setActionNotice({

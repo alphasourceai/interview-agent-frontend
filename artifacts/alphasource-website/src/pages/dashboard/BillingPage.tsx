@@ -1052,7 +1052,9 @@ function ScopedBillingPage() {
                   {billingSummary.membership_terms.renewal_request_status === "applied"
                     ? " Confirmed with Stripe."
                     : billingSummary.membership_terms.renewal_request_status === "waiting"
-                      ? " Scheduled; current-term monthly payments still continue."
+                      ? billingSummary.membership_terms.payment_option === "prepaid"
+                        ? " Scheduled; paid-term access is unchanged."
+                        : " Scheduled; current-term monthly payments still continue."
                       : billingSummary.membership_terms.renewal_request_status === "held"
                         ? " Held for support review; the request has not been confirmed."
                         : " Awaiting confirmation; the last confirmed setting still applies."}
