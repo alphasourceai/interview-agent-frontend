@@ -25,6 +25,15 @@ const enterprise = await server.ssrLoadModule(
   "/src/components/EnterpriseModelPreparation.tsx",
 );
 const enterpriseFields = await server.ssrLoadModule("/src/lib/enterpriseAgreementFields.ts");
+test("Stripe subscription status is labeled separately from paid billing and access", () => {
+  // Copy/source assertion only; the stored provider value is deliberately unchanged.
+  const source = readFileSync(join(root, "src/pages/dashboard/BillingPage.tsx"), "utf8");
+  assert.match(source, /label="Stripe Subscription Status"\s+value=\{billing\.membershipStatus\}/);
+  assert.match(source, /membershipStatus: toDisplayText\(billingSummary\?\.subscription_status\)/);
+  assert.ok(source.includes("Status reported by Stripe for recurring billing, not proof of payment or dashboard access. Trialing can describe a deferred recurring billing period; check invoice history for payment details."));
+  assert.ok(!source.includes('label="Membership Status"'));
+  assert.ok(!source.includes("Overall membership standing tied to this client's access and billing setup."));
+});
 test("existing billing action status is rendered once outside role-dependent purchase card", () => {
   // Structural placement assertion, not an interactive browser acceptance test.
   const source = readFileSync(join(root, "src/pages/dashboard/BillingPage.tsx"), "utf8");

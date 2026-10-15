@@ -1041,11 +1041,11 @@ function ScopedBillingPage() {
                 />
                 )}
                 <InfoCard
-                  label="Membership Status"
+                  label="Stripe Subscription Status"
                   value={billing.membershipStatus}
                   accent="#A380F6"
                   badge
-                  tooltip="Overall membership standing tied to this client's access and billing setup."
+                  tooltip="Status reported by Stripe for recurring billing, not proof of payment or dashboard access. Trialing can describe a deferred recurring billing period; check invoice history for payment details."
                 />
                 <InfoCard
                   label="Access Status"
