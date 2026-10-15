@@ -22,6 +22,7 @@ interface SignerSession {
   billing_option: string;
   auto_renew: boolean;
   notice_deadline_days: number;
+  renewal_notice_type: "reminder_only" | null;
   first_role_prepay_selected: boolean | null;
   initial_term_start: string;
   initial_renewal_date: string;
@@ -420,6 +421,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
         billing_option: String(sessionPayload.billing_option || "").trim(),
         auto_renew: Boolean(sessionPayload.auto_renew),
         notice_deadline_days: Number(sessionPayload.notice_deadline_days || 0) || 0,
+        renewal_notice_type: sessionPayload.renewal_notice_type === "reminder_only" ? "reminder_only" : null,
         first_role_prepay_selected: resolveFirstRolePrepaySelected(sessionPayload),
         initial_term_start: String(sessionPayload.initial_term_start || "").trim(),
         initial_renewal_date: String(sessionPayload.initial_renewal_date || "").trim(),
@@ -934,7 +936,9 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                 <div className="rounded-xl border border-gray-200 px-3.5 py-3">
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Link Expires</p>
                   <p className="mt-1 text-sm font-bold text-[#0A1547]">{formatDate(session.expires_at)}</p>
-                  <p className="text-[11px] text-[#0A1547]/55">Notice deadline: {session.notice_deadline_days || 30} days</p>
+                  <p className="text-[11px] text-[#0A1547]/55">{session.renewal_notice_type === "reminder_only"
+                    ? `Renewal reminder: ${session.notice_deadline_days || 30} days; turn off renewal before term end`
+                    : `Notice deadline: ${session.notice_deadline_days || 30} days`}</p>
                 </div>
               </div>
               {firstRolePrepayCopy ? (
