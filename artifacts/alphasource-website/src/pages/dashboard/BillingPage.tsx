@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
 import BillingModelPanel from "@/components/BillingModelPanel";
 import { isPricingPreviewOnly } from "@/lib/guardedPricingDev";
-import { moneyCents, readClientMembershipTerms, type ClientMembershipTerms } from "@/lib/billingDisplay";
+import { membershipTermEndDate, moneyCents, readClientMembershipTerms, stripeRenewalCutoffDate, type ClientMembershipTerms } from "@/lib/billingDisplay";
 
 interface BillingSummary {
   plan_tier: string;
@@ -905,7 +905,9 @@ function ScopedBillingPage() {
           : (billingSummary?.membership_terms?.auto_renew ?? billingSummary?.auto_renew) === false
             ? "No"
             : "—",
-      currentTermEnd: formatDate(billingSummary?.membership_terms?.current_term_end_at || billingSummary?.current_term_end),
+      currentTermEnd: billingSummary?.membership_terms
+        ? membershipTermEndDate(billingSummary.membership_terms.current_term_end_at, billingSummary.membership_terms.term_start_basis)
+        : formatDate(billingSummary?.current_term_end),
       contractEndDate: formatDate(billingSummary?.contract_end_at),
       membershipStatus: toDisplayText(billingSummary?.subscription_status),
       accessStatus: toDisplayText(billingSummary?.access_override_mode),
@@ -1014,7 +1016,7 @@ function ScopedBillingPage() {
                 />
                 {billingSummary.membership_terms?.stripe_renewal_billing_cutoff_at && (
                   <InfoCard label="Stripe Renewal Billing Date"
-                    value={formatDate(billingSummary.membership_terms.stripe_renewal_billing_cutoff_at)} accent="#02D99D"
+                    value={stripeRenewalCutoffDate(billingSummary.membership_terms.stripe_renewal_billing_cutoff_at)} accent="#02D99D"
                     tooltip="Turn off the next commitment renewal before this Stripe billing date. This is the full commitment boundary, not the next monthly installment or contractual term end." />
                 )}
                 {!billingSummary.membership_terms && (

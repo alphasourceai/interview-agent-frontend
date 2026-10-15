@@ -32,6 +32,7 @@ export interface ClientMembershipTerms {
   installment_count: number;
   current_term_start_at: string;
   current_term_end_at: string;
+  term_start_basis?: "generation_date" | "first_payment_success";
   auto_renew: boolean;
   stripe_renewal_billing_cutoff_at?: string;
   renewal_request_status?: "none" | "waiting" | "claimed" | "unknown" | "applied" | "held";
@@ -55,6 +56,10 @@ export function readClientMembershipTerms(value: unknown): ClientMembershipTerms
     || Date.parse(v.current_term_end_at) <= Date.parse(v.current_term_start_at)) {
     throw new Error("Membership terms could not be verified.");
   }
+  if (v.term_start_basis !== undefined && v.term_start_basis !== "generation_date"
+    && v.term_start_basis !== "first_payment_success") {
+    throw new Error("Membership terms could not be verified.");
+  }
   const renewal = v.stripe_renewal_billing_cutoff_at === undefined ? {} : (() => {
     if (typeof v.stripe_renewal_billing_cutoff_at !== "string" || !Number.isFinite(Date.parse(v.stripe_renewal_billing_cutoff_at))
       || !["none", "waiting", "claimed", "unknown", "applied", "held"].includes(String(v.renewal_request_status))
@@ -72,8 +77,31 @@ export function readClientMembershipTerms(value: unknown): ClientMembershipTerms
     payment_option: v.payment_option, currency: "usd", platform_payment_cents: v.platform_payment_cents,
     platform_commitment_total_cents: v.platform_commitment_total_cents, installment_count: Number(count),
     current_term_start_at: v.current_term_start_at, current_term_end_at: v.current_term_end_at, auto_renew: v.auto_renew,
+    ...(v.term_start_basis === undefined ? {} : { term_start_basis: v.term_start_basis }),
     ...renewal
   };
+}
+
+// Generation-date agreements bind a UTC calendar day, not the prior local
+// evening. Historical first-payment terms keep their original local display.
+export function membershipTermEndDate(value: unknown, basis?: ClientMembershipTerms["term_start_basis"],
+  localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone): string {
+  const raw = String(value || "").trim();
+  const parsed = new Date(raw);
+  if (!raw || Number.isNaN(parsed.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric",
+    timeZone: basis === "generation_date" ? "UTC" : localTimeZone }).format(parsed);
+}
+
+// The provider cutoff is a real instant. Include local time and zone so it
+// cannot be mistaken for the contract's calendar end date.
+export function stripeRenewalCutoffDate(value: unknown,
+  localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone): string {
+  const raw = String(value || "").trim();
+  const parsed = new Date(raw);
+  if (!raw || Number.isNaN(parsed.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric",
+    hour: "numeric", minute: "2-digit", timeZoneName: "short", timeZone: localTimeZone }).format(parsed);
 }
 
 export function billingModel(value: unknown): BillingModel {

@@ -71,6 +71,47 @@ test("unknown/null is never zero; explicit zero and cents remain accurate", () =
   assert.equal(display.moneyDollars(0), "$0.00");
   assert.equal(display.moneyDollars("299.25"), "$299.25");
 });
+test("optional accepted date basis is explicit; missing legacy stays compatible and bad values fail closed", () => {
+  const terms = { commitment_months: 6, payment_option: "prepaid", currency: "usd", platform_payment_cents: 195000,
+    platform_commitment_total_cents: 195000, installment_count: 1, current_term_start_at: "2026-10-15T00:00:00Z",
+    current_term_end_at: "2027-04-15T00:00:00Z", auto_renew: true };
+  assert.deepEqual(display.readClientMembershipTerms(terms), terms);
+  for (const basis of ["generation_date", "first_payment_success"]) {
+    assert.equal(display.readClientMembershipTerms({ ...terms, term_start_basis: basis }).term_start_basis, basis);
+  }
+  for (const basis of [null, "", "signature_date", "GENERATION_DATE", false, 3, {}])
+    assert.throws(() => display.readClientMembershipTerms({ ...terms, term_start_basis: basis }), /could not be verified/);
+});
+test("generation calendar dates never shift; first-payment and legacy keep local day", () => {
+  const zones = ["UTC", "America/Denver", "America/Los_Angeles", "Asia/Tokyo"];
+  const values = ["2027-04-15T00:00:00Z", "2028-02-29T00:00:00Z", "2027-01-31T00:00:00Z",
+    "2027-03-14T10:00:00Z", "2027-11-07T09:00:00Z", "2027-04-15T20:00:00Z"];
+  for (const zone of zones) for (const value of values) {
+    const options = { month: "short", day: "numeric", year: "numeric" };
+    assert.equal(display.membershipTermEndDate(value, "generation_date", zone),
+      new Intl.DateTimeFormat("en-US", { ...options, timeZone: "UTC" }).format(new Date(value)));
+    for (const basis of [undefined, "first_payment_success"])
+      assert.equal(display.membershipTermEndDate(value, basis, zone),
+        new Intl.DateTimeFormat("en-US", { ...options, timeZone: zone }).format(new Date(value)));
+  }
+  assert.equal(display.membershipTermEndDate(values[0], "generation_date", "America/Denver"), "Apr 15, 2027");
+  assert.equal(display.membershipTermEndDate(values[0], "first_payment_success", "America/Denver"), "Apr 14, 2027");
+  assert.equal(display.membershipTermEndDate(values[5], "first_payment_success", "Asia/Tokyo"), "Apr 16, 2027");
+  for (const invalid of [null, undefined, "", "bad"])
+    assert.equal(display.membershipTermEndDate(invalid, "generation_date"), "—");
+});
+test("Stripe cutoff displays the unchanged instant with local time and timezone", () => {
+  for (const zone of ["UTC", "America/Denver", "America/Los_Angeles", "Asia/Tokyo"])
+    for (const value of ["2027-04-15T00:00:00Z", "2027-03-14T10:00:00Z", "2027-11-07T09:00:00Z", "2028-02-29T00:00:00Z"]) {
+      const parts = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric",
+        hour: "numeric", minute: "2-digit", timeZoneName: "short", timeZone: zone }).formatToParts(new Date(value));
+      const result = display.stripeRenewalCutoffDate(value, zone);
+      for (const type of ["day", "hour", "minute", "timeZoneName"])
+        assert.ok(result.includes(parts.find(p => p.type === type).value));
+    }
+  assert.match(display.stripeRenewalCutoffDate("2027-04-15T00:00:00Z", "America/Denver"), /Apr 14, 2027.*6:00.*PM.*MDT/);
+  for (const invalid of [null, undefined, "", "bad"]) assert.equal(display.stripeRenewalCutoffDate(invalid), "—");
+});
 test("renewal request and full Stripe cutoff stay separate from contractual end and confirmed preference", () => {
   const value = { commitment_months: 3, payment_option: "monthly_installments", currency: "usd",
     platform_payment_cents: 44900, platform_commitment_total_cents: 134700, installment_count: 3,
