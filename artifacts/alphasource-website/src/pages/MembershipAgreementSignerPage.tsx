@@ -937,7 +937,7 @@ export default function MembershipAgreementSignerPage({ params }: SignerPageProp
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#0A1547]/40">Link Expires</p>
                   <p className="mt-1 text-sm font-bold text-[#0A1547]">{formatDate(session.expires_at)}</p>
                   <p className="text-[11px] text-[#0A1547]/55">{session.renewal_notice_type === "reminder_only"
-                    ? `Renewal reminder: ${session.notice_deadline_days || 30} days; turn off renewal before term end`
+                    ? `Renewal reminder: ${session.notice_deadline_days || 30} days (not a cancellation deadline)`
                     : `Notice deadline: ${session.notice_deadline_days || 30} days`}</p>
                 </div>
               </div>
