@@ -345,6 +345,8 @@ function retailVerificationErrorMessage(
   retryAfter = 0,
 ): string {
   switch (code) {
+    case "DEV_PRICING_TEST_MAIL_DENIED":
+      return "Dev email delivery is limited to approved test addresses. Use an approved address or ask the admin to add this alias.";
     case "RETAIL_EMAIL_VERIFICATION_COOLDOWN": {
       const seconds = Math.max(1, retryAfter);
       return `Please wait ${seconds} seconds before requesting another code.`;
@@ -1125,7 +1127,7 @@ function PurchaseIntentPanel({
                     <span className="min-w-0 flex-1">
                       <span className="block text-xs font-black text-[#0A1547]">{choice.label}</span>
                       <span className="mt-0.5 block truncate text-[10px] font-semibold text-[#0A1547]/45">
-                        {choice.enabled ? choice.destination : "U.S. mobile numbers only"}
+                        {choice.enabled ? choice.destination : isGuardedPricingDev ? "Disabled in dev — use email" : "U.S. mobile numbers only"}
                       </span>
                     </span>
                   </button>
