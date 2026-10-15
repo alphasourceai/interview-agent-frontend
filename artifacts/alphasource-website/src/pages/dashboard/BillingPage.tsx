@@ -949,6 +949,19 @@ function ScopedBillingPage() {
   return (
     <DashboardLayout title="Billing">
       <CurrentScopeBanner client={selectedClient} />
+      {actionNotice && (
+        <div
+          className={`mb-4 rounded-xl px-3.5 py-2 text-xs font-semibold ${
+            actionNotice.tone === "success"
+              ? "text-[#009E73] bg-[#02D99D]/10 border border-[#02D99D]/25"
+              : "text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {actionNotice.text}
+        </div>
+      )}
       {!clientLoading && !clientError && canViewLegalBilling && <BillingModelPanel clientId={selectedClientId} />}
 
       {canViewLegalBilling && (
@@ -1125,20 +1138,6 @@ function ScopedBillingPage() {
             <h2 className="text-base font-black" style={primaryTextStyle}>Purchase Additional Interviews</h2>
             <InfoTooltip content="Extra interview capacity can be purchased for a selected role outside the base membership. Checkout is processed via Stripe." side="bottom" />
           </div>
-          {actionNotice && (
-            <div
-              className={`mb-4 rounded-xl px-3.5 py-2 text-xs font-semibold ${
-                actionNotice.tone === "success"
-                  ? "text-[#009E73] bg-[#02D99D]/10 border border-[#02D99D]/25"
-                  : "text-red-500 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-500/10 dark:border-red-500/25"
-              }`}
-              role="status"
-              aria-live="polite"
-            >
-              {actionNotice.text}
-            </div>
-          )}
-
           <div className="flex flex-wrap gap-3 items-end">
             {/* Role select */}
             <div className="flex-1 min-w-[220px]">

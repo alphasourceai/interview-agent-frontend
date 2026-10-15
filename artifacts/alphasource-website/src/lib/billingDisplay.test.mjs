@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test, after } from "node:test";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
@@ -24,6 +25,16 @@ const enterprise = await server.ssrLoadModule(
   "/src/components/EnterpriseModelPreparation.tsx",
 );
 const enterpriseFields = await server.ssrLoadModule("/src/lib/enterpriseAgreementFields.ts");
+test("existing billing action status is rendered once outside role-dependent purchase card", () => {
+  // Structural placement assertion, not an interactive browser acceptance test.
+  const source = readFileSync(join(root, "src/pages/dashboard/BillingPage.tsx"), "utf8");
+  assert.equal(source.split("{actionNotice && (").length - 1, 1);
+  const notice = source.indexOf("{actionNotice && (");
+  assert.ok(notice > source.indexOf("<CurrentScopeBanner client={selectedClient} />"));
+  assert.ok(notice < source.indexOf("<BillingModelPanel clientId={selectedClientId} />"));
+  assert.ok(notice < source.indexOf("Purchase Additional Interviews</h2>"));
+  assert.match(source.slice(notice, source.indexOf("<BillingModelPanel clientId={selectedClientId} />")), /role="status"[\s\S]*aria-live="polite"/);
+});
 test("usage history distinguishes reserved, invoiced and recorded paid; unknown is not paid", () => {
   assert.equal(display.usageInvoiceStatusLabel("reserved"), "Reserved · not invoiced");
   assert.equal(display.usageInvoiceStatusLabel("invoiced_open"), "Invoiced · awaiting payment");
