@@ -19,7 +19,7 @@ import PatentPendingBadge from "@/components/PatentPendingBadge";
 import { AlphaScreenBreathingLockup, AlphaScreenMark } from "@/components/AlphaScreenBrand";
 import { getPublicBackendBase, joinUrl } from "@/lib/urlConfig";
 import { MembershipTermsSelector } from "@/components/MembershipTermsSelector";
-import { membershipMoney, selectedMembershipOffer, type MembershipOfferSelection } from "@/lib/membershipTerms";
+import { membershipMoney, selectedMembershipOffer, membershipTermStartCopy, type MembershipOfferSelection } from "@/lib/membershipTerms";
 import { membershipCardPricing, type MembershipQuoteCatalog, type RetailPlanDisplay } from "@/lib/membershipQuoteCatalog";
 import { verifiedPublicCatalog, publicRetailQuotePayload, savedPublicMembershipTerms } from "@/lib/publicMembershipQuote";
 import {
@@ -972,7 +972,7 @@ function PurchaseIntentPanel({
   const totalDueToday = selectedPlatformFee + (prepaySelected ? discountedFirstRoleFee : 0);
   const termLabel = newRetail ? months ? `${months} months, prepaid` : "Choose a prepaid term"
     : cadenceLabel(selectedPlan, savedPackage?.billing_cadence || form.billing_cadence);
-  const renewalCopy = newRetail ? `Your ${months || "selected"}-month term starts when your first payment succeeds. Auto-renew is on for the same term at your accepted platform price. You may turn it off any time before term end. Access lasts the full prepaid term; refunds are limited to exceptions in your accepted agreement.` : "";
+  const renewalCopy = newRetail ? `${membershipTermStartCopy(savedTerms?.pricing_version ?? offer?.offer_version ?? catalog?.pricing_version, months)} Auto-renew is on for the same term at your accepted platform price. You may turn it off any time before term end. Access lasts the full prepaid term; refunds are limited to exceptions in your accepted agreement.` : "";
 
   if (status === "success" && result) {
     const signingUrl = agreementSigningHref(agreementResult);

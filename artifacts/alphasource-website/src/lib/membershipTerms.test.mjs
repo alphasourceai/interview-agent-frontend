@@ -1,5 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {createRequire} from 'node:module';
-import {parseMembershipOffers,membershipSelectionPayload,selectedMembershipOffer,membershipObligationCopy,membershipMoney} from './membershipTerms.ts';
+import {parseMembershipOffers,membershipSelectionPayload,selectedMembershipOffer,membershipObligationCopy,membershipMoney,
+  GENERATION_DATE_MEMBERSHIP_VERSION,membershipTermStartCopy} from './membershipTerms.ts';
 // Portable dummy-price fixtures; optionally cross-check the exact backend
 // catalog through an explicitly selected local source. No FE price catalog.
 const require=createRequire(import.meta.url);
@@ -58,4 +59,18 @@ test('malformed amounts/currency/versions/policy/totals and duplicate identity f
   assert.throws(()=>parseMembershipOffers({},'sales'));
   assert.throws(()=>parseMembershipOffers(raw,'unknown'));
   assert.throws(()=>membershipMoney(1.5));
+});
+test('generation-date version and basis remain an exact pair; old sources retain their payment basis and copy',()=>{
+  const next=raw.map(offer=>({...offer,offer_version:GENERATION_DATE_MEMBERSHIP_VERSION,term_start_basis:'generation_date'}));
+  const offers=parseMembershipOffers(next,'sales');
+  assert.equal(offers.length,12);assert.ok(offers.every(o=>o.term_start_basis==='generation_date'));
+  assert.equal(parseMembershipOffers(next,'public').length,6);
+  assert.throws(()=>parseMembershipOffers([{...next[0],term_start_basis:'first_payment_success'}],'sales'));
+  assert.throws(()=>parseMembershipOffers([{...raw[0],term_start_basis:'generation_date'}],'sales'));
+  assert.match(membershipTermStartCopy(GENERATION_DATE_MEMBERSHIP_VERSION,3),/fixed start and renewal dates/);
+  assert.match(membershipTermStartCopy(GENERATION_DATE_MEMBERSHIP_VERSION,3),/Payment is required before access/);
+  assert.doesNotMatch(membershipTermStartCopy(GENERATION_DATE_MEMBERSHIP_VERSION,3),/starts when your first payment/);
+  assert.match(membershipTermStartCopy(raw[0].offer_version,3),/starts when your first payment succeeds/);
+  assert.deepEqual(membershipSelectionPayload(offers[0]),{offer_version:GENERATION_DATE_MEMBERSHIP_VERSION,
+    plan_key:offers[0].plan_key,commitment_months:offers[0].commitment_months,payment_option:offers[0].payment_option});
 });

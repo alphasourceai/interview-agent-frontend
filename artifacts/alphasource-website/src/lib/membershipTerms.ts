@@ -15,13 +15,22 @@ export interface RetailMembershipOffer {
   platform_commitment_total_cents: number;
   installment_count: number;
   initial_payment_cents: number;
-  term_start_basis: "first_payment_success";
+  term_start_basis: "first_payment_success" | "generation_date";
   contract_timezone: "UTC";
   first_role_prepay: { selected: boolean; amount_cents: number };
   renewal: { default_auto_renew: true; retain_accepted_pricing: true; commitment_months: number;
     non_renewal_cutoff: "before_term_end"; ends_installments_early: false };
 }
 export interface MembershipOfferSelection { offerVersion: string; offerKey: string }
+export const GENERATION_DATE_MEMBERSHIP_VERSION = "retail-stripe-terms-2026-10-15-v3";
+export function isGenerationDateMembership(version: unknown): boolean {
+  return version === GENERATION_DATE_MEMBERSHIP_VERSION;
+}
+export function membershipTermStartCopy(version: unknown, months?: number): string {
+  return isGenerationDateMembership(version)
+    ? `Your ${months || "selected"}-month term has fixed start and renewal dates shown in the agreement, based on its generation date. Payment is required before access.`
+    : `Your ${months || "selected"}-month term starts when your first payment succeeds.`;
+}
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 export function membershipMoney(cents: number): string {
   if (!Number.isSafeInteger(cents) || cents < 0) throw new Error("Invalid membership amount.");
@@ -50,7 +59,8 @@ export function parseMembershipOffers(value: unknown, audience: MembershipAudien
       || (offer.plan_key !== "basic" && offer.plan_key !== "pro") || ![3, 6, 12].includes(Number(offer.commitment_months))
       || typeof offer.commitment_months !== "number"
       || (offer.payment_option !== "prepaid" && offer.payment_option !== "monthly_installments")
-      || offer.term_start_basis !== "first_payment_success" || offer.contract_timezone !== "UTC"
+      || offer.term_start_basis !== (isGenerationDateMembership(offer.offer_version) ? "generation_date" : "first_payment_success")
+      || offer.contract_timezone !== "UTC"
       || !amount(offer.platform_payment_cents, true) || !amount(offer.platform_commitment_total_cents, true)
       || !amount(offer.initial_payment_cents, true) || !amount(role.amount_cents) || typeof role.selected !== "boolean"
       || (role.selected ? role.amount_cents <= 0 : role.amount_cents !== 0)
@@ -74,7 +84,8 @@ export function parseMembershipOffers(value: unknown, audience: MembershipAudien
       commitment_months: offer.commitment_months as RetailMembershipOffer["commitment_months"],
       payment_option: offer.payment_option as MembershipPaymentOption, platform_payment_cents: offer.platform_payment_cents,
       platform_commitment_total_cents: offer.platform_commitment_total_cents, installment_count: count,
-      initial_payment_cents: offer.initial_payment_cents, term_start_basis: "first_payment_success", contract_timezone: "UTC",
+      initial_payment_cents: offer.initial_payment_cents,
+      term_start_basis: offer.term_start_basis as RetailMembershipOffer["term_start_basis"], contract_timezone: "UTC",
       first_role_prepay: { selected: role.selected, amount_cents: role.amount_cents },
       renewal: { default_auto_renew: true, retain_accepted_pricing: true, commitment_months: offer.commitment_months,
         non_renewal_cutoff: "before_term_end", ends_installments_early: false } };

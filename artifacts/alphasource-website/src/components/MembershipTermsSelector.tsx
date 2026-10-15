@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { membershipMoney, membershipObligationCopy, selectedMembershipOffer,
+import { membershipMoney, membershipObligationCopy, selectedMembershipOffer, membershipTermStartCopy,
   type MembershipAudience, type MembershipOfferSelection, type MembershipPaymentOption,
   type RetailMembershipOffer } from "@/lib/membershipTerms";
 
@@ -25,7 +25,7 @@ export function MembershipTermsSelector({ offers, planKey, audience, selection, 
     <section className="space-y-5" aria-labelledby={labelId}>
       <div>
         <h3 id={labelId} className="text-base font-black" style={{ color: "var(--as-text)" }}>Membership term</h3>
-        <p className="mt-1 text-sm" style={{ color: "var(--as-text-muted)" }}>Choose your commitment. Your term starts when your first payment succeeds.</p>
+        <p className="mt-1 text-sm" style={{ color: "var(--as-text-muted)" }}>Choose your commitment. {membershipTermStartCopy(selected?.offer_version ?? available[0]?.offer_version, months)}</p>
       </div>
       {audience !== "public" ? (
         <fieldset disabled={disabled} className="flex flex-wrap gap-2">
