@@ -699,7 +699,9 @@ function PlanCard({
         </div>
       </div>
 
-      <div className="mb-5">
+      <p className="text-sm leading-relaxed text-[#0A1547]/60">{BEST_FOR[plan.plan_key]}</p>
+
+      <div className="mb-5 mt-6">
         <div className="flex items-end gap-2">
           <span className="text-4xl font-black tracking-normal text-[#0A1547]">{catalog ? commitmentMonths : formatPlatformFee(plan, billingCadence)}</span>
           <span className={catalog ? "text-4xl font-black tracking-normal text-[#0A1547]" : "pb-1.5 text-sm font-bold text-[#0A1547]/55"}>{catalog ? "months" : platformSuffix}</span>
@@ -716,7 +718,6 @@ function PlanCard({
             Annual platform pricing is discounted and billed upfront.
           </p>
         ) : null}
-        <p className="mt-2 text-sm leading-relaxed text-[#0A1547]/60">{BEST_FOR[plan.plan_key]}</p>
       </div>
 
       <div className="grid gap-3">
@@ -738,9 +739,9 @@ function PlanCard({
       </div>
 
       <div className="mt-5 grid gap-2">
-        {["On-Demand PDF Reports", "Email support", ...(catalog ? [
+        {["On-Demand PDF Reports", plan.plan_key === "pro" ? "Live support chat and email support" : "Email support", ...(catalog ? [
           `${catalog.plans[plan.plan_key as "basic" | "pro"].scored_question_count} scored questions`,
-          plan.plan_key === "basic" ? "No support chat" : `${catalog.plans.pro.rollover_days}-day closed-role interview rollover`,
+          plan.plan_key === "basic" ? "No support chat" : "Rollover interviews",
         ] : [])].map((item) => (
           <div key={item} className="flex items-center gap-2 text-sm font-bold text-[#0A1547]/70">
             <CheckCircle className="h-4 w-4 flex-shrink-0" style={{ color: accent.color }} />
@@ -2330,31 +2331,8 @@ export default function AlphaScreenPricingPage() {
             <EnterpriseCard />
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-relaxed text-[#0A1547]/55">
-            {retailCatalog ? "Choose a prepaid 3-, 6- or 12-month membership online, or contact sales for monthly installment payments for the same term. Your term begins when payment succeeds and renews at the same accepted price and term unless you turn renewal off before it ends. Canceling turns off auto-renewal; prepaid access continues through the full term, with refunds limited to applicable refund-policy exceptions. Role and additional-interview fees are separate; signed terms apply. Secure checkout opens after agreement signing."
-              : "Annual platform pricing is discounted and billed upfront. Role fees are billed separately when roles are created. Essential additional interviews are $25 each and Pro additional interviews are $30 each at current catalog rates; client-specific signed terms apply. Secure checkout opens after agreement signing. New self-serve buyers can optionally prepay their first role during signup and save 10% on that first role."}
-            {" "}
             For product and workflow questions, review the <a href="/faq" className="font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4 transition-colors hover:text-[#A380F6]">alphaScreen FAQ</a> or <a href="/alphascreen" className="font-black text-[#0A1547] underline decoration-[#A380F6]/35 underline-offset-4 transition-colors hover:text-[#A380F6]">alphaScreen overview</a>.
           </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {[
-              ["How it works", "/alphascreen/how-it-works"],
-              ["Security", "/alphascreen/security"],
-              ["Candidate experience", "/alphascreen/candidate-experience"],
-              ["Dental groups", "/alphascreen/for-dental-groups"],
-              ["ROI estimator", "/alphascreen/roi"],
-              ["Support", "/support"],
-            ].map(([label, href]) => (
-              <a
-                key={href}
-                href={href}
-                className="rounded-full border border-[#0A1547]/10 bg-[#F8F9FD] px-3 py-2 text-xs font-black text-[#0A1547]/65 transition-colors hover:border-[#A380F6]/45 hover:text-[#A380F6]"
-                data-analytics-cta={label}
-                data-analytics-placement="pricing-related-links"
-              >
-                {label}
-              </a>
-            ))}
-          </div>
         </div>
       </section>
 

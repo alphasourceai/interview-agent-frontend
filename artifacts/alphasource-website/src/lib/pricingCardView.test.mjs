@@ -50,7 +50,19 @@ test('actual card JSX displays only the selected term and both exact server pric
   assert.match(html,/class="text-\[10px\] font-medium">\(contact sales for monthly\)<\/span>/);
   assert.doesNotMatch(html,/through sales|3 \/ 6 \/ 12|Optional first-role prepay/);
   assert.match(html,new RegExp('class="mt-2 text-sm font-black text-\\[#0A1547\\]">\\+ \\$'+(plan_key==='basic'?399:699)+' / role'));
+  assert.ok(html.indexOf(plan_key==='basic'?'Essential test':'Pro test') < html.indexOf('>'+months+'</span>'));
+  assert.match(html,/class="mb-5 mt-6"/);
+  if(plan_key==='pro'){
+   assert.match(html,/Live support chat and email support/);assert.match(html,/Rollover interviews/);
+   assert.doesNotMatch(html,/90-day closed-role interview rollover|No support chat/);
+  }else{assert.match(html,/Email support/);assert.match(html,/No support chat/);assert.doesNotMatch(html,/Live support chat/);}
  }
+});
+test('pricing cards end with one FAQ/overview sentence and no related-link button strip',()=>{
+ const below=source.slice(source.indexOf('<EnterpriseCard />'),source.indexOf('{checkoutModalOpen ?'));
+ assert.match(below,/For product and workflow questions, review the/);
+ assert.match(below,/href="\/faq"/);assert.match(below,/href="\/alphascreen"/);
+ assert.doesNotMatch(below,/pricing-related-links|ROI estimator|Choose a prepaid|Annual platform pricing/);
 });
 test('saved intent returns before applying a new card selection and the shared toggle is accessible',()=>{
  const start=source.slice(source.indexOf('const startPurchase ='),source.indexOf('const closeCheckoutModal ='));
