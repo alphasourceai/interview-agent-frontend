@@ -127,8 +127,8 @@ const STATUS_COPY: Record<ReturnStatus, {
   },
   password_required: {
     eyebrow: "Payment confirmed",
-    title: "Check your email to set your password.",
-    body: "Your payment is confirmed. Use the secure setup link sent to your email. If it has expired or is missing, select Sign In on the home page, enter your email, and choose Forgot password?",
+    title: "Finish setting up your account.",
+    body: "Your payment is confirmed. Select Sign In on the home page. If you already have a password, sign in; otherwise, enter your email and choose Forgot password? to request a secure setup link.",
     tone: "success",
     primaryLabel: "Go to sign in",
     primaryHref: "/",
@@ -273,7 +273,9 @@ export default function CheckoutSubscriptionSuccessPage() {
         : "";
   const backHref = status === "ready" ? "/dashboard" : "/alphascreen/pricing#pricing-demo";
   const backLabel = status === "ready" ? "Back to dashboard" : "Back to pricing";
-  const nextStepCopy = isPasswordSetupStatus
+  const nextStepCopy = status === "password_required"
+    ? "Sign in with your existing password, or choose Forgot password? to request a secure setup link."
+    : status === "setup_email_sent"
     ? "Use the emailed setup link, or select Sign In and Forgot password? if the link expired."
     : status === "ready"
       ? "Open the dashboard or sign in when you are ready."
