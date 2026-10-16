@@ -25,6 +25,16 @@ const enterprise = await server.ssrLoadModule(
   "/src/components/EnterpriseModelPreparation.tsx",
 );
 const enterpriseFields = await server.ssrLoadModule("/src/lib/enterpriseAgreementFields.ts");
+test("admin billing cycle labels recognize prepaid without changing legacy checkout choices", () => {
+  for (const [input, expected] of [["monthly", "Monthly"], ["annual", "Annual"], ["prepaid", "Prepaid"],
+    [" PREPAID ", "Prepaid"], [null, "—"], [undefined, "—"], ["quarterly", "—"], [{}, "—"]]) {
+    assert.equal(display.billingIntervalLabel(input), expected);
+  }
+  const source = readFileSync(join(root, "src/pages/admin/AdminClientsPage.tsx"), "utf8");
+  assert.match(source, /type BillingCycle = "Monthly" \| "Annual" \| null/);
+  assert.match(source, /billingCycleDisplay: billingIntervalLabel\(item\.billing_interval\)/);
+  assert.equal(source.split('client.billingCycleDisplay ?? client.billingCycle ?? "—"').length - 1, 2);
+});
 test("Stripe subscription status is labeled separately from paid billing and access", () => {
   // Copy/source assertion only; the stored provider value is deliberately unchanged.
   const source = readFileSync(join(root, "src/pages/dashboard/BillingPage.tsx"), "utf8");

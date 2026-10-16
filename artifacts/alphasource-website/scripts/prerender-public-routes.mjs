@@ -153,12 +153,14 @@ const pricingSchema = {
     "Public alphaScreen Essential and Pro membership pricing for structured AI-assisted candidate screening.",
   url: routeUrl("/alphascreen/pricing"),
   offers: [
-    offer("alphaScreen Essential monthly membership", "299", "monthly platform membership"),
-    offer("alphaScreen Essential annual membership", "3299", "annual platform membership"),
+    offer("alphaScreen Essential 3-month prepaid membership", "1200", "3-month prepaid platform membership"),
+    offer("alphaScreen Essential 6-month prepaid membership", "1950", "6-month prepaid platform membership"),
+    offer("alphaScreen Essential 12-month prepaid membership", "3300", "12-month prepaid platform membership"),
     offer("alphaScreen Essential role fee", "399", "per role"),
     offer("alphaScreen Essential first-role prepay", "359", "one-time discounted first role"),
-    offer("alphaScreen Pro monthly membership", "599", "monthly platform membership"),
-    offer("alphaScreen Pro annual membership", "6499", "annual platform membership"),
+    offer("alphaScreen Pro 3-month prepaid membership", "2100", "3-month prepaid platform membership"),
+    offer("alphaScreen Pro 6-month prepaid membership", "3600", "6-month prepaid platform membership"),
+    offer("alphaScreen Pro 12-month prepaid membership", "6500", "12-month prepaid platform membership"),
     offer("alphaScreen Pro role fee", "699", "per role"),
     offer("alphaScreen Pro first-role prepay", "629", "one-time discounted first role"),
   ],
@@ -313,16 +315,16 @@ const routeContent = {
     eyebrow: "alphaScreen pricing",
     h1: "Compare alphaScreen memberships and get started.",
     intro:
-      "Essential and Pro self-serve memberships include a platform membership fee, role fees, included interviews per role, and optional first-role prepay during signup.",
+      "Choose a prepaid 3-, 6-, or 12-month Essential or Pro membership online. Contact sales for monthly installments over the same membership term.",
     sections: [
       section("How does alphaScreen pricing work?", [
-        "Essential is listed at $299 monthly or $3,299 annually plus $399 per role. Pro is listed at $599 monthly or $6,499 annually plus $699 per role.",
+        "Essential prepaid memberships are $1,200 for 3 months, $1,950 for 6 months, or $3,300 for 12 months, plus $399 per role. Pro prepaid memberships are $2,100 for 3 months, $3,600 for 6 months, or $6,500 for 12 months, plus $699 per role. Contact sales for monthly installments over the selected term.",
       ]),
       section("What is first-role prepay?", [
         "New self-serve buyers can optionally add their first role to the initial checkout at a one-time 10% discount: $359 for Essential or $629 for Pro. Additional roles use the standard role fee.",
       ]),
       section("What is included in a membership?", [
-        "Essential includes 20 interviews per role with a 10-minute interview cap. Pro includes 30 interviews per role with a 12-minute interview cap. Enterprise options are available for custom volume or rollout needs.",
+        "Essential includes 20 interviews per role with a 10-minute interview cap. Pro includes 30 interviews per role with a 12-minute interview cap. Enterprise is fully customizable, with a dedicated Client Support Agent and standard platform-and-role or usage-based platform fee and per-interview pricing.",
       ]),
     ],
     links: [

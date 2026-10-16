@@ -9,7 +9,7 @@ import EnterpriseModelPreparation from "@/components/EnterpriseModelPreparation"
 import { defaultEnterpriseAgreementFields, enterpriseAgreementFieldError, enterpriseAgreementSettingsPayload } from "@/lib/enterpriseAgreementFields";
 import type { EnterpriseAgreementFields } from "@/lib/enterpriseAgreementFields";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
-import { membershipTermEndDate, readAutoRenewUpdate } from "@/lib/billingDisplay";
+import { billingIntervalLabel, membershipTermEndDate, readAutoRenewUpdate } from "@/lib/billingDisplay";
 
 /* ── Types ───────────────────────────────────────────────────── */
 type PlanTier    = "basic" | "pro" | "enterprise" | null;
@@ -26,6 +26,7 @@ interface Client {
   planTier: PlanTier;
   billingStatus: BillingStatus;
   billingCycle: BillingCycle;
+  billingCycleDisplay?: string;
   rawBillingStatus: string;
   rawSubscriptionStatus: string;
   rawHasStripeSubscription: boolean;
@@ -1136,6 +1137,7 @@ export default function AdminClientsPage() {
               planTier: normalizePlanTier(item.plan_tier),
               billingStatus: normalizeBillingStatus(item),
               billingCycle: normalizeBillingCycle(item.billing_interval),
+              billingCycleDisplay: billingIntervalLabel(item.billing_interval),
               rawBillingStatus: String(item.billing_status || "").trim().toLowerCase(),
               rawSubscriptionStatus: String(item.subscription_status || "").trim().toLowerCase(),
               rawHasStripeSubscription: Boolean(String(item.stripe_subscription_id || "").trim()),
@@ -1438,7 +1440,7 @@ export default function AdminClientsPage() {
                   </div>
 
                   <p className="text-sm font-semibold" style={mutedTextStyle}>
-                    {rowIsChildEntity ? "—" : (client.billingCycle ?? "—")}
+                    {rowIsChildEntity ? "—" : (client.billingCycleDisplay ?? client.billingCycle ?? "—")}
                   </p>
 
                   {/* Auto-renew checkbox */}
@@ -1523,7 +1525,7 @@ export default function AdminClientsPage() {
                                 ["Membership tier",     getMembershipPlanLabel(client.planTier)],
                                 ["Billing status", <span className="font-bold" style={{ color: baselineStatus === "active" ? "#02D99D" : "#FF6B6B" }}>{baselineStatus}</span>],
                                 ["Stripe membership", client.stripeMembership ?? "—"],
-                                ["Billing cycle",      client.billingCycle ?? "—"],
+                                ["Billing cycle",      client.billingCycleDisplay ?? client.billingCycle ?? "—"],
                                 ["Contract",           client.contract ?? "—"],
                                 ["Current billing period ends", client.periodEnds ?? "—"],
                                 ["Renewal",            autoRenew ? "Auto-renew on" : "Auto-renew off"],

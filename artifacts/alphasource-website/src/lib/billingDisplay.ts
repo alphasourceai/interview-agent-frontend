@@ -1,5 +1,17 @@
 export type BillingModel = "fixed" | "rollover" | "usage" | null;
 
+// Display only: do not widen the separate legacy checkout cadence choices or
+// infer a contract length from the stored payment schedule.
+export function billingIntervalLabel(value: unknown): string {
+  if (typeof value !== "string") return "—";
+  switch (value.trim().toLowerCase()) {
+    case "monthly": return "Monthly";
+    case "annual": return "Annual";
+    case "prepaid": return "Prepaid";
+    default: return "—";
+  }
+}
+
 export function readAutoRenewUpdate(value: unknown, requested: boolean): { confirmed: boolean | null; notice: string } {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Renewal response could not be verified.");
   const payload = value as Record<string, unknown>;
