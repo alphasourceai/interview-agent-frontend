@@ -7,11 +7,13 @@ import { supabase } from "@/lib/supabaseClient";
 
 type Rep = { user_id: string; email: string; display_name: string; active: boolean };
 type ReviewCandidate = { id: string; company_legal_name: string; selected_plan_key: string; selected_billing_cadence: string; created_by_user_id: string; activated_at: string; reviewed_receipt_count: number };
-type Receipt = { id: string; purchase_intent_id: string; rep_user_id: string; provider: string; provider_payment_id: string; payment_kind: string; gross_membership_cents: number; discount_cents: number; provider_fee_cents: number; net_membership_cents: number; commission_cents: number; statement_week_start: string; reviewed_at: string; evidence_reference: string };
+type EnterpriseReviewCandidate = { id: string; client_legal_name: string; billing_option: string; original_rep_user_id: string | null; reviewed_receipt_count: number };
+type Receipt = { id: string; purchase_intent_id: string | null; enterprise_agreement_id?: string | null; rep_user_id: string; provider: string; provider_payment_id: string; payment_kind: string; gross_membership_cents: number; discount_cents: number; provider_fee_cents: number; net_membership_cents: number; commission_cents: number; statement_week_start: string; reviewed_at: string; evidence_reference: string };
 type Adjustment = { id: string; receipt_id: string; adjustment_type: string; commission_delta_cents: number; statement_week_start: string };
 type Payout = { id: string; receipt_id: string; amount_cents: number; ach_reference: string; paid_at: string };
 type Overview = {
   representatives: Rep[]; pending_evidence: ReviewCandidate[]; review_candidates: ReviewCandidate[]; receipts: Receipt[];
+  enterprise_review_candidates?: EnterpriseReviewCandidate[];
   adjustments: Adjustment[]; payouts: Payout[];
   departures: Array<{ rep_user_id: string; final_day: string }>;
   locked_statements: Array<{ rep_user_id: string; week_start: string; locked_at: string }>;
@@ -65,6 +67,10 @@ export default function AdminSalesPayrollPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [intentId, setIntentId] = useState("");
+  const [receiptSource, setReceiptSource] = useState<"intent" | "enterprise">("intent");
+  const [enterpriseAgreementId, setEnterpriseAgreementId] = useState("");
+  const [originalRepId, setOriginalRepId] = useState("");
+  const [originalRepAttested, setOriginalRepAttested] = useState(false);
   const [provider, setProvider] = useState("stripe");
   const [paymentKind, setPaymentKind] = useState("monthly");
   const [paymentId, setPaymentId] = useState("");
@@ -125,7 +131,10 @@ export default function AdminSalesPayrollPage() {
     event.preventDefault();
     try {
       void submit("/receipts", {
-        purchase_intent_id: intentId, provider, provider_payment_id: paymentId, payment_kind: paymentKind,
+        ...(receiptSource === "enterprise" ? { enterprise_agreement_id: enterpriseAgreementId,
+          original_rep_user_id: storedEnterpriseRep || originalRepId || null, original_rep_attested: originalRepAttested }
+          : { purchase_intent_id: intentId }),
+        provider, provider_payment_id: paymentId, payment_kind: paymentKind,
         payment_success_at: iso(paymentAt), funds_received_at: iso(fundsAt),
         gross_membership_cents: cents(gross), discount_cents: cents(discount), provider_fee_cents: cents(fee),
         evidence_reference: evidence,
@@ -166,6 +175,7 @@ export default function AdminSalesPayrollPage() {
   }
 
   const repNames = useMemo(() => new Map((overview?.representatives || []).map((rep) => [rep.user_id, rep.display_name || rep.email])), [overview]);
+  const storedEnterpriseRep = overview?.enterprise_review_candidates?.find(row => row.id === enterpriseAgreementId)?.original_rep_user_id || null;
 
   return <AdminLayout title="Sales Payroll">
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6" style={{ color: "var(--as-text)" }}>
@@ -227,15 +237,27 @@ export default function AdminSalesPayrollPage() {
             <h3 className="font-bold">Activated sales for receipt review</h3>
             <p className="mt-1 text-xs">Reconcile each received platform payment with the provider before recording a receipt; monthly installments require separate reviews.</p>
             {!overview?.review_candidates.length ? <p className="mt-2 text-sm">No activated sales in the current ledger view.</p> : <ul className="mt-3 space-y-2 text-sm">{overview.review_candidates.map((row) =>
-              <li key={row.id} className="flex flex-wrap justify-between gap-2 border-b pb-2" style={{ borderColor: "var(--as-border)" }}><span>{row.company_legal_name} · {row.selected_plan_key} {row.selected_billing_cadence} · {repNames.get(row.created_by_user_id) || "Attribution needs review"} · {row.reviewed_receipt_count} reviewed receipt{row.reviewed_receipt_count === 1 ? "" : "s"}</span><button type="button" className="underline" onClick={() => setIntentId(row.id)}>Review {row.reviewed_receipt_count ? "another" : "first"} receipt</button></li>)}</ul>}
+              <li key={row.id} className="flex flex-wrap justify-between gap-2 border-b pb-2" style={{ borderColor: "var(--as-border)" }}><span>{row.company_legal_name} · {row.selected_plan_key} {row.selected_billing_cadence} · {repNames.get(row.created_by_user_id) || "Attribution needs review"} · {row.reviewed_receipt_count} reviewed receipt{row.reviewed_receipt_count === 1 ? "" : "s"}</span><button type="button" className="underline" onClick={() => { setReceiptSource("intent"); setIntentId(row.id); }}>Review {row.reviewed_receipt_count ? "another" : "first"} receipt</button></li>)}</ul>}
+            {!!overview?.enterprise_review_candidates?.length && <ul className="mt-3 space-y-2 text-sm">{overview.enterprise_review_candidates.map(row =>
+              <li key={row.id} className="flex flex-wrap justify-between gap-2 border-b pb-2" style={{ borderColor: "var(--as-border)" }}>
+                <span>{row.client_legal_name} · Enterprise {row.billing_option} · {row.reviewed_receipt_count} reviewed receipts</span>
+                <button type="button" className="underline" onClick={() => { setReceiptSource("enterprise"); setEnterpriseAgreementId(row.id); setOriginalRepId(row.original_rep_user_id || ""); setOriginalRepAttested(false); setProvider("stripe"); setPaymentKind(row.billing_option === "annual" ? "paid_in_full" : "monthly"); }}>Review platform receipt</button>
+              </li>)}</ul>}
           </section>
           <form onSubmit={recordReceipt} className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2" style={{ borderColor: "var(--as-border)" }}>
             <h3 className="font-bold sm:col-span-2">Approve a verified provider receipt</h3>
             <p className="text-xs sm:col-span-2">Only funded platform membership payments belong here. Verify funding, discounts, fees, signed sale, and activation first.</p>
-            <label className="text-sm">Activated sale ID<input required value={intentId} onChange={(e) => setIntentId(e.target.value)} className={inputClass} /></label>
-            <label className="text-sm">Provider<select value={provider} onChange={(e) => setProvider(e.target.value)} className={inputClass}><option value="stripe">Stripe</option><option value="financing_partner">Financing partner</option><option value="other_verified">Other verified</option></select></label>
-            <label className="text-sm">Provider payment ID<input required value={paymentId} onChange={(e) => setPaymentId(e.target.value)} className={inputClass} /></label>
-            <label className="text-sm">Payment type<select value={paymentKind} onChange={(e) => setPaymentKind(e.target.value)} className={inputClass}><option value="monthly">Annual term paid monthly</option><option value="paid_in_full">Annual paid in full</option><option value="financed_checkout">Financed checkout</option></select></label>
+            <label className="text-sm">Sale source<select value={receiptSource} onChange={e => { const next=e.target.value as "intent" | "enterprise"; setReceiptSource(next); setOriginalRepAttested(false); if(next === "enterprise") { setProvider("stripe"); if(paymentKind === "financed_checkout") setPaymentKind("monthly"); } }} className={inputClass}><option value="intent">Activated retail sale</option><option value="enterprise">Enterprise agreement</option></select></label>
+            {receiptSource === "enterprise" ? <>
+              <label className="text-sm">Paid Enterprise agreement ID<input required value={enterpriseAgreementId} onChange={e => { setEnterpriseAgreementId(e.target.value); setOriginalRepId(""); setOriginalRepAttested(false); }} className={inputClass} /></label>
+              <label className="text-sm">Original salesperson (first receipt only)<select disabled={!!storedEnterpriseRep} value={storedEnterpriseRep || originalRepId} onChange={e => { setOriginalRepId(e.target.value); setOriginalRepAttested(false); }} className={inputClass}><option value="">Use saved original attribution</option>{overview?.representatives.map(rep => <option key={rep.user_id} value={rep.user_id}>{rep.display_name || rep.email}</option>)}</select></label>
+              {storedEnterpriseRep ? <p className="text-sm">Original salesperson is locked to {repNames.get(storedEnterpriseRep) || "the saved salesperson"}. Native receipt verification checks this again.</p>
+                : <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={originalRepAttested} onChange={e => setOriginalRepAttested(e.target.checked)} />I verified the original salesperson in my evidence (required for the first receipt). Saved attribution cannot be reassigned here.</label>}
+              <p className="text-xs sm:col-span-2">Initial Enterprise gross is only the prorated platform line; later receipts use the platform invoice line. Exclude prepaid interview pools, usage charges and tax. Original attribution and the first-payment commission year stay fixed.</p>
+            </> : <label className="text-sm">Activated sale ID<input required value={intentId} onChange={(e) => setIntentId(e.target.value)} className={inputClass} /></label>}
+            <label className="text-sm">Provider<select disabled={receiptSource === "enterprise"} value={provider} onChange={(e) => setProvider(e.target.value)} className={inputClass}><option value="stripe">Stripe</option><option value="financing_partner">Financing partner</option><option value="other_verified">Other verified</option></select></label>
+            <label className="text-sm">{receiptSource === "enterprise" ? "Stripe invoice ID (in_…)" : "Provider payment ID"}<input required value={paymentId} onChange={(e) => setPaymentId(e.target.value)} className={inputClass} /></label>
+            <label className="text-sm">Payment type<select value={paymentKind} onChange={(e) => setPaymentKind(e.target.value)} className={inputClass}><option value="monthly">Monthly platform payment</option><option value="paid_in_full">Prepaid or annual platform payment</option>{receiptSource !== "enterprise" && <option value="financed_checkout">Financed checkout</option>}</select></label>
             <label className="text-sm">Payment succeeded (timestamp with timezone)<input required value={paymentAt} onChange={(e) => setPaymentAt(e.target.value)} className={inputClass} placeholder="2026-10-02T18:00:00Z" /></label>
             <label className="text-sm">Funds received (timestamp with timezone)<input required value={fundsAt} onChange={(e) => setFundsAt(e.target.value)} className={inputClass} placeholder="2026-10-05T18:00:00Z" /></label>
             <label className="text-sm">Gross platform membership ($)<input required value={gross} onChange={(e) => setGross(e.target.value)} className={inputClass} /></label>
