@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, Re
 import type { Session, User } from "@supabase/supabase-js";
 import { PASSKEYS_ENABLED, supabase } from "@/lib/supabaseClient";
 import { isPasskeyCancellation, passkeyFailureMessage } from "@/lib/passkeyErrors";
+import type { AdminAccessResult } from "@/lib/adminAccessDecision";
 
 interface ClientLoginResult {
   error: string | null;
@@ -21,6 +22,7 @@ interface AuthContextType {
   clientAuthReady: boolean;
   adminAuthReady: boolean;
   isAdminLoggedIn: boolean;
+  adminAccessEpoch: number;
   currentUser: User | null;
   clientLoginLoading: boolean;
   clientLoginError: string;
@@ -32,7 +34,7 @@ interface AuthContextType {
   loginWithPasskey: () => Promise<ClientLoginResult>;
   loginAdmin: (email: string, password: string) => Promise<AdminLoginResult>;
   loginSales: (email: string, password: string) => Promise<SalesLoginResult>;
-  resolveAdminAccess: () => Promise<boolean>;
+  resolveAdminAccess: () => Promise<AdminAccessResult>;
   clearAdminLoginError: () => void;
   logout: () => void;
 }
@@ -42,6 +44,7 @@ const AuthContext = createContext<AuthContextType>({
   clientAuthReady: false,
   adminAuthReady: false,
   isAdminLoggedIn: false,
+  adminAccessEpoch: 0,
   currentUser: null,
   clientLoginLoading: false,
   clientLoginError: "",
@@ -53,7 +56,7 @@ const AuthContext = createContext<AuthContextType>({
   loginWithPasskey: async () => ({ error: null }),
   loginAdmin: async () => ({ error: null }),
   loginSales: async () => ({ error: null }),
-  resolveAdminAccess: async () => false,
+  resolveAdminAccess: async () => ({ status: "denied", userId: null }),
   clearAdminLoginError: () => {},
   logout: () => {},
 });
@@ -129,6 +132,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [salesLoginLoading, setSalesLoginLoading]   = useState(false);
   const [salesLoginError, setSalesLoginError]       = useState("");
   const adminProbeRef = useRef(0);
+  const [adminAccessEpoch, setAdminAccessEpoch] = useState(0);
+  const invalidateAdminAccess = useCallback(() => {
+    ++adminProbeRef.current;
+    setAdminAccessEpoch(epoch => epoch + 1);
+  }, []);
 
   const probeAdminAccess = useCallback(async (session: Session): Promise<{ ok: true } | { ok: false; error: string }> => {
     const token = session?.access_token;
@@ -214,41 +222,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const syncAdminFromSession = useCallback(async (session: Session | null): Promise<boolean> => {
+  const resolveAdminAccess = useCallback(async (): Promise<AdminAccessResult> => {
     const probeId = ++adminProbeRef.current;
-
-    if (!session) {
-      setIsAdminLoggedIn(false);
-      setAdminAuthReady(true);
-      return false;
-    }
-
-    setAdminAuthReady(false);
-    const probe = await probeAdminAccess(session);
-    if (probeId !== adminProbeRef.current) return false;
-
-    setIsAdminLoggedIn(probe.ok);
-    setAdminAuthReady(true);
-    return probe.ok;
-  }, [probeAdminAccess]);
-
-  const resolveAdminAccess = useCallback(async (): Promise<boolean> => {
+    let userId: string | null = null;
     try {
       const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        adminProbeRef.current += 1;
+      if (probeId !== adminProbeRef.current) return { status: "stale", userId: null };
+      const session = data.session || null;
+      userId = session?.user?.id || null;
+      if (error || !session || !userId) {
         setIsAdminLoggedIn(false);
         setAdminAuthReady(true);
-        return false;
+        return { status: "denied", userId };
       }
-      return syncAdminFromSession(data.session || null);
+      setAdminAuthReady(false);
+      const probe = await probeAdminAccess(session);
+      if (probeId !== adminProbeRef.current) return { status: "stale", userId };
+      setIsAdminLoggedIn(probe.ok);
+      setAdminAuthReady(true);
+      return { status: probe.ok ? "allowed" : "denied", userId };
     } catch {
-      adminProbeRef.current += 1;
+      if (probeId !== adminProbeRef.current) return { status: "stale", userId };
       setIsAdminLoggedIn(false);
       setAdminAuthReady(true);
-      return false;
+      return { status: "denied", userId };
     }
-  }, [syncAdminFromSession]);
+  }, [probeAdminAccess]);
 
   useEffect(() => {
     let mounted = true;
@@ -260,12 +259,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const session = data.session || null;
         if (session && hasStaleDashboardActivity()) {
           clearDashboardActivity();
-          await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+          invalidateAdminAccess();
           setIsLoggedIn(false);
           setCurrentUser(null);
           setClientAuthReady(true);
           setIsAdminLoggedIn(false);
           setAdminAuthReady(true);
+          await supabase.auth.signOut({ scope: "local" }).catch(() => {});
           return;
         }
         if (session) {
@@ -294,6 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && String(event || "") === "INITIAL_SESSION" && hasStaleDashboardActivity()) {
         clearDashboardActivity();
+        invalidateAdminAccess();
         setIsLoggedIn(false);
         setCurrentUser(null);
         setIsAdminLoggedIn(false);
@@ -305,11 +306,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoggedIn(Boolean(session));
       setCurrentUser(session?.user || null);
       if (!session) {
-        adminProbeRef.current += 1;
+        invalidateAdminAccess();
         setIsAdminLoggedIn(false);
         setAdminAuthReady(true);
       } else if (String(event || "") === "SIGNED_IN") {
-        adminProbeRef.current += 1;
+        invalidateAdminAccess();
         setIsAdminLoggedIn(false);
         setAdminAuthReady(true);
       }
@@ -538,6 +539,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         adminAuthReady,
         isAdminLoggedIn,
         currentUser,
+        adminAccessEpoch,
         clientLoginLoading,
         clientLoginError,
         adminLoginLoading,

@@ -18,6 +18,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import AdminAccessGate from "@/components/AdminAccessGate";
 import { AppearanceProvider, useAppearance } from "@/context/AppearanceContext";
 import { TrackingConsentProvider } from "@/context/TrackingConsentContext";
 import { ClientProvider } from "@/context/ClientContext";
@@ -504,34 +505,10 @@ function DashboardGuard() {
 
 /* ── Admin dashboard guard ──────────────────────────────── */
 function AdminGuard() {
-  const { isAdminLoggedIn, adminAuthReady, resolveAdminAccess } = useAuth();
-  const [, setLocation] = useLocation();
-  const [checkingAdminAccess, setCheckingAdminAccess] = useState(true);
-
-  useEffect(() => {
-    if (adminAuthReady && isAdminLoggedIn) {
-      setCheckingAdminAccess(false);
-      return;
-    }
-
-    let active = true;
-    setCheckingAdminAccess(true);
-    void resolveAdminAccess().finally(() => {
-      if (active) setCheckingAdminAccess(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [adminAuthReady, isAdminLoggedIn, resolveAdminAccess]);
-
-  useEffect(() => {
-    if (!checkingAdminAccess && adminAuthReady && !isAdminLoggedIn) setLocation("/");
-  }, [adminAuthReady, checkingAdminAccess, isAdminLoggedIn, setLocation]);
-
-  if (checkingAdminAccess || !adminAuthReady) return null;
-  if (!isAdminLoggedIn) return null;
+  const { isAdminLoggedIn, adminAuthReady } = useAuth();
 
   return (
+    <AdminAccessGate>
     <AppearanceProvider>
       <DashboardInactivityController enabled={adminAuthReady && isAdminLoggedIn} />
       <AdminClientProvider>
@@ -558,6 +535,7 @@ function AdminGuard() {
         </Switch>
       </AdminClientProvider>
     </AppearanceProvider>
+    </AdminAccessGate>
   );
 }
 
