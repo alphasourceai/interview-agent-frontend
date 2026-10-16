@@ -55,6 +55,7 @@ export interface EnterpriseMembershipTerms {
   renewal_request_status: "none" | "waiting" | "claimed" | "unknown" | "applied" | "held";
   requested_auto_renew: boolean | null;
   renewal_requested_at: string | null;
+  renewal_request_effective_at: string | null;
 }
 export type ClientMembershipTerms = RetailMembershipTerms | EnterpriseMembershipTerms;
 
@@ -71,14 +72,17 @@ function readEnterpriseTerms(v: Record<string, unknown>): EnterpriseMembershipTe
     || !["none", "waiting", "claimed", "unknown", "applied", "held"].includes(String(v.renewal_request_status))
     || (v.requested_auto_renew !== null && typeof v.requested_auto_renew !== "boolean")
     || (v.renewal_requested_at !== null && !date(v.renewal_requested_at))
-    || (v.renewal_request_status === "none" ? v.requested_auto_renew !== null || v.renewal_requested_at !== null
-      : v.requested_auto_renew !== v.auto_renew || !date(v.renewal_requested_at))) throw new Error("Enterprise membership terms could not be verified.");
+    || (v.renewal_request_status === "none" ? v.requested_auto_renew !== null || v.renewal_requested_at !== null || v.renewal_request_effective_at !== null
+      : v.requested_auto_renew !== v.auto_renew || !date(v.renewal_requested_at) || !date(v.renewal_request_effective_at)
+        || Date.parse(v.renewal_request_effective_at) > Date.parse(v.current_term_end_at)
+        || (v.requested_auto_renew === false && Date.parse(v.renewal_request_effective_at) !== Date.parse(v.current_term_end_at)))) throw new Error("Enterprise membership terms could not be verified.");
   return { kind: "enterprise", currency: "usd", billing_model: "usage", billing_interval: v.billing_interval as EnterpriseMembershipTerms["billing_interval"],
     platform_payment_cents: v.platform_payment_cents, current_term_start_at: v.current_term_start_at, current_term_end_at: v.current_term_end_at,
     term_start_basis: v.term_start_basis as EnterpriseMembershipTerms["term_start_basis"], auto_renew: v.auto_renew,
     stripe_renewal_billing_cutoff_at: v.stripe_renewal_billing_cutoff_at, renewal_notice_cutoff_at: v.renewal_notice_cutoff_at,
     renewal_request_status: v.renewal_request_status as EnterpriseMembershipTerms["renewal_request_status"],
-    requested_auto_renew: v.requested_auto_renew as boolean | null, renewal_requested_at: v.renewal_requested_at as string | null };
+    requested_auto_renew: v.requested_auto_renew as boolean | null, renewal_requested_at: v.renewal_requested_at as string | null,
+    renewal_request_effective_at: v.renewal_request_effective_at as string | null };
 }
 
 export function readClientMembershipTerms(value: unknown): ClientMembershipTerms | null {
@@ -124,15 +128,15 @@ export function readClientMembershipTerms(value: unknown): ClientMembershipTerms
   };
 }
 
-// Generation-date agreements bind a UTC calendar day, not the prior local
-// evening. Historical first-payment terms keep their original local display.
+// Native Enterprise legal boundaries and generation-date Retail agreements
+// bind UTC calendar days. Historical Retail first-payment displays stay local.
 export function membershipTermEndDate(value: unknown, basis?: ClientMembershipTerms["term_start_basis"],
   localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone): string {
   const raw = String(value || "").trim();
   const parsed = new Date(raw);
   if (!raw || Number.isNaN(parsed.getTime())) return "—";
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric",
-    timeZone: basis === "generation_date" || basis === "agreement_date" ? "UTC" : localTimeZone }).format(parsed);
+    timeZone: basis === "generation_date" || basis === "agreement_date" || basis === "successful_payment" ? "UTC" : localTimeZone }).format(parsed);
 }
 
 // The provider cutoff is a real instant. Include local time and zone so it

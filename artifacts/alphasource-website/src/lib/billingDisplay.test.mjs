@@ -73,7 +73,8 @@ test("Enterprise terms keep custom calendar dates and native notice separate fro
     platform_payment_cents: 123456, current_term_start_at: "2026-10-15T00:00:00.000000Z",
     current_term_end_at: "2027-03-19T00:00:00.000000Z", term_start_basis: "agreement_date", auto_renew: false,
     stripe_renewal_billing_cutoff_at: "2027-03-19T00:00:00.000Z", renewal_notice_cutoff_at: "2027-02-17T00:00:00.000000Z",
-    renewal_request_status: "waiting", requested_auto_renew: false, renewal_requested_at: "2026-10-16T00:00:00Z" };
+    renewal_request_status: "waiting", requested_auto_renew: false, renewal_requested_at: "2026-10-16T00:00:00Z",
+    renewal_request_effective_at: "2027-03-19T00:00:00.000000Z" };
   assert.deepEqual(display.readClientMembershipTerms(value), value);
   assert.equal(display.membershipTermEndDate(value.current_term_end_at, "agreement_date", "America/Denver"), "Mar 19, 2027");
   for (const key of ["commitment_months", "installment_count", "platform_commitment_total_cents"]) assert.equal(key in display.readClientMembershipTerms(value), false);
@@ -81,8 +82,20 @@ test("Enterprise terms keep custom calendar dates and native notice separate fro
     { current_term_end_at: "bad" }, { current_term_start_at: "2030-01-01Z" }, { term_start_basis: "signature_date" },
     { renewal_notice_cutoff_at: value.current_term_end_at }, { stripe_renewal_billing_cutoff_at: "2099-01-01T00:00:00Z" },
     { auto_renew: "false" }, { renewal_request_status: "delivered" }, { requested_auto_renew: "false" },
-    { requested_auto_renew: true }, { renewal_request_status: "none" }, { renewal_requested_at: null }]) {
+    { requested_auto_renew: true }, { renewal_request_status: "none" }, { renewal_requested_at: null },
+    { renewal_request_effective_at: null }, { renewal_request_effective_at: "bad" },
+    { renewal_request_effective_at: "2027-03-18T00:00:00Z" }, { renewal_request_effective_at: "2027-03-20T00:00:00Z" }]) {
     assert.throws(() => display.readClientMembershipTerms({ ...value, ...patch }), /could not be verified/);
+  }
+  const none = { ...value, auto_renew: true, requested_auto_renew: null, renewal_request_status: "none", renewal_requested_at: null,
+    renewal_request_effective_at: null };
+  assert.deepEqual(display.readClientMembershipTerms(none), none);
+  assert.throws(() => display.readClientMembershipTerms({ ...none, renewal_request_effective_at: value.current_term_end_at }), /could not be verified/);
+  for (const status of ["waiting", "held", "unknown", "applied"]) {
+    const advanced = { ...value, auto_renew: true, requested_auto_renew: true, renewal_request_status: status,
+      current_term_start_at: value.current_term_end_at, current_term_end_at: "2028-03-19T00:00:00Z",
+      stripe_renewal_billing_cutoff_at: "2028-03-19T00:00:00Z", renewal_notice_cutoff_at: "2028-02-18T00:00:00Z" };
+    assert.deepEqual(display.readClientMembershipTerms(advanced), advanced);
   }
   const page = readFileSync(join(root, "src/pages/dashboard/BillingPage.tsx"), "utf8");
   for (const text of ["Custom agreement", "Renewal Notice Deadline", "Renewal Effective Date", "Renewal Preference", "Current-term billing and paid access are unchanged."]) assert.ok(page.includes(text), text);
@@ -127,8 +140,9 @@ test("generation calendar dates never shift; first-payment and legacy keep local
     "2027-03-14T10:00:00Z", "2027-11-07T09:00:00Z", "2027-04-15T20:00:00Z"];
   for (const zone of zones) for (const value of values) {
     const options = { month: "short", day: "numeric", year: "numeric" };
-    assert.equal(display.membershipTermEndDate(value, "generation_date", zone),
-      new Intl.DateTimeFormat("en-US", { ...options, timeZone: "UTC" }).format(new Date(value)));
+    for (const basis of ["generation_date", "agreement_date", "successful_payment"])
+      assert.equal(display.membershipTermEndDate(value, basis, zone),
+        new Intl.DateTimeFormat("en-US", { ...options, timeZone: "UTC" }).format(new Date(value)));
     for (const basis of [undefined, "first_payment_success"])
       assert.equal(display.membershipTermEndDate(value, basis, zone),
         new Intl.DateTimeFormat("en-US", { ...options, timeZone: zone }).format(new Date(value)));

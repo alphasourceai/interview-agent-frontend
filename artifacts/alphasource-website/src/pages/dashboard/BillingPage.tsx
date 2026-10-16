@@ -1079,6 +1079,9 @@ function ScopedBillingPage() {
               {billingSummary.membership_terms?.requested_auto_renew != null && (
                 <p className="mt-2 text-sm leading-relaxed" style={mutedTextStyle}>
                   Requested renewal: {billingSummary.membership_terms.requested_auto_renew ? "On" : "Off"}.
+                  {billingSummary.membership_terms.kind === "enterprise" && billingSummary.membership_terms.renewal_request_effective_at
+                    && Date.parse(billingSummary.membership_terms.renewal_request_effective_at) !== Date.parse(billingSummary.membership_terms.current_term_end_at)
+                    ? ` Recorded request boundary: ${stripeRenewalCutoffDate(billingSummary.membership_terms.renewal_request_effective_at)}; current term dates are shown above.` : ""}
                   {billingSummary.membership_terms.renewal_request_status === "applied"
                     ? " Confirmed with Stripe."
                     : billingSummary.membership_terms.renewal_request_status === "waiting"
