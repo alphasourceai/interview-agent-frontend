@@ -68,6 +68,25 @@ test("accepted client term projection keeps historical cents and refuses malform
   assert.equal(display.readClientMembershipTerms(null), null);
   assert.equal(display.readClientMembershipTerms(undefined), null);
 });
+test("Enterprise terms keep custom calendar dates and native notice separate from provider cycles, without a retail term total", () => {
+  const value = { kind: "enterprise", currency: "usd", billing_model: "usage", billing_interval: "annual",
+    platform_payment_cents: 123456, current_term_start_at: "2026-10-15T00:00:00.000000Z",
+    current_term_end_at: "2027-03-19T00:00:00.000000Z", term_start_basis: "agreement_date", auto_renew: false,
+    stripe_renewal_billing_cutoff_at: "2027-03-19T00:00:00.000Z", renewal_notice_cutoff_at: "2027-02-17T00:00:00.000000Z",
+    renewal_request_status: "waiting", requested_auto_renew: false, renewal_requested_at: "2026-10-16T00:00:00Z" };
+  assert.deepEqual(display.readClientMembershipTerms(value), value);
+  assert.equal(display.membershipTermEndDate(value.current_term_end_at, "agreement_date", "America/Denver"), "Mar 19, 2027");
+  for (const key of ["commitment_months", "installment_count", "platform_commitment_total_cents"]) assert.equal(key in display.readClientMembershipTerms(value), false);
+  for (const patch of [{ billing_interval: "prepaid" }, { billing_model: "rollover" }, { platform_payment_cents: 0 },
+    { current_term_end_at: "bad" }, { current_term_start_at: "2030-01-01Z" }, { term_start_basis: "signature_date" },
+    { renewal_notice_cutoff_at: value.current_term_end_at }, { stripe_renewal_billing_cutoff_at: "2099-01-01T00:00:00Z" },
+    { auto_renew: "false" }, { renewal_request_status: "delivered" }, { requested_auto_renew: "false" },
+    { requested_auto_renew: true }, { renewal_request_status: "none" }, { renewal_requested_at: null }]) {
+    assert.throws(() => display.readClientMembershipTerms({ ...value, ...patch }), /could not be verified/);
+  }
+  const page = readFileSync(join(root, "src/pages/dashboard/BillingPage.tsx"), "utf8");
+  for (const text of ["Custom agreement", "Renewal Notice Deadline", "Renewal Effective Date", "Renewal Preference", "Current-term billing and paid access are unchanged."]) assert.ok(page.includes(text), text);
+});
 test("unknown/null is never zero; explicit zero and cents remain accurate", () => {
   for (const value of [
     null,

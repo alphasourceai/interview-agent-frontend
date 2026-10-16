@@ -897,7 +897,9 @@ function ScopedBillingPage() {
       planTier: getMembershipPlanLabel(billingSummary?.plan_tier),
       billingStatus: toDisplayText(billingSummary?.billing_status),
       billingCycle: billingSummary?.membership_terms
-        ? billingSummary.membership_terms.payment_option === "prepaid" ? "Prepaid" : "Monthly payments"
+        ? billingSummary.membership_terms.kind === "enterprise"
+          ? billingSummary.membership_terms.billing_interval === "annual" ? "Annual platform billing" : "Monthly platform billing"
+          : billingSummary.membership_terms.payment_option === "prepaid" ? "Prepaid" : "Monthly payments"
         : toDisplayText(billingSummary?.billing_interval),
       autoRenew:
         (billingSummary?.membership_terms?.auto_renew ?? billingSummary?.auto_renew) === true
@@ -1004,7 +1006,16 @@ function ScopedBillingPage() {
                   badge
                   tooltip={billingSummary.membership_terms ? "How the platform fee is paid during the accepted membership commitment." : "The billing period cadence used for renewals and membership timing."}
                 />
-                {billingSummary.membership_terms && (
+                {billingSummary.membership_terms?.kind === "enterprise" ? (
+                  <>
+                    <InfoCard label="Membership Terms" value="Custom agreement" accent="#A380F6"
+                      tooltip="The signed Enterprise agreement sets the actual term dates and notice deadline; it is not a retail installment plan." />
+                    <InfoCard label="Platform Payment" value={`${moneyCents(billingSummary.membership_terms.platform_payment_cents)} ${billingSummary.membership_terms.billing_interval === "annual" ? "per year" : "per month"}`} accent="#02ABE0"
+                      tooltip="The accepted scheduled platform fee, excluding interview usage, prepaid interview pools and tax. This is not a paid balance or full-term total." />
+                    <InfoCard label="Renewal Notice Deadline" value={stripeRenewalCutoffDate(billingSummary.membership_terms.renewal_notice_cutoff_at)} accent="#02D99D"
+                      tooltip="The cutoff for requesting nonrenewal. It is not the cancellation effective date, and does not waive current-term payments." />
+                  </>
+                ) : billingSummary.membership_terms && (
                   <>
                     <InfoCard label="Membership Commitment" value={`${billingSummary.membership_terms.commitment_months} months`} accent="#A380F6"
                       tooltip="The commitment length in the accepted membership agreement." />
@@ -1015,11 +1026,12 @@ function ScopedBillingPage() {
                   </>
                 )}
                 <InfoCard
-                  label="Auto-Renew"
+                  label={billingSummary.membership_terms?.kind === "enterprise" ? "Renewal Preference" : "Auto-Renew"}
                   value={billing.autoRenew}
                   accent="#A380F6"
                   badge
-                  tooltip={billingSummary.membership_terms ? "The last confirmed renewal setting. A scheduled or unconfirmed request is shown separately below. Renewal retains the accepted commitment and platform price." : "Shows whether the current subscription is set to renew at the end of the billing period or cancel at term end."}
+                  tooltip={billingSummary.membership_terms?.kind === "enterprise" ? "The accepted renewal preference in your agreement record. Provider confirmation is shown separately; this is not proof of payment or a changed Stripe setting."
+                    : billingSummary.membership_terms ? "The last confirmed renewal setting. A scheduled or unconfirmed request is shown separately below. Renewal retains the accepted commitment and platform price." : "Shows whether the current subscription is set to renew at the end of the billing period or cancel at term end."}
                 />
                 <InfoCard
                   label={billingSummary.membership_terms ? "Membership Term End" : "Current Term End"}
@@ -1028,9 +1040,10 @@ function ScopedBillingPage() {
                   tooltip={billingSummary.membership_terms ? "The end of the current accepted membership commitment, separate from Stripe's individual payment cycle." : "The date the current billing period or membership term is scheduled to end or renew."}
                 />
                 {billingSummary.membership_terms?.stripe_renewal_billing_cutoff_at && (
-                  <InfoCard label="Stripe Renewal Billing Date"
+                  <InfoCard label={billingSummary.membership_terms.kind === "enterprise" ? "Renewal Effective Date" : "Stripe Renewal Billing Date"}
                     value={stripeRenewalCutoffDate(billingSummary.membership_terms.stripe_renewal_billing_cutoff_at)} accent="#02D99D"
-                    tooltip="Turn off the next commitment renewal before this Stripe billing date. This is the full commitment boundary, not the next monthly installment or contractual term end." />
+                    tooltip={billingSummary.membership_terms.kind === "enterprise" ? "The native agreement term boundary at which an accepted nonrenewal takes effect. Submit nonrenewal before the separate notice deadline. Stripe's individual billing schedule and owed installments remain separate."
+                      : "Turn off the next commitment renewal before this Stripe billing date. This is the full commitment boundary, not the next monthly installment or contractual term end."} />
                 )}
                 {!billingSummary.membership_terms && (
                 <InfoCard
@@ -1056,7 +1069,9 @@ function ScopedBillingPage() {
               </div>
               {billingSummary.membership_terms && (
                 <p className="mt-4 text-sm leading-relaxed" style={mutedTextStyle}>
-                  {billingSummary.membership_terms.payment_option === "prepaid"
+                  {billingSummary.membership_terms.kind === "enterprise"
+                    ? "Your signed Enterprise agreement controls the displayed term and renewal notice deadline. Turning off renewal does not waive owed platform payments or interview charges, or end already-paid access early."
+                    : billingSummary.membership_terms.payment_option === "prepaid"
                     ? `Your agreement sets a ${billingSummary.membership_terms.commitment_months}-month prepaid term. Turning off renewal does not create a refund; exceptions follow the accepted agreement.`
                     : `Your agreement schedules ${billingSummary.membership_terms.commitment_months} monthly payments per term. Turning off renewal does not waive any unpaid installments.`}
                 </p>
@@ -1067,7 +1082,9 @@ function ScopedBillingPage() {
                   {billingSummary.membership_terms.renewal_request_status === "applied"
                     ? " Confirmed with Stripe."
                     : billingSummary.membership_terms.renewal_request_status === "waiting"
-                      ? billingSummary.membership_terms.payment_option === "prepaid"
+                      ? billingSummary.membership_terms.kind === "enterprise"
+                        ? " Preference saved; the provider setting is not yet confirmed. Current-term billing and paid access are unchanged."
+                        : billingSummary.membership_terms.payment_option === "prepaid"
                         ? " Scheduled; paid-term access is unchanged."
                         : " Scheduled; current-term monthly payments still continue."
                       : billingSummary.membership_terms.renewal_request_status === "held"

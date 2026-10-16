@@ -23,7 +23,8 @@ export function readAutoRenewUpdate(value: unknown, requested: boolean): { confi
       : "Renewal request is awaiting confirmation. The confirmed setting is unchanged." };
 }
 
-export interface ClientMembershipTerms {
+interface RetailMembershipTerms {
+  kind?: undefined;
   commitment_months: 3 | 6 | 12;
   payment_option: "prepaid" | "monthly_installments";
   currency: "usd";
@@ -39,11 +40,52 @@ export interface ClientMembershipTerms {
   requested_auto_renew?: boolean | null;
   renewal_requested_at?: string | null;
 }
+export interface EnterpriseMembershipTerms {
+  kind: "enterprise";
+  currency: "usd";
+  billing_model: "usage";
+  billing_interval: "monthly" | "annual";
+  platform_payment_cents: number;
+  current_term_start_at: string;
+  current_term_end_at: string;
+  term_start_basis: "agreement_date" | "successful_payment";
+  auto_renew: boolean;
+  stripe_renewal_billing_cutoff_at: string;
+  renewal_notice_cutoff_at: string;
+  renewal_request_status: "none" | "waiting" | "claimed" | "unknown" | "applied" | "held";
+  requested_auto_renew: boolean | null;
+  renewal_requested_at: string | null;
+}
+export type ClientMembershipTerms = RetailMembershipTerms | EnterpriseMembershipTerms;
+
+function readEnterpriseTerms(v: Record<string, unknown>): EnterpriseMembershipTerms {
+  const date = (value: unknown): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
+  if (v.kind !== "enterprise" || v.currency !== "usd" || v.billing_model !== "usage"
+    || !["monthly", "annual"].includes(String(v.billing_interval)) || typeof v.auto_renew !== "boolean"
+    || typeof v.platform_payment_cents !== "number" || !Number.isSafeInteger(v.platform_payment_cents) || v.platform_payment_cents <= 0
+    || !["agreement_date", "successful_payment"].includes(String(v.term_start_basis))
+    || !date(v.current_term_start_at) || !date(v.current_term_end_at) || Date.parse(v.current_term_start_at) >= Date.parse(v.current_term_end_at)
+    || !date(v.stripe_renewal_billing_cutoff_at) || !date(v.renewal_notice_cutoff_at)
+    || Date.parse(v.stripe_renewal_billing_cutoff_at) !== Date.parse(v.current_term_end_at)
+    || Date.parse(v.renewal_notice_cutoff_at) >= Date.parse(v.current_term_end_at)
+    || !["none", "waiting", "claimed", "unknown", "applied", "held"].includes(String(v.renewal_request_status))
+    || (v.requested_auto_renew !== null && typeof v.requested_auto_renew !== "boolean")
+    || (v.renewal_requested_at !== null && !date(v.renewal_requested_at))
+    || (v.renewal_request_status === "none" ? v.requested_auto_renew !== null || v.renewal_requested_at !== null
+      : v.requested_auto_renew !== v.auto_renew || !date(v.renewal_requested_at))) throw new Error("Enterprise membership terms could not be verified.");
+  return { kind: "enterprise", currency: "usd", billing_model: "usage", billing_interval: v.billing_interval as EnterpriseMembershipTerms["billing_interval"],
+    platform_payment_cents: v.platform_payment_cents, current_term_start_at: v.current_term_start_at, current_term_end_at: v.current_term_end_at,
+    term_start_basis: v.term_start_basis as EnterpriseMembershipTerms["term_start_basis"], auto_renew: v.auto_renew,
+    stripe_renewal_billing_cutoff_at: v.stripe_renewal_billing_cutoff_at, renewal_notice_cutoff_at: v.renewal_notice_cutoff_at,
+    renewal_request_status: v.renewal_request_status as EnterpriseMembershipTerms["renewal_request_status"],
+    requested_auto_renew: v.requested_auto_renew as boolean | null, renewal_requested_at: v.renewal_requested_at as string | null };
+}
 
 export function readClientMembershipTerms(value: unknown): ClientMembershipTerms | null {
   if (value == null) return null;
   if (typeof value !== "object" || Array.isArray(value)) throw new Error("Membership terms could not be verified.");
   const v = value as Record<string, unknown>;
+  if (v.kind === "enterprise") return readEnterpriseTerms(v);
   const count = v.payment_option === "prepaid" ? 1 : v.commitment_months;
   if (![3, 6, 12].includes(v.commitment_months as number)
     || (v.payment_option !== "prepaid" && v.payment_option !== "monthly_installments")
@@ -73,7 +115,7 @@ export function readClientMembershipTerms(value: unknown): ClientMembershipTerms
       renewal_requested_at: v.renewal_requested_at as string | null };
   })();
   return {
-    commitment_months: v.commitment_months as ClientMembershipTerms["commitment_months"],
+    commitment_months: v.commitment_months as RetailMembershipTerms["commitment_months"],
     payment_option: v.payment_option, currency: "usd", platform_payment_cents: v.platform_payment_cents,
     platform_commitment_total_cents: v.platform_commitment_total_cents, installment_count: Number(count),
     current_term_start_at: v.current_term_start_at, current_term_end_at: v.current_term_end_at, auto_renew: v.auto_renew,
@@ -90,7 +132,7 @@ export function membershipTermEndDate(value: unknown, basis?: ClientMembershipTe
   const parsed = new Date(raw);
   if (!raw || Number.isNaN(parsed.getTime())) return "—";
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric",
-    timeZone: basis === "generation_date" ? "UTC" : localTimeZone }).format(parsed);
+    timeZone: basis === "generation_date" || basis === "agreement_date" ? "UTC" : localTimeZone }).format(parsed);
 }
 
 // The provider cutoff is a real instant. Include local time and zone so it
