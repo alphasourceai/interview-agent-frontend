@@ -9,7 +9,7 @@ import EnterpriseModelPreparation from "@/components/EnterpriseModelPreparation"
 import { defaultEnterpriseAgreementFields, enterpriseAgreementFieldError, enterpriseAgreementSettingsPayload } from "@/lib/enterpriseAgreementFields";
 import type { EnterpriseAgreementFields } from "@/lib/enterpriseAgreementFields";
 import { getMembershipPlanLabel } from "@/lib/membershipPlans";
-import { readAutoRenewUpdate } from "@/lib/billingDisplay";
+import { membershipTermEndDate, readAutoRenewUpdate } from "@/lib/billingDisplay";
 
 /* ── Types ───────────────────────────────────────────────────── */
 type PlanTier    = "basic" | "pro" | "enterprise" | null;
@@ -1123,8 +1123,10 @@ export default function AdminClientsPage() {
             const id = String(item.id || "").trim();
             const name = String(item.name || "").trim() || "Unnamed client";
             const firstLetter = String(name.trim().charAt(0) || "?").toUpperCase();
-            const contractStart = formatDate(item.contract_start_at);
-            const contractEnd = formatDate(item.contract_end_at);
+            // Agreement calendar days must match the signed document in every timezone.
+            // The provider's current billing-period end below remains a local instant.
+            const contractStart = membershipTermEndDate(item.contract_start_at, "agreement_date");
+            const contractEnd = membershipTermEndDate(item.contract_end_at, "agreement_date");
             return {
               id,
               name,
@@ -1140,7 +1142,7 @@ export default function AdminClientsPage() {
               autoRenew: Boolean(item.auto_renew),
               accessOverrideMode: String(item.access_override_mode || "").trim().toLowerCase() || "inherit",
               stripeMembership: String(item.subscription_status || "").trim() || null,
-              contract: contractStart && contractEnd ? `${contractStart} – ${contractEnd}` : null,
+              contract: contractStart !== "—" && contractEnd !== "—" ? `${contractStart} – ${contractEnd}` : null,
               periodEnds: formatDate(item.current_term_end) || null,
               planSettingsPlanTier: normalizePlanTier(item.plan_settings_plan_tier),
               planSettingsBillingCycle: normalizeBillingCycle(item.plan_settings_billing_interval),

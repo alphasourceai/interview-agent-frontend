@@ -9,6 +9,7 @@ import {
   nonNegativeCount,
   hasPricedUsage,
   usageInvoiceStatusLabel,
+  membershipTermEndDate,
 } from "@/lib/billingDisplay";
 
 type JsonRow = Record<string, unknown>;
@@ -269,7 +270,9 @@ function BillingModelDetails({
             <ul className="text-sm space-y-2 mt-2">
               {invoices.map((invoice, index) => (
                 <li key={String(invoice.batch_id ?? invoice.stripe_invoice_id ?? index)}>
-                  {date(invoice.period_start ?? invoice.billed_at)} ·{" "}
+                  {invoice.period_start != null
+                    ? membershipTermEndDate(invoice.period_start, "agreement_date")
+                    : date(invoice.billed_at)} ·{" "}
                   {moneyCents(invoice.amount_cents)} ·{" "}
                   {count(invoice.interviews)} interviews · {usageInvoiceStatusLabel(invoice.billing_status)}
                 </li>

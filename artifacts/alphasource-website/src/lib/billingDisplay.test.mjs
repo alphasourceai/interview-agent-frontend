@@ -51,6 +51,21 @@ test("usage history distinguishes reserved, invoiced and recorded paid; unknown 
   assert.equal(display.usageInvoiceStatusLabel(undefined), "Invoiced");
   assert.equal(display.usageInvoiceStatusLabel("processing"), "Status unavailable");
 });
+test("admin contract and usage service dates reuse calendar-day formatting, not provider instants", () => {
+  for (const zone of ["America/Denver", "America/Los_Angeles", "UTC", "Asia/Tokyo"]) {
+    assert.equal(display.membershipTermEndDate("2026-09-01", "agreement_date", zone), "Sep 1, 2026");
+    assert.equal(display.membershipTermEndDate("2027-09-01T00:00:00.000Z", "agreement_date", zone), "Sep 1, 2027");
+    assert.equal(display.membershipTermEndDate(null, "agreement_date", zone), "—");
+    assert.equal(display.membershipTermEndDate("invalid", "agreement_date", zone), "—");
+  }
+  const admin = readFileSync(join(root, "src/pages/admin/AdminClientsPage.tsx"), "utf8");
+  assert.match(admin, /membershipTermEndDate\(item\.contract_start_at, "agreement_date"\)/);
+  assert.match(admin, /membershipTermEndDate\(item\.contract_end_at, "agreement_date"\)/);
+  assert.match(admin, /contractStart !== "—" && contractEnd !== "—"/);
+  assert.match(admin, /periodEnds: formatDate\(item\.current_term_end\)/);
+  const panel = readFileSync(join(root, "src/components/BillingModelPanel.tsx"), "utf8");
+  assert.match(panel, /invoice\.period_start != null\s*\? membershipTermEndDate\(invoice\.period_start, "agreement_date"\)\s*: date\(invoice\.billed_at\)/);
+});
 test("accepted client term projection keeps historical cents and refuses malformed obligations", () => {
   for (const months of [3, 6, 12]) for (const payment of ["prepaid", "monthly_installments"]) {
     const count = payment === "prepaid" ? 1 : months;
