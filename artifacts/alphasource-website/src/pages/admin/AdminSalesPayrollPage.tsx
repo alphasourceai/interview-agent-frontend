@@ -3,6 +3,7 @@ import { RefreshCw } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import AdminSalesPaymentsTab from "./AdminSalesPaymentsTab";
 import AdminSalesPayrollSummary from "./AdminSalesPayrollSummary";
+import SalesRenewalCommissionControl from "./SalesRenewalCommissionControl";
 import { supabase } from "@/lib/supabaseClient";
 
 type Rep = { user_id: string; email: string; display_name: string; active: boolean };
@@ -194,6 +195,7 @@ export default function AdminSalesPayrollPage() {
       {loading && <p role="status" className="rounded-2xl border p-4 text-sm" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}>Loading reviewed payroll actions…</p>}
       {overview?.truncated && <p role="alert" className="rounded-lg border border-amber-400/50 p-3 text-sm">The advanced receipt list exceeds its 500-row display limit. The date-filtered Sales overview and export remain complete; use a verified original receipt ID for older adjustments. Receipt approval and statement locking are paused until the full ledger is reconciled.</p>}
       <div><h2 className="text-lg font-bold">Payroll actions</h2><p className="text-sm" style={{ color: "var(--as-text-muted)" }}>Record reviewed adjustments, final days, and weekly statement locks. These controls do not initiate payments.</p></div>
+      <SalesRenewalCommissionControl request={request} />
       <div className="grid gap-4">
         <form onSubmit={recordAdjustment} className="grid gap-3 rounded-2xl border p-5 sm:grid-cols-2" style={{ backgroundColor: "var(--as-surface)", borderColor: "var(--as-border)" }}>
           <h2 className="font-bold sm:col-span-2">Add an adjustment to a sale</h2><p className="text-xs sm:col-span-2">Refunds, chargebacks, and recoveries use their effective date and remain linked to the original client sale.</p>
